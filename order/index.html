@@ -26,19 +26,110 @@
       <label for="mobile">Mobile Number:</label>
       <input type="tel" id="mobile" required>
 
-      <h2>Menu</h2>
-      <div class="menu-item">
-        <label>Pork Sisig (₱199)</label>
-        <input type="number" min="0" value="0" data-price="199">
-      </div>
-      <div class="menu-item">
-        <label>Seafood Boodle Tray (₱599)</label>
-        <input type="number" min="0" value="0" data-price="599">
-      </div>
-      <div class="menu-item">
-        <label>Crispy Pata (₱499)</label>
-        <input type="number" min="0" value="0" data-price="499">
-      </div>
+    from pathlib import Path
+
+# Create HTML for categorized dropdown order menu
+dropdown_menu_html = """
+<section id="dropdown-menu">
+  <h2>🍴 Select Your Dish by Category</h2>
+  <form id="dropdownOrderForm">
+    <label for="category">Choose Category:</label>
+    <select id="category" onchange="updateItems()" style="width:100%; padding:8px; margin-top:5px;">
+      <option value="">-- Select Category --</option>
+      <option value="pork">Pork</option>
+      <option value="chicken">Chicken</option>
+      <option value="vegetable">Vegetable</option>
+      <option value="noodles">Noodles</option>
+      <option value="fish">Fish</option>
+    </select>
+
+    <div id="itemSelection" style="margin-top: 20px;">
+      <!-- Dynamic items will load here -->
+    </div>
+
+    <div style="margin-top: 20px;">
+      <label for="requests">Special Requests:</label><br>
+      <textarea id="dropdownRequests" name="requests" rows="3" style="width:100%;"></textarea>
+    </div>
+
+    <h3>Total: ₱<span id="dropdownTotal">0</span></h3>
+    <button type="submit" style="margin-top: 10px;">Submit Order</button>
+  </form>
+</section>
+
+<script>
+const menuItems = {
+  pork: [
+    { name: "Pork Sisig", price: 199 },
+    { name: "Lechon Kawali", price: 229 },
+    { name: "Pork BBQ (2 sticks)", price: 120 }
+  ],
+  chicken: [
+    { name: "Fried Chicken", price: 179 },
+    { name: "Buffalo Wings", price: 189 },
+    { name: "Grilled Chicken", price: 199 }
+  ],
+  vegetable: [
+    { name: "Chopsuey", price: 159 },
+    { name: "Pinakbet", price: 149 },
+    { name: "Ginataang Gulay", price: 169 }
+  ],
+  noodles: [
+    { name: "Pancit Canton", price: 139 },
+    { name: "Bam-i", price: 149 },
+    { name: "Sotanghon Guisado", price: 139 }
+  ],
+  fish: [
+    { name: "Fried Tilapia", price: 199 },
+    { name: "Grilled Bangus", price: 219 },
+    { name: "Sweet & Sour Fish", price: 229 }
+  ]
+};
+
+function updateItems() {
+  const category = document.getElementById("category").value;
+  const itemDiv = document.getElementById("itemSelection");
+  itemDiv.innerHTML = "";
+
+  if (menuItems[category]) {
+    menuItems[category].forEach((item, index) => {
+      const row = document.createElement("div");
+      row.innerHTML = `
+        <label>${item.name} (₱${item.price})</label>
+        <input type="number" min="0" value="0" data-price="${item.price}" class="itemQty" name="${category}-${index}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+      `;
+      itemDiv.appendChild(row);
+    });
+  }
+
+  updateDropdownTotal();
+  document.querySelectorAll(".itemQty").forEach(input => {
+    input.addEventListener("input", updateDropdownTotal);
+  });
+}
+
+function updateDropdownTotal() {
+  let total = 0;
+  document.querySelectorAll(".itemQty").forEach(input => {
+    const quantity = parseInt(input.value) || 0;
+    const price = parseFloat(input.dataset.price);
+    total += quantity * price;
+  });
+  document.getElementById("dropdownTotal").textContent = total;
+}
+
+document.getElementById("dropdownOrderForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  alert("Order submitted successfully!");
+});
+</script>
+"""
+
+# Save to a file for download or merging
+dropdown_menu_path = Path("/mnt/data/category-dropdown-menu.html")
+dropdown_menu_path.write_text(dropdown_menu_html.strip())
+
+dropdown_menu_path.name
 
       <label for="requests">Special Requests:</label>
       <textarea id="requests" placeholder="Add spice, no onion, etc..."></textarea>
