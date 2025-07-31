@@ -1,141 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Order your favorite sizzling dishes and seafood trays at Stone Grill Restaurant. Enjoyable and Relaxing.">
-  <meta property="og:title" content="Order Online - Stone Grill Restaurant">
-  <meta property="og:description" content="Place your order now for dine-in or takeout. Sizzling sisig, crispy pata, and more!">
-  <meta property="og:image" content="https://stonegrillresto.net/Delicious/assets/img/whitelogo.png">
-  <meta property="og:url" content="https://stonegrillresto.net/Delicious/order/">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stone Grill - Full Order Form</title>
+  <meta name="description" content="Order food online from Stone Grill Restaurant.">
+  <meta property="og:title" content="Stone Grill Online Order Form">
+  <meta property="og:description" content="Place your order, choose dine-in or takeout, and schedule your pickup time.">
+  <meta property="og:image" content="https://stonegrillresto.net/order/assets/whitelogo.png">
+  <meta property="og:url" content="https://stonegrillresto.net/order/">
   <meta name="theme-color" content="#b22222">
-  <title>Order Now | Stone Grill Restaurant</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="../assets/img/favicon-32x32.png" sizes="32x32" type="image/png">
 </head>
 <body>
   <div class="container">
-    <img src="../assets/img/whitelogo.png" alt="Stone Grill Logo" style="max-width: 120px; display: block; margin: 0 auto 20px;">
-    <h1>Stone Grill Restaurant</h1>
-    <p>Place your order below</p>
+    <h1 style="text-align:center;">Stone Grill Order Form</h1>
 
-    <form id="orderForm">
+    <form id="fullOrderForm">
       <label for="name">Full Name:</label>
-      <input type="text" id="name" required>
+      <input type="text" id="name" name="name" required>
 
       <label for="mobile">Mobile Number:</label>
-      <input type="tel" id="mobile" required>
+      <input type="tel" id="mobile" name="mobile" required>
 
-<section id="dropdown-menu">
-  <h2>🍴 Select Your Dish by Category</h2>
-  <form id="dropdownOrderForm">
-    <label for="category">Choose Category:</label>
-    <select id="category" onchange="updateItems()" style="width:100%; padding:8px; margin-top:5px;">
-      <option value="">-- Select Category --</option>
-      <option value="pork">Pork</option>
-      <option value="chicken">Chicken</option>
-      <option value="vegetable">Vegetable</option>
-      <option value="noodles">Noodles</option>
-      <option value="fish">Fish</option>
-    </select>
+      <label for="orderType">Order Type:</label>
+      <select id="orderType" name="orderType" onchange="togglePersons()" required>
+        <option value="">-- Select --</option>
+        <option value="Dine-in">Dine-in</option>
+        <option value="Take-out">Take-out</option>
+      </select>
 
-    <div id="itemSelection" style="margin-top: 20px;">
-      <!-- Dynamic items will load here -->
-    </div>
+      <div id="personCount" style="display:none;">
+        <label for="persons">Number of Persons:</label>
+        <input type="number" id="persons" name="persons" min="1">
+      </div>
 
-    <div style="margin-top: 20px;">
-      <label for="requests">Special Requests:</label><br>
-      <textarea id="dropdownRequests" name="requests" rows="3" style="width:100%;"></textarea>
-    </div>
+      <label for="datetime">Pickup/Ready Time:</label>
+      <input type="datetime-local" id="datetime" name="datetime" required>
 
-    <h3>Total: ₱<span id="dropdownTotal">0</span></h3>
-    <button type="submit" style="margin-top: 10px;">Submit Order</button>
-  </form>
-</section>
+      <label for="category">Select Category:</label>
+      <select id="category" onchange="updateItems()" required>
+        <option value="">-- Select Category --</option>
+        <option value="pork">Pork</option>
+        <option value="chicken">Chicken</option>
+        <option value="vegetable">Vegetable</option>
+        <option value="noodles">Noodles</option>
+        <option value="fish">Fish</option>
+      </select>
 
-<script>
-const menuItems = {
-  pork: [
-    { name: "Pork Sisig", price: 199 },
-    { name: "Lechon Kawali", price: 229 },
-    { name: "Pork BBQ (2 sticks)", price: 120 }
-  ],
-  chicken: [
-    { name: "Fried Chicken", price: 179 },
-    { name: "Buffalo Wings", price: 189 },
-    { name: "Grilled Chicken", price: 199 }
-  ],
-  vegetable: [
-    { name: "Chopsuey", price: 159 },
-    { name: "Pinakbet", price: 149 },
-    { name: "Ginataang Gulay", price: 169 }
-  ],
-  noodles: [
-    { name: "Pancit Canton", price: 139 },
-    { name: "Bam-i", price: 149 },
-    { name: "Sotanghon Guisado", price: 139 }
-  ],
-  fish: [
-    { name: "Fried Tilapia", price: 199 },
-    { name: "Grilled Bangus", price: 219 },
-    { name: "Sweet & Sour Fish", price: 229 }
-  ]
-};
-
-function updateItems() {
-  const category = document.getElementById("category").value;
-  const itemDiv = document.getElementById("itemSelection");
-  itemDiv.innerHTML = "";
-
-  if (menuItems[category]) {
-    menuItems[category].forEach((item, index) => {
-      const row = document.createElement("div");
-      row.innerHTML = `
-        <label>${item.name} (₱${item.price})</label>
-        <input type="number" min="0" value="0" data-price="${item.price}" class="itemQty" name="${category}-${index}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
-      `;
-      itemDiv.appendChild(row);
-    });
-  }
-
-  updateDropdownTotal();
-  document.querySelectorAll(".itemQty").forEach(input => {
-    input.addEventListener("input", updateDropdownTotal);
-  });
-}
-
-function updateDropdownTotal() {
-  let total = 0;
-  document.querySelectorAll(".itemQty").forEach(input => {
-    const quantity = parseInt(input.value) || 0;
-    const price = parseFloat(input.dataset.price);
-    total += quantity * price;
-  });
-  document.getElementById("dropdownTotal").textContent = total;
-}
-
-document.getElementById("dropdownOrderForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-  alert("Order submitted successfully!");
-});
-</script>
-"""
-
+      <div id="itemSelection" style="margin-top: 20px;"></div>
 
       <label for="requests">Special Requests:</label>
-      <textarea id="requests" placeholder="Add spice, no onion, etc..."></textarea>
+      <textarea id="requests" name="requests" rows="3" style="width:100%;"></textarea>
 
-      <h3>Total: ₱<span id="total">0</span></h3>
-
-      <button type="submit">Submit Order</button>
+      <h3>Total: ₱<span id="dropdownTotal">0</span></h3>
+      <button type="submit" style="margin-top: 10px;">Submit Order</button>
     </form>
 
-    <div id="summary" class="hidden">
+    <div id="orderSummary" class="hidden">
       <h2>Order Summary</h2>
-      <p id="summaryText"></p>
+      <div id="summaryText"></div>
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    const menuItems = {
+      pork: [
+        { name: "Pork Sisig", price: 199 },
+        { name: "Lechon Kawali", price: 229 },
+        { name: "Pork BBQ (2 sticks)", price: 120 }
+      ],
+      chicken: [
+        { name: "Fried Chicken", price: 179 },
+        { name: "Buffalo Wings", price: 189 },
+        { name: "Grilled Chicken", price: 199 }
+      ],
+      vegetable: [
+        { name: "Chopsuey", price: 159 },
+        { name: "Pinakbet", price: 149 },
+        { name: "Ginataang Gulay", price: 169 }
+      ],
+      noodles: [
+        { name: "Pancit Canton", price: 139 },
+        { name: "Bam-i", price: 149 },
+        { name: "Sotanghon Guisado", price: 139 }
+      ],
+      fish: [
+        { name: "Fried Tilapia", price: 199 },
+        { name: "Grilled Bangus", price: 219 },
+        { name: "Sweet & Sour Fish", price: 229 }
+      ]
+    };
+
+    function togglePersons() {
+      const orderType = document.getElementById("orderType").value;
+      document.getElementById("personCount").style.display = (orderType === "Dine-in") ? "block" : "none";
+    }
+
+    function updateItems() {
+      const category = document.getElementById("category").value;
+      const itemDiv = document.getElementById("itemSelection");
+      itemDiv.innerHTML = "";
+
+      if (menuItems[category]) {
+        menuItems[category].forEach((item, index) => {
+          const row = document.createElement("div");
+          row.innerHTML = `
+            <label>${item.name} (₱${item.price})</label>
+            <input type="number" min="0" value="0" data-price="${item.price}" class="itemQty" name="${category}-${index}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+          `;
+          itemDiv.appendChild(row);
+        });
+      }
+
+      updateDropdownTotal();
+      document.querySelectorAll(".itemQty").forEach(input => {
+        input.addEventListener("input", updateDropdownTotal);
+      });
+    }
+
+    function updateDropdownTotal() {
+      let total = 0;
+      document.querySelectorAll(".itemQty").forEach(input => {
+        const quantity = parseInt(input.value) || 0;
+        const price = parseFloat(input.dataset.price);
+        total += quantity * price;
+      });
+      document.getElementById("dropdownTotal").textContent = total;
+    }
+
+    document.getElementById("fullOrderForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      let summary = "<strong>Customer Info:</strong><br>";
+      summary += "Name: " + document.getElementById("name").value + "<br>";
+      summary += "Mobile: " + document.getElementById("mobile").value + "<br>";
+      summary += "Order Type: " + document.getElementById("orderType").value + "<br>";
+      if (document.getElementById("orderType").value === "Dine-in") {
+        summary += "Persons: " + document.getElementById("persons").value + "<br>";
+      }
+      summary += "Pickup Time: " + document.getElementById("datetime").value + "<br><br>";
+      summary += "<strong>Ordered Items:</strong><br>";
+
+      document.querySelectorAll(".itemQty").forEach(input => {
+        const qty = parseInt(input.value);
+        if (qty > 0) {
+          const label = input.previousElementSibling.textContent;
+          summary += `${label} x ${qty}<br>`;
+        }
+      });
+
+      summary += "<br><strong>Special Requests:</strong> " + document.getElementById("requests").value + "<br>";
+      summary += "<strong>Total:</strong> ₱" + document.getElementById("dropdownTotal").textContent;
+
+      document.getElementById("summaryText").innerHTML = summary;
+      document.getElementById("orderSummary").classList.remove("hidden");
+    });
+  </script>
 </body>
 </html>
