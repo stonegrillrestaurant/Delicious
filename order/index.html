@@ -11,6 +11,15 @@
   <meta property="og:url" content="https://stonegrillresto.net/order/">
   <meta name="theme-color" content="#b22222">
   <link rel="stylesheet" href="style.css">
+  <style>
+    #cartItems { margin:15px 0 10px 0; border:1px solid #bbb; padding:10px; border-radius:8px;}
+    .cart-row {display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;}
+    .cart-row button {margin: 0 5px;}
+    .add-btn {background:#b22222;color:#fff;border:none;padding:4px 12px;border-radius:4px;}
+    .add-btn:hover {background:#aa1818;}
+    .qty-btn {padding:2px 7px;}
+    .cart-total {font-weight:bold; margin-top:8px;}
+  </style>
 </head>
 <body>
   <div class="container">
@@ -52,10 +61,13 @@
 
       <div id="itemSelection" style="margin-top: 20px;"></div>
 
+      <h3>Ordered Items:</h3>
+      <div id="cartItems"></div>
+      <div class="cart-total">Total: ₱<span id="dropdownTotal">0</span></div>
+
       <label for="requests">Special Requests:</label>
       <textarea id="requests" name="requests" rows="3" style="width:100%;"></textarea>
 
-      <h3>Total: ₱<span id="dropdownTotal">0</span></h3>
       <button type="submit" style="margin-top: 10px;">Submit Order</button>
     </form>
 
@@ -67,17 +79,6 @@
 
   <script>
     const menuItems = {
-      set-meals: [
-        { name: "Set-A", price: 1,100 },
-        { name: "Set-B", price: 1000 },
-        { name: "Set_C", price: 1,980 }
-        { name: "Boodle", price: 2,300 }
-      ],
-      rice: [
-        { name: "Cup Rice", price: 25 },
-        { name: "Platter Rice", price: 100 },
-        { name: "Stone Grill Fried Rice", price: 200 }
-      ],
       pork: [
         { name: "Pork Sisig", price: 199 },
         { name: "Lechon Kawali", price: 229 },
@@ -87,16 +88,6 @@
         { name: "Fried Chicken", price: 179 },
         { name: "Buffalo Wings", price: 189 },
         { name: "Grilled Chicken", price: 199 }
-      ],
-      squid: [
-        { name: "Calamari", price: 25 310
-        { name: "sizzling squid sisig", price: 100 },
-        { name: "Adobo Spicy Squid", price: 200 }
-      ],
-      beef: [
-        { name: "Beef Steak", price: 300 },
-        { name: "beef with Mushroom", price: 310 },
-        { name: "Beef Caldereta", price: 320 }
       ],
       vegetable: [
         { name: "Chopsuey", price: 159 },
@@ -108,12 +99,24 @@
         { name: "Bam-i", price: 149 },
         { name: "Sotanghon Guisado", price: 139 }
       ],
+      rice: [
+        { name: "Cup Rice", price: 25 },
+        { name: "Platter Rice", price: 100 },
+        { name: "Stone Grill Fried Rice", price: 200 }
+      ],
+      beef: [
+        { name: "Beef Steak", price: 300 },
+        { name: "Beef with Mushroom", price: 310 },
+        { name: "Beef Caldereta", price: 320 }
+      ],
       fish: [
         { name: "Fried Tilapia", price: 199 },
         { name: "Grilled Bangus", price: 219 },
         { name: "Sweet & Sour Fish", price: 229 }
       ]
     };
+
+    let cart = [];
 
     function togglePersons() {
       const orderType = document.getElementById("orderType").value;
@@ -127,28 +130,66 @@
 
       if (menuItems[category]) {
         menuItems[category].forEach((item, index) => {
+          const btnId = `${category}-${index}`;
           const row = document.createElement("div");
+          row.style.marginBottom = "12px";
           row.innerHTML = `
             <label>${item.name} (₱${item.price})</label>
-            <input type="number" min="0" value="0" data-price="${item.price}" class="itemQty" name="${category}-${index}" style="width: 100%; margin-bottom: 10px; padding: 8px;">
+            <button type="button" class="add-btn" onclick="addToCart('${category}', ${index})">Add</button>
           `;
           itemDiv.appendChild(row);
         });
       }
-
-      updateDropdownTotal();
-      document.querySelectorAll(".itemQty").forEach(input => {
-        input.addEventListener("input", updateDropdownTotal);
-      });
     }
 
-    function updateDropdownTotal() {
+    function addToCart(category, index) {
+      const item = menuItems[category][index];
+      // check if already in cart
+      const cartIndex = cart.findIndex(
+        (ci) => ci.name === item.name && ci.price === item.price
+      );
+      if (cartIndex >= 0) {
+        cart[cartIndex].qty += 1;
+      } else {
+        cart.push({ ...item, qty: 1 });
+      }
+      renderCart();
+    }
+
+    function removeFromCart(idx) {
+      cart.splice(idx, 1);
+      renderCart();
+    }
+
+    function changeQty(idx, delta) {
+      cart[idx].qty += delta;
+      if (cart[idx].qty <= 0) cart.splice(idx, 1);
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartDiv = document.getElementById("cartItems");
+      cartDiv.innerHTML = "";
       let total = 0;
-      document.querySelectorAll(".itemQty").forEach(input => {
-        const quantity = parseInt(input.value) || 0;
-        const price = parseFloat(input.dataset.price);
-        total += quantity * price;
-      });
+      if (cart.length === 0) {
+        cartDiv.innerHTML = "<em>No items yet.</em>";
+      } else {
+        cart.forEach((item, idx) => {
+          total += item.qty * item.price;
+          const row = document.createElement("div");
+          row.className = "cart-row";
+          row.innerHTML = `
+            <span>${item.name} (₱${item.price})</span>
+            <div>
+              <button type="button" class="qty-btn" onclick="changeQty(${idx},-1)">-</button>
+              <span>${item.qty}</span>
+              <button type="button" class="qty-btn" onclick="changeQty(${idx},1)">+</button>
+              <button type="button" class="qty-btn" onclick="removeFromCart(${idx})">🗑️</button>
+            </div>
+          `;
+          cartDiv.appendChild(row);
+        });
+      }
       document.getElementById("dropdownTotal").textContent = total;
     }
 
@@ -164,12 +205,13 @@
       summary += "Pickup Time: " + document.getElementById("datetime").value + "<br><br>";
       summary += "<strong>Ordered Items:</strong><br>";
 
-      document.querySelectorAll(".itemQty").forEach(input => {
-        const qty = parseInt(input.value);
-        if (qty > 0) {
-          const label = input.previousElementSibling.textContent;
-          summary += `${label} x ${qty}<br>`;
-        }
+      if(cart.length===0){
+        alert("Please add at least one item to your order.");
+        return;
+      }
+
+      cart.forEach(item => {
+        summary += `${item.name} (₱${item.price}) x ${item.qty}<br>`;
       });
 
       summary += "<br><strong>Special Requests:</strong> " + document.getElementById("requests").value + "<br>";
@@ -178,6 +220,9 @@
       document.getElementById("summaryText").innerHTML = summary;
       document.getElementById("orderSummary").classList.remove("hidden");
     });
+
+    // Initialize empty cart display
+    renderCart();
   </script>
 </body>
 </html>
