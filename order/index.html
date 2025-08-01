@@ -78,6 +78,7 @@
   </div>
 
   <script>
+    // PALITAN at dagdagan ang items dito kung gusto mo pa!
     const menuItems = {
       pork: [
         { name: "Pork Sisig", price: 199 },
@@ -144,7 +145,6 @@
 
     function addToCart(category, index) {
       const item = menuItems[category][index];
-      // check if already in cart
       const cartIndex = cart.findIndex(
         (ci) => ci.name === item.name && ci.price === item.price
       );
@@ -195,30 +195,56 @@
 
     document.getElementById("fullOrderForm").addEventListener("submit", function(e) {
       e.preventDefault();
-      let summary = "<strong>Customer Info:</strong><br>";
-      summary += "Name: " + document.getElementById("name").value + "<br>";
-      summary += "Mobile: " + document.getElementById("mobile").value + "<br>";
-      summary += "Order Type: " + document.getElementById("orderType").value + "<br>";
-      if (document.getElementById("orderType").value === "Dine-in") {
-        summary += "Persons: " + document.getElementById("persons").value + "<br>";
-      }
-      summary += "Pickup Time: " + document.getElementById("datetime").value + "<br><br>";
-      summary += "<strong>Ordered Items:</strong><br>";
-
       if(cart.length===0){
         alert("Please add at least one item to your order.");
         return;
       }
 
+      // Collect all form data
+      const data = {
+        name: document.getElementById("name").value,
+        mobile: document.getElementById("mobile").value,
+        orderType: document.getElementById("orderType").value,
+        persons: document.getElementById("persons").value || "",
+        datetime: document.getElementById("datetime").value,
+        requests: document.getElementById("requests").value,
+        cart: JSON.stringify(cart),
+        total: document.getElementById("dropdownTotal").textContent
+      };
+
+      // SEND DATA TO GOOGLE SHEETS (via Apps Script Web App)
+      fetch("https://script.google.com/macros/s/AKfycbxZkhKvjGiIPsBTCh4rxfPgmXHJXrj57aHqhz7PvibYAFWHZ5LdaBzuv5RFl0oZQRK_/exec", {   // <-- Palitan mo ito ng sariling Web App URL mo!
+        method: "POST",
+        mode: "no-cors",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+      });
+
+      // Show order summary after submit
+      let summary = "<strong>Customer Info:</strong><br>";
+      summary += "Name: " + data.name + "<br>";
+      summary += "Mobile: " + data.mobile + "<br>";
+      summary += "Order Type: " + data.orderType + "<br>";
+      if (data.orderType === "Dine-in") {
+        summary += "Persons: " + data.persons + "<br>";
+      }
+      summary += "Pickup Time: " + data.datetime + "<br><br>";
+      summary += "<strong>Ordered Items:</strong><br>";
+
       cart.forEach(item => {
         summary += `${item.name} (₱${item.price}) x ${item.qty}<br>`;
       });
 
-      summary += "<br><strong>Special Requests:</strong> " + document.getElementById("requests").value + "<br>";
-      summary += "<strong>Total:</strong> ₱" + document.getElementById("dropdownTotal").textContent;
+      summary += "<br><strong>Special Requests:</strong> " + data.requests + "<br>";
+      summary += "<strong>Total:</strong> ₱" + data.total;
 
       document.getElementById("summaryText").innerHTML = summary;
       document.getElementById("orderSummary").classList.remove("hidden");
+
+      // Reset form and cart after
+      document.getElementById("fullOrderForm").reset();
+      cart = [];
+      renderCart();
     });
 
     // Initialize empty cart display
