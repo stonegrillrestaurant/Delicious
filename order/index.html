@@ -7,194 +7,245 @@
   <meta name="description" content="Order food online from Stone Grill Restaurant.">
   <link rel="stylesheet" href="style.css">
   <style>
-    body { font-family: Arial, sans-serif; background: #fff; color: #222; margin: 0; padding: 20px; }
-    .container { max-width: 700px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fefefe; }
-    h1, h3 { color: #b22222; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; }
-    textarea { resize: vertical; }
-    button { background: #b22222; color: #fff; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #951a1a; }
-
-    .section-box { background: #fff; border: 1px solid #ccc; padding: 15px; margin-top: 20px; border-radius: 6px; }
-    .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; }
-    .cart-left { display: flex; align-items: center; gap: 10px; }
-    .delete-btn { background: #b22222; color: white; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; }
-    .cart-total { text-align: right; font-weight: bold; margin-top: 10px; }
-    .hidden { display: none; }
-    .error { border-color: red; }
+    body {
+      background: #f9f9f9;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .section-box {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #b22222;
+    }
+    label {
+      display: block;
+      margin: 12px 0 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background: #b22222;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #951d1d;
+    }
+    .selectable-item {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .selectable-item.selected {
+      background: #b22222;
+      color: #fff;
+      font-weight: bold;
+    }
+    #cartItems {
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+    .cart-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .cart-row .left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 70%;
+      overflow-wrap: break-word;
+    }
+    .cart-row .delete-btn {
+      background: transparent;
+      color: #b22222;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .cart-row .right {
+      font-weight: bold;
+      min-width: 60px;
+      text-align: right;
+    }
+    .cart-total {
+      font-weight: bold;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>Stone Grill Order Form</h1>
+  <div class="container">
+    <h1>Stone Grill Order Form</h1>
 
-  <div class="section-box">
-    <form id="orderForm">
-      <label for="name">Full Name:</label>
-      <input type="text" id="name" required>
+    <div class="section-box">
+      <form id="fullOrderForm">
+        <label for="name">Full Name:</label>
+        <input type="text" id="name" name="name" required>
 
-      <label for="mobile">Mobile Number:</label>
-      <input type="tel" id="mobile" placeholder="e.g. +639171234567" required>
+        <label for="mobile">Mobile Number:</label>
+        <input type="tel" id="mobile" name="mobile" required>
 
-      <label for="orderType">Order Type:</label>
-      <select id="orderType" required onchange="togglePersons()">
-        <option value="">-- Select --</option>
-        <option value="Dine-in">Dine-in</option>
-        <option value="Take-out">Take-out</option>
+        <label for="orderType">Order Type:</label>
+        <select id="orderType" name="orderType" onchange="togglePersons()" required>
+          <option value="">-- Select --</option>
+          <option value="Dine-in">Dine-in</option>
+          <option value="Take-out">Take-out</option>
+        </select>
+
+        <div id="personCount" style="display:none;">
+          <label for="persons">Number of Persons:</label>
+          <input type="number" id="persons" name="persons" min="1">
+        </div>
+
+        <label for="datetime">Date and Time:</label>
+        <input type="datetime-local" id="datetime" name="datetime" required>
+      </form>
+    </div>
+
+    <div class="section-box">
+      <label for="category">Select MENU:</label>
+      <select id="category" onchange="updateItems()" required>
+        <option value="">-- CHOOSE MENU --</option>
+        <option value="pork">PORK</option>
+        <option value="chicken">CHICKEN</option>
+        <option value="vegetable">VEGETABLES</option>
+        <option value="noodles">NOODLES</option>
+        <option value="rice">RICE</option>
+        <option value="beef">BEEF</option>
+        <option value="fish">FISH</option>
       </select>
+      <div id="itemSelection" style="margin-top: 20px;"></div>
+      <button type="button" id="addSelectedBtn">Add Selected</button>
 
-      <div id="personSection" style="display:none">
-        <label for="persons">Number of Persons:</label>
-        <input type="number" id="persons" min="1">
-      </div>
-
-      <label for="datetime">Date & Time:</label>
-      <input type="datetime-local" id="datetime" required>
+      <h3>Ordered Items:</h3>
+      <div id="cartItems"></div>
+      <div class="cart-total">Total: ₱<span id="dropdownTotal">0</span></div>
 
       <label for="requests">Special Requests:</label>
-      <textarea id="requests" rows="3"></textarea>
-    </form>
+      <textarea id="requests" name="requests" rows="3"></textarea>
+
+      <button type="submit" form="fullOrderForm">Submit Order</button>
+    </div>
   </div>
 
-  <div class="section-box">
-    <label for="category">Select Menu Category:</label>
-    <select id="category" onchange="renderMenu()">
-      <option value="">-- Choose --</option>
-      <option value="pork">Pork</option>
-      <option value="chicken">Chicken</option>
-      <option value="vegetable">Vegetables</option>
-    </select>
-    <div id="menuItems"></div>
-  </div>
+  <script>
+    const menuItems = {
+      pork: [ { name: "Pork Sisig", price: 199 }, { name: "Lechon Kawali", price: 229 }, { name: "Pork BBQ", price: 120 } ],
+      chicken: [ { name: "Fried Chicken", price: 179 }, { name: "Buffalo Wings", price: 189 }, { name: "Grilled Chicken", price: 199 } ],
+      vegetable: [ { name: "Chopsuey", price: 159 }, { name: "Pinakbet", price: 149 }, { name: "Ginataang Gulay", price: 169 } ],
+      noodles: [ { name: "Pancit Canton", price: 139 }, { name: "Bam-i", price: 149 }, { name: "Sotanghon Guisado", price: 139 } ],
+      rice: [ { name: "Cup Rice", price: 25 }, { name: "Platter Rice", price: 100 }, { name: "Fried Rice", price: 200 } ],
+      beef: [ { name: "Beef Steak", price: 300 }, { name: "Beef Mushroom", price: 310 }, { name: "Caldereta", price: 320 } ],
+      fish: [ { name: "Tilapia", price: 199 }, { name: "Grilled Bangus", price: 219 }, { name: "Sweet & Sour", price: 229 } ]
+    };
 
-  <div class="section-box">
-    <h3>Ordered Items:</h3>
-    <div id="cart"></div>
-    <div class="cart-total">Total: ₱<span id="total">0</span></div>
-    <button onclick="submitOrder()">Submit Order</button>
-  </div>
+    let cart = [], selectedItems = [];
 
-  <div id="confirmation" class="hidden section-box"></div>
-</div>
-
-<script>
-const menuData = {
-  pork: [{ name: "Pork Sisig", price: 199 }, { name: "Lechon Kawali", price: 229 }],
-  chicken: [{ name: "Fried Chicken", price: 179 }, { name: "Buffalo Wings", price: 189 }],
-  vegetable: [{ name: "Chopsuey", price: 159 }, { name: "Pinakbet", price: 149 }]
-};
-
-let cart = [];
-
-function togglePersons() {
-  const val = document.getElementById("orderType").value;
-  document.getElementById("personSection").style.display = val === "Dine-in" ? "block" : "none";
-}
-
-function renderMenu() {
-  const category = document.getElementById("category").value;
-  const container = document.getElementById("menuItems");
-  container.innerHTML = "";
-  if (!menuData[category]) return;
-
-  menuData[category].forEach((item, idx) => {
-    const btn = document.createElement("button");
-    btn.innerText = `${item.name} (₱${item.price})`;
-    btn.onclick = () => addToCart(item);
-    container.appendChild(btn);
-  });
-}
-
-function addToCart(item) {
-  const index = cart.findIndex(i => i.name === item.name);
-  if (index >= 0) cart[index].qty += 1;
-  else cart.push({ ...item, qty: 1 });
-  renderCart();
-}
-
-function removeItem(index) {
-  cart.splice(index, 1);
-  renderCart();
-}
-
-function renderCart() {
-  const cartDiv = document.getElementById("cart");
-  cartDiv.innerHTML = "";
-  let total = 0;
-  cart.forEach((item, i) => {
-    total += item.qty * item.price;
-    const row = document.createElement("div");
-    row.className = "cart-row";
-    row.innerHTML = `
-      <div class="cart-left">
-        <button class="delete-btn" onclick="removeItem(${i})">🗑️</button>
-        <span>${item.qty} x ${item.name}</span>
-      </div>
-      <span>₱${item.price * item.qty}</span>
-    `;
-    cartDiv.appendChild(row);
-  });
-  document.getElementById("total").innerText = total;
-}
-
-function submitOrder() {
-  const requiredFields = ["name", "mobile", "orderType", "datetime"];
-  let valid = true;
-  requiredFields.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el.value.trim()) {
-      el.classList.add("error");
-      valid = false;
-    } else {
-      el.classList.remove("error");
+    function togglePersons() {
+      const orderType = document.getElementById("orderType").value;
+      document.getElementById("personCount").style.display = (orderType === "Dine-in") ? "block" : "none";
     }
-  });
 
-  const mobile = document.getElementById("mobile").value;
-  if (!mobile.startsWith("+63")) {
-    alert("Please use +63 format for mobile number.");
-    return;
-  }
+    function updateItems() {
+      const cat = document.getElementById("category").value;
+      const wrap = document.getElementById("itemSelection");
+      wrap.innerHTML = "";
+      selectedItems = [];
+      if (menuItems[cat]) {
+        menuItems[cat].forEach((item, idx) => {
+          const row = document.createElement("div");
+          row.className = "selectable-item";
+          row.innerHTML = `<span>${item.name} (₱${item.price})</span>`;
+          row.onclick = () => toggleHighlight(row, cat, idx);
+          wrap.appendChild(row);
+        });
+      }
+    }
 
-  if (!valid || cart.length === 0) {
-    alert("Please complete all fields and select at least one item.");
-    return;
-  }
+    function toggleHighlight(row, cat, idx) {
+      const key = cat + '-' + idx;
+      const selIndex = selectedItems.indexOf(key);
+      if (selIndex >= 0) {
+        selectedItems.splice(selIndex, 1);
+        row.classList.remove("selected");
+      } else {
+        selectedItems.push(key);
+        row.classList.add("selected");
+      }
+    }
 
-  const data = {
-    name: document.getElementById("name").value,
-    mobile,
-    orderType: document.getElementById("orderType").value,
-    persons: document.getElementById("persons").value,
-    datetime: document.getElementById("datetime").value,
-    requests: document.getElementById("requests").value,
-    cart: cart,
-    total: document.getElementById("total").innerText
-  };
-
-  fetch("https://api.telegram.org/bot7538084446:AAEEBLr2U1YRhKhSyrN-HWf4mnPfjhtXgUqY/sendMessage", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: "-1002531095369",
-      text: `New Order\nName: ${data.name}\nMobile: ${data.mobile}\nOrder Type: ${data.orderType}\nDateTime: ${data.datetime}\nRequests: ${data.requests}\nItems: ${JSON.stringify(data.cart)}\nTotal: ₱${data.total}`
-    })
-  })
-  .then(r => r.json())
-  .then(res => {
-    if (res.ok) {
-      document.getElementById("confirmation").classList.remove("hidden");
-      document.getElementById("confirmation").innerHTML = `<h3>Thank you! Your order has been sent.</h3>`;
-      document.getElementById("orderForm").reset();
-      cart = [];
+    document.getElementById("addSelectedBtn").onclick = () => {
+      selectedItems.forEach(key => {
+        const [cat, idx] = key.split('-');
+        const item = menuItems[cat][parseInt(idx)];
+        if (!cart.some(ci => ci.name === item.name)) {
+          cart.push({ ...item, qty: 1 });
+        }
+      });
+      selectedItems = [];
+      document.querySelectorAll('.selectable-item').forEach(row => row.classList.remove("selected"));
       renderCart();
-    } else {
-      document.getElementById("confirmation").classList.remove("hidden");
-      document.getElementById("confirmation").innerHTML = `<h3 style='color:red'>Failed to send order. Please try again.</h3>`;
+    };
+
+    function removeFromCart(idx) {
+      cart.splice(idx, 1);
+      renderCart();
     }
-  });
-}
-</script>
+
+    function renderCart() {
+      const cartDiv = document.getElementById("cartItems");
+      cartDiv.innerHTML = "";
+      let total = 0;
+      if (!cart.length) {
+        cartDiv.innerHTML = "<em>No items yet.</em>";
+        return;
+      }
+      cart.forEach((item, idx) => {
+        total += item.qty * item.price;
+        const row = document.createElement("div");
+        row.className = "cart-row";
+        row.innerHTML = `
+          <div class="left">
+            <button class="delete-btn" onclick="removeFromCart(${idx})">🗑️</button>
+            <span>${item.qty}x</span>
+            <span>${item.name}</span>
+          </div>
+          <div class="right">₱${item.qty * item.price}</div>
+        `;
+        cartDiv.appendChild(row);
+      });
+      document.getElementById("dropdownTotal").textContent = total;
+    }
+
+    window.removeFromCart = removeFromCart;
+  </script>
 </body>
 </html>
