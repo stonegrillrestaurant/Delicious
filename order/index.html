@@ -10,7 +10,8 @@
     .selectable-item {border:1px solid #ccc;padding:10px;margin-bottom:8px;border-radius:6px;cursor:pointer;transition:background 0.15s;}
     .selectable-item.selected {background:#b22222;color:#fff;font-weight:bold;}
     #cartItems {border:1px solid #bbb;padding:10px;border-radius:8px;margin-top:10px;}
-    .cart-row {display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap: 8px;}
+    .cart-row {display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+    .cart-row span {flex:1;}
     .cart-row .delete-btn {padding:2px 7px;color:#fff;background:#b22222;border:none;border-radius:3px;}
     .cart-total {font-weight:bold; margin-top:8px;}
     .hidden {display:none;}
@@ -38,7 +39,7 @@
         <input type="number" id="persons" name="persons" min="1">
       </div>
 
-      <label for="datetime">DATE:     TIME:</label>
+      <label for="datetime">DATE and TIME:</label>
       <input type="datetime-local" id="datetime" name="datetime" required>
 
       <label for="category">Select MENU:</label>
@@ -76,20 +77,18 @@
 
   <script>
     const menuItems = {
-      pork: [ { name: "Pork Sisig", price: 199 }, { name: "Lechon Kawali", price: 229 }, { name: "Pork BBQ (2 sticks)", price: 120 } ],
-      chicken: [ { name: "Fried Chicken", price: 179 }, { name: "Buffalo Wings", price: 189 }, { name: "Grilled Chicken", price: 199 } ],
-      vegetable: [ { name: "Chopsuey", price: 159 }, { name: "Pinakbet", price: 149 }, { name: "Ginataang Gulay", price: 169 } ],
-      noodles: [ { name: "Pancit Canton", price: 139 }, { name: "Bam-i", price: 149 }, { name: "Sotanghon Guisado", price: 139 } ],
-      rice: [ { name: "Cup Rice", price: 25 }, { name: "Platter Rice", price: 100 }, { name: "Stone Grill Fried Rice", price: 200 } ],
-      beef: [ { name: "Beef Steak", price: 300 }, { name: "Beef with Mushroom", price: 310 }, { name: "Beef Caldereta", price: 320 } ],
-      fish: [ { name: "Fried Tilapia", price: 199 }, { name: "Grilled Bangus", price: 219 }, { name: "Sweet & Sour Fish", price: 229 } ]
+      pork: [{ name: "Pork Sisig", price: 199 },{ name: "Lechon Kawali", price: 229 },{ name: "Pork BBQ (2 sticks)", price: 120 }],
+      chicken: [{ name: "Fried Chicken", price: 179 },{ name: "Buffalo Wings", price: 189 },{ name: "Grilled Chicken", price: 199 }],
+      vegetable: [{ name: "Chopsuey", price: 159 },{ name: "Pinakbet", price: 149 },{ name: "Ginataang Gulay", price: 169 }],
+      noodles: [{ name: "Pancit Canton", price: 139 },{ name: "Bam-i", price: 149 },{ name: "Sotanghon Guisado", price: 139 }],
+      rice: [{ name: "Cup Rice", price: 25 },{ name: "Platter Rice", price: 100 },{ name: "Stone Grill Fried Rice", price: 200 }],
+      beef: [{ name: "Beef Steak", price: 300 },{ name: "Beef with Mushroom", price: 310 },{ name: "Beef Caldereta", price: 320 }],
+      fish: [{ name: "Fried Tilapia", price: 199 },{ name: "Grilled Bangus", price: 219 },{ name: "Sweet & Sour Fish", price: 229 }]
     };
-
     let cart = [], selectedItems = [];
 
     function togglePersons() {
-      const orderType = document.getElementById("orderType").value;
-      document.getElementById("personCount").style.display = (orderType === "Dine-in") ? "block" : "none";
+      document.getElementById("personCount").style.display = document.getElementById("orderType").value === "Dine-in" ? "block" : "none";
     }
 
     function updateItems() {
@@ -102,7 +101,7 @@
           const row = document.createElement("div");
           row.className = "selectable-item";
           row.innerHTML = `<span>${item.name} (₱${item.price})</span>`;
-          row.onclick = function() { toggleHighlight(row, category, index); };
+          row.onclick = () => toggleHighlight(row, category, index);
           itemDiv.appendChild(row);
         });
       }
@@ -110,9 +109,9 @@
 
     function toggleHighlight(row, category, index) {
       const key = category + '-' + index;
-      const selIndex = selectedItems.indexOf(key);
-      if (selIndex >= 0) {
-        selectedItems.splice(selIndex, 1);
+      const idx = selectedItems.indexOf(key);
+      if (idx >= 0) {
+        selectedItems.splice(idx, 1);
         row.classList.remove("selected");
       } else {
         selectedItems.push(key);
@@ -120,7 +119,8 @@
       }
     }
 
-    document.getElementById("addSelectedBtn").onclick = function() {
+    document.getElementById("addSelectedBtn").onclick = () => {
+      const category = document.getElementById("category").value;
       selectedItems.forEach(key => {
         const [cat, idx] = key.split('-');
         const item = menuItems[cat][parseInt(idx)];
@@ -157,7 +157,7 @@
 
     document.getElementById("fullOrderForm").addEventListener("submit", function(e) {
       e.preventDefault();
-      if(cart.length === 0) return alert("Please add at least one item.");
+      if (cart.length === 0) return alert("Please select at least one item.");
 
       const data = {
         name: document.getElementById("name").value,
@@ -166,42 +166,44 @@
         persons: document.getElementById("persons").value || "",
         datetime: document.getElementById("datetime").value,
         requests: document.getElementById("requests").value,
-        cart: cart,
+        cart: JSON.stringify(cart),
         total: document.getElementById("dropdownTotal").textContent
       };
 
-      const message = `🧾 *New Order!*\n👤 Name: ${data.name}\n📞 Mobile: ${data.mobile}\n🍽️ Type: ${data.orderType}\n👥 Pax: ${data.persons}\n🕰️ When: ${data.datetime}\n🧺 Items: ${cart.map(i=>`${i.name} x${i.qty}`).join(', ')}\n💵 Total: ₱${data.total}\n📌 Requests: ${data.requests}`;
+      const message = `Name: ${data.name}\nMobile: ${data.mobile}\nOrder type: ${data.orderType}\nPAX: ${data.persons}\nDate: ${data.datetime.split('T')[0]}\nTime: ${data.datetime.split('T')[1]}\nOrdered Items: ${data.cart}\nTOTAL AMOUNT: ₱${data.total}\nSPECIAL REQUEST: ${data.requests}`;
+
+      document.getElementById("orderSummary").classList.remove("hidden");
+      document.getElementById("summaryText").innerHTML = `<div style="color:#888">Sending your order... Please wait.</div>`;
 
       fetch("https://api.telegram.org/bot7538084446:AAEEBLr2U1YRhKhSyrN-HWf4mnPfjhtXgUqY/sendMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: "-1002531095369",
-          text: message,
-          parse_mode: "Markdown"
-        })
+        body: JSON.stringify({ chat_id: "-1002531095369", text: message, parse_mode: "Markdown" })
       })
       .then(r => r.json())
       .then(res => {
         if (res.ok) {
-          // Only then submit to Sheets
-          fetch("https://script.google.com/macros/s/AKfycbyKlYNy78JDPvS_Dl65sHT24T5FE33XBWB-uo3rrafz3aCP5RuihGnJgeoq-NRc46iwsA/exec", {
+          return fetch("https://script.google.com/macros/s/AKfycbyKlYNy78JDPvS_Dl65sHT24T5FE33XBWB-uo3rrafz3aCP5RuihGnJgeoq-NRc46iwsA/exec", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
           });
-
-          document.getElementById("orderSummary").classList.remove("hidden");
-          document.getElementById("summaryText").innerHTML = `<h2>Thank you for your order!</h2><p>Your order was successfully submitted and is being processed.</p>`;
-          cart = [];
-          renderCart();
-          document.getElementById("fullOrderForm").reset();
         } else {
-          document.getElementById("summaryText").innerHTML = `<h2 style='color:red;'>Failed to send order.</h2>`;
+          throw new Error("Telegram send failed");
         }
       })
+      .then(() => {
+        document.getElementById("fullOrderForm").style.display = "none";
+        document.getElementById("summaryText").innerHTML = `
+          <h2>Thank you for your order!</h2>
+          <p>Your order has been submitted and received by our team.</p>
+          <p><strong>Total:</strong> ₱${data.total}</p>
+          <p>We'll begin preparing your food shortly. 🧑‍🍳</p>`;
+        cart = [];
+        renderCart();
+      })
       .catch(() => {
-        document.getElementById("summaryText").innerHTML = `<h2 style='color:red;'>Network error. Try again.</h2>`;
+        document.getElementById("summaryText").innerHTML = `<h2 style="color:red">Order not sent.</h2><p>There was a problem. Please try again.</p>`;
       });
     });
 
