@@ -11,10 +11,10 @@
     .selectable-item.selected {background:#b22222;color:#fff;font-weight:bold;}
     #cartItems {border:1px solid #bbb;padding:10px;border-radius:8px;margin-top:10px;}
     .cart-row {display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-    .cart-row span {flex:1;}
     .cart-row .delete-btn {padding:2px 7px;color:#fff;background:#b22222;border:none;border-radius:3px;}
     .cart-total {font-weight:bold; margin-top:8px;}
     .hidden {display:none;}
+    .error {border: 2px solid red; background-color: #ffe6e6;}
   </style>
 </head>
 <body>
@@ -39,7 +39,7 @@
         <input type="number" id="persons" name="persons" min="1">
       </div>
 
-      <label for="datetime">DATE and TIME:</label>
+      <label for="datetime">DATE:     TIME:</label>
       <input type="datetime-local" id="datetime" name="datetime" required>
 
       <label for="category">Select MENU:</label>
@@ -53,7 +53,7 @@
         <option value="beef">BEEF</option>
         <option value="fish">FISH</option>
       </select>
-      
+
       <div id="itemSelection" style="margin-top: 20px;"></div>
       <button type="button" id="addSelectedBtn" style="margin-bottom:10px;">Add Selected</button>
 
@@ -76,19 +76,25 @@
   </div>
 
   <script>
-    const menuItems = {
-      pork: [{ name: "Pork Sisig", price: 199 },{ name: "Lechon Kawali", price: 229 },{ name: "Pork BBQ (2 sticks)", price: 120 }],
-      chicken: [{ name: "Fried Chicken", price: 179 },{ name: "Buffalo Wings", price: 189 },{ name: "Grilled Chicken", price: 199 }],
-      vegetable: [{ name: "Chopsuey", price: 159 },{ name: "Pinakbet", price: 149 },{ name: "Ginataang Gulay", price: 169 }],
-      noodles: [{ name: "Pancit Canton", price: 139 },{ name: "Bam-i", price: 149 },{ name: "Sotanghon Guisado", price: 139 }],
-      rice: [{ name: "Cup Rice", price: 25 },{ name: "Platter Rice", price: 100 },{ name: "Stone Grill Fried Rice", price: 200 }],
-      beef: [{ name: "Beef Steak", price: 300 },{ name: "Beef with Mushroom", price: 310 },{ name: "Beef Caldereta", price: 320 }],
-      fish: [{ name: "Fried Tilapia", price: 199 },{ name: "Grilled Bangus", price: 219 },{ name: "Sweet & Sour Fish", price: 229 }]
-    };
-    let cart = [], selectedItems = [];
+    function formatMobile(mobile) {
+      mobile = mobile.replace(/\s|-/g, '');
+      if (/^09\d{9}$/.test(mobile)) {
+        return '+63' + mobile.substring(1);
+      }
+      if (/^\+639\d{9}$/.test(mobile)) {
+        return mobile;
+      }
+      return null;
+    }
+
+    const form = document.getElementById("fullOrderForm");
+    const cartItemsDiv = document.getElementById("cartItems");
+    let cart = [];
+    let selectedItems = [];
 
     function togglePersons() {
-      document.getElementById("personCount").style.display = document.getElementById("orderType").value === "Dine-in" ? "block" : "none";
+      const orderType = document.getElementById("orderType").value;
+      document.getElementById("personCount").style.display = (orderType === "Dine-in") ? "block" : "none";
     }
 
     function updateItems() {
@@ -109,9 +115,9 @@
 
     function toggleHighlight(row, category, index) {
       const key = category + '-' + index;
-      const idx = selectedItems.indexOf(key);
-      if (idx >= 0) {
-        selectedItems.splice(idx, 1);
+      const selIndex = selectedItems.indexOf(key);
+      if (selIndex >= 0) {
+        selectedItems.splice(selIndex, 1);
         row.classList.remove("selected");
       } else {
         selectedItems.push(key);
@@ -120,7 +126,6 @@
     }
 
     document.getElementById("addSelectedBtn").onclick = () => {
-      const category = document.getElementById("category").value;
       selectedItems.forEach(key => {
         const [cat, idx] = key.split('-');
         const item = menuItems[cat][parseInt(idx)];
@@ -139,29 +144,59 @@
     }
 
     function renderCart() {
-      const cartDiv = document.getElementById("cartItems");
-      cartDiv.innerHTML = "";
+      cartItemsDiv.innerHTML = "";
       let total = 0;
-      if (cart.length === 0) cartDiv.innerHTML = "<em>No items yet.</em>";
+      if (cart.length === 0) cartItemsDiv.innerHTML = "<em>No items yet.</em>";
       else cart.forEach((item, idx) => {
         total += item.qty * item.price;
-        cartDiv.innerHTML += `
-          <div class="cart-row">
-            <button type="button" class="delete-btn" onclick="removeFromCart(${idx})">🗑️</button>
-            <span>${item.name}</span>
-            <span>₱${item.price}</span>
-          </div>`;
+        const row = document.createElement("div");
+        row.className = "cart-row";
+        row.innerHTML = `
+          <button class="delete-btn" onclick="removeFromCart(${idx})">🗑️</button>
+          <span>${item.name} (₱${item.price})</span>
+        `;
+        cartItemsDiv.appendChild(row);
       });
       document.getElementById("dropdownTotal").textContent = total;
     }
 
-    document.getElementById("fullOrderForm").addEventListener("submit", function(e) {
+    const menuItems = {
+      pork: [ { name: "Pork Sisig", price: 199 }, { name: "Lechon Kawali", price: 229 }, { name: "Pork BBQ (2 sticks)", price: 120 } ],
+      chicken: [ { name: "Fried Chicken", price: 179 }, { name: "Buffalo Wings", price: 189 }, { name: "Grilled Chicken", price: 199 } ],
+      vegetable: [ { name: "Chopsuey", price: 159 }, { name: "Pinakbet", price: 149 }, { name: "Ginataang Gulay", price: 169 } ],
+      noodles: [ { name: "Pancit Canton", price: 139 }, { name: "Bam-i", price: 149 }, { name: "Sotanghon Guisado", price: 139 } ],
+      rice: [ { name: "Cup Rice", price: 25 }, { name: "Platter Rice", price: 100 }, { name: "Stone Grill Fried Rice", price: 200 } ],
+      beef: [ { name: "Beef Steak", price: 300 }, { name: "Beef with Mushroom", price: 310 }, { name: "Beef Caldereta", price: 320 } ],
+      fish: [ { name: "Fried Tilapia", price: 199 }, { name: "Grilled Bangus", price: 219 }, { name: "Sweet & Sour Fish", price: 229 } ]
+    };
+
+    form.addEventListener("submit", function(e) {
       e.preventDefault();
-      if (cart.length === 0) return alert("Please select at least one item.");
+      const nameField = document.getElementById("name");
+      const mobileField = document.getElementById("mobile");
+      const mobileFormatted = formatMobile(mobileField.value);
+
+      nameField.classList.remove("error");
+      mobileField.classList.remove("error");
+
+      if (!nameField.value.trim()) {
+        nameField.classList.add("error");
+        alert("Please enter your name.");
+        return;
+      }
+      if (!mobileFormatted) {
+        mobileField.classList.add("error");
+        alert("Please enter a valid mobile number starting with 09 or +63.");
+        return;
+      }
+      if (cart.length === 0) {
+        alert("Please add at least one item to your order.");
+        return;
+      }
 
       const data = {
-        name: document.getElementById("name").value,
-        mobile: document.getElementById("mobile").value,
+        name: nameField.value,
+        mobile: mobileFormatted,
         orderType: document.getElementById("orderType").value,
         persons: document.getElementById("persons").value || "",
         datetime: document.getElementById("datetime").value,
@@ -170,45 +205,92 @@
         total: document.getElementById("dropdownTotal").textContent
       };
 
-      const message = `Name: ${data.name}\nMobile: ${data.mobile}\nOrder type: ${data.orderType}\nPAX: ${data.persons}\nDate: ${data.datetime.split('T')[0]}\nTime: ${data.datetime.split('T')[1]}\nOrdered Items: ${data.cart}\nTOTAL AMOUNT: ₱${data.total}\nSPECIAL REQUEST: ${data.requests}`;
-
-      document.getElementById("orderSummary").classList.remove("hidden");
-      document.getElementById("summaryText").innerHTML = `<div style="color:#888">Sending your order... Please wait.</div>`;
-
-      fetch("https://api.telegram.org/bot7538084446:AAEEBLr2U1YRhKhSyrN-HWf4mnPfjhtXgUqY/sendMessage", {
+      fetch("https://script.google.com/macros/s/AKfycbyKlYNy78JDPvS_Dl65sHT24T5FE33XBWB-uo3rrafz3aCP5RuihGnJgeoq-NRc46iwsA/exec", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: "-1002531095369", text: message, parse_mode: "Markdown" })
+        body: JSON.stringify(data)
       })
-      .then(r => r.json())
+      .then(response => response.text())
       .then(res => {
-        if (res.ok) {
-          return fetch("https://script.google.com/macros/s/AKfycbyKlYNy78JDPvS_Dl65sHT24T5FE33XBWB-uo3rrafz3aCP5RuihGnJgeoq-NRc46iwsA/exec", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
+        if (res.trim() === "OK") {
+          document.getElementById("fullOrderForm").style.display = "none";
+          let summary = "<h2>Thank you for your order!</h2><ul>";
+          cart.forEach(item => {
+            summary += `<li>${item.name} (₱${item.price}) x ${item.qty}</li>`;
           });
+          summary += `</ul><strong>Total Amount:</strong> ₱${data.total}<br><br><div style='font-size:1.1em;color:#b22222;'>Your order has been submitted and our staff will process it after payment has been made.<br>Please feel free to explore our site while waiting.</div>`;
+          document.getElementById("orderSummary").classList.remove("hidden");
+          document.getElementById("summaryText").innerHTML = summary;
         } else {
-          throw new Error("Telegram send failed");
+          document.getElementById("summaryText").innerHTML = `<h2 style='color:#b22222'>Your order has not been sent.</h2><div>Sorry, please try again or contact our staff.</div>`;
         }
       })
-      .then(() => {
-        document.getElementById("fullOrderForm").style.display = "none";
-        document.getElementById("summaryText").innerHTML = `
-          <h2>Thank you for your order!</h2>
-          <p>Your order has been submitted and received by our team.</p>
-          <p><strong>Total:</strong> ₱${data.total}</p>
-          <p>We'll begin preparing your food shortly. 🧑‍🍳</p>`;
-        cart = [];
-        renderCart();
-      })
       .catch(() => {
-        document.getElementById("summaryText").innerHTML = `<h2 style="color:red">Order not sent.</h2><p>There was a problem. Please try again.</p>`;
+        document.getElementById("summaryText").innerHTML = `<h2 style='color:#b22222'>Your order has not been sent.</h2><div>There was a connection error. Please try again later.</div>`;
       });
     });
 
     renderCart();
     window.removeFromCart = removeFromCart;
   </script>
+  <script>
+  // --- Real-time validation logic ---
+
+  function validateMobileFormat(value) {
+    if (value.startsWith("09")) return "+63" + value.slice(1);
+    return value;
+  }
+
+  function isValidMobile(value) {
+    return /^\+639\d{9}$/.test(value);
+  }
+
+  function markInvalid(field, isInvalid) {
+    if (isInvalid) {
+      field.style.border = "2px solid red";
+      field.style.backgroundColor = "#ffe5e5";
+    } else {
+      field.style.border = "";
+      field.style.backgroundColor = "";
+    }
+  }
+
+  document.getElementById("mobile").addEventListener("input", function () {
+    let inputVal = this.value.trim();
+    if (inputVal.startsWith("09")) {
+      this.value = "+63" + inputVal.slice(1);
+    }
+    markInvalid(this, !isValidMobile(this.value));
+  });
+
+  document.getElementById("name").addEventListener("input", function () {
+    markInvalid(this, this.value.trim() === "");
+  });
+
+  document.getElementById("orderType").addEventListener("change", function () {
+    markInvalid(this, this.value === "");
+  });
+
+  document.getElementById("fullOrderForm").addEventListener("submit", function (e) {
+    const name = document.getElementById("name");
+    const mobile = document.getElementById("mobile");
+    const orderType = document.getElementById("orderType");
+
+    const isNameEmpty = name.value.trim() === "";
+    const isMobileInvalid = !isValidMobile(mobile.value);
+    const isOrderTypeEmpty = orderType.value === "";
+    const isCartEmpty = cart.length === 0;
+
+    markInvalid(name, isNameEmpty);
+    markInvalid(mobile, isMobileInvalid);
+    markInvalid(orderType, isOrderTypeEmpty);
+
+    if (isNameEmpty || isMobileInvalid || isOrderTypeEmpty || isCartEmpty) {
+      alert("Please complete all required fields and add at least one item.");
+      e.preventDefault();
+      return;
+    }
+  });
+</script>
 </body>
 </html>
