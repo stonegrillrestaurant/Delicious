@@ -5,161 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stone Grill - Online Order</title>
   <meta name="description" content="Order food online from Stone Grill Restaurant.">
-  <link rel="stylesheet" href="style.css">
-  <style>
-    .selectable-item {border:1px solid #ccc;padding:10px;margin-bottom:8px;border-radius:6px;cursor:pointer;transition:background 0.15s;}
-    .selectable-item.selected {background:#b22222;color:#fff;font-weight:bold;}
-    #cartItems {border:1px solid #bbb;padding:10px;border-radius:8px;margin-top:10px;}
-    .cart-row {display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;}
-    .cart-row .delete-btn {padding:2px 7px;color:#fff;background:#b22222;border:none;border-radius:3px;}
-    .cart-total {font-weight:bold; margin-top:8px;}
-    .hidden {display:none;}
-    #floatingStatus {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #b22222;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      font-weight: bold;
-      z-index: 999;
-      transition: opacity 0.3s;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <h1 style="text-align:center;">Stone Grill Order Form</h1>
-    <form id="fullOrderForm">
+    <form id="orderForm">
       <label for="name">Full Name:</label>
-      <input type="text" id="name" name="name" required>
-
+      <input type="text" id="name" required />
       <label for="mobile">Mobile Number:</label>
-      <input type="tel" id="mobile" name="mobile" required>
-
-      <label for="orderType">Order Type:</label>
-      <select id="orderType" name="orderType" onchange="togglePersons()" required>
-        <option value="">-- Select --</option>
-        <option value="Dine-in">Dine-in</option>
-        <option value="Take-out">Take-out</option>
-      </select>
-
-      <div id="personCount" style="display:none;">
-        <label for="persons">Number of Persons:</label>
-        <input type="number" id="persons" name="persons" min="1">
-      </div>
-
-      <label for="datetime">DATE:     TIME:</label>
-      <input type="datetime-local" id="datetime" name="datetime" required>
-
-      <label for="category">Select MENU:</label>
-      <select id="category" onchange="updateItems()" required>
-        <option value="">-- CHOOSE MENU --</option>
-        <option value="pork">PORK</option>
-        <option value="chicken">CHICKEN</option>
-        <option value="vegetable">VEGETABLES</option>
-        <option value="noodles">NOODLES</option>
-        <option value="rice">RICE</option>
-        <option value="beef">BEEF</option>
-        <option value="fish">FISH</option>
-      </select>
-
-      <div id="itemSelection" style="margin-top: 20px;"></div>
-      <button type="button" id="addSelectedBtn" style="margin-bottom:10px;">Add Selected</button>
-
-      <h3>Ordered Items:</h3>
-      <div id="cartItems"></div>
-      <div class="cart-total">Total: ₱<span id="dropdownTotal">0</span></div>
-
+      <input type="tel" id="mobile" required />
       <label for="requests">Special Requests:</label>
-      <textarea id="requests" name="requests" rows="3" style="width:100%;"></textarea>
-
-      <button type="submit" style="margin-top: 10px;">Submit Order</button>
+      <textarea id="requests" rows="3"></textarea>
+      <div id="cartItems"></div>
+      <div class="cart-total">Total: ₱<span id="total">0</span></div>
+      <button type="submit">Submit Order</button>
     </form>
-
-    <div id="orderSummary" class="hidden">
+    <div id="summary" class="hidden">
       <div id="summaryText"></div>
-      <div style="margin-top: 30px;">
-        <a href="/" style="color:#b22222;text-decoration:underline;font-weight:bold;">Back to Stone Grill Homepage</a>
-      </div>
     </div>
   </div>
-
-  <div id="floatingStatus" class="hidden">Sending...</div>
-
-document.getElementById("fullOrderForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-
-  if (cart.length === 0) {
-    alert("Please select at least one menu item.");
-    return;
-  }
-
-  const data = {
-    name: document.getElementById("name").value,
-    mobile: document.getElementById("mobile").value.replace(/^0/, '+63'),  // fix mobile format
-    orderType: document.getElementById("orderType").value,
-    persons: document.getElementById("persons").value || "",
-    datetime: document.getElementById("datetime").value,
-    requests: document.getElementById("requests").value,
-    cart: JSON.stringify(cart),
-    total: document.getElementById("dropdownTotal").textContent
-  };
-
-  const message = `🍽️ *New Order Received!*\n👤 Name: ${data.name}\n📱 Mobile: ${data.mobile}\n📦 Type: ${data.orderType}\n👥 Pax: ${data.persons}\n📅 When: ${data.datetime}\n🛒 Items: ${cart.map(i => `\n• ${i.name} x${i.qty}`).join('')}\n💰 Total: ₱${data.total}\n✍️ Notes: ${data.requests}`;
-
-  // Show sending message
-  document.getElementById("orderSummary").classList.remove("hidden");
-  document.getElementById("summaryText").innerHTML = `<div style="color:#999;">⏳ Sending your order... please wait.</div>`;
-
-  // Send to Telegram first
-  fetch("https://api.telegram.org/bot7538084446:AAEEBLr2U1YRhKhSyrNHWf4mnPfjhtXgUqY/sendMessage", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: "-1002531095369",
-      text: message,
-      parse_mode: "Markdown"
-    })
-  })
-  .then(r => r.json())
-  .then(res => {
-    if (res.ok) {
-      // If Telegram worked, send to Google Sheets
-      return fetch("https://script.google.com/macros/s/1IUPNsqjOgW9YamwN0yQXzFH9PncU_ZBVF9jjkAlQ9nVvr1C9Eb0ryIN4/exec", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-    } else {
-      throw new Error("Telegram failed");
-    }
-  })
-  .then(sheetRes => sheetRes.text())
-  .then(result => {
-    if (result.trim() === "OK") {
-      // Success! Show confirmation
-      document.getElementById("fullOrderForm").style.display = "none";
-      let summary = `<h2>✅ Order Sent Successfully!</h2>`;
-      summary += "<strong>Details:</strong><ul>";
-      cart.forEach(item => {
-        summary += `<li>${item.name} x${item.qty} - ₱${item.price * item.qty}</li>`;
-      });
-      summary += `</ul><strong>Total:</strong> ₱${data.total}`;
-      summary += `<p style="color:#b22222; margin-top:10px;">Your order has been submitted and received by our staff. Please wait while we process it.</p>`;
-      document.getElementById("summaryText").innerHTML = summary;
-
-      cart = [];
-      renderCart();
-    } else {
-      throw new Error("Sheets saving failed");
-    }
-  })
-  .catch(err => {
-    document.getElementById("summaryText").innerHTML = `<h2 style="color:red;">❌ Order Failed</h2><p>${err.message}</p><p>Please try again or contact our staff.</p>`;
-  });
-});
+  <script src="main.js"></script>
 </body>
 </html>
