@@ -1,70 +1,51 @@
-const cartItems = [];
-const cartContainer = document.getElementById("cartItems");
-const totalDisplay = document.getElementById("dropdownTotal");
+const inputs = document.querySelectorAll('input[type="number"]');
+const totalDisplay = document.getElementById('total');
+const form = document.getElementById('orderForm');
+const summaryBox = document.getElementById('summary');
+const summaryText = document.getElementById('summaryText');
+const personsField = document.getElementById('personsField');
 
-let selectedItem = null;
-document.querySelectorAll(".item").forEach(item => {
-  item.addEventListener("click", () => {
-    item.classList.toggle("selected");
-    selectedItem = item.classList.contains("selected") ? item : null;
-  });
+inputs.forEach(input => {
+  input.addEventListener('input', updateTotal);
 });
 
-document.getElementById("addBtn").addEventListener("click", () => {
-  if (!selectedItem) return;
-  const name = selectedItem.dataset.name;
-  const price = parseFloat(selectedItem.dataset.price);
-  const qty = 1;
-  cartItems.push({ name, price, qty });
-  renderCart();
-  selectedItem.classList.remove("selected");
-  selectedItem = null;
-});
-
-function renderCart() {
-  cartContainer.innerHTML = "";
+function updateTotal() {
   let total = 0;
-  cartItems.forEach((item, index) => {
-    total += item.price * item.qty;
-    const div = document.createElement("div");
-    div.classList.add("cart-line");
-    div.innerHTML = `<button onclick="removeItem(${index})">❌</button> [${item.qty}] ${item.name}<span>₱${item.price}</span>`;
-    cartContainer.appendChild(div);
+  inputs.forEach(input => {
+    const quantity = parseInt(input.value) || 0;
+    const price = parseInt(input.dataset.price);
+    total += quantity * price;
   });
   totalDisplay.textContent = total;
 }
 
-function removeItem(index) {
-  cartItems.splice(index, 1);
-  renderCart();
+function togglePersons() {
+  const orderType = document.getElementById('orderType').value;
+  personsField.classList.toggle('hidden', orderType !== 'Dine-in');
 }
 
-document.getElementById("fullOrderForm").addEventListener("submit", function(e) {
+form.addEventListener('submit', function(e) {
   e.preventDefault();
-  const name = document.getElementById("name").value;
-  const mobile = document.getElementById("mobile").value;
-  const orderType = document.getElementById("orderType").value;
-  const persons = document.getElementById("persons").value;
-  const datetime = document.getElementById("datetime").value;
-  const requests = document.getElementById("requests").value;
-  const total = totalDisplay.textContent;
-  const cart = JSON.stringify(cartItems);
+  const data = {
+    name: document.getElementById("name").value,
+    mobile: document.getElementById("mobile").value,
+    orderType: document.getElementById("orderType").value,
+    persons: document.getElementById("persons").value || "",
+    datetime: document.getElementById("datetime").value,
+    requests: document.getElementById("requests").value,
+    total: totalDisplay.textContent
+  };
 
-  const data = { name, mobile, orderType, persons, datetime, requests, cart, total };
-
-  const message = `New Order from ${data.name}
-Mobile: ${data.mobile}
-Type: ${data.orderType}
-PAX: ${data.persons}
-DateTime: ${data.datetime}
-Items: ${cart}
-Total: ₱${total}
-Request: ${data.requests}`;
+  const message = `New Order from ${data.name}\nMobile: ${data.mobile}\nOrder: ${data.orderType} ${data.persons ? "(" + data.persons + " pax)" : ""}\nWhen: ${data.datetime}\nRequest: ${data.requests}\nTotal: ₱${data.total}`;
 
   fetch("https://api.telegram.org/bot7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s/sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: "-1002531095369", text: message })
+    body: JSON.stringify({
+      chat_id: "-1002531095369",
+      text: message,
+      parse_mode: "Markdown"
+    })
   })
   .then(r => r.json())
   .then(res => {
@@ -75,15 +56,25 @@ Request: ${data.requests}`;
         body: JSON.stringify(data)
       });
     } else {
-      alert("Telegram send failed.");
+      alert("Telegram failed: " + res.description);
+      throw new Error("Telegram failed");
     }
   })
   .then(r => r && r.text())
   .then(response => {
-    if (response === "OK") {
-      alert("Order received. Thank you!");
+    if (response && response.trim() === "OK") {
+      summaryText.innerHTML = "<h3>Your order has been submitted!</h3><p>We'll process it after payment is confirmed.</p>";
+      summaryBox.classList.remove("hidden");
     } else {
-      alert("Failed to save to sheet.");
+      alert("Google Sheet error.");
     }
+  })
+  .catch(err => {
+    summaryText.innerHTML = "<h3>Your order was not sent.</h3><p>Please try again later.</p>";
+    summaryBox.classList.remove("hidden");
+    console.error(err);
   });
+
+  form.reset();
+  updateTotal();
 });
