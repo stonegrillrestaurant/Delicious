@@ -1,32 +1,135 @@
-const form = document.getElementById("orderForm");
-const totalDisplay = document.getElementById("total");
-const summaryBox = document.getElementById("summary");
-const summaryText = document.getElementById("summaryText");
+const menuItems = {
+  pork: [
+    { name: "Pork Sisig", price: 199 },
+    { name: "Lechon Kawali", price: 229 }
+  ],
+  chicken: [
+    { name: "Fried Chicken", price: 179 },
+    { name: "Buffalo Wings", price: 189 }
+  ],
+  vegetable: [
+    { name: "Pinakbet", price: 149 },
+    { name: "Chopsuey", price: 159 }
+  ],
+  noodles: [
+    { name: "Bam-i", price: 149 },
+    { name: "Pancit Canton", price: 139 }
+  ],
+  rice: [
+    { name: "Platter Rice", price: 100 },
+    { name: "Cup Rice", price: 25 }
+  ],
+  beef: [
+    { name: "Beef Steak", price: 299 },
+    { name: "Kaldereta", price: 320 }
+  ],
+  fish: [
+    { name: "Sweet & Sour Fish", price: 219 },
+    { name: "Grilled Bangus", price: 199 }
+  ]
+};
 
-form.addEventListener("submit", function(e) {
+let cart = [];
+let selectedItems = [];
+
+function togglePersons() {
+  const val = document.getElementById("orderType").value;
+  document.getElementById("personCount").style.display = (val === "Dine-in") ? "block" : "none";
+}
+
+function updateItems() {
+  const category = document.getElementById("category").value;
+  const container = document.getElementById("itemSelection");
+  container.innerHTML = "";
+  selectedItems = [];
+
+  if (menuItems[category]) {
+    menuItems[category].forEach((item, i) => {
+      const div = document.createElement("div");
+      div.className = "selectable-item";
+      div.innerText = `${item.name} (₱${item.price})`;
+      div.onclick = () => toggleHighlight(div, category, i);
+      container.appendChild(div);
+    });
+  }
+}
+
+function toggleHighlight(element, cat, index) {
+  const key = `${cat}-${index}`;
+  const idx = selectedItems.indexOf(key);
+  if (idx >= 0) {
+    selectedItems.splice(idx, 1);
+    element.classList.remove("selected");
+  } else {
+    selectedItems.push(key);
+    element.classList.add("selected");
+  }
+}
+
+document.getElementById("addSelectedBtn").onclick = function () {
+  selectedItems.forEach(key => {
+    const [cat, idx] = key.split("-");
+    const item = menuItems[cat][parseInt(idx)];
+    if (!cart.find(i => i.name === item.name)) {
+      cart.push({ ...item, qty: 1 });
+    }
+  });
+  selectedItems = [];
+  document.querySelectorAll(".selectable-item").forEach(el => el.classList.remove("selected"));
+  renderCart();
+};
+
+function renderCart() {
+  const cartDiv = document.getElementById("cartItems");
+  cartDiv.innerHTML = "";
+  let total = 0;
+
+  cart.forEach((item, i) => {
+    total += item.qty * item.price;
+    const row = document.createElement("div");
+    row.className = "cart-row";
+    row.innerHTML = `
+      <button class="delete-btn" onclick="removeFromCart(${i})">🗑</button>
+      <span>${item.qty}x ${item.name}</span>
+      <span>₱${item.price}</span>
+    `;
+    cartDiv.appendChild(row);
+  });
+
+  document.getElementById("dropdownTotal").textContent = total;
+}
+
+function removeFromCart(index) {
+  cart.splice(index, 1);
+  renderCart();
+}
+
+document.getElementById("orderForm").addEventListener("submit", function (e) {
   e.preventDefault();
-  const name = document.getElementById("name").value;
-  const mobile = document.getElementById("mobile").value;
-  const requests = document.getElementById("requests").value;
-  const total = totalDisplay.textContent;
+  if (cart.length === 0) {
+    alert("Please select items.");
+    return;
+  }
 
   const data = {
-    name: name,
-    mobile: mobile,
-    requests: requests,
-    cart: "Not detailed here",
-    total: total
+    name: document.getElementById("name").value,
+    mobile: document.getElementById("mobile").value,
+    orderType: document.getElementById("orderType").value,
+    persons: document.getElementById("persons").value || "",
+    datetime: document.getElementById("datetime").value,
+    requests: document.getElementById("requests").value,
+    cart: JSON.stringify(cart),
+    total: document.getElementById("dropdownTotal").textContent
   };
 
-  const message = `New Order from ${data.name}\nTotal: ₱${data.total}`;
+  const telegramMsg = `New Order from ${data.name}\nTotal: ₱${data.total}`;
 
   fetch("https://api.telegram.org/bot7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s/sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: "-1002531095369",
-      text: message,
-      parse_mode: "Markdown"
+      text: telegramMsg
     })
   })
   .then(r => r.json())
@@ -38,17 +141,25 @@ form.addEventListener("submit", function(e) {
         body: JSON.stringify(data)
       });
     } else {
-      throw new Error("Telegram send failed");
+      throw new Error("Telegram failed.");
     }
   })
-  .then(() => {
-    summaryBox.classList.remove("hidden");
-    summaryText.innerHTML = `<strong>Your order has been sent!</strong>`;
-    form.reset();
+  .then(r => r && r.text())
+  .then(response => {
+    if (response === "OK") {
+      document.getElementById("summaryText").innerHTML = `<h3>Thank you! Order sent successfully.</h3>`;
+      document.getElementById("summary").classList.remove("hidden");
+      document.getElementById("orderForm").reset();
+      cart = [];
+      renderCart();
+    } else {
+      alert("Saving to sheet failed.");
+    }
   })
   .catch(err => {
-    summaryBox.classList.remove("hidden");
-    summaryText.innerHTML = `<span style='color:red;'>Order not sent. Try again.</span>`;
+    alert("Something went wrong: " + err.message);
   });
 });
 
+// Expose removeFromCart globally
+window.removeFromCart = removeFromCart;
