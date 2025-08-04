@@ -1,32 +1,11 @@
 const menuItems = {
-  pork: [
-    { name: "Pork Sisig", price: 199 },
-    { name: "Lechon Kawali", price: 229 }
-  ],
-  chicken: [
-    { name: "Fried Chicken", price: 179 },
-    { name: "Buffalo Wings", price: 189 }
-  ],
-  vegetable: [
-    { name: "Pinakbet", price: 149 },
-    { name: "Chopsuey", price: 159 }
-  ],
-  noodles: [
-    { name: "Bam-i", price: 149 },
-    { name: "Pancit Canton", price: 139 }
-  ],
-  rice: [
-    { name: "Platter Rice", price: 100 },
-    { name: "Cup Rice", price: 25 }
-  ],
-  beef: [
-    { name: "Beef Steak", price: 299 },
-    { name: "Kaldereta", price: 320 }
-  ],
-  fish: [
-    { name: "Sweet & Sour Fish", price: 219 },
-    { name: "Grilled Bangus", price: 199 }
-  ]
+  pork: [{ name: "Pork Sisig", price: 199 }, { name: "Lechon Kawali", price: 229 }],
+  chicken: [{ name: "Fried Chicken", price: 179 }, { name: "Buffalo Wings", price: 189 }],
+  vegetable: [{ name: "Pinakbet", price: 149 }, { name: "Chopsuey", price: 159 }],
+  noodles: [{ name: "Bam-i", price: 149 }, { name: "Pancit Canton", price: 139 }],
+  rice: [{ name: "Platter Rice", price: 100 }, { name: "Cup Rice", price: 25 }],
+  beef: [{ name: "Beef Steak", price: 299 }, { name: "Kaldereta", price: 320 }],
+  fish: [{ name: "Sweet & Sour Fish", price: 219 }, { name: "Grilled Bangus", price: 199 }]
 };
 
 let cart = [];
@@ -36,7 +15,6 @@ function togglePersons() {
   const val = document.getElementById("orderType").value;
   document.getElementById("personCount").style.display = (val === "Dine-in") ? "block" : "none";
 }
-
 function updateItems() {
   const category = document.getElementById("category").value;
   const container = document.getElementById("itemSelection");
@@ -53,7 +31,6 @@ function updateItems() {
     });
   }
 }
-
 function toggleHighlight(element, cat, index) {
   const key = `${cat}-${index}`;
   const idx = selectedItems.indexOf(key);
@@ -65,12 +42,14 @@ function toggleHighlight(element, cat, index) {
     element.classList.add("selected");
   }
 }
-
 document.getElementById("addSelectedBtn").onclick = function () {
   selectedItems.forEach(key => {
     const [cat, idx] = key.split("-");
     const item = menuItems[cat][parseInt(idx)];
-    if (!cart.find(i => i.name === item.name)) {
+    const found = cart.find(i => i.name === item.name);
+    if (found) {
+      found.qty += 1;
+    } else {
       cart.push({ ...item, qty: 1 });
     }
   });
@@ -78,7 +57,6 @@ document.getElementById("addSelectedBtn").onclick = function () {
   document.querySelectorAll(".selectable-item").forEach(el => el.classList.remove("selected"));
   renderCart();
 };
-
 function renderCart() {
   const cartDiv = document.getElementById("cartItems");
   cartDiv.innerHTML = "";
@@ -88,32 +66,28 @@ function renderCart() {
     total += item.qty * item.price;
     const row = document.createElement("div");
     row.className = "cart-row";
-    row.innerHTML = `
-      <button class="delete-btn" onclick="removeFromCart(${i})">🗑</button>
-      <span>${item.qty}x ${item.name}</span>
-      <span>₱${item.price}</span>
-    `;
+    row.innerHTML = \`
+      <button class="delete-btn" onclick="removeFromCart(\${i})">🗑</button>
+      <span>\${item.qty}x \${item.name}</span>
+      <span>₱\${item.price}</span>
+    \`;
     cartDiv.appendChild(row);
   });
-
   document.getElementById("dropdownTotal").textContent = total;
 }
-
 function removeFromCart(index) {
   cart.splice(index, 1);
   renderCart();
 }
+window.removeFromCart = removeFromCart;
 
 document.getElementById("orderForm").addEventListener("submit", function (e) {
   e.preventDefault();
-  if (cart.length === 0) {
-    alert("Please select items.");
-    return;
-  }
+  if (cart.length === 0) return alert("Please select items.");
 
   const data = {
     name: document.getElementById("name").value,
-    mobile: document.getElementById("mobile").value,
+    mobile: document.getElementById("mobile").value.replace(/^0/, "+63"),
     orderType: document.getElementById("orderType").value,
     persons: document.getElementById("persons").value || "",
     datetime: document.getElementById("datetime").value,
@@ -122,15 +96,12 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
     total: document.getElementById("dropdownTotal").textContent
   };
 
-  const telegramMsg = `New Order from ${data.name}\nTotal: ₱${data.total}`;
+  const msg = \`New Order from \${data.name}\nTotal: ₱\${data.total}\`;
 
   fetch("https://api.telegram.org/bot7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s/sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: "-1002531095369",
-      text: telegramMsg
-    })
+    body: JSON.stringify({ chat_id: "-1002531095369", text: msg })
   })
   .then(r => r.json())
   .then(res => {
@@ -141,25 +112,24 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
         body: JSON.stringify(data)
       });
     } else {
+      alert("⚠️ Staff is currently offline. Order not sent to Telegram.");
       throw new Error("Telegram failed.");
     }
   })
   .then(r => r && r.text())
   .then(response => {
     if (response === "OK") {
-      document.getElementById("summaryText").innerHTML = `<h3>Thank you! Order sent successfully.</h3>`;
+      document.getElementById("summaryText").innerHTML = 
+        "<h3>Thank you! Order sent successfully.<br>Our staff will process it after payment.</h3>";
       document.getElementById("summary").classList.remove("hidden");
       document.getElementById("orderForm").reset();
       cart = [];
       renderCart();
     } else {
-      alert("Saving to sheet failed.");
+      alert("❌ Failed saving to Google Sheets.");
     }
   })
   .catch(err => {
-    alert("Something went wrong: " + err.message);
+    console.error(err);
   });
 });
-
-// Expose removeFromCart globally
-window.removeFromCart = removeFromCart;
