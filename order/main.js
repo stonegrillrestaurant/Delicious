@@ -128,7 +128,8 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
   // Format cart for Telegram
   let cartText = cart.map(i => `- ${i.qty} x ${i.name} = ₱${i.qty * i.price}`).join("\n");
   const telegramMsg =
-    `🧾 *New Order Received!*\n\n👤 Name: ${data.name}\n📱 Mobile: ${data.mobile}\n📦 Type: ${data.orderType}\n👥 Persons: ${data.persons || 'N/A'}\n🕒 Date: ${data.datetime}\n\n📝 *Order List:*\n${cartText}\n\n💬 Special: ${data.requests || 'None'}\n\n💰 *Total: ₱${data.total}*`;
+    `🧾 *New Order Received!*\n\n👤 Name: ${data.name}\n📱 Mobile: ${data.mobile}\n📦 Type: ${data.orderType}\n👥 Persons: ${data.persons || 'N/A'}\n🗓️ Date: ${data.datetime.split('T')[0]}
+⏰ Time: ${data.datetime.split('T')[1]}\n\n📝 *Order List:*\n${cartText}\n\n💬 Special: ${data.requests || 'None'}\n\n💰 *Total: ₱${data.total}*`;
 
   // Telegram Send
   fetch("https://api.telegram.org/bot7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s/sendMessage", {
