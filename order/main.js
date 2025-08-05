@@ -171,4 +171,4 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
     });
 });
 
-window.removeFromCart = removeFromCart
+window.removeFromCart = removeFromCart;
