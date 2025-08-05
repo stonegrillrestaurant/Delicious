@@ -1,11 +1,16 @@
+// 📁 main.js — Stone Grill Restaurant Order Page Scripts
+
 const menuItems = {
   pork: [
     { name: "Pork Sisig", price: 199 },
-    { name: "Lechon Kawali", price: 229 }
+    { name: "Lechon Kawali", price: 229 },
+    { name: "Pork BBQ", price: 35 },
+    { name: "Crispy Pata", price: 750 }
   ],
   chicken: [
     { name: "Fried Chicken", price: 179 },
-    { name: "Buffalo Wings", price: 189 }
+    { name: "Buffalo Wings", price: 189 },
+    { name: "Chicken Inasal", price: 175 }
   ],
   vegetable: [
     { name: "Pinakbet", price: 149 },
@@ -13,7 +18,8 @@ const menuItems = {
   ],
   noodles: [
     { name: "Bam-i", price: 149 },
-    { name: "Pancit Canton", price: 139 }
+    { name: "Pancit Canton", price: 139 },
+    { name: "Sotanghon Guisado", price: 145 }
   ],
   rice: [
     { name: "Platter Rice", price: 100 },
@@ -25,7 +31,8 @@ const menuItems = {
   ],
   fish: [
     { name: "Sweet & Sour Fish", price: 219 },
-    { name: "Grilled Bangus", price: 199 }
+    { name: "Grilled Bangus", price: 199 },
+    { name: "Calamares", price: 170 }
   ]
 };
 
@@ -70,7 +77,10 @@ document.getElementById("addSelectedBtn").onclick = function () {
   selectedItems.forEach(key => {
     const [cat, idx] = key.split("-");
     const item = menuItems[cat][parseInt(idx)];
-    if (!cart.find(i => i.name === item.name)) {
+    const existing = cart.find(i => i.name === item.name);
+    if (existing) {
+      existing.qty += 1;
+    } else {
       cart.push({ ...item, qty: 1 });
     }
   });
@@ -104,7 +114,10 @@ function removeFromCart(index) {
   renderCart();
 }
 
-document.getElementById("orderForm").addEventListener("submit", function (e) {
+// ✅ Form Submission
+
+const form = document.getElementById("orderForm");
+form.addEventListener("submit", function (e) {
   e.preventDefault();
   if (cart.length === 0) {
     alert("Please select items.");
@@ -122,8 +135,9 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
     total: document.getElementById("dropdownTotal").textContent
   };
 
-  const telegramMsg = `New Order from ${data.name}\nTotal: ₱${data.total}`;
+  const telegramMsg = `New Order from ${data.name}\nMobile: ${data.mobile}\nTotal: ₱${data.total}`;
 
+  // Send to Telegram
   fetch("https://api.telegram.org/bot7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s/sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -135,21 +149,22 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
   .then(r => r.json())
   .then(res => {
     if (res.ok) {
+      // Send to Google Sheets
       return fetch("https://script.google.com/macros/s/1IUPNsqjOgW9YamwN0yQXzFH9PncU_ZBVF9jjkAlQ9nVvr1C9Eb0ryIN4/exec", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
     } else {
-      throw new Error("Telegram failed.");
+      throw new Error("Telegram failed");
     }
   })
-  .then(r => r && r.text())
+  .then(r => r.text())
   .then(response => {
     if (response === "OK") {
-      document.getElementById("summaryText").innerHTML = `<h3>Thank you! Order sent successfully.</h3>`;
+      document.getElementById("summaryText").innerHTML = `<h3>Thank you! Order sent. Staff will handle it after payment.</h3>`;
       document.getElementById("summary").classList.remove("hidden");
-      document.getElementById("orderForm").reset();
+      form.reset();
       cart = [];
       renderCart();
     } else {
@@ -161,5 +176,4 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
   });
 });
 
-// Expose removeFromCart globally
 window.removeFromCart = removeFromCart;
