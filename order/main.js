@@ -1,4 +1,3 @@
-// ===== MENU ITEMS LIST (Editable Prices)
 const menuItems = {
   pork: [
     { name: "Pork Sisig", price: 199 },
@@ -30,17 +29,14 @@ const menuItems = {
   ]
 };
 
-// ===== GLOBAL STATE
 let cart = [];
 let selectedItems = [];
 
-// ===== TOGGLE PERSON COUNT IF DINE-IN
 function togglePersons() {
   const val = document.getElementById("orderType").value;
   document.getElementById("personCount").style.display = (val === "Dine-in") ? "block" : "none";
 }
 
-// ===== SHOW ITEMS BASED ON SELECTED CATEGORY
 function updateItems() {
   const category = document.getElementById("category").value;
   const container = document.getElementById("itemSelection");
@@ -58,7 +54,6 @@ function updateItems() {
   }
 }
 
-// ===== HIGHLIGHT ITEM WHEN SELECTED
 function toggleHighlight(element, cat, index) {
   const key = `${cat}-${index}`;
   const idx = selectedItems.indexOf(key);
@@ -71,14 +66,13 @@ function toggleHighlight(element, cat, index) {
   }
 }
 
-// ===== ADD SELECTED ITEMS TO CART
 document.getElementById("addSelectedBtn").onclick = function () {
   selectedItems.forEach(key => {
     const [cat, idx] = key.split("-");
     const item = menuItems[cat][parseInt(idx)];
-    const existing = cart.find(i => i.name === item.name);
+    let existing = cart.find(i => i.name === item.name);
     if (existing) {
-      existing.qty++;
+      existing.qty += 1;
     } else {
       cart.push({ ...item, qty: 1 });
     }
@@ -88,7 +82,6 @@ document.getElementById("addSelectedBtn").onclick = function () {
   renderCart();
 };
 
-// ===== SHOW CART ITEMS
 function renderCart() {
   const cartDiv = document.getElementById("cartItems");
   cartDiv.innerHTML = "";
@@ -101,7 +94,7 @@ function renderCart() {
     row.innerHTML = `
       <button class="delete-btn" onclick="removeFromCart(${i})">🗑</button>
       <span>${item.qty}x ${item.name}</span>
-      <span>₱${item.price}</span>
+      <span>₱${item.qty * item.price}</span>
     `;
     cartDiv.appendChild(row);
   });
@@ -109,108 +102,73 @@ function renderCart() {
   document.getElementById("dropdownTotal").textContent = total;
 }
 
-// ===== REMOVE FROM CART
 function removeFromCart(index) {
   cart.splice(index, 1);
   renderCart();
 }
-window.removeFromCart = removeFromCart; // make globally accessible
 
-// ===== MOBILE NUMBER FORMAT (+63)
-const mobileInput = document.getElementById("mobile");
-mobileInput.addEventListener("input", function () {
-  let val = mobileInput.value;
-  if (val.length > 1 && val.startsWith("0")) {
-    val = "+63" + val.slice(1);
-    mobileInput.value = val;
-  }
-  if (val.includes("++")) {
-    mobileInput.value = val.replace("++", "+");
-  }
-});
-
-// ===== SUBMIT FORM
 document.getElementById("orderForm").addEventListener("submit", function (e) {
   e.preventDefault();
-
-  // Validate form
-  const name = document.getElementById("name");
-  const mobile = document.getElementById("mobile");
-  const orderType = document.getElementById("orderType");
-  const datetime = document.getElementById("datetime");
-
-  if (!name.value.trim()) return alertMark(name, "Name is required");
-  if (!mobile.value.startsWith("+63")) return alertMark(mobile, "Mobile must start with +63");
-  if (!orderType.value) return alertMark(orderType, "Please choose order type");
-  if (!datetime.value) return alertMark(datetime, "Date and Time required");
-  if (cart.length === 0) return alert("Please select at least 1 item.");
+  if (cart.length === 0) {
+    alert("Please select at least 1 item.");
+    return;
+  }
 
   const data = {
-    name: name.value,
-    mobile: mobile.value,
-    orderType: orderType.value,
+    name: document.getElementById("name").value.trim(),
+    mobile: document.getElementById("mobile").value.trim(),
+    orderType: document.getElementById("orderType").value,
     persons: document.getElementById("persons").value || "",
-    datetime: datetime.value,
-    requests: document.getElementById("requests").value,
+    datetime: document.getElementById("datetime").value,
+    requests: document.getElementById("requests").value.trim(),
     cart: JSON.stringify(cart),
     total: document.getElementById("dropdownTotal").textContent
   };
 
-  showFloatingMessage("Sending order...");
+  // Format cart for Telegram
+  let cartText = cart.map(i => `- ${i.qty} x ${i.name} = ₱${i.qty * i.price}`).join("\n");
+  const telegramMsg =
+    `🧾 *New Order Received!*\n\n👤 Name: ${data.name}\n📱 Mobile: ${data.mobile}\n📦 Type: ${data.orderType}\n👥 Persons: ${data.persons || 'N/A'}\n🕒 Date: ${data.datetime}\n\n📝 *Order List:*\n${cartText}\n\n💬 Special: ${data.requests || 'None'}\n\n💰 *Total: ₱${data.total}*`;
 
-  // Send to Telegram
+  // Telegram Send
   fetch("https://api.telegram.org/bot7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s/sendMessage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: "-1002531095369",
-      text: `📦 New Order from ${data.name}\n🧾 Total: ₱${data.total}\n📱 ${data.mobile}`,
+      text: telegramMsg,
       parse_mode: "Markdown"
     })
   })
-  .then(r => r.json())
-  .then(res => {
-    if (res.ok) {
-      // Send to Google Sheets
-      return fetch("https://script.google.com/macros/s/1IUPNsqjOgW9YamwN0yQXzFH9PncU_ZBVF9jjkAlQ9nVvr1C9Eb0ryIN4/exec", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-    } else {
-      throw new Error("Telegram failed to send.");
-    }
-  })
-  .then(r => r && r.text())
-  .then(response => {
-    if (response === "OK") {
-      showFloatingMessage("✅ Order received! Our staff will assist you after payment.");
-      document.getElementById("orderForm").reset();
-      cart = [];
-      renderCart();
-    } else {
-      throw new Error("Google Sheets saving failed.");
-    }
-  })
-  .catch(err => {
-    showFloatingMessage("❌ " + err.message);
-  });
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok) {
+        // Save to Google Sheet
+        return fetch("https://script.google.com/macros/s/1IUPNsqjOgW9YamwN0yQXzFH9PncU_ZBVF9jjkAlQ9nVvr1C9Eb0ryIN4/exec", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+      } else {
+        alert("❌ Failed to send to Telegram.");
+        throw new Error("Telegram failed.");
+      }
+    })
+    .then(r => r.text())
+    .then(response => {
+      if (response === "OK") {
+        alert("✅ Order sent! Our staff will handle it after payment is received.");
+        document.getElementById("orderForm").reset();
+        document.getElementById("personCount").style.display = "none";
+        cart = [];
+        renderCart();
+      } else {
+        alert("⚠️ Failed to save to Google Sheets.");
+      }
+    })
+    .catch(err => {
+      alert("❗ Something went wrong: " + err.message);
+    });
 });
 
-// ===== FORM ERROR HIGHLIGHT
-function alertMark(input, message) {
-  input.focus();
-  input.style.borderColor = "red";
-  alert(message);
-}
-
-// ===== FLOATING CONFIRMATION
-function showFloatingMessage(text) {
-  let msg = document.createElement("div");
-  msg.className = "floating-message";
-  msg.innerText = text;
-  document.body.appendChild(msg);
-  setTimeout(() => {
-    msg.remove();
-  }, 5000);
-}
+window.removeFromCart = removeFromCart
