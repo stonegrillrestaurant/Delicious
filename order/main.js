@@ -184,17 +184,17 @@ ${itemsText}
         throw new Error("Telegram failed.");
       }
     })
-    .then(r => r && r.text())
     .then(response => {
-      if (response && response.trim().toUpperCase() === "OK") {
-        showToast("✅ Order sent! Our staff will handle it after payment.", true);
-        document.getElementById("orderForm").reset();
-        cart = [];
-        renderCart();
-      } else {
-        showToast("⚠️ Failed to save to Google Sheets.", false);
-      }
-    })
+  const text = (response || "").trim().toUpperCase();
+  if (text.includes("OK") || text === "") {
+    showToast("✅ Order sent! Our staff will handle it after payment.", true);
+    document.getElementById("orderForm").reset();
+    cart = [];
+    renderCart();
+  } else {
+    showToast("⚠️ Order sent, but not saved to sheet.", false);
+  }
+})
     .catch(err => {
       showToast("❌ Something went wrong: " + err.message, false);
     });
