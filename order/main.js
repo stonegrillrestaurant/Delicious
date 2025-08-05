@@ -141,18 +141,18 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
 
   const telegramMessage = `
 🧾 New Order Received!
-👤 Name: ${name}
-📱 Mobile: ${mobile}
-📦 Type: ${orderType}
+👤Name: ${name}
+📱Mobile: ${mobile}
+📦Type: ${orderType}
 ${orderType === "Dine-in" ? `👥 Persons: ${persons}` : ""}
-🗓️ Date: ${dateOnly}
-⏰ Time: ${timeOnly}
+🗓️Date: ${dateOnly}
+⏰Time: ${timeOnly}
 
-📝 Order List:
+📝Order:
 ${itemsText}
-💬 Special: ${requests || 'None'}
+💬Special Request: ${requests || 'None'}
 
-💰 Total: ₱${total}
+💰Total: ₱${total}
   `.trim();
 
   // Prepare payload
