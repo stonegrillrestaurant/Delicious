@@ -2,77 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stone Grill - Online Order</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stone Grill Order</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <h1>Stone Grill Online Order</h1>
 
-    <!-- Customer Info Section -->
-    <form id="orderForm">
-      <div class="section customer-section">
-        <label>Full Name:</label>
-        <input type="text" id="name" required />
-
-        <label>Mobile Number (+63):</label>
-        <input type="tel" id="mobile" required placeholder="+63..." />
-
-        <label>Order Type:</label>
+    <!-- Customer Info -->
+    <div class="card">
+      <h2>Customer Information</h2>
+      <form id="orderForm">
+        <input type="text" id="name" required placeholder="Full Name" />
+        <input type="tel" id="mobile" placeholder="e.g. 09171234567" required />
+        <label>Date & Time:</label>
+        <input type="datetime-local" id="datetime" required />
         <select id="orderType" required onchange="togglePersons()">
-          <option value="">-- Select --</option>
+          <option value="">- dine-in / take-out -</option>
           <option value="Dine-in">Dine-in</option>
           <option value="Take-out">Take-out</option>
         </select>
-
         <div id="personCount" style="display:none">
           <label>Number of Persons:</label>
           <input type="number" id="persons" min="1" />
         </div>
-
-        <label>Date & Time:</label>
-        <input type="datetime-local" id="datetime" required />
-      </div>
-
-      <!-- Menu Selection Section -->
-      <div class="section menu-section">
-        <label>Select Menu Category:</label>
-        <select id="category" onchange="updateItems()" required>
-          <option value="">-- Choose Category --</option>
-          <option value="pork">Pork</option>
-          <option value="chicken">Chicken</option>
-          <option value="vegetable">Vegetable</option>
-          <option value="noodles">Noodles</option>
-          <option value="rice">Rice</option>
-          <option value="beef">Beef</option>
-          <option value="fish">Fish</option>
-        </select>
-
-        <div id="itemSelection"></div>
-        <button type="button" id="addSelectedBtn">Add Selected Items</button>
-      </div>
-
-      <!-- Ordered Items Section -->
-      <div class="section order-summary">
-        <h3>Ordered Items</h3>
-        <div id="cartItems"></div>
-        <label>Special Requests:</label>
-        <textarea id="requests" rows="2"></textarea>
-        <div class="cart-total">Total: ₱<span id="dropdownTotal">0</span></div>
-        <button type="submit">Submit Order</button>
-      </div>
-    </form>
-
-    <!-- Confirmation Summary -->
-    <div id="summary" class="hidden">
-      <div id="summaryText"></div>
+      </form>
     </div>
 
-    <!-- Floating Message -->
-    <div id="floatingMessage" class="hidden"></div>
-  </div>
+    <!-- Category Selector -->
+    <div class="card">
+      <button type="button" onclick="openCategoryPopup()" class="category-btn">🍽 Select Category</button>
+      <div id="cartItems"></div>
+      <div class="cart-total">Total: ₱<span id="dropdownTotal">0</span></div>
+    </div>
 
-  <script src="main.js"></script>
+    <!-- Floating Category Popup -->
+    <div id="categoryPopup" class="hidden">
+      <div class="popup-header">
+        <h3 id="popupTitle">Select Category</h3>
+        <button class="close-btn" onclick="closePopup()">×</button>
+      </div>
+      <div id="popupItems"></div>
+      <button onclick="addSelectedItems()" class="add-selected-btn">Add Selected Item</button>
+    </div>
+
+    <!-- Special Request + Submit -->
+    <div class="card">
+      <h4>Special Request</h4>
+      <textarea id="requests" rows="2" placeholder="Less spicy, Add extra sauce..."></textarea>
+      <button type="submit" form="orderForm">Submit Order</button>
+    </div>
+
+    <!-- Floating Messages -->
+    <div id="floatingMessage" class="hidden">Sending...</div>
+    <script src="main.js"></script>
 </body>
 </html>
