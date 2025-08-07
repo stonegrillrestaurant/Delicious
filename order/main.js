@@ -199,7 +199,7 @@ const data = {
   total: cart.reduce((sum, item) => sum + (item.price * item.qty), 0)
 };
 
-  const telegramMessage = `📌 New Order from ${data.name}\n📞 ${data.mobile}\n📍 ${data.orderType} ${data.persons ? `(${data.persons} pax)` : ""}\n📅 ${data.datetime}\n\n🧾 Ordered Items:\n${data.cart}\n\n💰 Total: ₱${data.total}\n\n📝 Note: ${data.requests}`;
+  const telegramMessage = `📌  ${data.name}\n📞 ${data.mobile}\n📍 ${data.orderType} ${data.persons ? `(${data.persons} pax)` : ""}\n📅 ${data.datetime}\n\n🧾 Order:\n${data.cart}\n\n💰 Total: ₱${data.total}\n\n📝 Note: ${data.requests}`;
   showFloatingMessage("Sending order...");
 
   fetch("https://api.telegram.org/bot7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s/sendMessage", {
