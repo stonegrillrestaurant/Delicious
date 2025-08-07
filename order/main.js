@@ -12,13 +12,14 @@ const menuItems = {
     { name: "🐓 Chicken Curry", price: 189 }
   ],
   beef: [
-    { name: "🐄 Beef Steak Tagalog", price: 299 },
-    { name: "🐄 Kalderetang Baka", price: 320 }
+    { name: "🐄 Beef Steak", price: 299 },
+    { name: "🐄 Kalderetang Baka", price: 320 },
+    { name: "🐄 Beef with Broccoli", price: 299 }
   ],
   vegetables: [
     { name: "🥦 Pinakbet", price: 149 },
     { name: "🥦 Chopsuey", price: 159 },
-    { name: "🥦 Ginisang Monggo", price: 129 }
+    { name: "🥦 Beef w/ Ampalaya", price: 129 }
   ],
   noodles: [
     { name: "🍜 Bam-i", price: 149 },
@@ -51,15 +52,15 @@ const menuItems = {
     { name: "🔥 Pork BBQ Stick", price: 45 },
     { name: "🔥 Chicken BBQ", price: 99 }
   ],
-  specialties: [
-    { name: "⭐ Seafood Boodle Tray", price: 1099 },
-    { name: "⭐ Set-C Meal", price: 599 }
+  boodle: [
+    { name: "⭐ Seafood Boodle Tray", price: 2300 },
+    { name: "⭐ Set-C Meal", price: 1980 },
+    { name: "⭐ Seafood Inferno", price: 1980 }
   ]
 };
 
 let cart = [];
 let selectedItems = [];
-let selectedCategory = "";
 
 function togglePersons() {
   const orderType = document.getElementById("orderType").value;
@@ -68,6 +69,8 @@ function togglePersons() {
 
 function openCategoryPopup() {
   document.getElementById("categoryPopup").classList.remove("hidden");
+  document.getElementById("popupOverlay").classList.remove("hidden");
+
   const container = document.getElementById("popupItems");
   const title = document.getElementById("popupTitle");
   container.innerHTML = "";
@@ -91,57 +94,37 @@ function openCategoryPopup() {
 function loadCategory(category) {
   const container = document.getElementById("popupItems");
   const title = document.getElementById("popupTitle");
-  selectedCategory = category;
-  selectedItems = [];
+
   container.innerHTML = "";
-  title.textContent = "Select " + formatCategoryName(category) + " Items";
+  title.textContent = "Select " + category.charAt(0).toUpperCase() + category.slice(1) + " Item";
 
   menuItems[category].forEach((item, i) => {
     const div = document.createElement("div");
     div.className = "selectable-item";
     div.innerText = `${item.name} (₱${item.price})`;
-    div.onclick = () => toggleHighlight(div, category, i);
+
+    div.onclick = () => {
+      const existing = cart.find(i => i.name === item.name);
+      if (existing) {
+        existing.qty++;
+      } else {
+        cart.push({ ...item, qty: 1 });
+      }
+      renderCart();
+      closePopup();
+      showFloatingMessage(`${item.name} added to your order ✅`);
+    };
+
     container.appendChild(div);
   });
 }
 
-function formatCategoryName(cat) {
-  return cat.charAt(0).toUpperCase() + cat.slice(1).replace("-", " ");
-}
-
-function toggleHighlight(element, cat, index) {
-  const key = `${cat}-${index}`;
-  const idx = selectedItems.indexOf(key);
-  if (idx >= 0) {
-    selectedItems.splice(idx, 1);
-    element.classList.remove("selected");
-  } else {
-    selectedItems.push(key);
-    element.classList.add("selected");
-  }
-}
-
 function closePopup() {
   document.getElementById("categoryPopup").classList.add("hidden");
+  document.getElementById("popupOverlay").classList.add("hidden");
 }
 
-function addSelectedItems() {
-  selectedItems.forEach(key => {
-    const [cat, idx] = key.split("-");
-    const item = menuItems[cat][parseInt(idx)];
-    const existing = cart.find(i => i.name === item.name);
-    if (existing) {
-      existing.qty++;
-    } else {
-      cart.push({ ...item, qty: 1 });
-    }
-  });
-
-  selectedItems = [];
-  document.querySelectorAll(".selectable-item").forEach(el => el.classList.remove("selected"));
-  renderCart();
-  closePopup();
-}
+  
 
 function renderCart() {
   const cartDiv = document.getElementById("cartItems");
@@ -153,14 +136,21 @@ function renderCart() {
     const row = document.createElement("div");
     row.className = "cart-row";
     row.innerHTML = `
-      <span class="item-name">${item.qty}x ${item.name}</span>
-      <span class="item-price">₱${item.qty * item.price}</span>
-      <button class="delete-btn" onclick="removeFromCart(${i})">🗑</button>
+      <div class="item-name">${item.qty}x ${item.name}</div>
+      <div class="item-price">₱${item.qty * item.price}</div>
+      <button class="delete-btn" onclick="removeFromCart(${i})">❌</button>
     `;
     cartDiv.appendChild(row);
   });
 
-  document.getElementById("dropdownTotal").textContent = total;
+  const totalRow = document.createElement("div");
+  totalRow.className = "cart-total-row";
+  totalRow.innerHTML = `
+    <hr class="cart-divider" />
+    <div class="cart-total-label">Total</div>
+    <div class="cart-total-amount">₱${total}</div>
+  `;
+  cartDiv.appendChild(totalRow);
 }
 
 function removeFromCart(index) {
@@ -169,21 +159,37 @@ function removeFromCart(index) {
 }
 window.removeFromCart = removeFromCart;
 
-// Submit order
 const orderForm = document.getElementById("orderForm");
 orderForm.addEventListener("submit", function (e) {
   e.preventDefault();
 
-  const data = {
-    name: document.getElementById("name").value,
-    mobile: document.getElementById("mobile").value,
-    orderType: document.getElementById("orderType").value,
-    persons: document.getElementById("persons").value || "",
-    datetime: document.getElementById("datetime").value,
-    requests: document.getElementById("requests").value,
-    cart: cart.map(item => `${item.qty}x ${item.name} (₱${item.price})`).join("\n"),
-    total: document.getElementById("dropdownTotal").textContent
-  };
+  const rawDateTime = document.getElementById("datetime").value;
+const dateObj = new Date(rawDateTime);
+
+// ✅ Format the date: "August 8, 2025"
+const formattedDate = dateObj.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
+
+// ✅ Format the time: "11:30 AM"
+const formattedTime = dateObj.toLocaleTimeString('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+});
+
+const data = {
+  name: document.getElementById("name").value,
+  mobile: document.getElementById("mobile").value,
+  orderType: document.getElementById("orderType").value,
+  persons: document.getElementById("persons").value || "",
+  datetime: `${formattedDate}\n🕒 ${formattedTime}`, // ✅ Formatted output
+  requests: document.getElementById("requests").value,
+  cart: cart.map(item => `${item.qty}x ${item.name} (₱${item.price})`).join("\n"),
+  total: cart.reduce((sum, item) => sum + (item.price * item.qty), 0)
+};
 
   const telegramMessage = `📌 New Order from ${data.name}\n📞 ${data.mobile}\n📍 ${data.orderType} ${data.persons ? `(${data.persons} pax)` : ""}\n📅 ${data.datetime}\n\n🧾 Ordered Items:\n${data.cart}\n\n💰 Total: ₱${data.total}\n\n📝 Note: ${data.requests}`;
   showFloatingMessage("Sending order...");
@@ -193,44 +199,42 @@ orderForm.addEventListener("submit", function (e) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: "-1002531095369", text: telegramMessage })
   })
-  .then(r => r.json())
-  .then(res => {
-    if (res.ok) {
-      return fetch("https://script.google.com/macros/s/1IUPNsqjOgW9YamwN0yQXzFH9PncU_ZBVF9jjkAlQ9nVvr1C9Eb0ryIN4/exec", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-    } else {
-      throw new Error("Telegram failed.");
-    }
-  })
-  .then(res => res && res.text())
-  .then(response => {
-    if (response === "OK") {
-      showFloatingMessage("✅ Order sent successfully. Staff will handle your order after payment.");
-      orderForm.reset();
-      cart = [];
-      renderCart();
-    } else {
-      showFloatingMessage("⚠️ Sent to Telegram but failed to record in Google Sheets.");
-    }
-  })
-  .catch(err => {
-    showFloatingMessage("❌ Error: " + err.message);
-  });
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok) {
+        return fetch("https://script.google.com/macros/s/1IUPNsqjOgW9YamwN0yQXzFH9PncU_ZBVF9jjkAlQ9nVvr1C9Eb0ryIN4/exec", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+      } else {
+        throw new Error("Telegram failed.");
+      }
+    })
+    .then(res => res && res.text())
+    .then(response => {
+      if (response === "OK") {
+        showFloatingMessage("✅ Order sent successfully. Staff will handle your order after payment.");
+        orderForm.reset();
+        cart = [];
+        renderCart();
+      } else {
+        showFloatingMessage("⚠️ Sent to Telegram but failed to record in Google Sheets.");
+      }
+    })
+    .catch(err => {
+      showFloatingMessage("❌ Error: " + err.message);
+    });
 });
 
-// Floating Message
 function showFloatingMessage(msg) {
   let floatMsg = document.createElement("div");
   floatMsg.innerText = msg;
   floatMsg.className = "floating-msg";
   document.body.appendChild(floatMsg);
-  setTimeout(() => floatMsg.remove(), 5000);
+  setTimeout(() => floatMsg.remove(), 3000);
 }
 
-// +63 auto format
 const mobileInput = document.getElementById("mobile");
 mobileInput.addEventListener("input", function () {
   let val = mobileInput.value;
@@ -241,3 +245,6 @@ mobileInput.addEventListener("input", function () {
     mobileInput.value = val.replace("++", "+");
   }
 });
+
+// Clicking outside popup closes it
+document.getElementById("popupOverlay").addEventListener("click", closePopup);
