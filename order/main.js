@@ -1,25 +1,33 @@
 const menuItems = {
   pork: [
-    { name: "🐖 Pork Sisig", price: 199 },
-    { name: "🐖 Lechon Kawali", price: 229 },
-    { name: "🐖 Crispy Pata", price: 499 },
-    { name: "🐖 Adobo", price: 179 }
+    { name: "🐖 Pork Sisig", price: 230 },
+    { name: "🐖 Lechon Kawali", price: 300 },
+    { name: "🐖 Crispy Pata", price: 650 },
+    { name: "🐖 Pork Steak", price: 240 },
+    { name: "🐖 Sweet and sour pork", price: 230 },
+    { name: "🐖 Pork Sinigang", price: 280 },
+    { name: "🐖 Pork with Cabage", price: 260 }
   ],
   chicken: [
-    { name: "🐓 Fried Chicken", price: 179 },
-    { name: "🐓 Buffalo Wings", price: 189 },
-    { name: "🐓 Chicken Inasal", price: 169 },
-    { name: "🐓 Chicken Curry", price: 189 }
+    { name: "🐓 Fried Chicken", price: 210 },
+    { name: "🐓 Buffalo Wings", price: 240 },
+    { name: "🐓 Chicken Teriyaki", price: 250 },
+    { name: "🐓 Chicken Curry", price: 250 },
+    { name: "🐓 Naked Chicken", price: 220 },
+    { name: "🐓 Buttered Chicken", price: 220 }
   ],
   beef: [
-    { name: "🐄 Beef Steak", price: 299 },
+    { name: "🐄 Beef Steak", price: 300 },
     { name: "🐄 Kalderetang Baka", price: 320 },
-    { name: "🐄 Beef with Broccoli", price: 299 }
+    { name: "🐄 Beef with Broccoli", price: 320 },
+    { name: "🐄 Beef With mushroom", price: 310 },
+    { name: "🐄 Beef with Ampalaya", price: 300 }
   ],
   vegetables: [
-    { name: "🥦 Pinakbet", price: 149 },
-    { name: "🥦 Chopsuey", price: 159 },
-    { name: "🥦 Beef w/ Ampalaya", price: 129 }
+    { name: "🥦 Pinakbet", price: 230 },
+    { name: "🥦 Chopsuey", price: 210 },
+    { name: "🥦 Beef w/ Ampalaya", price: 300 },
+    { name: "🥦 Buttered mix Vegetable", price: 210 }
   ],
   noodles: [
     { name: "🍜 Bam-i", price: 149 },
