@@ -4,7 +4,7 @@
 window.APP_CONFIG = {
   TELEGRAM_BOT_TOKEN: "7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s",
   TELEGRAM_CHAT_ID: "-1002531095369",
-  SHEETS_ENDPOINT: "https://script.google.com/macros/s/1IUPNsqjOgW9YamwN0yQXzFH9PncU_ZBVF9jjkAlQ9nVvr1C9Eb0ryIN4",
+  SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbyKlYNy78JDPvS_Dl65sHT24T5FE33XBWB-uo3rrafz3aCP5RuihGnJgeoq-NRc46iwsA/exec",
 
   ORDER_PAGE_URL: "https://stonegrillresto.net/order/",
 
