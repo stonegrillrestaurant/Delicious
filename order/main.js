@@ -1,19 +1,51 @@
 /* ============================
    Stone Grill — Order Logic
+   - Two-column responsive
+   - Tap-to-add items
+   - Cart with qty controls
+   - Telegram + Google Sheets
+   - Floating confirmation & GCash QR AFTER success
+   - Mobile number auto +63
+   - Category popup & item detail popup (long-press)
    ============================ */
 
 const CFG = window.APP_CONFIG;
 
-// ====== MENU ITEMS ======
+// ====== MENU (use your latest IMG_0139.jpeg mapping when ready) ======
 const menuItems = {
-  pork: [ { name: "Pork Sisig", price: 199 }, { name: "Lechon Kawali", price: 229 }, { name: "Crispy Pata", price: 499 } ],
-  chicken: [ { name: "Fried Chicken (2pcs)", price: 189 }, { name: "Chicken Inasal", price: 209 } ],
-  beef: [ { name: "Beef Tapa", price: 219 }, { name: "Beef Caldereta", price: 249 } ],
-  vegetables: [ { name: "Chopsuey", price: 169 }, { name: "Pinakbet", price: 169 } ],
-  seafood: [ { name: "Shrimp Garlic Butter", price: 289 }, { name: "Grilled Bangus", price: 239 } ],
-  noodles: [ { name: "Pancit Canton", price: 169 }, { name: "Spaghetti", price: 159 } ],
-  bbq: [ { name: "Pork BBQ (2 sticks)", price: 89 }, { name: "Isaw (5 pcs)", price: 59 } ],
-  soup: [ { name: "Sinigang Baboy", price: 249 }, { name: "Nilagang Baka", price: 279 } ]
+  pork: [
+    { name: "Pork Sisig", price: 199 },
+    { name: "Lechon Kawali", price: 229 },
+    { name: "Crispy Pata", price: 499 }
+  ],
+  chicken: [
+    { name: "Fried Chicken (2pcs)", price: 189 },
+    { name: "Chicken Inasal", price: 209 }
+  ],
+  beef: [
+    { name: "Beef Tapa", price: 219 },
+    { name: "Beef Caldereta", price: 249 }
+  ],
+  vegetables: [
+    { name: "Chopsuey", price: 169 },
+    { name: "Pinakbet", price: 169 }
+  ],
+  seafood: [
+    { name: "Shrimp Garlic Butter", price: 289 },
+    { name: "Grilled Bangus", price: 239 }
+  ],
+  noodles: [
+    { name: "Pancit Canton", price: 169 },
+    { name: "Spaghetti", price: 159 }
+  ],
+  bbq: [
+    { name: "Pork BBQ (2 sticks)", price: 89 },
+    { name: "Isaw (5 pcs)", price: 59 }
+  ],
+  soup: [
+    { name: "Sinigang Baboy", price: 249 },
+    { name: "Nilagang Baka", price: 279 }
+  ],
 };
 
 const categories = [
@@ -21,18 +53,16 @@ const categories = [
   { id: "chicken", label: "Chicken", emoji: "🐓" },
   { id: "beef", label: "Beef", emoji: "🐂" },
   { id: "vegetables", label: "Veggies", emoji: "🥦" },
-  { id: "seafood", label: "Seafood", emoji: "🤐" },
+  { id: "seafood", label: "Seafood", emoji: "🦐" },
   { id: "noodles", label: "Noodles", emoji: "🍜" },
   { id: "bbq", label: "Grilled/BBQ", emoji: "🔥" },
-  { id: "soup", label: "Soup", emoji: "🍲" }
+  { id: "soup", label: "Soup", emoji: "🍲" },
 ];
 
-// ====== STATE ======
 let cart = [];
 let activeCategory = categories[0].id;
 let longPressTimer = null;
 
-// ====== HELPERS ======
 const el = (sel) => document.querySelector(sel);
 const els = (sel) => Array.from(document.querySelectorAll(sel));
 const peso = (n) => "₱" + (n || 0).toFixed(2);
@@ -65,7 +95,6 @@ function formatMobile() {
   input.value = v.slice(0, 14);
 }
 
-// ====== POPULATE CATEGORIES & MENU ======
 function renderCategories() {
   const bar = el("#categoryBar");
   bar.innerHTML = "";
@@ -76,12 +105,26 @@ function renderCategories() {
     pill.onclick = () => { activeCategory = c.id; renderCategories(); renderMenu(); };
     bar.appendChild(pill);
   });
+
+  const pop = el("#popupCategories");
+  pop.innerHTML = "";
+  categories.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.textContent = `${c.emoji} ${c.label}`;
+    btn.onclick = () => {
+      activeCategory = c.id;
+      renderCategories(); renderMenu();
+      togglePopup("#categoryPopup", false);
+    };
+    pop.appendChild(btn);
+  });
 }
 
 function renderMenu() {
   const list = el("#menuList");
   list.innerHTML = "";
-  (menuItems[activeCategory] || []).forEach((item) => {
+  (menuItems[activeCategory] || []).forEach((item, idx) => {
     const div = document.createElement("div");
     div.className = "item";
     div.innerHTML = `
@@ -93,6 +136,14 @@ function renderMenu() {
     `;
     div.querySelector(".add-btn").onclick = (e) => { e.stopPropagation(); addToCart(item); };
     div.onclick = () => addToCart(item);
+    div.addEventListener("touchstart", () => {
+      longPressTimer = setTimeout(() => showItemDetail(item), 550);
+    });
+    div.addEventListener("touchend", () => clearTimeout(longPressTimer));
+    div.addEventListener("mousedown", () => {
+      longPressTimer = setTimeout(() => showItemDetail(item), 700);
+    });
+    div.addEventListener("mouseup", () => clearTimeout(longPressTimer));
     list.appendChild(div);
   });
 }
@@ -101,6 +152,7 @@ function renderCart() {
   const wrap = el("#cartItems");
   wrap.innerHTML = "";
   let total = 0;
+
   cart.forEach((row, i) => {
     total += row.price * row.qty;
     const div = document.createElement("div");
@@ -120,6 +172,7 @@ function renderCart() {
     div.querySelector(".remove-btn").onclick = () => removeItem(i);
     wrap.appendChild(div);
   });
+
   el("#cartTotal").textContent = peso(total);
 }
 
@@ -137,13 +190,40 @@ function updateQty(index, delta) {
   renderCart();
 }
 
-function removeItem(index) { cart.splice(index,1); renderCart(); }
-function clearCart() { cart = []; renderCart(); }
+function removeItem(index) {
+  cart.splice(index, 1);
+  renderCart();
+}
 
-// ====== SUBMIT ORDER ======
-async function submitOrder(e){
+function clearCart() {
+  cart = [];
+  renderCart();
+}
+
+function togglePopup(sel, show) {
+  const p = el(sel);
+  if (show === undefined) p.classList.toggle("hidden");
+  else p.classList.toggle("hidden", !show);
+}
+
+function showItemDetail(item) {
+  const box = el("#itemDetail");
+  box.innerHTML = `
+    <h3>${item.name}</h3>
+    <p class="muted">Price: <strong>${peso(item.price)}</strong></p>
+    <div class="inline">
+      <button class="btn" id="detailAdd">Add to Cart</button>
+      <button class="btn ghost" id="detailClose">Close</button>
+    </div>
+  `;
+  togglePopup("#itemPopup", true);
+  el("#detailAdd").onclick = () => { addToCart(item); togglePopup("#itemPopup", false); };
+  el("#detailClose").onclick = () => togglePopup("#itemPopup", false);
+}
+
+async function submitOrder(e) {
   e.preventDefault();
-  if (cart.length === 0) return toast("Your cart is empty.");
+  if (cart.length === 0) { toast("Your cart is empty."); return; }
 
   const name = el("#fullName").value.trim();
   const mobile = el("#mobileNumber").value.trim();
@@ -154,34 +234,45 @@ async function submitOrder(e){
   const time = el("#orderTime").value;
   const requests = el("#specialRequests").value.trim();
 
-  if (!name || !mobile || !orderType || !date || !time) return toast("Please complete the form.");
+  if (!name || !mobile || !orderType || !date || !time) {
+    toast("Please complete the form.");
+    return;
+  }
 
   const itemsText = cart.map(i => `• ${i.name} × ${i.qty} = ${peso(i.price*i.qty)}`).join("\n");
   const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
-
-  const msg = `
-📟 *${CFG.SHOP_NAME}* — Online Order
-👤 ${name}
-📱 ${mobile}
-🗓️ ${date}  ⏰ ${time}
+  const msg =
+`🧾 *${CFG.SHOP_NAME}* — Online Order
+👤  ${name}
+📱  ${mobile}
+🗓️ ${date}  ⏰ Time: ${time}
 🍽️ ${orderType}${orderType === "Dine-in" ? `  👥 Persons: ${persons}` : ""}
 🧺 Items:
 ${itemsText}
-──────────
+────────────
 💵 Total: ${peso(total)}
-📜 Note: ${requests || "-"}
+📝 Note: ${requests || "-"}
 📍 ${CFG.ADDRESS}
-📞 ${CFG.PHONE}`;
+☎️ ${CFG.PHONE}`;
 
   const tUrl = `https://api.telegram.org/bot${CFG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-  const tPayload = { chat_id: CFG.TELEGRAM_CHAT_ID, text: msg, parse_mode: "Markdown" };
-  const sPayload = { name, mobile, orderType, persons, date, time, requests, total, items: cart, source: "order-page" };
+  const tPayload = {
+    chat_id: CFG.TELEGRAM_CHAT_ID,
+    text: msg,
+    parse_mode: "Markdown"
+  };
+
+  const sPayload = {
+    name, mobile, orderType, persons, datetime: `${date} ${time}`,
+    requests, total, cart
+  };
 
   try {
     const [tRes, sRes] = await Promise.all([
       fetch(tUrl, { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(tPayload)}),
       fetch(CFG.SHEETS_ENDPOINT, { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(sPayload)})
     ]);
+
     if (!tRes.ok) throw new Error("Telegram error");
     if (!sRes.ok) throw new Error("Sheets error");
 
@@ -191,6 +282,7 @@ ${itemsText}
     el("#orderForm").reset();
     setMinDateTime();
     el("#personsWrap").classList.add("hidden");
+
   } catch (err) {
     console.error(err);
     toast("Failed to submit. Please try again.");
@@ -200,15 +292,19 @@ ${itemsText}
 function initEvents() {
   el("#categoryBar").addEventListener("dblclick", () => togglePopup("#categoryPopup", true));
   els(".popup-close").forEach(b => b.addEventListener("click", () => b.closest(".popup-backdrop").classList.add("hidden")));
+
   els("input[name='orderType']").forEach(r => r.addEventListener("change", () => {
     if (r.value === "Dine-in" && r.checked) el("#personsWrap").classList.remove("hidden");
     if (r.value === "Take-out" && r.checked) el("#personsWrap").classList.add("hidden");
   }));
+
   el("#mobileNumber").addEventListener("input", formatMobile);
   el("#mobileNumber").addEventListener("blur", formatMobile);
+
   el("#clearCartBtn").onclick = clearCart;
   el("#checkoutBtn").onclick = () => el("#orderForm").requestSubmit();
   el("#orderForm").addEventListener("submit", submitOrder);
+
   el("#paidBtn").onclick = () => togglePopup("#successPopup", false);
   el("#copyRefBtn").onclick = async () => {
     const text = `Please pay via GCash by scanning the QR. After payment, reply with your reference number and name. Thank you!`;
