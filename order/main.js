@@ -260,13 +260,13 @@ ${itemsText}
 ☎️ ${CFG.PHONE}
 `;
 
-  // 1) Send to Telegram
-  const tUrl = `https://api.telegram.org/bot${CFG.7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s}/sendMessage`;
-  const tPayload = {
-    chat_id: CFG.-1002531095369,
-    text: msg,
-    parse_mode: "Markdown"
-  };
+ const tUrl = `https://api.telegram.org/bot${CFG.TELEGRAM_BOT_TOKEN}/sendMessage`;
+const tPayload = {
+  chat_id: CFG.TELEGRAM_CHAT_ID,
+  text: msg,
+  parse_mode: "Markdown"
+};
+
 
   // 2) Send to Google Sheets
   const sPayload = {
