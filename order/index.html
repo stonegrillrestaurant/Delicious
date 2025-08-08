@@ -2,92 +2,151 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Stone Grill | Online Reservation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stone Grill — Online Order</title>
+  <meta name="description" content="Order sizzling meals from Stone Grill Restaurant — Enjoyable & Relaxing." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="pwa/manifest.webmanifest">
+  <meta name="theme-color" content="#ff7a00">
+
+  <!-- Icons (keep these; they won't break the page if 404) -->
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-180.png">
+
   <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#BA1313" />
 
-<!-- iOS Support -->
-<link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Open Graph (only affects link previews; page still works if missing) -->
+  <meta property="og:title" content="Stone Grill — Online Order">
+  <meta property="og:description" content="Fast, easy online ordering. Dine-in or take-out.">
+  <meta property="og:image" content="https://stonegrillresto.net/order/assets/og-order.jpg">
+  <meta property="og:url" content="https://stonegrillresto.net/order/">
 </head>
-  <section class="hero">
-  <div class="hero-content">
-    <img src="assets/IMG_0155.png" alt="Stone Grill Logo" class="hero-logo" />
-    <h1>Welcome to Stone Grill</h1>
-  
-    <a href="#orderForm" class="hero-btn">Start Your Order</a>
-  </div>
-</section>
 <body>
-
-  <!-- 🔰 Header with Logo -->
-  <header class="header">
-    <img src="assets/IMG_0267.png" alt="Stone Grill Logo" class="logo" />
-    <h1 class="title">Online Reservation</h1>
-    <!-- 📦 Container -->
-  <div class="container">
-<div style="text-align: center; margin-top: 15px;">
-  <a href="https://stonegrillresto.net" class="home-btn">🏠 Visit Home Page for more info.        --click here--</a>
-</div>
+  <!-- HEADER (fixed) -->
+  <header class="app-header">
+    <div class="brand">
+      <!-- no src here; main.js will resolve best match -->
+      <img id="logoImg" alt="Stone Grill" class="logo">
+      <div class="brand-text">
+        <h1>Stone Grill</h1>
+        <p>Enjoyable & Relaxing</p>
+      </div>
+    </div>
+    <div class="cart-summary">
+      <div class="total-label">Total</div>
+      <div id="cartTotal" class="total-value">₱0.00</div>
+      <button id="checkoutBtn" class="btn primary">Checkout</button>
+    </div>
   </header>
 
-    <!-- 📋 Full Form -->
-    <form id="orderForm">
-      
-      <!-- 🧍 Customer Info -->
+  <!-- MAIN -->
+  <main class="app-main">
+    <!-- LEFT: MENU -->
+    <section class="menu-col">
+      <div class="category-bar" id="categoryBar"></div>
+      <div id="menuList" class="menu-list"></div>
+    </section>
+
+    <!-- RIGHT: CART + CUSTOMER INFO -->
+    <aside class="cart-col">
       <div class="card">
-        <h4>Please Fill in All Details Below to Complete Your Order Successfully</h4>
-        <input type="text" id="name" required placeholder="Full Name" />
-        <input type="tel" id="mobile" placeholder="e.g. 09171234567" required />
-        <label>Date & Time:</label>
-        <input type="datetime-local" id="datetime" required />
-        <select id="orderType" required onchange="togglePersons()">
-          <option value="">- dine-in / take-out -</option>
-          <option value="Dine-in">Dine-in</option>
-          <option value="Take-out">Take-out</option>
-        </select>
-        <div id="personCount" style="display:none">
-          <label>Number of Persons:</label>
-          <input type="number" id="persons" min="1" />
+        <h2 class="card-title">🧾 Your Order</h2>
+        <div id="cartItems" class="cart-items"></div>
+        <div class="cart-actions">
+          <button id="clearCartBtn" class="btn ghost">Clear</button>
         </div>
       </div>
 
-      <!-- 🍽 Ordering Section -->
       <div class="card">
-        <button type="button" onclick="openCategoryPopup()" class="category-btn">🍽 Select Category</button>
+        <h2 class="card-title">👤 Customer Info</h2>
+        <form id="orderForm" autocomplete="on">
+          <label>Full Name
+            <input type="text" id="fullName" required placeholder="Juan Dela Cruz">
+          </label>
 
-        <div id="cartItems" style="margin-top: 15px;"></div>
+          <label>Mobile Number
+            <input type="tel" id="mobileNumber" inputmode="numeric" required placeholder="+63 9XX XXX XXXX">
+          </label>
 
-        <label for="requests" style="margin-top: 20px; display: block;">📝 Special Requests:</label>
-        <textarea id="requests" placeholder="Any special instructions..." rows="3"
-          style="width: 100%; border-radius: 8px; padding: 10px;"></textarea>
+          <label>Order Type</label>
+          <div class="inline">
+            <label><input type="radio" name="orderType" value="Dine-in" required> Dine-in</label>
+            <label><input type="radio" name="orderType" value="Take-out" required> Take-out</label>
+          </div>
+
+          <div id="personsWrap" class="hidden">
+            <label>Number of Persons
+              <input type="number" id="persons" min="1" value="1">
+            </label>
+          </div>
+
+          <div class="inline-2">
+            <label>Date
+              <input type="date" id="orderDate" required>
+            </label>
+            <label>Time
+              <input type="time" id="orderTime" required>
+            </label>
+          </div>
+
+          <label>Special Requests
+            <textarea id="specialRequests" rows="3" placeholder="Less spicy, extra rice, no peanuts…"></textarea>
+          </label>
+
+          <button type="submit" class="btn primary wide">Submit Order</button>
+        </form>
       </div>
 
-      <!-- ✅ Submit Button -->
-      <div style="text-align: center; margin-top: 16px;">
-        <button type="submit" class="submit-btn">📤 Submit Order</button>
+      <div class="card muted">
+        <p>💬 Need help? Message us on Facebook or call <a href="tel:0535680539">053 568 0539</a>.</p>
       </div>
+    </aside>
+  </main>
 
-    </form>
-  </div>
-
-  <!-- 🧾 Floating Category Popup -->
-  <div id="popupOverlay" class="hidden"></div>
-  <div id="categoryPopup" class="hidden">
-    <div class="popup-header">
-      <h3 id="popupTitle">Select Category</h3>
-      <button class="close-btn" onclick="closePopup()">×</button>
+  <!-- FLOATING CATEGORY POPUP -->
+  <div id="categoryPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <h3 class="popup-title">Browse Categories</h3>
+      <div id="popupCategories" class="popup-grid"></div>
     </div>
-    <div id="popupItems"></div>
   </div>
 
-  <!-- 🔔 Floating message (for order added) -->
-  <div id="floatingMessage" class="hidden">Sending...</div>
+  <!-- ITEM DETAIL POPUP (long-press) -->
+  <div id="itemPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <div id="itemDetail"></div>
+    </div>
+  </div>
 
-  <!-- ✅ Main Script -->
+  <!-- SUCCESS + GCash QR (resolved at runtime) -->
+  <div id="successPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <h3 class="popup-title">Order Received ✅</h3>
+      <p>Please settle your payment to proceed. Scan the GCash QR below:</p>
+      <div class="qr-wrap">
+        <img id="gcashQR" alt="GCash QR">
+      </div>
+      <p class="small">After paying, staff will process your order. Keep your reference number.</p>
+      <div class="inline">
+        <button class="btn" id="paidBtn">I’ve Paid</button>
+        <button class="btn ghost" id="copyRefBtn">Copy Payment Instructions</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING MESSAGE -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="config.js"></script>
   <script src="main.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('pwa/sw.js').catch(()=>{});
+    }
+  </script>
 </body>
 </html>
