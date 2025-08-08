@@ -247,10 +247,10 @@ async function submitOrder(e){
   const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
   const msg =
 `🧾 *${CFG.SHOP_NAME}* — Online Order
-👤 Name: ${name}
-📱 Mobile: ${mobile}
-🗓️ Date: ${date}  ⏰ Time: ${time}
-🍽️ Type: ${orderType}${orderType === "Dine-in" ? `  👥 Persons: ${persons}` : ""}
+👤  ${name}
+📱  ${mobile}
+🗓️ ${date}  ⏰ Time: ${time}
+🍽️ ${orderType}${orderType === "Dine-in" ? `  👥 Persons: ${persons}` : ""}
 🧺 Items:
 ${itemsText}
 ────────────
@@ -261,9 +261,9 @@ ${itemsText}
 `;
 
   // 1) Send to Telegram
-  const tUrl = `https://api.telegram.org/bot${CFG.TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const tUrl = `https://api.telegram.org/bot${CFG.7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s}/sendMessage`;
   const tPayload = {
-    chat_id: CFG.TELEGRAM_CHAT_ID,
+    chat_id: CFG.-1002531095369,
     text: msg,
     parse_mode: "Markdown"
   };
