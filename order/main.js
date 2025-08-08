@@ -337,6 +337,7 @@ function boot() {
   initEvents();
   // Ensure QR path respects config
   const qr = document.getElementById("gcashQR");
-  if (qr && CFG.GCASH_QR_PATH) qr.src = CFG.GCASH_QR_PATH;
+  if (qr && CFG.GCASH_QR_PATH) qr.src = CFG.assets/qr
+/gcash.png;
 }
 document.addEventListener("DOMContentLoaded", boot);
