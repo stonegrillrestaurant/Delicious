@@ -1,236 +1,163 @@
-/* === Global Reset === */
-body, html {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
-  background: #fdfdfd;
-  color: #222;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stone Grill — Online Order</title>
+  <meta name="description" content="Order sizzling meals from Stone Grill Restaurant — Enjoyable & Relaxing." />
 
-button {
-  cursor: pointer;
-}
+  <!-- PWA -->
+  <link rel="manifest" href="pwa/manifest.webmanifest">
+  <meta name="theme-color" content="#ff7a00">
 
-/* === Header === */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background: #ff7a00;
-  color: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+  <!-- Icons -->
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-180.png">
 
-.brand {
-  display: flex;
-  align-items: center;
-}
+  <link rel="stylesheet" href="style.css">
 
-.logo {
-  width: 48px;
-  height: 48px;
-  margin-right: 10px;
-}
+  <!-- Open Graph -->
+  <meta property="og:title" content="Stone Grill — Online Order">
+  <meta property="og:description" content="Fast, easy online ordering. Dine-in or take-out.">
+  <meta property="og:image" content="https://stonegrillresto.net/order/assets/og-order.jpg">
+  <meta property="og:url" content="https://stonegrillresto.net/order/">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img id="logoImg" src="assets/icons/logo.png" alt="Stone Grill" class="logo">
+      <div class="brand-text">
+        <h1>Stone Grill</h1>
+        <p>Enjoyable & Relaxing</p>
+      </div>
+    </div>
+    <div class="cart-summary">
+      <div class="total-label">Total</div>
+      <div id="cartTotal" class="total-value">₱0.00</div>
+      <button id="checkoutBtn" class="btn primary">Checkout</button>
+    </div>
+  </header>
 
-.brand-text h1 {
-  margin: 0;
-  font-size: 1.4em;
-}
+  <main class="app-main">
+    <section class="menu-col">
+      <!-- ✅ Category Buttons -->
+      <div class="category-bar" id="categoryBar">
+        <button onclick="showCategory('pork')">🐖 Pork</button>
+        <button onclick="showCategory('chicken')">🐓 Chicken</button>
+        <button onclick="showCategory('beef')">🐄 Beef</button>
+        <button onclick="showCategory('seafood')">🦐 Seafood</button>
+        <button onclick="showCategory('vegetables')">🥦 Veggies</button>
+        <button onclick="showCategory('noodles')">🍜 Noodles</button>
+        <button onclick="showCategory('bbq')">🔥 BBQ</button>
+        <button onclick="showCategory('soup')">🍲 Soup</button>
+        <button onclick="showCategory('specials')">⭐ Specials</button>
+        <button onclick="showCategory('drinks')">🥤 Drinks</button>
+      </div>
 
-.cart-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+      <!-- Product List -->
+      <div id="menuList" class="menu-list"></div>
+    </section>
 
-.total-label {
-  font-weight: bold;
-}
+    <aside class="cart-col">
+      <!-- Cart -->
+      <div class="card">
+        <h2 class="card-title">🦾 Your Order</h2>
+        <div id="cartItems" class="cart-items"></div>
+        <div class="cart-actions">
+          <button id="clearCartBtn" class="btn ghost">Clear</button>
+        </div>
+      </div>
 
-.btn.primary {
-  background: #fff;
-  color: #ff7a00;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-}
+      <!-- Customer Info -->
+      <div class="card">
+        <h2 class="card-title">👤 Customer Info</h2>
+        <form id="orderForm" autocomplete="on">
+          <label>Full Name
+            <input type="text" id="fullName" required placeholder="Juan Dela Cruz">
+          </label>
 
-.btn.ghost {
-  background: transparent;
-  border: 1px solid #ff7a00;
-  color: #ff7a00;
-  padding: 6px 12px;
-  border-radius: 6px;
-}
+          <label>Mobile Number
+            <input type="tel" id="mobileNumber" inputmode="numeric" required placeholder="+63 9XX XXX XXXX">
+          </label>
 
-.btn.wide {
-  width: 100%;
-  margin-top: 1em;
-}
+          <label>Order Type</label>
+          <div class="inline">
+            <label><input type="radio" name="orderType" value="Dine-in" required> Dine-in</label>
+            <label><input type="radio" name="orderType" value="Take-out" required> Take-out</label>
+          </div>
 
-/* === Layout === */
-.app-main {
-  display: flex;
-  flex-direction: row;
-  padding: 16px;
-  gap: 20px;
-}
+          <div id="personsWrap" class="hidden">
+            <label>Number of Persons
+              <input type="number" id="persons" min="1" value="1">
+            </label>
+          </div>
 
-.menu-col {
-  flex: 2;
-}
+          <div class="inline-2">
+            <label>Date
+              <input type="date" id="orderDate" required>
+            </label>
+            <label>Time
+              <input type="time" id="orderTime" required>
+            </label>
+          </div>
 
-.cart-col {
-  flex: 1;
-}
+          <label>Special Requests
+            <textarea id="specialRequests" rows="3" placeholder="Less spicy, extra rice, no peanuts…"></textarea>
+          </label>
 
-/* === Category Bar === */
-.category-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  padding: 10px;
-  overflow-x: auto;
-}
+          <button type="submit" class="btn primary wide">Submit Order</button>
+        </form>
+      </div>
 
-.category-bar button {
-  background: #ff7a00;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 8px 14px;
-  font-size: 16px;
-  white-space: nowrap;
-  flex: 0 0 auto;
-}
+      <div class="card muted">
+        <p>💬 Need help? Message us on Facebook or call <a href="tel:0535680539">053 568 0539</a>.</p>
+      </div>
+    </aside>
+  </main>
 
-/* === Menu List === */
-.menu-list {
-  display: grid;
-  gap: 10px;
-  padding-top: 10px;
-}
+  <!-- Floating Popups -->
+  <div id="categoryPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <h3 class="popup-title">Browse Categories</h3>
+      <div id="popupCategories" class="popup-grid"></div>
+    </div>
+  </div>
 
-.menu-item {
-  padding: 10px;
-  background: #fff4e6;
-  border-radius: 8px;
-  border: 1px solid #ffa94d;
-}
+  <div id="itemPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <div id="itemDetail"></div>
+    </div>
+  </div>
 
-/* === Cart and Form === */
-.card {
-  background: #fff;
-  padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 1em;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
+  <!-- Success / GCash QR -->
+  <div id="successPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <h3 class="popup-title">Order Received ✅</h3>
+      <p>Please settle your payment to proceed. Scan the GCash QR below:</p>
+      <div class="qr-wrap">
+        <img id="gcashQR" alt="GCash QR" src="assets/qr/gcash.png">
+      </div>
+      <p class="small">After paying, staff will process your order. Keep your reference number.</p>
+      <div class="inline">
+        <button class="btn" id="paidBtn">I’ve Paid</button>
+        <button class="btn ghost" id="copyRefBtn">Copy Payment Instructions</button>
+      </div>
+    </div>
+  </div>
 
-.cart-items {
-  margin-top: 10px;
-}
+  <!-- Toast Message -->
+  <div id="toast" class="toast hidden"></div>
 
-.card-title {
-  margin-top: 0;
-}
-
-.inline, .inline-2 {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.inline-2 > label {
-  flex: 1;
-}
-
-label {
-  display: block;
-  margin-top: 10px;
-}
-
-input, textarea, select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-
-textarea {
-  resize: vertical;
-}
-
-/* === Popups === */
-.popup-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.popup {
-  background: #fff;
-  padding: 20px;
-  border-radius: 14px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-  position: relative;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-}
-
-.popup-close {
-  position: absolute;
-  right: 12px;
-  top: 10px;
-  font-size: 24px;
-  background: none;
-  border: none;
-  color: #444;
-}
-
-/* === QR === */
-.qr-wrap img {
-  width: 100%;
-  max-width: 280px;
-  display: block;
-  margin: 1em auto;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #222;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 6px;
-  z-index: 9999;
-}
-
-/* === Responsive === */
-@media (max-width: 768px) {
-  .app-main {
-    flex-direction: column;
-  }
-
-  .category-bar {
-    justify-content: flex-start;
-  }
-
-  .category-bar button {
-    font-size: 14px;
-    padding: 6px 12px;
-  }
-}
+  <!-- Scripts -->
+  <script src="config.js"></script>
+  <script src="main.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('pwa/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
