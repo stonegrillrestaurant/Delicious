@@ -1,7 +1,3 @@
-/* ============================
-   Stone Grill — Order Logic
-   ============================ */
-
 const CFG = window.APP_CONFIG;
 
 // ====== MENU ======
@@ -39,6 +35,14 @@ const menuItems = {
     { name: "Sinigang Baboy", price: 249 },
     { name: "Nilagang Baka", price: 279 }
   ],
+  // Optional categories used by your HTML buttons; leave if you'll fill later
+  specials: [
+    { name: "Sizzling Bulalo", price: 399 }
+  ],
+  drinks: [
+    { name: "Iced Tea (Pitcher)", price: 149 },
+    { name: "Bottled Water", price: 25 }
+  ]
 };
 
 const categories = [
@@ -59,17 +63,30 @@ let longPressTimer = null;
 // ✅ Guard so QR popup NEVER shows on load
 let paymentDialogAllowed = false;
 
+// Expose for your HTML buttons like onclick="showCategory('pork')"
+window.showCategory = function(id) {
+  activeCategory = id;
+  renderMenu();
+};
+
 // ====== HELPERS ======
 const el = (sel) => document.querySelector(sel);
 const els = (sel) => Array.from(document.querySelectorAll(sel));
 const peso = (n) => "₱" + (n || 0).toFixed(2);
+
+// ✅ Toast that auto-hides
 const toast = (msg) => {
   const t = el("#toast");
   if (!t) return;
+
   t.textContent = msg;
-  t.classList.add("show");
   t.classList.remove("hidden");
-  setTimeout(() => t.classList.remove("show"), 1800);
+  t.classList.add("show");
+
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.classList.add("hidden"), 300); // allow fade-out
+  }, 1800);
 };
 
 function setMinDateTime() {
@@ -136,7 +153,7 @@ function renderMenu() {
       <div class="item-title">${item.name}</div>
       <div class="item-actions">
         <div class="item-price">${peso(item.price)}</div>
-        <button class="add-btn" aria-label="Add">＋</button>
+        <button class="add-btn" aria-label="Add"></button>
       </div>
     `;
     div.querySelector(".add-btn").onclick = (e) => { e.stopPropagation(); addToCart(item); };
@@ -159,6 +176,7 @@ function renderMenu() {
 function renderCart() {
   const wrap = el("#cartItems");
   const totalEl = el("#cartTotal");
+  const subEl = el("#cartSubtotal"); // optional subtotal
   if (!wrap || !totalEl) return;
 
   wrap.innerHTML = "";
@@ -175,7 +193,7 @@ function renderCart() {
         <div>${row.qty}</div>
         <button class="qty-btn plus">＋</button>
       </div>
-      <div class="cart-price">${peso(row.price * row.qty)}</div>
+      <div class="cart-price">₱${(row.price * row.qty).toFixed(2)}</div>
       <button class="remove-btn" aria-label="Remove">×</button>
     `;
     div.querySelector(".minus").onclick = () => updateQty(i, -1);
@@ -184,7 +202,8 @@ function renderCart() {
     wrap.appendChild(div);
   });
 
-  totalEl.textContent = peso(total);
+  if (subEl) subEl.textContent = "₱" + total.toFixed(2); // Subtotal under the list
+  totalEl.textContent = "₱" + total.toFixed(2);          // Header "Total"
 }
 
 function addToCart(item) {
@@ -193,6 +212,12 @@ function addToCart(item) {
   else cart.push({ ...item, qty: 1 });
   renderCart();
   toast(`Added: ${item.name}`);
+
+  // ✅ Auto-close item detail popup if it's open
+  const itemPop = el("#itemPopup");
+  if (itemPop && !itemPop.classList.contains("hidden")) {
+    togglePopup("#itemPopup", false);
+  }
 }
 function updateQty(index, delta) {
   cart[index].qty += delta;
@@ -250,7 +275,7 @@ async function submitOrder(e){
   const itemsText = cart.map(i => `• ${i.name} × ${i.qty} = ${peso(i.price*i.qty)}`).join("\n");
   const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
   const msg =
-`🧾 *${CFG.SHOP_NAME}* — Online Order
+`🧾 *${CFG.SHOP_NAME}* -- Online Order
 👤  ${name}
 📱  ${mobile}
 🗓️ ${date}  ⏰ ${time}
@@ -298,6 +323,13 @@ ${itemsText}
 function initEvents() {
   el("#categoryBar")?.addEventListener("dblclick", () => togglePopup("#categoryPopup", true));
   els(".popup-close").forEach(b => b.addEventListener("click", () => b.closest(".popup-backdrop").classList.add("hidden")));
+
+  // ✅ Click backdrop to close (not clicks inside)
+  document.querySelectorAll(".popup-backdrop").forEach(backdrop => {
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) backdrop.classList.add("hidden");
+    });
+  });
 
   els("input[name='orderType']").forEach(r => r.addEventListener("change", () => {
     if (r.value === "Dine-in" && r.checked) el("#personsWrap")?.classList.remove("hidden");
