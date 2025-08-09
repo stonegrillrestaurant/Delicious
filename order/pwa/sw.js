@@ -1,23 +1,51 @@
-const CACHE_NAME = "sg-order-v1";
-const OFFLINE_URL = "offline.html";
+// Stone Grill Order PWA SW — cache bump
+const CACHE_NAME = "sg-order-v3"; // <-- bump this number next time to force refresh
+
+// Files to cache (relative to /Delicious/order/)
 const ASSETS = [
-  "../index.html","../style.css","../main.js","../config.js",
-  "../assets/icons/icon-192.png","../assets/icons/icon-512.png",
-  "../assets/qr/gcash.png"
+  "./",
+  "./index.html",
+  "./style.css",
+  "./main.js",
+  "./config.js",
+  "./assets/qr/gcash.png",
 ];
 
-self.addEventListener("install", (e) => {
-  e.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.addAll([OFFLINE_URL, ...ASSETS]);
-  })());
+// Install: pre-cache core assets
+self.addEventListener("install", (event) => {
+  self.skipWaiting(); // activate new SW immediately
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).catch(() => {}))
+  );
 });
-self.addEventListener("activate", (e) => {
-  e.waitUntil(self.clients.claim());
+
+// Activate: clean old caches
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
+    ).then(() => self.clients.claim())
+  );
 });
-self.addEventListener("fetch", (e) => {
-  e.respondWith((async () => {
-    try { return await fetch(e.request); }
-    catch { const cache = await caches.open(CACHE_NAME); return cache.match(e.request) || cache.match(OFFLINE_URL); }
-  })());
+
+// Fetch: cache-first for same-origin static, network for others
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Only handle GET and same-origin
+  if (req.method !== "GET" || url.origin !== self.location.origin) return;
+
+  // Cache-first for our order assets
+  event.respondWith(
+    caches.match(req).then((hit) => {
+      if (hit) return hit;
+      return fetch(req).then((res) => {
+        // Optionally cache new GETs
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone)).catch(() => {});
+        return res;
+      }).catch(() => hit); // fallback to cache if offline
+    })
+  );
 });
