@@ -423,3 +423,5 @@ document.addEventListener("DOMContentLoaded", () => {
   const clearBtn = el("#clearCart");
   if (clearBtn) clearBtn.addEventListener("click", clearCart);
 });
+
+
