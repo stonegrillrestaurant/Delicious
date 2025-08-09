@@ -1,17 +1,10 @@
 /* ============================
    Stone Grill — Order Logic
-   - Two-column responsive
-   - Tap-to-add items
-   - Cart with qty controls
-   - Telegram + Google Sheets
-   - GCash QR shows ONLY after success
-   - Mobile number auto +63
-   - Category popup & item detail popup (long-press)
    ============================ */
 
 const CFG = window.APP_CONFIG;
 
-// ====== MENU (sample data; update prices anytime) ======
+// ====== MENU ======
 const menuItems = {
   pork: [
     { name: "Pork Sisig", price: 199 },
@@ -63,7 +56,7 @@ const categories = [
 let cart = [];
 let activeCategory = categories[0].id;
 let longPressTimer = null;
-// ✅ Guard so QR popup never shows on first load
+// ✅ Guard so QR popup NEVER shows on load
 let paymentDialogAllowed = false;
 
 // ====== HELPERS ======
@@ -270,7 +263,6 @@ ${itemsText}
 📍 ${CFG.ADDRESS}
 ☎️ ${CFG.PHONE}`;
 
-  // Telegram + Sheets endpoints
   const tUrl = `https://api.telegram.org/bot${CFG.TELEGRAM_BOT_TOKEN}/sendMessage`;
   const tPayload = { chat_id: CFG.TELEGRAM_CHAT_ID, text: msg, parse_mode: "Markdown" };
   const sPayload = { name, mobile, orderType, persons, date, time, requests, total, items: cart, source: "order-page" };
@@ -284,7 +276,7 @@ ${itemsText}
     if (!tRes.ok) throw new Error("Telegram error");
     if (!sRes.ok) throw new Error("Sheets error");
 
-    // ✅ Only allow QR popup after a successful submit
+    // ✅ allow QR popup only after a real success
     paymentDialogAllowed = true;
     if (paymentDialogAllowed) togglePopup("#successPopup", true);
 
@@ -297,8 +289,7 @@ ${itemsText}
 
   } catch (err) {
     console.error(err);
-    // ✅ Never allow QR popup on error
-    paymentDialogAllowed = false;
+    paymentDialogAllowed = false;   // ✅ never show QR on error
     toast("Failed to submit. Please try again.");
   }
 }
@@ -335,10 +326,10 @@ function boot() {
   renderCart();
   initEvents();
 
-  // ✅ Force-hide ALL popups on load to avoid any stale state
+  // ✅ force-hide ANY popup on first load
   document.querySelectorAll(".popup-backdrop").forEach(p => p.classList.add("hidden"));
 
-  // ✅ Set QR image source without showing the popup
+  // ✅ set QR image without showing popup
   const qr = document.getElementById("gcashQR");
   if (qr && CFG.GCASH_QR_PATH) qr.src = CFG.GCASH_QR_PATH;
 }
