@@ -4,14 +4,14 @@
    - Tap-to-add items
    - Cart with qty controls
    - Telegram + Google Sheets
-   - Floating confirmation & GCash QR AFTER success
+   - GCash QR shows ONLY after success
    - Mobile number auto +63
    - Category popup & item detail popup (long-press)
    ============================ */
 
 const CFG = window.APP_CONFIG;
 
-// ====== MENU (use your latest IMG_0139.jpeg mapping when ready) ======
+// ====== MENU (sample data; update prices anytime) ======
 const menuItems = {
   pork: [
     { name: "Pork Sisig", price: 199 },
@@ -59,15 +59,20 @@ const categories = [
   { id: "soup", label: "Soup", emoji: "🍲" },
 ];
 
+// ====== STATE ======
 let cart = [];
 let activeCategory = categories[0].id;
 let longPressTimer = null;
+// ✅ Guard so QR popup never shows on first load
+let paymentDialogAllowed = false;
 
+// ====== HELPERS ======
 const el = (sel) => document.querySelector(sel);
 const els = (sel) => Array.from(document.querySelectorAll(sel));
 const peso = (n) => "₱" + (n || 0).toFixed(2);
 const toast = (msg) => {
   const t = el("#toast");
+  if (!t) return;
   t.textContent = msg;
   t.classList.add("show");
   t.classList.remove("hidden");
@@ -77,6 +82,7 @@ const toast = (msg) => {
 function setMinDateTime() {
   const d = el("#orderDate");
   const t = el("#orderTime");
+  if (!d || !t) return;
   const now = new Date();
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth()+1).padStart(2,'0');
@@ -88,15 +94,19 @@ function setMinDateTime() {
   t.value = `${hh}:${min}`;
 }
 
+// Mobile auto +63
 function formatMobile() {
   const input = el("#mobileNumber");
+  if (!input) return;
   let v = input.value.replace(/[^\d+]/g, "");
   if (!v.startsWith("+63")) v = "+63" + v.replace(/^0+/, "");
   input.value = v.slice(0, 14);
 }
 
+// ====== RENDER ======
 function renderCategories() {
   const bar = el("#categoryBar");
+  if (!bar) return;
   bar.innerHTML = "";
   categories.forEach(c => {
     const pill = document.createElement("button");
@@ -107,6 +117,7 @@ function renderCategories() {
   });
 
   const pop = el("#popupCategories");
+  if (!pop) return;
   pop.innerHTML = "";
   categories.forEach(c => {
     const btn = document.createElement("button");
@@ -123,8 +134,9 @@ function renderCategories() {
 
 function renderMenu() {
   const list = el("#menuList");
+  if (!list) return;
   list.innerHTML = "";
-  (menuItems[activeCategory] || []).forEach((item, idx) => {
+  (menuItems[activeCategory] || []).forEach((item) => {
     const div = document.createElement("div");
     div.className = "item";
     div.innerHTML = `
@@ -136,6 +148,8 @@ function renderMenu() {
     `;
     div.querySelector(".add-btn").onclick = (e) => { e.stopPropagation(); addToCart(item); };
     div.onclick = () => addToCart(item);
+
+    // Long-press for detail popup
     div.addEventListener("touchstart", () => {
       longPressTimer = setTimeout(() => showItemDetail(item), 550);
     });
@@ -144,12 +158,16 @@ function renderMenu() {
       longPressTimer = setTimeout(() => showItemDetail(item), 700);
     });
     div.addEventListener("mouseup", () => clearTimeout(longPressTimer));
+
     list.appendChild(div);
   });
 }
 
 function renderCart() {
   const wrap = el("#cartItems");
+  const totalEl = el("#cartTotal");
+  if (!wrap || !totalEl) return;
+
   wrap.innerHTML = "";
   let total = 0;
 
@@ -173,7 +191,7 @@ function renderCart() {
     wrap.appendChild(div);
   });
 
-  el("#cartTotal").textContent = peso(total);
+  totalEl.textContent = peso(total);
 }
 
 function addToCart(item) {
@@ -183,31 +201,24 @@ function addToCart(item) {
   renderCart();
   toast(`Added: ${item.name}`);
 }
-
 function updateQty(index, delta) {
   cart[index].qty += delta;
   if (cart[index].qty <= 0) cart.splice(index, 1);
   renderCart();
 }
+function removeItem(index) { cart.splice(index,1); renderCart(); }
+function clearCart() { cart = []; renderCart(); }
 
-function removeItem(index) {
-  cart.splice(index, 1);
-  renderCart();
-}
-
-function clearCart() {
-  cart = [];
-  renderCart();
-}
-
+// ====== POPUPS ======
 function togglePopup(sel, show) {
   const p = el(sel);
+  if (!p) return;
   if (show === undefined) p.classList.toggle("hidden");
   else p.classList.toggle("hidden", !show);
 }
-
 function showItemDetail(item) {
   const box = el("#itemDetail");
+  if (!box) return;
   box.innerHTML = `
     <h3>${item.name}</h3>
     <p class="muted">Price: <strong>${peso(item.price)}</strong></p>
@@ -221,18 +232,22 @@ function showItemDetail(item) {
   el("#detailClose").onclick = () => togglePopup("#itemPopup", false);
 }
 
-async function submitOrder(e) {
+// ====== SUBMIT ======
+async function submitOrder(e){
   e.preventDefault();
   if (cart.length === 0) { toast("Your cart is empty."); return; }
 
-  const name = el("#fullName").value.trim();
-  const mobile = el("#mobileNumber").value.trim();
+  const name = el("#fullName")?.value.trim();
+  const mobile = el("#mobileNumber")?.value.trim();
   const orderType = (els("input[name='orderType']:checked")[0] || {}).value || "";
   const personsWrap = el("#personsWrap");
-  const persons = personsWrap.classList.contains("hidden") ? "" : (el("#persons").value || "1");
-  const date = el("#orderDate").value;
-  const time = el("#orderTime").value;
-  const requests = el("#specialRequests").value.trim();
+  const persons = personsWrap && !personsWrap.classList.contains("hidden")
+    ? (el("#persons").value || "1")
+    : "";
+
+  const date = el("#orderDate")?.value;
+  const time = el("#orderTime")?.value;
+  const requests = el("#specialRequests")?.value.trim();
 
   if (!name || !mobile || !orderType || !date || !time) {
     toast("Please complete the form.");
@@ -245,7 +260,7 @@ async function submitOrder(e) {
 `🧾 *${CFG.SHOP_NAME}* — Online Order
 👤  ${name}
 📱  ${mobile}
-🗓️ ${date}  ⏰ Time: ${time}
+🗓️ ${date}  ⏰ ${time}
 🍽️ ${orderType}${orderType === "Dine-in" ? `  👥 Persons: ${persons}` : ""}
 🧺 Items:
 ${itemsText}
@@ -255,17 +270,10 @@ ${itemsText}
 📍 ${CFG.ADDRESS}
 ☎️ ${CFG.PHONE}`;
 
+  // Telegram + Sheets endpoints
   const tUrl = `https://api.telegram.org/bot${CFG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-  const tPayload = {
-    chat_id: CFG.TELEGRAM_CHAT_ID,
-    text: msg,
-    parse_mode: "Markdown"
-  };
-
-  const sPayload = {
-    name, mobile, orderType, persons, datetime: `${date} ${time}`,
-    requests, total, cart
-  };
+  const tPayload = { chat_id: CFG.TELEGRAM_CHAT_ID, text: msg, parse_mode: "Markdown" };
+  const sPayload = { name, mobile, orderType, persons, date, time, requests, total, items: cart, source: "order-page" };
 
   try {
     const [tRes, sRes] = await Promise.all([
@@ -276,30 +284,37 @@ ${itemsText}
     if (!tRes.ok) throw new Error("Telegram error");
     if (!sRes.ok) throw new Error("Sheets error");
 
-    togglePopup("#successPopup", true);
+    // ✅ Only allow QR popup after a successful submit
+    paymentDialogAllowed = true;
+    if (paymentDialogAllowed) togglePopup("#successPopup", true);
+
     toast("Order sent! Please pay via GCash to proceed.");
+
     clearCart();
-    el("#orderForm").reset();
+    el("#orderForm")?.reset();
     setMinDateTime();
-    el("#personsWrap").classList.add("hidden");
+    el("#personsWrap")?.classList.add("hidden");
 
   } catch (err) {
     console.error(err);
+    // ✅ Never allow QR popup on error
+    paymentDialogAllowed = false;
     toast("Failed to submit. Please try again.");
   }
 }
 
+// ====== EVENTS ======
 function initEvents() {
-  el("#categoryBar").addEventListener("dblclick", () => togglePopup("#categoryPopup", true));
+  el("#categoryBar")?.addEventListener("dblclick", () => togglePopup("#categoryPopup", true));
   els(".popup-close").forEach(b => b.addEventListener("click", () => b.closest(".popup-backdrop").classList.add("hidden")));
 
   els("input[name='orderType']").forEach(r => r.addEventListener("change", () => {
-    if (r.value === "Dine-in" && r.checked) el("#personsWrap").classList.remove("hidden");
-    if (r.value === "Take-out" && r.checked) el("#personsWrap").classList.add("hidden");
+    if (r.value === "Dine-in" && r.checked) el("#personsWrap")?.classList.remove("hidden");
+    if (r.value === "Take-out" && r.checked) el("#personsWrap")?.classList.add("hidden");
   }));
 
-  el("#mobileNumber").addEventListener("input", formatMobile);
-  el("#mobileNumber").addEventListener("blur", formatMobile);
+  el("#mobileNumber")?.addEventListener("input", formatMobile);
+  el("#mobileNumber")?.addEventListener("blur", formatMobile);
 
   el("#clearCartBtn").onclick = clearCart;
   el("#checkoutBtn").onclick = () => el("#orderForm").requestSubmit();
@@ -312,12 +327,18 @@ function initEvents() {
   };
 }
 
+// ====== BOOT ======
 function boot() {
   setMinDateTime();
   renderCategories();
   renderMenu();
   renderCart();
   initEvents();
+
+  // ✅ Force-hide ALL popups on load to avoid any stale state
+  document.querySelectorAll(".popup-backdrop").forEach(p => p.classList.add("hidden"));
+
+  // ✅ Set QR image source without showing the popup
   const qr = document.getElementById("gcashQR");
   if (qr && CFG.GCASH_QR_PATH) qr.src = CFG.GCASH_QR_PATH;
 }
