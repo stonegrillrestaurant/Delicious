@@ -2,7 +2,7 @@ const CACHE_NAME = "sg-order-v8"; // bump number when you update files
 
 // Files to cache (relative to /Delicious/order/)
 const ASSETS = [
-  "./", // root of order page
+  "./", // root of order pages
   "./index.html",
   "./style.css",
   "./main.js",
