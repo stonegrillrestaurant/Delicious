@@ -1,11 +1,12 @@
 /* ============================================================
-   Stone Grill — Pill-Style Order Script (your preferred version)
-   - Dynamic pill categories + popup category list
+   Stone Grill — Pill-Style Order Script
+   - Sticky header shrink on scroll (logo always visible)
+   - Category pills + popup list
    - Long-press item detail popup
    - Toast messages
    - +63 mobile formatter & min date/time setter
-   - Guard so payment dialog never shows on load
-   ============================================================ */
+   - GCash popup guard (won’t show on load)
+============================================================ */
 
 /* ---------- CONFIG (optional external) ---------- */
 const CFG = (window.APP_CONFIG || window.CFG || {});
@@ -13,7 +14,7 @@ const CFG = (window.APP_CONFIG || window.CFG || {});
 /* ---------- STATE ---------- */
 let cart = [];
 let longPressTimer = null;
-let paymentDialogAllowed = false; // ✅ prevent QR on initial load
+let paymentDialogAllowed = false; // guard for GCash popup
 
 /* ---------- DOM HELPERS ---------- */
 const el  = (sel) => document.querySelector(sel);
@@ -57,9 +58,20 @@ function formatMobile() {
   input.value = v.slice(0, 14);
 }
 
+/* ---------- Sticky header compact on scroll ---------- */
+(function () {
+  const hdr = document.getElementById('appHeader');
+  if (!hdr) return;
+  const onScroll = () => {
+    if (window.scrollY > 8) hdr.classList.add('scrolled');
+    else hdr.classList.remove('scrolled');
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
+
 /* ============================================================
-   MENU DATA (updated with Set Meals + latest prices)
-   NOTE: category ids MUST match keys in menuItems
+   MENU DATA (with Set Meals + latest prices)
 ============================================================ */
 const menuItems = {
   setmeals: [
@@ -205,7 +217,7 @@ const menuItems = {
   ]
 };
 
-/* Category pills + popup list (ids MUST match menuItems keys) */
+/* Categories (IDs match menuItems keys; design retained) */
 const categories = [
   { id: "setmeals",      label: "Set Meals",     emoji: "🔥"  },
   { id: "rice",          label: "Rice",          emoji: "🍚"  },
@@ -225,11 +237,11 @@ const categories = [
   { id: "refreshments",  label: "Refreshments",  emoji: "🍹"  }
 ];
 
-/* Active category defaults to the first one */
+/* Active category defaults to first */
 let activeCategory = categories[0].id;
 
-/* Expose for HTML buttons like onclick="showCategory('pork')" */
-window.showCategory = function(id) {
+/* Expose if you want to switch via HTML onclick="showCategory('pork')" */
+window.showCategory = function(id){
   activeCategory = id;
   renderCategories();
   renderMenu();
@@ -238,41 +250,41 @@ window.showCategory = function(id) {
 /* ============================================================
    RENDER UI
 ============================================================ */
-function renderCategories() {
+function renderCategories(){
   const bar = el("#categoryBar");
-  if (!bar) return;
+  if(!bar) return;
   bar.innerHTML = "";
-  categories.forEach(c => {
+  categories.forEach(c=>{
     const pill = document.createElement("button");
-    pill.className = "cat-pill" + (c.id === activeCategory ? " active" : "");
+    pill.className = "cat-pill" + (c.id===activeCategory ? " active":"");
     pill.innerHTML = `<span class="cat-emoji">${c.emoji}</span><span>${c.label}</span>`;
-    pill.onclick = () => { activeCategory = c.id; renderCategories(); renderMenu(); };
+    pill.onclick = ()=>{ activeCategory=c.id; renderCategories(); renderMenu(); };
     bar.appendChild(pill);
   });
 
   // Popup list
   const pop = el("#popupCategories");
-  if (!pop) return;
-  pop.innerHTML = "";
-  categories.forEach(c => {
-    const btn = document.createElement("button");
-    btn.className = "btn";
-    btn.textContent = `${c.emoji} ${c.label}`;
-    btn.onclick = () => {
-      activeCategory = c.id;
-      renderCategories();
-      renderMenu();
-      togglePopup("#categoryPopup", false);
-    };
-    pop.appendChild(btn);
-  });
+  if(pop){
+    pop.innerHTML = "";
+    categories.forEach(c=>{
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.textContent = `${c.emoji} ${c.label}`;
+      btn.onclick = ()=>{
+        activeCategory = c.id;
+        renderCategories(); renderMenu();
+        togglePopup("#categoryPopup", false);
+      };
+      pop.appendChild(btn);
+    });
+  }
 }
 
-function renderMenu() {
+function renderMenu(){
   const list = el("#menuList");
-  if (!list) return;
+  if(!list) return;
   list.innerHTML = "";
-  (menuItems[activeCategory] || []).forEach((item) => {
+  (menuItems[activeCategory] || []).forEach(item=>{
     const div = document.createElement("div");
     div.className = "item";
     div.innerHTML = `
@@ -282,33 +294,29 @@ function renderMenu() {
         <button class="add-btn" aria-label="Add"></button>
       </div>
     `;
-    div.querySelector(".add-btn").onclick = (e) => { e.stopPropagation(); addToCart(item); };
-    div.onclick = () => addToCart(item);
+    div.querySelector(".add-btn").onclick = (e)=>{ e.stopPropagation(); addToCart(item); };
+    div.onclick = ()=> addToCart(item);
 
-    // Long-press for item detail popup
-    div.addEventListener("touchstart", () => {
-      longPressTimer = setTimeout(() => showItemDetail(item), 550);
-    });
-    div.addEventListener("touchend", () => clearTimeout(longPressTimer));
-    div.addEventListener("mousedown", () => {
-      longPressTimer = setTimeout(() => showItemDetail(item), 700);
-    });
-    div.addEventListener("mouseup", () => clearTimeout(longPressTimer));
+    // Long-press handlers
+    div.addEventListener("touchstart", ()=>{ longPressTimer=setTimeout(()=>showItemDetail(item),550); });
+    div.addEventListener("touchend",   ()=> clearTimeout(longPressTimer));
+    div.addEventListener("mousedown",  ()=>{ longPressTimer=setTimeout(()=>showItemDetail(item),700); });
+    div.addEventListener("mouseup",    ()=> clearTimeout(longPressTimer));
 
     list.appendChild(div);
   });
 }
 
-function renderCart() {
+function renderCart(){
   const wrap = el("#cartItems");
   const totalEl = el("#cartTotal");
   const subEl = el("#cartSubtotal");
-  if (!wrap || !totalEl) return;
+  if(!wrap || !totalEl) return;
 
   wrap.innerHTML = "";
   let total = 0;
 
-  cart.forEach((row, i) => {
+  cart.forEach((row,i)=>{
     total += row.price * row.qty;
     const div = document.createElement("div");
     div.className = "cart-row";
@@ -322,52 +330,52 @@ function renderCart() {
       <div class="cart-price">${peso(row.price * row.qty)}</div>
       <button class="remove-btn" aria-label="Remove">×</button>
     `;
-    div.querySelector(".minus").onclick = () => updateQty(i, -1);
-    div.querySelector(".plus").onclick = () => updateQty(i, +1);
-    div.querySelector(".remove-btn").onclick = () => removeItem(i);
+    div.querySelector(".minus").onclick = ()=> updateQty(i,-1);
+    div.querySelector(".plus").onclick  = ()=> updateQty(i,+1);
+    div.querySelector(".remove-btn").onclick = ()=> removeItem(i);
     wrap.appendChild(div);
   });
 
-  if (subEl) subEl.textContent = peso(total);
+  if(subEl) subEl.textContent = peso(total);
   totalEl.textContent = peso(total);
 }
 
 /* ============================================================
    CART ACTIONS
 ============================================================ */
-function addToCart(item) {
-  const existing = cart.find(c => c.name === item.name);
-  if (existing) existing.qty++;
-  else cart.push({ ...item, qty: 1 });
+function addToCart(item){
+  const existing = cart.find(c=>c.name===item.name);
+  if(existing) existing.qty++;
+  else cart.push({ ...item, qty:1 });
   renderCart();
   toast(`Added: ${item.name}`);
 
   // Auto-close item detail if open
   const itemPop = el("#itemPopup");
-  if (itemPop && !itemPop.classList.contains("hidden")) {
+  if(itemPop && !itemPop.classList.contains("hidden")){
     togglePopup("#itemPopup", false);
   }
 }
-function updateQty(index, delta) {
+function updateQty(index,delta){
   cart[index].qty += delta;
-  if (cart[index].qty <= 0) cart.splice(index, 1);
+  if(cart[index].qty <= 0) cart.splice(index,1);
   renderCart();
 }
-function removeItem(index) { cart.splice(index, 1); renderCart(); }
-function clearCart() { cart = []; renderCart(); }
+function removeItem(index){ cart.splice(index,1); renderCart(); }
+function clearCart(){ cart = []; renderCart(); }
 
 /* ============================================================
    POPUPS
 ============================================================ */
-function togglePopup(sel, show) {
+function togglePopup(sel, show){
   const p = el(sel);
-  if (!p) return;
-  if (show === undefined) p.classList.toggle("hidden");
+  if(!p) return;
+  if(show===undefined) p.classList.toggle("hidden");
   else p.classList.toggle("hidden", !show);
 }
-function showItemDetail(item) {
+function showItemDetail(item){
   const box = el("#itemDetail");
-  if (!box) return;
+  if(!box) return;
   box.innerHTML = `
     <h3>${item.name}</h3>
     <p class="muted">Price: <strong>${peso(item.price)}</strong></p>
@@ -377,27 +385,24 @@ function showItemDetail(item) {
     </div>
   `;
   togglePopup("#itemPopup", true);
-  el("#detailAdd").onclick = () => { addToCart(item); togglePopup("#itemPopup", false); };
-  el("#detailClose").onclick = () => togglePopup("#itemPopup", false);
+  el("#detailAdd").onclick = ()=>{ addToCart(item); togglePopup("#itemPopup", false); };
+  el("#detailClose").onclick = ()=> togglePopup("#itemPopup", false);
 }
 
 /* ============================================================
-   OPTIONAL: ORDER SUBMIT HOOKS
-   - Keep your existing submit function if you already have it.
-   - This guard ensures any payment/QR popup only shows AFTER submit.
+   GCash popup guard & hook
 ============================================================ */
-function allowPaymentDialog() { paymentDialogAllowed = true; }
-function maybeShowPaymentDialog() {
-  if (!paymentDialogAllowed) return; // block on load
-  const p = el("#gcashPopup");
-  if (p) togglePopup("#gcashPopup", true);
+function allowPaymentDialog(){ paymentDialogAllowed = true; }
+function maybeShowPaymentDialog(){
+  if(!paymentDialogAllowed) return; // block on load
+  togglePopup("#gcashPopup", true);
 }
 
 /* ============================================================
    INIT
 ============================================================ */
-document.addEventListener("DOMContentLoaded", () => {
-  // Initial UI
+document.addEventListener("DOMContentLoaded", ()=>{
+  // UI
   renderCategories();
   renderMenu();
   renderCart();
@@ -405,23 +410,25 @@ document.addEventListener("DOMContentLoaded", () => {
   // Date/time + mobile formatter
   setMinDateTime();
   const mobile = el("#mobileNumber");
-  if (mobile) {
+  if(mobile){
     mobile.addEventListener("input", formatMobile);
     formatMobile();
   }
 
-  // Example: If your "Submit Order" button exists, wire guard here
+  // Submit hook (show GCash after your own send succeeds)
   const submitBtn = el("#submitOrder");
-  if (submitBtn) {
-    submitBtn.addEventListener("click", () => {
+  if(submitBtn){
+    submitBtn.addEventListener("click", async ()=>{
+      if(cart.length===0){ toast("Your cart is empty."); return; }
+
+      // TODO: plug your Telegram/Sheets send here. If success:
       allowPaymentDialog();
-      // your existing submit logic can call maybeShowPaymentDialog() after success
+      maybeShowPaymentDialog();
+      toast("Order received! Please proceed with payment.");
     });
   }
 
-  // Optional: clear cart button
+  // Clear cart button
   const clearBtn = el("#clearCart");
-  if (clearBtn) clearBtn.addEventListener("click", clearCart);
+  if(clearBtn) clearBtn.addEventListener("click", clearCart);
 });
-
-
