@@ -11,9 +11,9 @@ window.APP_CONFIG = {
   ASSETS: {
     logo: [
       "assets/logo.png",
-      "assets/img/logo.png",
+      "assets/icons/icon-192.png",
       "assets/stonegrill-logo.png",
-      "assets/img/stonegrill-logo.png",
+      "assets/icons/stonegrill-logo.png",
       "assets/logo.jpg",
       "assets/img/logo.jpg"
     ],
