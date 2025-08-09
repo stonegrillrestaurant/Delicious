@@ -2,50 +2,150 @@ const CFG = window.APP_CONFIG;
 
 // ====== MENU ======
 const menuItems = {
-  pork: [
-    { name: "Pork Sisig", price: 199 },
-    { name: "Lechon Kawali", price: 229 },
-    { name: "Crispy Pata", price: 499 }
-  ],
-  chicken: [
-    { name: "Fried Chicken (2pcs)", price: 189 },
-    { name: "Chicken Inasal", price: 209 }
-  ],
-  beef: [
-    { name: "Beef Tapa", price: 219 },
-    { name: "Beef Caldereta", price: 249 }
+  setmeals: [
+    { name: "Boodle", price: 2300 },
+    { name: "Set-A", price: 1100 },
+    { name: "Set-B", price: 1000 },
+    { name: "Set-C", price: 1980 },
+    { name: "Seafood Inferno", price: 850 },
+    { name: "Seafood Heaven", price: 850 }
+  rice: [
+    { name: "Black Rice", price: 180 },
+    { name: "Cup Rice", price: 25 },
+    { name: "Garlic Fried Rice", price: 180 },
+    { name: "Platter Rice", price: 180 },
+    { name: "Shrimp Fried Rice", price: 195 },
+    { name: "Stone Grill Fried Rice", price: 180 }
   ],
   vegetables: [
-    { name: "Chopsuey", price: 169 },
-    { name: "Pinakbet", price: 169 }
+    { name: "Beef with Ampalaya", price: 320 },
+    { name: "Beef with Broccoli", price: 320 },
+    { name: "Chopsuey", price: 210 },
+    { name: "Chopsuey Seafood", price: 230 },
+    { name: "Pinakbet", price: 235 }
   ],
-  seafood: [
-    { name: "Shrimp Garlic Butter", price: 289 },
-    { name: "Grilled Bangus", price: 239 }
+  noodles_pasta: [
+    { name: "Bam-i", price: 220 },
+    { name: "Bam-i Seafood", price: 240 },
+    { name: "Bihon", price: 240 },
+    { name: "Bihon Seafood", price: 260 },
+    { name: "Canton", price: 200 },
+    { name: "Canton Seafood", price: 220 },
+    { name: "Lomi", price: 180 },
+    { name: "Lomi Seafood", price: 200 },
+    { name: "Sotanghon Guisado", price: 280 }
   ],
-  noodles: [
-    { name: "Pancit Canton", price: 169 },
-    { name: "Spaghetti", price: 159 }
+  chicken: [
+    { name: "Buffalo Wings", price: 240 },
+    { name: "Buttered Chicken", price: 230 },
+    { name: "Chicken Teriyaki", price: 250 },
+    { name: "Fried Chicken", price: 210 },
+    { name: "Naked Fried Chicken", price: 220 }
   ],
-  bbq: [
-    { name: "Pork BBQ (2 sticks)", price: 89 },
-    { name: "Isaw (5 pcs)", price: 59 }
+  beef: [
+    { name: "Beef Caldereta", price: 320 },
+    { name: "Beef Nilaga/Pochero", price: 310 },
+    { name: "Beef Steak", price: 300 },
+    { name: "Beef with Mushroom", price: 300 },
+    { name: "Beef with Brocoli", price: 320 }
+  ],
+  pork: [
+    { name: "Crispy Pata Large", price: 620 },
+    { name: "Crispy Pata Medium", price: 550 },
+    { name: "Crispy Pata Small", price: 480 },
+    { name: "Lechon Kawali (500g)", price: 300 },
+    { name: "Pork Kare-Kare", price: 300 },
+    { name: "Pork Sisig", price: 230 },
+    { name: "Pork Steak", price: 240 },
+    { name: "Pork with Cabbage", price: 220 },
+    { name: "Sweet & Sour Pork", price: 230 }
+  ],
+  fish: [
+    { name: "Fish Eskabetche", price: 330 },
+    { name: "Fish Fillet in Mayo Dip", price: 310 },
+    { name: "Fish Kinilaw", price: 340 },
+    { name: "Fish Sinigang", price: 340 },
+    { name: "Fish Tinola", price: 340 },
+    { name: "Fish with Tausi", price: 340 },
+    { name: "Fried Fish", price: 300 },
+    { name: "Grilled Fish", price: 300 },
+    { name: "Sweet & Sour Fish", price: 340 }
+  ],
+  shrimp: [
+    { name: "Camaron Rebusado", price: 230 },
+    { name: "Crispy Fried Shrimp", price: 220 },
+    { name: "Garlic Buttered Shrimp", price: 230 },
+    { name: "Shrimp Sinigang/Tinola", price: 250 },
+    { name: "Sizzling Gambas", price: 230 },
+    { name: "Sweet Chili Shrimp", price: 200 }
+  ],
+  squid: [
+    { name: "Adobo Spicy Squid", price: 270 },
+    { name: "Calamari", price: 280 },
+    { name: "Crispy Fried Squid", price: 280 },
+    { name: "Grilled Squid (70/100g)", price: 280 },
+    { name: "Sizzling Squid", price: 280 }
+  ],
+  crabs: [
+    { name: "Adobo sa Gata Crab", price: 340 },
+    { name: "Boiled Crabs", price: 310 },
+    { name: "Crab Curry", price: 340 },
+    { name: "Salt & Pepper Crabs", price: 340 },
+    { name: "Sweet Chili Crabs", price: 340 }
+  ],
+  grilled_bbq: [
+    { name: "Chicken Kebab", price: 190 },
+    { name: "Grilled Pork Belly", price: 190 },
+    { name: "Pork BBQ", price: 190 },
+    { name: "Shrimp Kebab", price: 190 },
+    { name: "Squid Kebab", price: 190 },
+    { name: "Tuna Belly", price: 190 },
+    { name: "Tuna Panga", price: 190 }
   ],
   soup: [
-    { name: "Sinigang Baboy", price: 249 },
-    { name: "Nilagang Baka", price: 279 }
+    { name: "Crab & Corn Soup", price: 190 },
+    { name: "Cream of Mushroom", price: 190 },
+    { name: "Egg Drop Soup", price: 190 },
+    { name: "Mix Seafood Tinola", price: 300 },
+    { name: "Pork Sinigang", price: 300 },
+    { name: "Vegetable Soup", price: 230 }
   ],
-  // Optional categories used by your HTML buttons; leave if you'll fill later
   specials: [
-    { name: "Sizzling Bulalo", price: 399 }
+    { name: "Crispy Squid Sisig", price: 280 },
+    { name: "Kalderetang Kanding", price: 290 },
+    { name: "Mix Seafood Kare-Kare", price: 290 },
+    { name: "Sinuglaw", price: 340 }
   ],
   drinks: [
-    { name: "Iced Tea (Pitcher)", price: 149 },
-    { name: "Bottled Water", price: 25 }
+    { name: "Red Horse Stallion", price: 80 },
+    { name: "Red Horse 1L", price: 120 },
+    { name: "San Mig Apple", price: 70 },
+    { name: "San Mig Grande", price: 130 },
+    { name: "San Mig Light", price: 70 },
+    { name: "San Mig Pale Pilsen", price: 70 },
+    { name: "Softdrinks", price: 20 },
+    { name: "Wilkins 1L", price: 30 },
+    { name: "Wilkins 500ml", price: 25 }
+  ],
+  refreshments: [
+    { name: "Apple Shake", price: 75 },
+    { name: "Avocado Shake (Seasonal)", price: 80 },
+    { name: "Banana Shake", price: 75 },
+    { name: "Buko Juice", price: 50 },
+    { name: "Carrot Shake", price: 75 },
+    { name: "Cucumber (Glass)", price: 25 },
+    { name: "Cucumber (Pitcher)", price: 100 },
+    { name: "Halo-Halo", price: 90 },
+    { name: "Ice Tea (Glass)", price: 25 },
+    { name: "Ice Tea (Pitcher)", price: 100 },
+    { name: "Mango Shake", price: 75 },
+    { name: "Pineapple (Glass)", price: 25 },
+    { name: "Pineapple (Pitcher)", price: 100 }
   ]
 };
 
 const categories = [
+  { id: "setmeals", label: "Set Meals", emoji: "🔥" },
   { id: "pork", label: "Pork", emoji: "🐖" },
   { id: "chicken", label: "Chicken", emoji: "🐓" },
   { id: "beef", label: "Beef", emoji: "🐂" },
