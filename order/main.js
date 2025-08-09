@@ -9,6 +9,7 @@ const menuItems = {
     { name: "Set-C", price: 1980 },
     { name: "Seafood Inferno", price: 850 },
     { name: "Seafood Heaven", price: 850 }
+  ],
   rice: [
     { name: "Black Rice", price: 180 },
     { name: "Cup Rice", price: 25 },
