@@ -21,6 +21,11 @@
   <meta property="og:description" content="Fast, easy online ordering. Dine-in or take-out.">
   <meta property="og:image" content="https://stonegrillresto.net/order/assets/og-order.jpg">
   <meta property="og:url" content="https://stonegrillresto.net/order/">
+
+  <!-- ✅ Belt-and-suspenders: ensure hidden class wins even if CSS is stale -->
+  <style>
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <header class="app-header">
@@ -138,6 +143,7 @@
       <h3 class="popup-title">Order Received ✅</h3>
       <p>Please settle your payment to proceed. Scan the GCash QR below:</p>
       <div class="qr-wrap">
+        <!-- Keeping src is fine; popup stays hidden until JS opens it -->
         <img id="gcashQR" alt="GCash QR" src="assets/qr/gcash.png">
       </div>
       <p class="small">After paying, staff will process your order. Keep your reference number.</p>
@@ -151,12 +157,17 @@
   <!-- Toast Message -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Scripts -->
-  <script src="config.js"></script>
-  <script src="main.js"></script>
+  <!-- Scripts (config first). Add cache-busting to beat old cached JS -->
+  <script src="config.js?v=8"></script>
+  <script src="main.js?v=8"></script>
+
+  <!-- Register SW only on custom domain (prevents github.io from caching old JS) -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('pwa/sw.js').catch(() => {});
+      const onGithubIo = location.hostname.endsWith('github.io');
+      if (!onGithubIo) {
+        navigator.serviceWorker.register('pwa/sw.js?v=8').catch(() => {});
+      }
     }
   </script>
 </body>
