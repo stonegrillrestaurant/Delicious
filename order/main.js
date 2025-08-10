@@ -1,427 +1,381 @@
-/* ============================================================
-   Stone Grill — Pill-Style Order Script (your preferred version)
-   - Dynamic pill categories + popup category list
-   - Long-press item detail popup
+/* =========================================================================
+   Stone Grill — main.js
+   - Categories → Items → Cart
+   - Subtotal, Clear Cart
+   - Dine-in pax toggle
+   - Mobile number auto-format to +63
+   - Telegram send (REQUIRED)
+   - Google Sheets log (OPTIONAL; non-blocking)
    - Toast messages
-   - +63 mobile formatter & min date/time setter
-   - Guard so payment dialog never shows on load
-   ============================================================ */
+   NOTE: GCash popup intentionally not triggered per request.
+   ========================================================================= */
 
-/* ---------- CONFIG (optional external) ---------- */
-const CFG = (window.APP_CONFIG || window.CFG || {});
+/* ---- Config compatibility layer --------------------------------------- */
+(function attachConfig() {
+  const sources = [
+    window.CFG,
+    window.APP_CONFIG,
+    window.app_config,
+    window.config,
+    window
+  ].filter(Boolean);
 
-/* ---------- STATE ---------- */
-let cart = [];
-let longPressTimer = null;
-let paymentDialogAllowed = false; // ✅ prevent QR on initial load
+  function pick(...keys) {
+    for (const src of sources) {
+      for (const k of keys) {
+        if (src && src[k] != null) return src[k];
+      }
+    }
+    return undefined;
+  }
 
-/* ---------- DOM HELPERS ---------- */
-const el  = (sel) => document.querySelector(sel);
-const els = (sel) => Array.from(document.querySelectorAll(sel));
-const peso = (n) => "₱" + Number(n || 0).toFixed(2);
+  window.APP = {
+    TELEGRAM_BOT_TOKEN: pick('TELEGRAM_BOT_TOKEN', 'telegramBotToken'),
+    TELEGRAM_CHAT_ID: pick('TELEGRAM_CHAT_ID', 'telegramChatId'),
+    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL', 'appsScriptUrl', 'GOOGLE_SHEETS_WEBAPP_URL'),
+  };
+})();
 
-/* ---------- TOAST ---------- */
-const toast = (msg) => {
-  const t = el("#toast");
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.remove("hidden");
-  t.classList.add("show");
-  setTimeout(() => {
-    t.classList.remove("show");
-    setTimeout(() => t.classList.add("hidden"), 300);
-  }, 1800);
-};
-
-/* ---------- DATE/TIME + MOBILE FORMAT ---------- */
-function setMinDateTime() {
-  const d = el("#orderDate");
-  const t = el("#orderTime");
-  if (!d || !t) return;
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  d.min = `${yyyy}-${mm}-${dd}`;
-  d.value = `${yyyy}-${mm}-${dd}`;
-  const hh = String(now.getHours()).padStart(2, "0");
-  const min = String(now.getMinutes()).padStart(2, "0");
-  t.value = `${hh}:${min}`;
+/* ---- Simple toast ------------------------------------------------------ */
+function showToast(msg, ms = 2200) {
+  const el = document.getElementById('toast');
+  if (!el) return alert(msg);
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
 }
 
-function formatMobile() {
-  const input = el("#mobileNumber");
-  if (!input) return;
-  let v = input.value.replace(/[^\d+]/g, "");
-  if (!v.startsWith("+63")) v = "+63" + v.replace(/^0+/, "");
-  input.value = v.slice(0, 14);
-}
-
-/* ============================================================
-   MENU DATA (updated with Set Meals + latest prices)
-   NOTE: category ids MUST match keys in menuItems
-============================================================ */
-const menuItems = {
-  setmeals: [
-    { name: "Boodle", price: 2300 },
-    { name: "Seafood Heaven", price: 850 },
-    { name: "Seafood Inferno", price: 850 },
-    { name: "Set-A", price: 1100 },
-    { name: "Set-B", price: 1000 },
-    { name: "Set-C", price: 1980 }
-  ],
-  rice: [
-    { name: "Black Rice", price: 180 },
-    { name: "Cup Rice", price: 25 },
-    { name: "Garlic Fried Rice", price: 180 },
-    { name: "Platter Rice", price: 180 },
-    { name: "Shrimp Fried Rice", price: 195 },
-    { name: "Stone Grill Fried Rice", price: 180 }
-  ],
-  vegetables: [
-    { name: "Beef with Ampalaya", price: 320 },
-    { name: "Beef with Broccoli", price: 320 },
-    { name: "Chopsuey", price: 210 },
-    { name: "Chopsuey Seafood", price: 230 },
-    { name: "Pinakbet", price: 235 }
-  ],
-  noodles_pasta: [
-    { name: "Bam-i", price: 220 },
-    { name: "Bam-i Seafood", price: 240 },
-    { name: "Bihon", price: 240 },
-    { name: "Bihon Seafood", price: 260 },
-    { name: "Canton", price: 200 },
-    { name: "Canton Seafood", price: 220 },
-    { name: "Lomi", price: 180 },
-    { name: "Lomi Seafood", price: 200 },
-    { name: "Sotanghon Guisado", price: 280 }
+/* ---- Menu data (you can swap to your full menu later) ------------------ */
+const MENU = {
+  pork: [
+    { name: "Pork Sisig", price: 199 },
+    { name: "Lechon Kawali", price: 229 },
+    { name: "Crispy Pata", price: 499 }
   ],
   chicken: [
-    { name: "Buffalo Wings", price: 240 },
-    { name: "Buttered Chicken", price: 230 },
-    { name: "Chicken Teriyaki", price: 250 },
-    { name: "Fried Chicken", price: 210 },
-    { name: "Naked Fried Chicken", price: 220 }
+    { name: "Chicken Inasal", price: 199 },
+    { name: "Fried Chicken", price: 189 }
   ],
   beef: [
-    { name: "Beef Caldereta", price: 320 },
-    { name: "Beef Nilaga/Pochero", price: 310 },
-    { name: "Beef Steak", price: 300 },
-    { name: "Beef with Brocoli", price: 320 },
-    { name: "Beef with Mushroom", price: 300 }
+    { name: "Beef Caldereta", price: 239 },
+    { name: "Beef Steak", price: 259 }
   ],
-  pork: [
-    { name: "Crispy Pata Large", price: 620 },
-    { name: "Crispy Pata Medium", price: 550 },
-    { name: "Crispy Pata Small", price: 480 },
-    { name: "Lechon Kawali (500g)", price: 300 },
-    { name: "Pork Kare-Kare", price: 300 },
-    { name: "Pork Sisig", price: 230 },
-    { name: "Pork Steak", price: 240 },
-    { name: "Pork with Cabbage", price: 220 },
-    { name: "Sweet & Sour Pork", price: 230 }
+  seafood: [
+    { name: "Grilled Bangus", price: 229 },
+    { name: "Garlic Shrimp", price: 299 }
   ],
-  fish: [
-    { name: "Fish Eskabetche", price: 330 },
-    { name: "Fish Fillet in Mayo Dip", price: 310 },
-    { name: "Fish Kinilaw", price: 340 },
-    { name: "Fish Sinigang", price: 340 },
-    { name: "Fish Tinola", price: 340 },
-    { name: "Fish with Tausi", price: 340 },
-    { name: "Fried Fish", price: 300 },
-    { name: "Grilled Fish", price: 300 },
-    { name: "Sweet & Sour Fish", price: 340 }
+  vegetables: [
+    { name: "Chopsuey", price: 169 },
+    { name: "Pinakbet", price: 159 }
   ],
-  shrimp: [
-    { name: "Camaron Rebusado", price: 230 },
-    { name: "Crispy Fried Shrimp", price: 220 },
-    { name: "Garlic Buttered Shrimp", price: 230 },
-    { name: "Shrimp Sinigang/Tinola", price: 250 },
-    { name: "Sizzling Gambas", price: 230 },
-    { name: "Sweet Chili Shrimp", price: 200 }
+  noodles: [
+    { name: "Pancit Canton", price: 159 },
+    { name: "Spaghetti", price: 149 }
   ],
-  squid: [
-    { name: "Adobo Spicy Squid", price: 270 },
-    { name: "Calamari", price: 280 },
-    { name: "Crispy Fried Squid", price: 280 },
-    { name: "Grilled Squid (70/100g)", price: 280 },
-    { name: "Sizzling Squid", price: 280 }
-  ],
-  crabs: [
-    { name: "Adobo sa Gata Crab", price: 340 },
-    { name: "Boiled Crabs", price: 310 },
-    { name: "Crab Curry", price: 340 },
-    { name: "Salt & Pepper Crabs", price: 340 },
-    { name: "Sweet Chili Crabs", price: 340 }
-  ],
-  grilled_bbq: [
-    { name: "Chicken Kebab", price: 190 },
-    { name: "Grilled Pork Belly", price: 190 },
-    { name: "Pork BBQ", price: 190 },
-    { name: "Shrimp Kebab", price: 190 },
-    { name: "Squid Kebab", price: 190 },
-    { name: "Tuna Belly", price: 190 },
-    { name: "Tuna Panga", price: 190 }
+  bbq: [
+    { name: "Pork BBQ (3 sticks)", price: 99 },
+    { name: "Chicken BBQ", price: 119 }
   ],
   soup: [
-    { name: "Crab & Corn Soup", price: 190 },
-    { name: "Cream of Mushroom", price: 190 },
-    { name: "Egg Drop Soup", price: 190 },
-    { name: "Mix Seafood Tinola", price: 300 },
-    { name: "Pork Sinigang", price: 300 },
-    { name: "Vegetable Soup", price: 230 }
+    { name: "Sinigang na Baboy", price: 229 },
+    { name: "Nilagang Baka", price: 249 }
   ],
   specials: [
-    { name: "Crispy Squid Sisig", price: 280 },
-    { name: "Kalderetang Kanding", price: 290 },
-    { name: "Mix Seafood Kare-Kare", price: 290 },
-    { name: "Sinuglaw", price: 340 }
+    { name: "Sizzling Sisig Platter", price: 399 },
+    { name: "Family Platter", price: 799 }
   ],
   drinks: [
-    { name: "Red Horse 1L", price: 120 },
-    { name: "Red Horse Stallion", price: 80 },
-    { name: "San Mig Apple", price: 70 },
-    { name: "San Mig Grande", price: 130 },
-    { name: "San Mig Light", price: 70 },
-    { name: "San Mig Pale Pilsen", price: 70 },
-    { name: "Softdrinks", price: 20 },
-    { name: "Wilkins 1L", price: 30 },
-    { name: "Wilkins 500ml", price: 25 }
+    { name: "Iced Tea", price: 39 },
+    { name: "Bottled Water", price: 25 }
   ],
-  refreshments: [
-    { name: "Apple Shake", price: 75 },
-    { name: "Avocado Shake (Seasonal)", price: 80 },
-    { name: "Banana Shake", price: 75 },
-    { name: "Buko Juice", price: 50 },
-    { name: "Carrot Shake", price: 75 },
-    { name: "Cucumber (Glass)", price: 25 },
-    { name: "Cucumber (Pitcher)", price: 100 },
-    { name: "Halo-Halo", price: 90 },
-    { name: "Ice Tea (Glass)", price: 25 },
-    { name: "Ice Tea (Pitcher)", price: 100 },
-    { name: "Mango Shake", price: 75 },
-    { name: "Pineapple (Glass)", price: 25 },
-    { name: "Pineapple (Pitcher)", price: 100 }
-  ]
 };
 
-/* Category pills + popup list (ids MUST match menuItems keys) */
-const categories = [
-  { id: "setmeals",      label: "Set Meals",     emoji: "🔥"  },
-  { id: "rice",          label: "Rice",          emoji: "🍚"  },
-  { id: "pork",          label: "Pork",          emoji: "🐖"  },
-  { id: "chicken",       label: "Chicken",       emoji: "🐓"  },
-  { id: "beef",          label: "Beef",          emoji: "🐂"  },
-  { id: "vegetables",    label: "Veggies",       emoji: "🥦"  },
-  { id: "noodles_pasta", label: "Noodles/Pasta", emoji: "🍝"  },
-  { id: "fish",          label: "Fish",          emoji: "🐟"  },
-  { id: "shrimp",        label: "Shrimp",        emoji: "🦐"  },
-  { id: "squid",         label: "Squid",         emoji: "🦑"  },
-  { id: "crabs",         label: "Crabs",         emoji: "🦀"  },
-  { id: "grilled_bbq",   label: "Grilled/BBQ",   emoji: "🔥"  },
-  { id: "soup",          label: "Soup",          emoji: "🍲"  },
-  { id: "specials",      label: "Specialties",   emoji: "⭐"  },
-  { id: "drinks",        label: "Drinks",        emoji: "🥤"  },
-  { id: "refreshments",  label: "Refreshments",  emoji: "🍹"  }
-];
+/* ---- State ------------------------------------------------------------- */
+let currentCategory = 'pork';
+let cart = [];
 
-/* Active category defaults to the first one */
-let activeCategory = categories[0].id;
+/* ---- DOM helpers ------------------------------------------------------- */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
 
-/* Expose for HTML buttons like onclick="showCategory('pork')" */
-window.showCategory = function(id) {
-  activeCategory = id;
-  renderCategories();
+/* ---- Render Category Items -------------------------------------------- */
+function money(n) {
+  return '₱' + Number(n).toFixed(2);
+}
+
+function showCategory(cat) {
+  currentCategory = cat;
   renderMenu();
-};
-
-/* ============================================================
-   RENDER UI
-============================================================ */
-function renderCategories() {
-  const bar = el("#categoryBar");
-  if (!bar) return;
-  bar.innerHTML = "";
-  categories.forEach(c => {
-    const pill = document.createElement("button");
-    pill.className = "cat-pill" + (c.id === activeCategory ? " active" : "");
-    pill.innerHTML = `<span class="cat-emoji">${c.emoji}</span><span>${c.label}</span>`;
-    pill.onclick = () => { activeCategory = c.id; renderCategories(); renderMenu(); };
-    bar.appendChild(pill);
-  });
-
-  // Popup list
-  const pop = el("#popupCategories");
-  if (!pop) return;
-  pop.innerHTML = "";
-  categories.forEach(c => {
-    const btn = document.createElement("button");
-    btn.className = "btn";
-    btn.textContent = `${c.emoji} ${c.label}`;
-    btn.onclick = () => {
-      activeCategory = c.id;
-      renderCategories();
-      renderMenu();
-      togglePopup("#categoryPopup", false);
-    };
-    pop.appendChild(btn);
-  });
 }
 
 function renderMenu() {
-  const list = el("#menuList");
+  const list = $('#menuList');
   if (!list) return;
-  list.innerHTML = "";
-  (menuItems[activeCategory] || []).forEach((item) => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerHTML = `
-      <div class="item-title">${item.name}</div>
+  const items = MENU[currentCategory] || [];
+  list.innerHTML = items.map((item, idx) => `
+    <div class="item" data-idx="${idx}">
+      <div class="item-title" title="${item.name}">${item.name}</div>
       <div class="item-actions">
-        <div class="item-price">${peso(item.price)}</div>
-        <button class="add-btn" aria-label="Add"></button>
+        <span class="item-price">${money(item.price)}</span>
+        <button class="add-btn" data-idx="${idx}" aria-label="Add ${item.name}">Add</button>
       </div>
-    `;
-    div.querySelector(".add-btn").onclick = (e) => { e.stopPropagation(); addToCart(item); };
-    div.onclick = () => addToCart(item);
+    </div>
+  `).join('');
 
-    // Long-press for item detail popup
-    div.addEventListener("touchstart", () => {
-      longPressTimer = setTimeout(() => showItemDetail(item), 550);
+  // attach add handlers
+  list.querySelectorAll('.add-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const i = parseInt(e.currentTarget.getAttribute('data-idx'), 10);
+      const item = MENU[currentCategory][i];
+      addToCart(item);
     });
-    div.addEventListener("touchend", () => clearTimeout(longPressTimer));
-    div.addEventListener("mousedown", () => {
-      longPressTimer = setTimeout(() => showItemDetail(item), 700);
-    });
-    div.addEventListener("mouseup", () => clearTimeout(longPressTimer));
-
-    list.appendChild(div);
   });
 }
 
-function renderCart() {
-  const wrap = el("#cartItems");
-  const totalEl = el("#cartTotal");
-  const subEl = el("#cartSubtotal");
-  if (!wrap || !totalEl) return;
-
-  wrap.innerHTML = "";
-  let total = 0;
-
-  cart.forEach((row, i) => {
-    total += row.price * row.qty;
-    const div = document.createElement("div");
-    div.className = "cart-row";
-    div.innerHTML = `
-      <div class="cart-name">${row.name}</div>
-      <div class="qty-wrap">
-        <button class="qty-btn minus">−</button>
-        <div>${row.qty}</div>
-        <button class="qty-btn plus">＋</button>
-      </div>
-      <div class="cart-price">${peso(row.price * row.qty)}</div>
-      <button class="remove-btn" aria-label="Remove">×</button>
-    `;
-    div.querySelector(".minus").onclick = () => updateQty(i, -1);
-    div.querySelector(".plus").onclick = () => updateQty(i, +1);
-    div.querySelector(".remove-btn").onclick = () => removeItem(i);
-    wrap.appendChild(div);
-  });
-
-  if (subEl) subEl.textContent = peso(total);
-  totalEl.textContent = peso(total);
-}
-
-/* ============================================================
-   CART ACTIONS
-============================================================ */
+/* ---- Cart -------------------------------------------------------------- */
 function addToCart(item) {
-  const existing = cart.find(c => c.name === item.name);
-  if (existing) existing.qty++;
-  else cart.push({ ...item, qty: 1 });
-  renderCart();
-  toast(`Added: ${item.name}`);
+  const found = cart.find(c => c.name === item.name);
+  if (found) {
+    found.qty += 1;
+  } else {
+    cart.push({ name: item.name, price: item.price, qty: 1 });
+  }
+  renderCart(true);
+}
 
-  // Auto-close item detail if open
-  const itemPop = el("#itemPopup");
-  if (itemPop && !itemPop.classList.contains("hidden")) {
-    togglePopup("#itemPopup", false);
+function changeQty(name, delta) {
+  const it = cart.find(c => c.name === name);
+  if (!it) return;
+  it.qty += delta;
+  if (it.qty <= 0) {
+    cart = cart.filter(c => c.name !== name);
+  }
+  renderCart();
+}
+
+function removeItem(name) {
+  cart = cart.filter(c => c.name !== name);
+  renderCart();
+}
+
+function cartSubtotal() {
+  return cart.reduce((sum, it) => sum + it.price * it.qty, 0);
+}
+
+function renderCart(nudge = false) {
+  const wrap = $('#cartItems');
+  if (!wrap) return;
+
+  wrap.innerHTML = cart.map(it => `
+    <div class="cart-row">
+      <div class="cart-name" title="${it.name}">${it.name}</div>
+      <div class="qty-wrap">
+        <button class="qty-btn" data-name="${it.name}" data-delta="-1">−</button>
+        <span>${it.qty}</span>
+        <button class="qty-btn" data-name="${it.name}" data-delta="1">+</button>
+      </div>
+      <div class="cart-price">${money(it.price * it.qty)}</div>
+      <button class="remove-btn" data-name="${it.name}">Remove</button>
+    </div>
+  `).join('');
+
+  // totals
+  $('#cartSubtotal') && ($('#cartSubtotal').textContent = money(cartSubtotal()));
+  $('#cartTotal') && ($('#cartTotal').textContent = money(cartSubtotal()));
+
+  // events
+  wrap.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const name = e.currentTarget.getAttribute('data-name');
+      const d = parseInt(e.currentTarget.getAttribute('data-delta'), 10);
+      changeQty(name, d);
+    });
+  });
+  wrap.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => removeItem(e.currentTarget.getAttribute('data-name')));
+  });
+
+  // subtle nudge animation on add
+  const card = document.querySelector('.card.highlight');
+  if (nudge && card) {
+    card.classList.remove('nudge');
+    void card.offsetWidth; // reflow to restart animation
+    card.classList.add('nudge');
   }
 }
-function updateQty(index, delta) {
-  cart[index].qty += delta;
-  if (cart[index].qty <= 0) cart.splice(index, 1);
+
+function clearCart() {
+  cart = [];
   renderCart();
 }
-function removeItem(index) { cart.splice(index, 1); renderCart(); }
-function clearCart() { cart = []; renderCart(); }
 
-/* ============================================================
-   POPUPS
-============================================================ */
-function togglePopup(sel, show) {
-  const p = el(sel);
-  if (!p) return;
-  if (show === undefined) p.classList.toggle("hidden");
-  else p.classList.toggle("hidden", !show);
-}
-function showItemDetail(item) {
-  const box = el("#itemDetail");
-  if (!box) return;
-  box.innerHTML = `
-    <h3>${item.name}</h3>
-    <p class="muted">Price: <strong>${peso(item.price)}</strong></p>
-    <div class="inline">
-      <button class="btn" id="detailAdd">Add to Cart</button>
-      <button class="btn ghost" id="detailClose">Close</button>
-    </div>
-  `;
-  togglePopup("#itemPopup", true);
-  el("#detailAdd").onclick = () => { addToCart(item); togglePopup("#itemPopup", false); };
-  el("#detailClose").onclick = () => togglePopup("#itemPopup", false);
+/* ---- Dine-in pax toggle ----------------------------------------------- */
+function updatePersonsVisibility() {
+  const selected = document.querySelector('input[name="orderType"]:checked');
+  const wrap = $('#personsWrap');
+  if (!wrap) return;
+  const isDineIn = selected && /dine[\s-]*in/i.test(String(selected.value || ''));
+  wrap.classList.toggle('hidden', !isDineIn);
 }
 
-/* ============================================================
-   OPTIONAL: ORDER SUBMIT HOOKS
-   - Keep your existing submit function if you already have it.
-   - This guard ensures any payment/QR popup only shows AFTER submit.
-============================================================ */
-function allowPaymentDialog() { paymentDialogAllowed = true; }
-function maybeShowPaymentDialog() {
-  if (!paymentDialogAllowed) return; // block on load
-  const p = el("#gcashPopup");
-  if (p) togglePopup("#gcashPopup", true);
+/* ---- Mobile number formatting (+63) ----------------------------------- */
+function normalizeMobile(inputEl) {
+  let val = inputEl.value.replace(/[^\d+]/g, '');
+  // Force +63
+  if (val.startsWith('0')) val = '+63' + val.slice(1);
+  if (!val.startsWith('+63')) val = '+63' + val.replace(/^\+?/, '').replace(/^63/, '');
+  // Optional spacing (keeps numbers compact but readable)
+  val = val.replace(/^\+63\s?(\d{3})\s?(\d{3})\s?(\d{4}).*/, '+63 $1 $2 $3')
+           .replace(/^\+63(\d{3})(\d{3})(\d{0,4})$/, '+63 $1 $2 $3').trim();
+  inputEl.value = val;
 }
 
-/* ============================================================
-   INIT
-============================================================ */
-document.addEventListener("DOMContentLoaded", () => {
-  // Initial UI
-  renderCategories();
+/* ---- Telegram + Sheets submission ------------------------------------- */
+async function sendToTelegram(text) {
+  const token = (APP && APP.TELEGRAM_BOT_TOKEN) || '';
+  const chatId = (APP && APP.TELEGRAM_CHAT_ID) || '';
+  if (!token || !chatId) throw new Error('Missing Telegram token or chat id in config.js');
+
+  const url = `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error('Telegram error: ' + (t || res.status));
+  }
+  return res.json();
+}
+
+async function logToSheets(payload) {
+  const endpoint = (APP && APP.GOOGLE_APPS_SCRIPT_URL) || '';
+  if (!endpoint) return { ok: false, skipped: true };
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(() => null);
+  if (!res || !res.ok) return { ok: false };
+  return { ok: true };
+}
+
+/* ---- Order form handling ---------------------------------------------- */
+function buildOrderMessage(form) {
+  const name = $('#fullName')?.value?.trim() || '';
+  const mobile = $('#mobileNumber')?.value?.trim() || '';
+  const orderType = (form.querySelector('input[name="orderType"]:checked')?.value) || '';
+  const persons = $('#persons')?.value || '';
+  const date = $('#orderDate')?.value || '';
+  const time = $('#orderTime')?.value || '';
+  const notes = $('#specialRequests')?.value?.trim() || '';
+
+  const items = cart.map(it => `• ${it.name} x${it.qty} — ${money(it.qty * it.price)}`).join('\n') || '—';
+
+  let msg = `<b>Stone Grill — New Order</b>\n`;
+  msg += `\n<b>Customer:</b> ${name}`;
+  msg += `\n<b>Mobile:</b> ${mobile}`;
+  msg += `\n<b>Type:</b> ${orderType}`;
+  if (/dine/i.test(orderType)) msg += `\n<b>Persons:</b> ${persons || 1}`;
+  msg += `\n<b>Date/Time:</b> ${date || '—'} ${time || ''}`;
+  msg += `\n<b>Items:</b>\n${items}`;
+  msg += `\n<b>Subtotal:</b> ${money(cartSubtotal())}`;
+  if (notes) msg += `\n<b>Requests:</b> ${notes}`;
+  msg += `\n\n(Automated message)`;
+  return msg;
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+
+  if (cart.length === 0) {
+    showToast('Add at least 1 item to your order.');
+    return;
+  }
+
+  const mobileEl = $('#mobileNumber');
+  if (mobileEl) normalizeMobile(mobileEl);
+
+  const form = e.currentTarget;
+  const message = buildOrderMessage(form);
+
+  // Build payload for Sheets (non-blocking)
+  const payload = {
+    name: $('#fullName')?.value?.trim() || '',
+    mobile: $('#mobileNumber')?.value?.trim() || '',
+    orderType: form.querySelector('input[name="orderType"]:checked')?.value || '',
+    persons: $('#persons')?.value || '',
+    date: $('#orderDate')?.value || '',
+    time: $('#orderTime')?.value || '',
+    requests: $('#specialRequests')?.value?.trim() || '',
+    items: cart.map(it => ({ name: it.name, qty: it.qty, price: it.price })),
+    subtotal: cartSubtotal(),
+    createdAt: new Date().toISOString()
+  };
+
+  // Send to Telegram (required)
+  try {
+    await sendToTelegram(message);
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to send to Telegram. Please try again.');
+    return; // do not proceed if telegram fails
+  }
+
+  // Log to Sheets (optional, silent failure)
+  logToSheets(payload).then(r => {
+    if (!r.ok && !r.skipped) console.warn('Sheets logging failed');
+  }).catch(() => {});
+
+  // Success flow (no GCash popup per request)
+  showToast('Order sent! We’ll message you shortly.');
+  clearCart();
+  form.reset();
+  updatePersonsVisibility(); // hide pax if needed
+}
+
+/* ---- Clear cart button ------------------------------------------------- */
+function initClearButton() {
+  const btn = $('#clearCartBtn');
+  if (btn) btn.addEventListener('click', () => {
+    if (cart.length === 0) return;
+    clearCart();
+    showToast('Cart cleared.');
+  });
+}
+
+/* ---- Initialization ---------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  // Category buttons already call showCategory('cat') inline, just render first
   renderMenu();
   renderCart();
 
-  // Date/time + mobile formatter
-  setMinDateTime();
-  const mobile = el("#mobileNumber");
-  if (mobile) {
-    mobile.addEventListener("input", formatMobile);
-    formatMobile();
-  }
+  // Dine-in pax toggle
+  $$('input[name="orderType"]').forEach(r => r.addEventListener('change', updatePersonsVisibility));
+  updatePersonsVisibility();
 
-  // Example: If your "Submit Order" button exists, wire guard here
-  const submitBtn = el("#submitOrder");
-  if (submitBtn) {
-    submitBtn.addEventListener("click", () => {
-      allowPaymentDialog();
-      // your existing submit logic can call maybeShowPaymentDialog() after success
+  // Mobile number formatting
+  const m = $('#mobileNumber');
+  if (m) {
+    m.addEventListener('blur', () => normalizeMobile(m));
+    m.addEventListener('input', () => {
+      // Keep +63 prefix; allow typing naturally
+      if (!m.value.startsWith('+63')) m.value = '+63 ';
     });
   }
 
-  // Optional: clear cart button
-  const clearBtn = el("#clearCart");
-  if (clearBtn) clearBtn.addEventListener("click", clearCart);
+  // Form submit
+  const form = $('#orderForm');
+  if (form) form.addEventListener('submit', handleSubmit);
+
+  // Clear button
+  initClearButton();
+
+  // Checkout button (optional shortcut: focus form)
+  const checkout = $('#checkoutBtn');
+  if (checkout) checkout.addEventListener('click', () => {
+    const formEl = $('#orderForm');
+    if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 });
-
-
