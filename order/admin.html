@@ -6,24 +6,68 @@
 <title>Stone Grill — Menu Admin</title>
 <style>
   :root{--ink:#222;--muted:#666;--accent:#ff7a00;--bg:#fff;--line:#eee;}
-  *{box-sizing:border-box} body{margin:0;padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
-  h1{margin:0 0 12px} .row{display:flex;gap:12px;flex-wrap:wrap}
+  *{box-sizing:border-box}
+  body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
+  /* Header */
+  .app-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#FF4433;color:#fff;position:sticky;top:0;z-index:10}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+  .brand .logo{height:40px;width:auto;border-radius:6px}
+  .brand h1{margin:0;font-size:1.2rem}
+  .actions{display:flex;gap:8px}
+  .btn{border:1px solid #ddd;border-radius:8px;padding:8px 12px;background:#fff;color:#111;cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.ghost{background:transparent;border:1px solid #fff;color:#fff}
+  /* Layout */
+  .narrow{max-width:960px;margin:0 auto;padding:16px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
   .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 8px 16px rgba(0,0,0,.04)}
-  label{display:block;margin:8px 0 4px;font-weight:600} input,select,button,textarea{font:inherit}
+  label{display:block;margin:8px 0 4px;font-weight:600}
+  input,select,button,textarea{font:inherit}
   input,select,textarea{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px}
-  button{border:1px solid #ddd;border-radius:8px;padding:8px 12px;cursor:pointer}
-  .btn{background:#fff} .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-  table{width:100%;border-collapse:collapse;margin-top:8px} th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
   .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #ddd;border-radius:999px;padding:4px 8px;background:#fafafa}
-  .right{margin-left:auto} .muted{color:var(--muted)} .narrow{max-width:960px;margin:0 auto}
+  .muted{color:var(--muted)}
+  /* Lock screen */
+  .lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff9f3,#ffffff);z-index:999}
+  .lock .panel{background:#fff;border:1px solid #ffe1c2;border-radius:12px;box-shadow:0 10px 24px rgba(255,122,0,.18);padding:20px;max-width:360px;width:92%}
+  .lock h2{margin:0 0 8px}
+  .hint{font-size:.9rem;color:#777;margin-top:8px}
+  .error{color:#c00;font-size:.9rem;margin-top:6px;min-height:1em}
+  .hidden{display:none!important}
 </style>
 </head>
 <body>
-  <div class="narrow">
-    <h1>Stone Grill — Menu Admin</h1>
-    <div class="row">
+
+  <!-- Header -->
+  <header class="app-header">
+    <a class="brand" href="/order/">
+      <img src="assets/icons/icon-192.png" class="logo" alt="Stone Grill">
+      <h1>Stone Grill — Menu Admin</h1>
+    </a>
+    <div class="actions">
+      <button id="logoutBtn" class="btn ghost">Logout</button>
+      <a class="btn" href="/order/">← Back to Order</a>
+    </div>
+  </header>
+
+  <!-- LOCK SCREEN -->
+  <div id="lock" class="lock">
+    <div class="panel">
+      <h2>Enter Admin Passcode</h2>
+      <label>Passcode</label>
+      <input id="passInput" type="password" placeholder="••••••••" autocomplete="current-password" />
+      <button id="unlockBtn" class="btn primary" style="margin-top:10px;width:100%">Unlock</button>
+      <div id="lockMsg" class="error"></div>
+      <div class="hint">Tip: change the passcode hash in this file (see comment in the script).</div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" class="narrow hidden">
+    <div class="row" style="margin-top:6px">
       <div class="pill">Status: <span id="status" class="muted">Ready</span></div>
-      <div class="right">
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
         <button id="importBtn" class="btn">Import menu.json</button>
         <button id="downloadBtn" class="btn">Download menu.json</button>
         <button id="saveLocalBtn" class="btn">Save to Browser</button>
@@ -86,40 +130,85 @@
   </div>
 
 <script>
-/* Minimal schema:
-{
-  "categories":[{"id":"pork","label":"Pork","emoji":"🐖"}, ...],
-  "data":{"pork":[{"name":"Pork Sisig","price":199}], ...}
+/* -----------------------------------------------------------------------
+   PASSCODE SETUP
+   - Default passcode is: changeme123
+   - To change it:
+     1) Pick a new passcode (e.g. myStrongPass!)
+     2) In your browser console run:
+        await crypto.subtle.digest('SHA-256', new TextEncoder().encode('myStrongPass!'))
+        ...then convert to hex, or use any SHA-256 generator.
+     3) Replace PASS_HASH below with the new hex string (lowercase).
+------------------------------------------------------------------------ */
+const PASS_HASH = '494a715f7e9b4071aca61bac42ca858a309524e5864f0920030862a4ae7589be'; // sha256('changeme123')
+const AUTH_KEY  = 'sg_admin_auth_v1';
+const MAX_ATTEMPTS = 5;
+let attempts = 0;
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-*/
+function showApp(){
+  document.getElementById('lock').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+}
+function showLock(msg){
+  document.getElementById('lock').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('lockMsg').textContent = msg || '';
+}
+async function tryUnlock(){
+  const input = document.getElementById('passInput').value;
+  if(!input){ showLock('Enter passcode.'); return; }
+  const hex = await sha256Hex(input);
+  if(hex === PASS_HASH){
+    sessionStorage.setItem(AUTH_KEY, 'ok');
+    showApp();
+  }else{
+    attempts++;
+    if(attempts >= MAX_ATTEMPTS){
+      showLock('Too many attempts. Wait 30 seconds.');
+      document.getElementById('unlockBtn').disabled = true;
+      setTimeout(()=>{ document.getElementById('unlockBtn').disabled = false; showLock('Try again.'); attempts = 0; }, 30000);
+    }else{
+      showLock('Incorrect passcode.');
+    }
+  }
+}
+// Auto-auth if already unlocked in this tab
+if(sessionStorage.getItem(AUTH_KEY)==='ok'){ showApp(); }
+
+document.getElementById('unlockBtn').addEventListener('click', tryUnlock);
+document.getElementById('passInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  sessionStorage.removeItem(AUTH_KEY);
+  showLock('');
+});
+
+/* -----------------------------------------------------------------------
+   MENU ADMIN (same as before)
+------------------------------------------------------------------------ */
 const LS_KEY = 'stonegrill_menu_v1';
 let model = { categories: [], data: {} };
 const el = (id)=>document.getElementById(id);
-const status = (txt)=>{ el('status').textContent = txt; };
+const status = (txt)=>{ const s=el('status'); if(s) s.textContent = txt; };
 
-/* ------- Load from existing menu.json if present ------- */
+/* Load existing assets/menu.json if present */
 (async function boot(){
   try {
     const res = await fetch('assets/menu.json', {cache:'no-store'});
     if (res.ok) {
       const json = await res.json();
-      if (json && json.categories && json.data) {
-        model = json;
-        status('Loaded assets/menu.json');
-      }
-    } else {
-      status('No assets/menu.json yet — starting empty');
-    }
-  } catch {
-    status('Starting empty (no menu.json)');
-  }
+      if (json && json.categories && json.data) { model = json; status('Loaded assets/menu.json'); }
+    } else { status('No assets/menu.json yet — starting empty'); }
+  } catch { status('Starting empty (no menu.json)'); }
   render();
 })();
 
-/* ------- Render helpers ------- */
 function render(){
-  // categories table
-  const tb = el('catsTable').querySelector('tbody');
+  // categories
+  const tb = el('catsTable')?.querySelector('tbody'); if(!tb) return;
   tb.innerHTML = '';
   model.categories.forEach((c, idx)=>{
     const tr = document.createElement('tr');
@@ -136,13 +225,10 @@ function render(){
       </td>`;
     tb.appendChild(tr);
   });
-
-  // category select for items
-  const sel = el('itemCat');
-  sel.innerHTML = model.categories.map(c=>`<option value="${c.id}">${c.emoji||''} ${c.label||c.id}</option>`).join('');
-
-  // items table
-  const itb = el('itemsTable').querySelector('tbody');
+  // select
+  const sel = el('itemCat'); if(sel) sel.innerHTML = model.categories.map(c=>`<option value="${c.id}">${c.emoji||''} ${c.label||c.id}</option>`).join('');
+  // items
+  const itb = el('itemsTable')?.querySelector('tbody'); if(!itb) return;
   itb.innerHTML = '';
   Object.keys(model.data).forEach(cat=>{
     (model.data[cat]||[]).forEach((it, idx)=>{
@@ -160,7 +246,7 @@ function render(){
   });
 }
 
-/* ------- Category actions ------- */
+/* Category actions */
 el('addCatBtn').addEventListener('click', ()=>{
   const id = el('catId').value.trim();
   if(!id){ alert('Category ID required'); return; }
@@ -172,15 +258,11 @@ el('addCatBtn').addEventListener('click', ()=>{
   el('catId').value = el('catLabel').value = el('catEmoji').value = '';
   render();
 });
-
-el('catsTable').addEventListener('click', (e)=>{
+document.getElementById('catsTable').addEventListener('click', (e)=>{
   const id = e.target.getAttribute('data-edit');
   if(id){
-    const c = model.categories.find(x=>x.id===id);
-    if(!c) return;
-    el('catId').value = c.id;
-    el('catLabel').value = c.label||'';
-    el('catEmoji').value = c.emoji||'';
+    const c = model.categories.find(x=>x.id===id); if(!c) return;
+    el('catId').value = c.id; el('catLabel').value = c.label||''; el('catEmoji').value = c.emoji||'';
   }
   const del = e.target.getAttribute('data-del');
   if(del){
@@ -192,15 +274,14 @@ el('catsTable').addEventListener('click', (e)=>{
   const mv = e.target.getAttribute('data-move');
   const mid = e.target.getAttribute('data-id');
   if(mv && mid){
-    const idx = model.categories.findIndex(c=>c.id===mid);
-    if(idx<0) return;
+    const idx = model.categories.findIndex(c=>c.id===mid); if(idx<0) return;
     if(mv==='up' && idx>0) [model.categories[idx-1], model.categories[idx]]=[model.categories[idx], model.categories[idx-1]];
     if(mv==='down' && idx<model.categories.length-1) [model.categories[idx+1], model.categories[idx]]=[model.categories[idx], model.categories[idx+1]];
     render();
   }
 });
 
-/* ------- Item actions ------- */
+/* Item actions */
 el('addItemBtn').addEventListener('click', ()=>{
   const cat = el('itemCat').value;
   const name = el('itemName').value.trim();
@@ -213,8 +294,7 @@ el('addItemBtn').addEventListener('click', ()=>{
   el('itemName').value = ''; el('itemPrice').value = '';
   render();
 });
-
-el('itemsTable').addEventListener('click', (e)=>{
+document.getElementById('itemsTable').addEventListener('click', (e)=>{
   const edit = e.target.getAttribute('data-edit-item');
   const del  = e.target.getAttribute('data-del-item');
   if(edit){
@@ -229,32 +309,28 @@ el('itemsTable').addEventListener('click', (e)=>{
   }
 });
 
-/* ------- Import / Export / Local Storage ------- */
-el('downloadBtn').addEventListener('click', ()=>{
+/* Import / Export / Local Storage */
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(model,null,2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'menu.json'; a.click();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'menu.json'; a.click();
 });
-el('importBtn').addEventListener('click', async ()=>{
+document.getElementById('importBtn').addEventListener('click', async ()=>{
   const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json';
   inp.onchange = async ()=> {
     const file = inp.files[0]; if(!file) return;
     const text = await file.text();
-    try{
-      const json = JSON.parse(text);
-      if(!json.categories || !json.data) throw new Error('Invalid schema');
+    try{ const json = JSON.parse(text); if(!json.categories||!json.data) throw new Error('Invalid schema');
       model = json; status('Imported from file'); render();
     }catch(err){ alert('Invalid JSON: ' + err.message); }
   };
   inp.click();
 });
-el('saveLocalBtn').addEventListener('click', ()=>{ localStorage.setItem(LS_KEY, JSON.stringify(model)); status('Saved to browser'); });
-el('loadLocalBtn').addEventListener('click', ()=>{
-  const txt = localStorage.getItem(LS_KEY);
-  if(!txt){ alert('No browser copy'); return; }
+document.getElementById('saveLocalBtn').addEventListener('click', ()=>{ localStorage.setItem('stonegrill_menu_v1', JSON.stringify(model)); status('Saved to browser'); });
+document.getElementById('loadLocalBtn').addEventListener('click', ()=>{
+  const txt = localStorage.getItem('stonegrill_menu_v1'); if(!txt){ alert('No browser copy'); return; }
   try{ model = JSON.parse(txt); status('Loaded from browser'); render(); }catch{ alert('Corrupted browser copy'); }
 });
-el('clearLocalBtn').addEventListener('click', ()=>{ localStorage.removeItem(LS_KEY); status('Browser copy cleared'); });
+document.getElementById('clearLocalBtn').addEventListener('click', ()=>{ localStorage.removeItem('stonegrill_menu_v1'); status('Browser copy cleared'); });
 </script>
 </body>
 </html>
