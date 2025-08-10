@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Stone Grill — Menu Admin</title>
+<style>
+  :root{--ink:#222;--muted:#666;--accent:#ff7a00;--bg:#fff;--line:#eee;}
+  *{box-sizing:border-box} body{margin:0;padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:var(--ink)}
+  h1{margin:0 0 12px} .row{display:flex;gap:12px;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 8px 16px rgba(0,0,0,.04)}
+  label{display:block;margin:8px 0 4px;font-weight:600} input,select,button,textarea{font:inherit}
+  input,select,textarea{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px}
+  button{border:1px solid #ddd;border-radius:8px;padding:8px 12px;cursor:pointer}
+  .btn{background:#fff} .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  table{width:100%;border-collapse:collapse;margin-top:8px} th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #ddd;border-radius:999px;padding:4px 8px;background:#fafafa}
+  .right{margin-left:auto} .muted{color:var(--muted)} .narrow{max-width:960px;margin:0 auto}
+</style>
+</head>
+<body>
+  <div class="narrow">
+    <h1>Stone Grill — Menu Admin</h1>
+    <div class="row">
+      <div class="pill">Status: <span id="status" class="muted">Ready</span></div>
+      <div class="right">
+        <button id="importBtn" class="btn">Import menu.json</button>
+        <button id="downloadBtn" class="btn">Download menu.json</button>
+        <button id="saveLocalBtn" class="btn">Save to Browser</button>
+        <button id="loadLocalBtn" class="btn">Load from Browser</button>
+        <button id="clearLocalBtn" class="btn">Clear Browser Copy</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Categories</h3>
+      <div class="row">
+        <div style="flex:1">
+          <label>Category ID (no spaces, e.g. <code>pork</code>)</label>
+          <input id="catId" placeholder="e.g. pork">
+        </div>
+        <div style="flex:1">
+          <label>Label (shown to customers)</label>
+          <input id="catLabel" placeholder="e.g. Pork">
+        </div>
+        <div style="flex:1">
+          <label>Emoji (optional)</label>
+          <input id="catEmoji" placeholder="🐖">
+        </div>
+        <div style="flex:0 0 160px;align-self:flex-end">
+          <button id="addCatBtn" class="btn primary" style="width:100%">Add/Update Category</button>
+        </div>
+      </div>
+
+      <table id="catsTable">
+        <thead><tr><th>Order</th><th>ID</th><th>Label</th><th>Emoji</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Items</h3>
+      <div class="row">
+        <div style="flex:1">
+          <label>Category</label>
+          <select id="itemCat"></select>
+        </div>
+        <div style="flex:2">
+          <label>Item Name</label>
+          <input id="itemName" placeholder="e.g. Pork Sisig">
+        </div>
+        <div style="flex:1">
+          <label>Price (₱)</label>
+          <input id="itemPrice" type="number" step="1" min="0" placeholder="199">
+        </div>
+        <div style="flex:0 0 160px;align-self:flex-end">
+          <button id="addItemBtn" class="btn primary" style="width:100%">Add/Update Item</button>
+        </div>
+      </div>
+
+      <table id="itemsTable">
+        <thead><tr><th>Category</th><th>Name</th><th>Price</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+/* Minimal schema:
+{
+  "categories":[{"id":"pork","label":"Pork","emoji":"🐖"}, ...],
+  "data":{"pork":[{"name":"Pork Sisig","price":199}], ...}
+}
+*/
+const LS_KEY = 'stonegrill_menu_v1';
+let model = { categories: [], data: {} };
+const el = (id)=>document.getElementById(id);
+const status = (txt)=>{ el('status').textContent = txt; };
+
+/* ------- Load from existing menu.json if present ------- */
+(async function boot(){
+  try {
+    const res = await fetch('assets/menu.json', {cache:'no-store'});
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.categories && json.data) {
+        model = json;
+        status('Loaded assets/menu.json');
+      }
+    } else {
+      status('No assets/menu.json yet — starting empty');
+    }
+  } catch {
+    status('Starting empty (no menu.json)');
+  }
+  render();
+})();
+
+/* ------- Render helpers ------- */
+function render(){
+  // categories table
+  const tb = el('catsTable').querySelector('tbody');
+  tb.innerHTML = '';
+  model.categories.forEach((c, idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>${c.id}</td>
+      <td>${c.label||''}</td>
+      <td>${c.emoji||''}</td>
+      <td>
+        <button data-move="up" data-id="${c.id}">↑</button>
+        <button data-move="down" data-id="${c.id}">↓</button>
+        <button data-edit="${c.id}">Edit</button>
+        <button data-del="${c.id}">Delete</button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+
+  // category select for items
+  const sel = el('itemCat');
+  sel.innerHTML = model.categories.map(c=>`<option value="${c.id}">${c.emoji||''} ${c.label||c.id}</option>`).join('');
+
+  // items table
+  const itb = el('itemsTable').querySelector('tbody');
+  itb.innerHTML = '';
+  Object.keys(model.data).forEach(cat=>{
+    (model.data[cat]||[]).forEach((it, idx)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${cat}</td>
+        <td>${it.name}</td>
+        <td>₱${Number(it.price).toFixed(0)}</td>
+        <td>
+          <button data-edit-item="${cat}::${idx}">Edit</button>
+          <button data-del-item="${cat}::${idx}">Delete</button>
+        </td>`;
+      itb.appendChild(tr);
+    });
+  });
+}
+
+/* ------- Category actions ------- */
+el('addCatBtn').addEventListener('click', ()=>{
+  const id = el('catId').value.trim();
+  if(!id){ alert('Category ID required'); return; }
+  const label = el('catLabel').value.trim() || id;
+  const emoji = el('catEmoji').value.trim();
+  const i = model.categories.findIndex(c=>c.id===id);
+  if(i>=0){ model.categories[i] = {id, label, emoji}; }
+  else { model.categories.push({id, label, emoji}); if(!model.data[id]) model.data[id]=[]; }
+  el('catId').value = el('catLabel').value = el('catEmoji').value = '';
+  render();
+});
+
+el('catsTable').addEventListener('click', (e)=>{
+  const id = e.target.getAttribute('data-edit');
+  if(id){
+    const c = model.categories.find(x=>x.id===id);
+    if(!c) return;
+    el('catId').value = c.id;
+    el('catLabel').value = c.label||'';
+    el('catEmoji').value = c.emoji||'';
+  }
+  const del = e.target.getAttribute('data-del');
+  if(del){
+    if(!confirm('Delete category and its items?')) return;
+    model.categories = model.categories.filter(c=>c.id!==del);
+    delete model.data[del];
+    render();
+  }
+  const mv = e.target.getAttribute('data-move');
+  const mid = e.target.getAttribute('data-id');
+  if(mv && mid){
+    const idx = model.categories.findIndex(c=>c.id===mid);
+    if(idx<0) return;
+    if(mv==='up' && idx>0) [model.categories[idx-1], model.categories[idx]]=[model.categories[idx], model.categories[idx-1]];
+    if(mv==='down' && idx<model.categories.length-1) [model.categories[idx+1], model.categories[idx]]=[model.categories[idx], model.categories[idx+1]];
+    render();
+  }
+});
+
+/* ------- Item actions ------- */
+el('addItemBtn').addEventListener('click', ()=>{
+  const cat = el('itemCat').value;
+  const name = el('itemName').value.trim();
+  const price = Number(el('itemPrice').value);
+  if(!cat || !name || isNaN(price)){ alert('Select category, set item name and price'); return; }
+  const arr = model.data[cat] = model.data[cat] || [];
+  const i = arr.findIndex(it=>it.name.toLowerCase()===name.toLowerCase());
+  if(i>=0) arr[i] = {name, price};
+  else arr.push({name, price});
+  el('itemName').value = ''; el('itemPrice').value = '';
+  render();
+});
+
+el('itemsTable').addEventListener('click', (e)=>{
+  const edit = e.target.getAttribute('data-edit-item');
+  const del  = e.target.getAttribute('data-del-item');
+  if(edit){
+    const [cat, idx] = edit.split('::'); const item = model.data[cat][idx];
+    el('itemCat').value = cat; el('itemName').value = item.name; el('itemPrice').value = item.price;
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  if(del){
+    const [cat, idx] = del.split('::');
+    model.data[cat].splice(Number(idx),1);
+    render();
+  }
+});
+
+/* ------- Import / Export / Local Storage ------- */
+el('downloadBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(model,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'menu.json'; a.click();
+});
+el('importBtn').addEventListener('click', async ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json';
+  inp.onchange = async ()=> {
+    const file = inp.files[0]; if(!file) return;
+    const text = await file.text();
+    try{
+      const json = JSON.parse(text);
+      if(!json.categories || !json.data) throw new Error('Invalid schema');
+      model = json; status('Imported from file'); render();
+    }catch(err){ alert('Invalid JSON: ' + err.message); }
+  };
+  inp.click();
+});
+el('saveLocalBtn').addEventListener('click', ()=>{ localStorage.setItem(LS_KEY, JSON.stringify(model)); status('Saved to browser'); });
+el('loadLocalBtn').addEventListener('click', ()=>{
+  const txt = localStorage.getItem(LS_KEY);
+  if(!txt){ alert('No browser copy'); return; }
+  try{ model = JSON.parse(txt); status('Loaded from browser'); render(); }catch{ alert('Corrupted browser copy'); }
+});
+el('clearLocalBtn').addEventListener('click', ()=>{ localStorage.removeItem(LS_KEY); status('Browser copy cleared'); });
+</script>
+</body>
+</html>
