@@ -348,3 +348,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 });
+// --- How to Order popup wiring (non-destructive) ---
+(function () {
+  var link = document.getElementById('howToOrderLink');
+  var popup = document.getElementById('howToOrderPopup');
+  if (!link || !popup) return;
+
+  var closeBtn = popup.querySelector('.popup-close');
+
+  function openHowto(e) {
+    if (e) e.preventDefault();
+    popup.classList.remove('hidden');
+    popup.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeHowto() {
+    popup.classList.add('hidden');
+    popup.setAttribute('aria-hidden', 'true');
+  }
+
+  // Open/close handlers
+  link.addEventListener('click', openHowto);
+  if (closeBtn) closeBtn.addEventListener('click', closeHowto);
+
+  // Close when clicking outside the dialog
+  popup.addEventListener('click', function (e) {
+    if (e.target === popup) closeHowto();
+  });
+
+  // Close on ESC
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !popup.classList.contains('hidden')) {
+      closeHowto();
+    }
+  });
+})();
