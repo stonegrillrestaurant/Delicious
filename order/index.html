@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -14,7 +14,7 @@
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-180.png">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=10">
 
   <!-- Open Graph -->
   <meta property="og:title" content="Stone Grill -- Online Order">
@@ -22,14 +22,12 @@
   <meta property="og:image" content="https://stonegrillresto.net/order/assets/og-order.jpg">
   <meta property="og:url" content="https://stonegrillresto.net/order/">
 
-  <!-- ✅ Belt-and-suspenders: ensure hidden class wins even if CSS is stale -->
-  <style>
-    .hidden { display: none !important; }
-  </style>
+  <!-- Ensure .hidden works even if old CSS is cached -->
+  <style>.hidden{display:none!important}</style>
 </head>
 <body>
   <header class="app-header">
-    <!-- ✅ Brand is now a link; uses your requested icon -->
+    <!-- Clickable brand + your requested logo -->
     <a href="/" class="brand">
       <img id="logoImg" src="assets/icons/icon-192.png" alt="Stone Grill" class="logo">
       <div class="brand-text">
@@ -38,7 +36,6 @@
       </div>
     </a>
 
-    <!-- Cart summary unchanged -->
     <div class="cart-summary">
       <div class="total-label">Total</div>
       <div id="cartTotal" class="total-value">₱0.00</div>
@@ -48,18 +45,22 @@
 
   <main class="app-main">
     <section class="menu-col">
-      <!-- ✅ Category Buttons -->
+      <!-- Category Buttons -->
       <div class="category-bar" id="categoryBar">
-        <button onclick="showCategory('pork')">🐖 Pork</button>
-        <button onclick="showCategory('chicken')">🐓 Chicken</button>
-        <button onclick="showCategory('beef')">🐄 Beef</button>
-        <button onclick="showCategory('seafood')">🦐 Seafood</button>
-        <button onclick="showCategory('vegetables')">🥦 Veggies</button>
-        <button onclick="showCategory('noodles')">🍜 Noodles</button>
-        <button onclick="showCategory('bbq')">🔥 BBQ</button>
-        <button onclick="showCategory('soup')">🍲 Soup</button>
-        <button onclick="showCategory('specials')">⭐ Specials</button>
-        <button onclick="showCategory('drinks')">🥤 Drinks</button>
+        <button onclick="showCategory('pork')"><span class="cat-emoji">🐖</span><span>Pork</span></button>
+        <button onclick="showCategory('chicken')"><span class="cat-emoji">🐓</span><span>Chicken</span></button>
+        <button onclick="showCategory('beef')"><span class="cat-emoji">🐄</span><span>Beef</span></button>
+        <button onclick="showCategory('vegetables')"><span class="cat-emoji">🥦</span><span>Veggies</span></button>
+        <button onclick="showCategory('fish')"><span class="cat-emoji">🐟</span><span>Fish</span></button>
+        <button onclick="showCategory('noodles')"><span class="cat-emoji">🍜</span><span>Noodles/Pasta</span></button>
+        <button onclick="showCategory('bbq')"><span class="cat-emoji">🔥</span><span>Grilled/BBQ</span></button>
+        <button onclick="showCategory('soup')"><span class="cat-emoji">🍲</span><span>Soup</span></button>
+        <button onclick="showCategory('squid')"><span class="cat-emoji">🦑</span><span>Squid</span></button>
+        <button onclick="showCategory('shrimp')"><span class="cat-emoji">🦐</span><span>Shrimp</span></button>
+        <button onclick="showCategory('crabs')"><span class="cat-emoji">🦀</span><span>Crabs</span></button>
+        <button onclick="showCategory('specials')"><span class="cat-emoji">⭐</span><span>Specialties</span></button>
+        <button onclick="showCategory('refreshments')"><span class="cat-emoji">🧊</span><span>Refreshments</span></button>
+        <button onclick="showCategory('drinks')"><span class="cat-emoji">🥤</span><span>Drinks</span></button>
       </div>
 
       <!-- Product List -->
@@ -133,7 +134,7 @@
     </aside>
   </main>
 
-  <!-- Floating Popups -->
+  <!-- Popups (kept for future use; not triggered here) -->
   <div id="categoryPopup" class="popup-backdrop hidden">
     <div class="popup">
       <button class="popup-close" aria-label="Close">×</button>
@@ -149,20 +150,13 @@
     </div>
   </div>
 
-  <!-- Success / GCash QR -->
+  <!-- Success / GCash QR (disabled for now per request) -->
   <div id="successPopup" class="popup-backdrop hidden">
     <div class="popup">
       <button class="popup-close" aria-label="Close">×</button>
       <h3 class="popup-title">Order Received ✅</h3>
-      <p>Please settle your payment to proceed. Scan the GCash QR below:</p>
       <div class="qr-wrap">
-        <!-- Keeping src is fine; popup stays hidden until JS opens it -->
         <img id="gcashQR" alt="GCash QR" src="assets/qr/gcash.png">
-      </div>
-      <p class="small">After paying, staff will process your order. Keep your reference number.</p>
-      <div class="inline">
-        <button class="btn" id="paidBtn">I've Paid</button>
-        <button class="btn ghost" id="copyRefBtn">Copy Payment Instructions</button>
       </div>
     </div>
   </div>
@@ -170,16 +164,16 @@
   <!-- Toast Message -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Scripts (config first). Add cache-busting to beat old cached JS) -->
-  <script src="config.js?v=8"></script>
-  <script src="main.js?v=8"></script>
+  <!-- Scripts (config first). Bump version to bust cache -->
+  <script src="config.js?v=10"></script>
+  <script src="main.js?v=10"></script>
 
-  <!-- Register SW only on custom domain (prevents github.io from caching old JS) -->
+  <!-- Register SW only on custom domain -->
   <script>
     if ('serviceWorker' in navigator) {
       const onGithubIo = location.hostname.endsWith('github.io');
       if (!onGithubIo) {
-        navigator.serviceWorker.register('pwa/sw.js?v=8').catch(() => {});
+        navigator.serviceWorker.register('pwa/sw.js?v=10').catch(() => {});
       }
     }
   </script>
