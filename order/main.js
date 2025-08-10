@@ -34,90 +34,162 @@ function showToast(msg, ms = 2200) {
 }
 
 /* === MENU START (Edit this block only if you need to update items/prices) === */
-const MENU = {
+/* === MENU (updated from your board; unreadable items skipped) === */
+var MENU = {
+  /* ---------- SET MEAL (restored) ---------- */
+  setMeals: [
+    { name: "Set A", price: 1100 },
+    { name: "Set B", price: 1000 },
+    { name: "Set C", price: 1980 },
+    { name: "Boodle", price: 2300 },
+    { name: "Mix Seafood Inferno (Hot)", price: 850 },
+    { name: "Mix Seafood Heaven (Reg)", price: 850 }
+  ],
+
+  /* ---------- SOUP ---------- */
+  soup: [
+    { name: "Crab & Corn Soup", price: 190 },
+    { name: "Cream of Mushroom", price: 190 },
+    { name: "Egg Drop Soup", price: 180 },
+    { name: "Vegetable Soup", price: 230 },
+    { name: "Pork Sinigang", price: 280 },
+    { name: "Mix Seafood Tinola", price: 350 }
+  ],
+
+  /* ---------- RICE ---------- */
+  rice: [
+    { name: "Cup Rice", price: 25 },
+    { name: "Platter Rice", price: 100 },
+    { name: "Garlic Fried Rice", price: 180 },
+    { name: "Black Rice", price: 180 },
+    { name: "Stone Grill Fried Rice", price: 200 },
+    { name: "Shrimp Fried Rice", price: 195 }
+  ],
+
+  /* ---------- VEGETABLES ---------- */
+  vegetables: [
+    { name: "Pinakbet", price: 235 },
+    { name: "Chopsuey", price: 210 },
+    { name: "Chopsuey (Seafood)", price: 230 },
+    { name: "Beef with Ampalaya", price: 300 },
+    { name: "Beef with Broccoli", price: 320 }
+  ],
+
+  /* ---------- NOODLES / PASTA ---------- */
+  noodles: [
+    { name: "Lomi", price: 180 },
+    { name: "Lomi (Seafood)", price: 200 },
+    { name: "Canton", price: 200 },
+    { name: "Canton (Seafood)", price: 220 },
+    { name: "Bihon", price: 240 },
+    { name: "Bihon (Seafood)", price: 270 },
+    { name: "Bam-i", price: 220 },
+    { name: "Bam-i (Seafood)", price: 240 },
+    { name: "Sotanghon Guisado (Reg)", price: 280 },
+    { name: "Sotanghon Guisado (Large)", price: 300 }
+  ],
+
+  /* ---------- CHICKEN ---------- */
+  chicken: [
+    { name: "Naked Fried Chicken", price: 220 },
+    { name: "Fried Chicken", price: 200 },
+    { name: "Buttered Chicken", price: 230 },
+    { name: "Buffalo Chicken or Curry", price: 240 },
+    { name: "Chicken Teriyaki", price: 250 }
+  ],
+
+  /* ---------- BEEF ---------- */
+  beef: [
+    { name: "Beef Steak", price: 300 },
+    { name: "Beef w/ Mushroom", price: 310 },
+    { name: "Beef Caldereta", price: 320 },
+    { name: "Beef Nilaga", price: 320 }
+  ],
+
+  /* ---------- FISH ---------- */
+  fish: [
+    { name: "Fish Fillet in Mayo Dip", price: 310 },
+    { name: "Grilled Fish", price: 300 },
+    { name: "Fried Fish", price: 320 },
+    { name: "Fish Kinilaw", price: 310 },
+    { name: "Fish Tinola", price: 340 },
+    { name: "Fish Sinigang", price: 340 },
+    { name: "Sweet & Sour Fish", price: 300 },
+    { name: "Fish with Tausi", price: 340 },
+    { name: "Fish Eskabetche", price: 330 }
+  ],
+
+  /* ---------- SHRIMP ---------- */
+  shrimp: [
+    { name: "Crispy Fried Shrimp", price: 240 },
+    { name: "Garlic Buttered Shrimp", price: 250 },
+    { name: "Sizzling Gambas", price: 260 },
+    { name: "Camaron Rebusado", price: 260 },
+    { name: "Shrimp Sinigang / Tinola", price: 280 },
+    { name: "Sweet Chili Shrimp", price: 260 }
+  ],
+
+  /* ---------- SQUID ---------- */
+  squid: [
+    { name: "Crispy Fried Squid", price: 280 },
+    { name: "Adobo Spicy Squid", price: 300 },
+    { name: "Calamari", price: 300 },
+    { name: "Sizzling Squid", price: 300 }
+    // "Grilled Squid (per 100g)" not added—no clear price on board.
+  ],
+
+  /* ---------- CRABS ---------- */
+  crabs: [
+    { name: "Boiled Crabs", price: 310 },
+    { name: "Sweet Chili Crabs", price: 320 },
+    { name: "Salt & Pepper Crabs", price: 300 },
+    { name: "Crab Curry", price: 340 },
+    { name: "Adobo sa Gata Crab", price: 340 }
+  ],
+
+  /* ---------- GRILLED / BBQ ---------- */
+  bbq: [
+    // Board items had unreadable prices; keeping your existing defaults.
+    { name: "Pork BBQ (3 sticks)", price: 99 },
+    { name: "Chicken BBQ", price: 119 },
+    { name: "Liempo", price: 219 },
+    { name: "Grilled Tuna Belly", price: 269 }
+  ],
+
+  /* ---------- DRINKS (board) ---------- */
+  drinks: [
+    { name: "Softdrinks", price: 20 },
+    { name: "Wilkins 500 ml", price: 20 },
+    { name: "Wilkins 1 L", price: 30 },
+    { name: "San Mig Light", price: 70 },
+    { name: "San Mig Apple", price: 70 },
+    { name: "San Mig Pale Pilsen", price: 70 },
+    { name: "Red Horse Stallion", price: 80 },
+    { name: "Red Horse 1 L", price: 150 },
+    { name: "San Mig Grande", price: 130 }
+  ],
+
+  /* ---------- SPECIALS / REFRESHMENTS (kept) ---------- */
+  specials: [
+    { name: "Sizzling Sisig Platter", price: 399 },
+    { name: "Seafood Platter", price: 799 },
+    { name: "Family Platter", price: 799 },
+    { name: "StoneGrill Special", price: 499 }
+  ],
+  refreshments: [
+    { name: "Halo-Halo", price: 129 },
+    { name: "Mais con Yelo", price: 109 },
+    { name: "Buko Pandan", price: 109 }
+  ],
+
+  /* ---------- PORK (kept) ---------- */
   pork: [
     { name: "Pork Sisig", price: 199 },
     { name: "Lechon Kawali", price: 229 },
     { name: "Crispy Pata", price: 499 },
     { name: "Pork Adobo", price: 189 },
-    { name: "Sweet & Sour Pork", price: 209 },
-  ],
-  chicken: [
-    { name: "Chicken Inasal", price: 199 },
-    { name: "Fried Chicken", price: 189 },
-    { name: "Chicken Teriyaki", price: 209 },
-    { name: "Buttered Chicken", price: 199 },
-    { name: "Chicken Curry", price: 219 },
-  ],
-  beef: [
-    { name: "Beef Caldereta", price: 239 },
-    { name: "Beef Steak (Bistek)", price: 259 },
-    { name: "Beef with Broccoli", price: 269 },
-    { name: "Beef Tapa", price: 229 },
-  ],
-  vegetables: [
-    { name: "Chopsuey", price: 169 },
-    { name: "Pinakbet", price: 159 },
-    { name: "Ginisang Sayote", price: 139 },
-    { name: "Stir-fry Mixed Veggies", price: 159 },
-    { name: "Eggplant Tofu", price: 149 },
-  ],
-  fish: [
-    { name: "Grilled Bangus", price: 229 },
-    { name: "Sweet & Sour Fish Fillet", price: 219 },
-    { name: "Fried Tilapia", price: 179 },
-    { name: "Sizzling Bangus", price: 259 },
-  ],
-  noodles: [
-    { name: "Pancit Canton", price: 159 },
-    { name: "Bihon Guisado", price: 159 },
-    { name: "Spaghetti", price: 149 },
-    { name: "Carbonara", price: 169 },
-    { name: "Sotanghon", price: 159 },
-  ],
-  bbq: [
-    { name: "Pork BBQ (3 sticks)", price: 99 },
-    { name: "Chicken BBQ", price: 119 },
-    { name: "Liempo", price: 219 },
-    { name: "Grilled Tuna Belly", price: 269 },
-  ],
-  soup: [
-    { name: "Sinigang na Baboy", price: 229 },
-    { name: "Sinigang na Hipon", price: 249 },
-    { name: "Nilagang Baka", price: 249 },
-    { name: "Tinola Manok", price: 199 },
-  ],
-  squid: [
-    { name: "Calamares", price: 229 },
-    { name: "Grilled Pusit", price: 299 },
-    { name: "Sizzling Squid", price: 299 },
-  ],
-  shrimp: [
-    { name: "Garlic Butter Shrimp", price: 299 },
-    { name: "Sweet Chili Shrimp", price: 299 },
-    { name: "Shrimp Tempura", price: 299 },
-  ],
-  crabs: [
-    { name: "Crab in Garlic Butter", price: 399 },
-    { name: "Chili Crab", price: 419 },
-  ],
-  specials: [
-    { name: "Sizzling Sisig Platter", price: 399 },
-    { name: "Seafood Platter", price: 799 },
-    { name: "Family Platter", price: 799 },
-    { name: "StoneGrill Special", price: 499 },
-  ],
-  refreshments: [
-    { name: "Halo-Halo", price: 129 },
-    { name: "Mais con Yelo", price: 109 },
-    { name: "Buko Pandan", price: 109 },
-  ],
-  drinks: [
-    { name: "Iced Tea", price: 39 },
-    { name: "Softdrinks (Can)", price: 49 },
-    { name: "Bottled Water", price: 25 },
-    { name: "Coffee (Hot)", price: 49 },
-  ],
+    { name: "Sweet & Sour Pork", price: 209 }
+  ]
 };
 /* === MENU END === */
 
