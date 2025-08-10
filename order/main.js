@@ -1,12 +1,12 @@
 /* =========================================================================
-   Stone Grill — main.js (v12, single drop-in)
-   Features kept: Category list, items, cart, subtotal/total, Dine-in pax toggle,
-   mobile +63 formatting, Telegram send, optional Sheets log, How-to popup.
-   Menu source: LocalStorage -> assets/menu.json -> fallback MENU below.
+   Stone Grill — main.js (v13)
+   Menu source: LocalStorage -> assets/menu.json -> fallback.
+   Keeps: cart, subtotal/total (no decimals), Dine-in pax toggle,
+   How-to popup, Telegram send, readable Date/Time in Telegram.
    ========================================================================= */
 'use strict';
 
-/* ---- Config compatibility layer --------------------------------------- */
+/* ---- Config compatibility layer ---- */
 (function attachConfig() {
   var sources = [window.CFG, window.APP_CONFIG, window.app_config, window.config, window].filter(Boolean);
   function pick() {
@@ -26,20 +26,21 @@
   };
 })();
 
-/* ---- Helpers ----------------------------------------------------------- */
-function $(sel) { return document.querySelector(sel); }
-function $$(sel) { return document.querySelectorAll(sel); }
-function money(n) { return '₱' + Number(n).toFixed(2); }
-function showToast(msg, ms) {
+/* ---- Helpers ---- */
+function $(sel){ return document.querySelector(sel); }
+function $$(sel){ return document.querySelectorAll(sel); }
+function money(n){ return '₱' + Math.round(Number(n)); } // no decimals
+function showToast(msg, ms){
   ms = ms || 2200;
   var el = document.getElementById('toast');
-  if (!el) { alert(msg); return; }
+  if(!el){ alert(msg); return; }
   el.textContent = msg;
+  el.classList.remove('hidden');
   el.classList.add('show');
   setTimeout(function(){ el.classList.remove('show'); }, ms);
 }
 
-/* ---- MENU FALLBACK (used only if no LocalStorage and no assets/menu.json) --- */
+/* ---- Fallback MENU (only if no LS/menu.json) ---- */
 var MENU_FALLBACK = {
   setMeals: [
     { name: "Set A", price: 1100 },
@@ -166,9 +167,8 @@ var MENU_FALLBACK = {
   ]
 };
 
-/* ---- Load menu: LocalStorage -> assets/menu.json -> fallback ----------- */
+/* ---- Load menu: LocalStorage -> assets/menu.json -> fallback ---- */
 async function loadMenuData(fallbackMENU) {
-  // 1) LocalStorage (from admin.html)
   try {
     var ls = localStorage.getItem('stonegrill_menu_v1');
     if (ls) {
@@ -177,7 +177,6 @@ async function loadMenuData(fallbackMENU) {
     }
   } catch(e) {}
 
-  // 2) assets/menu.json
   try {
     var res = await fetch('assets/menu.json?v=' + Date.now(), { cache: 'no-store' });
     if (res.ok) {
@@ -186,34 +185,22 @@ async function loadMenuData(fallbackMENU) {
     }
   } catch(e) {}
 
-  // 3) Fallback to inline object
   var cats = Object.keys(fallbackMENU || {}).map(function(id){
-    // Try to map known labels/emojis for nicer default buttons
     var map = {
-      setMeals: {label:'Set Meal', emoji:'🍱'},
-      soup: {label:'Soup', emoji:'🍲'},
-      rice: {label:'Rice', emoji:'🍚'},
-      vegetables: {label:'Veggies', emoji:'🥦'},
-      noodles: {label:'Noodles/Pasta', emoji:'🍜'},
-      chicken: {label:'Chicken', emoji:'🐓'},
-      beef: {label:'Beef', emoji:'🐄'},
-      fish: {label:'Fish', emoji:'🐟'},
-      shrimp: {label:'Shrimp', emoji:'🦐'},
-      squid: {label:'Squid', emoji:'🦑'},
-      crabs: {label:'Crabs', emoji:'🦀'},
-      bbq: {label:'Grilled/BBQ', emoji:'🔥'},
-      specials: {label:'Specialties', emoji:'⭐'},
-      refreshments: {label:'Refreshments', emoji:'🧊'},
-      drinks: {label:'Drinks', emoji:'🥤'},
-      pork: {label:'Pork', emoji:'🐖'}
+      setMeals:{label:'Set Meal',emoji:'🍱'}, soup:{label:'Soup',emoji:'🍲'}, rice:{label:'Rice',emoji:'🍚'},
+      vegetables:{label:'Veggies',emoji:'🥦'}, noodles:{label:'Noodles/Pasta',emoji:'🍜'},
+      chicken:{label:'Chicken',emoji:'🐓'}, beef:{label:'Beef',emoji:'🐄'}, fish:{label:'Fish',emoji:'🐟'},
+      shrimp:{label:'Shrimp',emoji:'🦐'}, squid:{label:'Squid',emoji:'🦑'}, crabs:{label:'Crabs',emoji:'🦀'},
+      bbq:{label:'Grilled/BBQ',emoji:'🔥'}, specials:{label:'Specialties',emoji:'⭐'},
+      refreshments:{label:'Refreshments',emoji:'🧊'}, drinks:{label:'Drinks',emoji:'🥤'}, pork:{label:'Pork',emoji:'🐖'}
     };
     var meta = map[id] || {label:id, emoji:''};
-    return { id: id, label: meta.label, emoji: meta.emoji };
+    return { id:id, label:meta.label, emoji:meta.emoji };
   });
   return { categories: cats, data: (fallbackMENU || {}) };
 }
 
-/* ---- Build category bar dynamically ----------------------------------- */
+/* ---- Build category bar dynamically ---- */
 function buildCategoryBar(categories) {
   var bar = document.getElementById('categoryBar');
   if (!bar) return;
@@ -223,20 +210,17 @@ function buildCategoryBar(categories) {
   }).join('');
 }
 
-/* ---- State ------------------------------------------------------------- */
+/* ---- State ---- */
 var MENU_META = null;   // {categories:[...], data:{...}}
-var MENU = {};          // shortcut to MENU_META.data
+var MENU = {};          // convenience
 var currentCategory = 'pork';
 var cart = [];
 
-/* ---- Category render (EXPOSED to window) ------------------------------- */
-function showCategory(cat) {
-  currentCategory = cat;
-  renderMenu();
-}
+/* ---- Category render (exposed) ---- */
+function showCategory(cat){ currentCategory = cat; renderMenu(); }
 window.showCategory = showCategory;
 
-/* ---- Menu rendering ---------------------------------------------------- */
+/* ---- Menu rendering ---- */
 function renderMenu() {
   var list = $('#menuList'); if (!list) return;
   var items = (MENU[currentCategory] || []);
@@ -264,129 +248,129 @@ function renderMenu() {
   }
 }
 
-/* ---- Cart -------------------------------------------------------------- */
-function addToCart(item) {
+/* ---- Cart ---- */
+function addToCart(item){
   var found = null;
-  for (var i = 0; i < cart.length; i++) { if (cart[i].name === item.name) { found = cart[i]; break; } }
-  if (found) found.qty += 1; else cart.push({ name: item.name, price: item.price, qty: 1 });
+  for (var i=0;i<cart.length;i++){ if(cart[i].name===item.name){ found=cart[i]; break; } }
+  if(found) found.qty += 1; else cart.push({ name:item.name, price:item.price, qty:1 });
   renderCart(true);
 }
-function changeQty(name, delta) {
-  for (var i = 0; i < cart.length; i++) {
-    if (cart[i].name === name) {
-      cart[i].qty += delta;
-      if (cart[i].qty <= 0) { cart.splice(i,1); }
-      break;
-    }
+function changeQty(name, delta){
+  for (var i=0;i<cart.length;i++){
+    if(cart[i].name===name){ cart[i].qty += delta; if(cart[i].qty<=0){ cart.splice(i,1); } break; }
   }
   renderCart();
 }
-function removeItem(name) {
-  cart = cart.filter(function(c){ return c.name !== name; });
-  renderCart();
-}
-function cartSubtotal() {
-  var sum = 0;
-  for (var i = 0; i < cart.length; i++) sum += cart[i].price * cart[i].qty;
-  return sum;
-}
-function renderCart(nudge) {
-  nudge = !!nudge;
-  var wrap = $('#cartItems'); if (!wrap) return;
+function removeItem(name){ cart = cart.filter(function(c){ return c.name!==name; }); renderCart(); }
+function cartSubtotal(){ var s=0; for(var i=0;i<cart.length;i++){ s += cart[i].price*cart[i].qty; } return s; }
+
+function renderCart(nudge){
+  var wrap = $('#cartItems'); if(!wrap) return;
   var html = '';
-  for (var i = 0; i < cart.length; i++) {
+  for (var i=0;i<cart.length;i++){
     var it = cart[i];
     html += '' +
-      '<div class="cart-row">' +
-        '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>' +
-        '<div class="qty-wrap">' +
-          '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>' +
-          '<span>'+it.qty+'</span>' +
-          '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>' +
-        '</div>' +
-        '<div class="cart-price">'+money(it.price * it.qty)+'</div>' +
-        '<button class="remove-btn" data-name="'+it.name+'">Remove</button>' +
-      '</div>';
+    '<div class="cart-row">' +
+      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>' +
+      '<div class="qty-wrap">' +
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>' +
+        '<span>'+it.qty+'</span>' +
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>' +
+      '</div>' +
+      '<div class="cart-price">'+money(it.price*it.qty)+'</div>' +
+      '<button class="remove-btn" data-name="'+it.name+'">Remove</button>' +
+    '</div>';
   }
   wrap.innerHTML = html;
 
-  var sub = $('#cartSubtotal'); if (sub) sub.textContent = money(cartSubtotal());
-  var tot = $('#cartTotal');    if (tot) tot.textContent = money(cartSubtotal());
+  var sub = $('#cartSubtotal'); if(sub) sub.textContent = money(cartSubtotal());
+  var tot = $('#cartTotal');    if(tot) tot.textContent = money(cartSubtotal());
 
   var qbtns = wrap.querySelectorAll('.qty-btn');
-  for (var q=0; q<qbtns.length; q++) {
+  for (var q=0;q<qbtns.length;q++){
     qbtns[q].addEventListener('click', function(e){
       var nm = e.currentTarget.getAttribute('data-name');
-      var d  = parseInt(e.currentTarget.getAttribute('data-delta'), 10);
+      var d  = parseInt(e.currentTarget.getAttribute('data-delta'),10);
       changeQty(nm, d);
     });
   }
   var rbtns = wrap.querySelectorAll('.remove-btn');
-  for (var r=0; r<rbtns.length; r++) {
-    rbtns[r].addEventListener('click', function(e){
-      removeItem(e.currentTarget.getAttribute('data-name'));
-    });
+  for (var r=0;r<rbtns.length;r++){
+    rbtns[r].addEventListener('click', function(e){ removeItem(e.currentTarget.getAttribute('data-name')); });
   }
 
-  if (nudge) {
+  if(nudge){
     var card = document.querySelector('.card.highlight');
-    if (card) { card.classList.remove('nudge'); void card.offsetWidth; card.classList.add('nudge'); }
+    if(card){ card.classList.remove('nudge'); void card.offsetWidth; card.classList.add('nudge'); }
   }
 }
-function clearCart() { cart = []; renderCart(); }
+function clearCart(){ cart = []; renderCart(); }
 
-/* ---- Dine-in pax toggle ----------------------------------------------- */
-function updatePersonsVisibility() {
+/* ---- Dine-in pax toggle ---- */
+function updatePersonsVisibility(){
   var selected = document.querySelector('input[name="orderType"]:checked');
-  var wrap = $('#personsWrap'); if (!wrap) return;
-  var isDineIn = selected && /dine[\s-]*in/i.test(String(selected.value || ''));
-  if (isDineIn) wrap.classList.remove('hidden'); else wrap.classList.add('hidden');
+  var wrap = $('#personsWrap'); if(!wrap) return;
+  var isDineIn = selected && /dine[\s-]*in/i.test(String(selected.value||''));
+  if(isDineIn) wrap.classList.remove('hidden'); else wrap.classList.add('hidden');
 }
 
-/* ---- Mobile number formatting (+63) ----------------------------------- */
-function normalizeMobile(inputEl) {
-  var val = inputEl.value.replace(/[^\d+]/g, '');
-  if (val.indexOf('0') === 0) val = '+63' + val.slice(1);
-  if (val.indexOf('+63') !== 0) {
-    val = '+63' + val.replace(/^\+?/, '').replace(/^63/, '');
-  }
+/* ---- Mobile number formatting (+63) ---- */
+function normalizeMobile(inputEl){
+  var val = inputEl.value.replace(/[^\d+]/g,'');
+  if(val.indexOf('0')===0) val = '+63' + val.slice(1);
+  if(val.indexOf('+63')!==0){ val = '+63' + val.replace(/^\+?/, '').replace(/^63/,''); }
   var m = /^\+63(\d{3})(\d{3})(\d{0,4})/.exec(val.replace(/\s+/g,''));
-  if (m) val = '+63 ' + m[1] + ' ' + m[2] + (m[3] ? ' ' + m[3] : '');
+  if(m) val = '+63 ' + m[1] + ' ' + m[2] + (m[3] ? ' ' + m[3] : '');
   inputEl.value = val;
 }
 
-/* ---- Telegram + Sheets submission ------------------------------------- */
-function sendToTelegram(text) {
+/* ---- Telegram / Sheets ---- */
+function sendToTelegram(text){
   return new Promise(function(resolve, reject){
-    var token = (window.APP && window.APP.TELEGRAM_BOT_TOKEN) || '';
-    var chatId = (window.APP && window.APP.TELEGRAM_CHAT_ID) || '';
-    if (!token || !chatId) return reject(new Error('Missing Telegram token or chat id in config.js'));
-
+    var token  = (window.APP && window.APP.TELEGRAM_BOT_TOKEN) || '';
+    var chatId = (window.APP && window.APP.TELEGRAM_CHAT_ID)   || '';
+    if(!token || !chatId) return reject(new Error('Missing Telegram token or chat id in config.js'));
     var url = 'https://api.telegram.org/bot' + encodeURIComponent(token) + '/sendMessage';
     fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
-    }).then(function(r){ if (!r.ok) return r.text().then(function(t){ throw new Error(t || r.status); }); return r.json(); })
-      .then(resolve)
-      .catch(reject);
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ chat_id:chatId, text:text, parse_mode:'HTML' })
+    }).then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error(t||r.status); }); return r.json(); })
+      .then(resolve).catch(reject);
   });
 }
-function logToSheets(payload) {
+function logToSheets(payload){
   return new Promise(function(resolve){
     var endpoint = (window.APP && window.APP.GOOGLE_APPS_SCRIPT_URL) || '';
-    if (!endpoint) return resolve({ ok:false, skipped:true });
+    if(!endpoint) return resolve({ok:false, skipped:true});
     fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify(payload)
-    }).then(function(r){ resolve({ ok: !!r && r.ok }); })
-      .catch(function(){ resolve({ ok:false }); });
+    }).then(function(r){ resolve({ok: !!r && r.ok}); })
+      .catch(function(){ resolve({ok:false}); });
   });
 }
 
-/* ---- Order message ----------------------------------------------------- */
-function buildOrderMessage(form) {
+/* ---- Date/Time formatting for Telegram ---- */
+function formatOrderDateTime(dateStr, timeStr){
+  if(!dateStr && !timeStr) return { human:'—', iso:'—' };
+  var dt = new Date(dateStr + 'T' + (timeStr || '00:00'));
+  if(isNaN(dt.getTime())) return { human:(dateStr+' '+(timeStr||'')).trim(), iso:(dateStr+' '+(timeStr||'')).trim() };
+  var human = dt.toLocaleString('en-PH', {
+    weekday:'short', year:'numeric', month:'short', day:'2-digit',
+    hour:'numeric', minute:'2-digit', hour12:true
+  });
+  var iso = dt.getFullYear() + '-' +
+            String(dt.getMonth()+1).padStart(2,'0') + '-' +
+            String(dt.getDate()).padStart(2,'0') + ' ' +
+            String(dt.getHours()).padStart(2,'0') + ':' +
+            String(dt.getMinutes()).padStart(2,'0');
+  return { human:human, iso:iso };
+}
+
+/* ---- Build Telegram message ---- */
+function buildOrderMessage(form){
   var nameEl = $('#fullName');
   var mobileEl = $('#mobileNumber');
   var orderTypeEl = form.querySelector('input[name="orderType"]:checked');
@@ -405,12 +389,14 @@ function buildOrderMessage(form) {
 
   var items = cart.map(function(it){ return '• ' + it.name + ' x' + it.qty + ' — ' + money(it.qty * it.price); }).join('\n') || '—';
 
+  var when = formatOrderDateTime(date, time);
+
   var msg = '<b>Stone Grill — New Order</b>\n';
   msg += '\n<b>Customer:</b> ' + name;
   msg += '\n<b>Mobile:</b> ' + mobile;
   msg += '\n<b>Type:</b> ' + orderType;
   if (/dine/i.test(orderType)) msg += '\n<b>Persons:</b> ' + (persons || 1);
-  msg += '\n<b>Date/Time:</b> ' + (date || '—') + ' ' + (time || '');
+  msg += '\n<b>Date/Time:</b> ' + when.human + '  <i>(' + when.iso + ')</i>';
   msg += '\n<b>Items:</b>\n' + items;
   msg += '\n<b>Subtotal:</b> ' + money(cartSubtotal());
   if (notes) msg += '\n<b>Requests:</b> ' + notes;
@@ -418,13 +404,12 @@ function buildOrderMessage(form) {
   return msg;
 }
 
-/* ---- Submit ------------------------------------------------------------ */
-function handleSubmit(e) {
+/* ---- Submit ---- */
+function handleSubmit(e){
   e.preventDefault();
-  if (cart.length === 0) { showToast('Add at least 1 item to your order.'); return; }
+  if(cart.length===0){ showToast('Add at least 1 item to your order.'); return; }
 
-  var mobileEl = $('#mobileNumber');
-  if (mobileEl) normalizeMobile(mobileEl);
+  var mobileEl = $('#mobileNumber'); if(mobileEl) normalizeMobile(mobileEl);
 
   var form = e.currentTarget;
   var message = buildOrderMessage(form);
@@ -437,14 +422,13 @@ function handleSubmit(e) {
     date: ($('#orderDate')||{}).value || '',
     time: ($('#orderTime')||{}).value || '',
     requests: ($('#specialRequests')||{}).value || '',
-    items: cart.map(function(it){ return { name: it.name, qty: it.qty, price: it.price }; }),
+    items: cart.map(function(it){ return { name:it.name, qty:it.qty, price:it.price }; }),
     subtotal: cartSubtotal(),
     createdAt: new Date().toISOString()
   };
 
   sendToTelegram(message).then(function(){
-    // Sheets is optional and non-blocking
-    logToSheets(payload);
+    logToSheets(payload); // optional
     showToast('Order sent! We’ll message you shortly.');
     clearCart();
     form.reset();
@@ -455,89 +439,67 @@ function handleSubmit(e) {
   });
 }
 
-/* ---- Clear cart button ------------------------------------------------- */
-function initClearButton() {
+/* ---- Clear cart ---- */
+function initClearButton(){
   var btn = $('#clearCartBtn');
-  if (btn) btn.addEventListener('click', function(){
-    if (!cart.length) return;
+  if(btn) btn.addEventListener('click', function(){
+    if(!cart.length) return;
     clearCart();
     showToast('Cart cleared.');
   });
 }
 
-/* ---- How to Order popup wiring ---------------------------------------- */
-function wireHowToPopup() {
+/* ---- How to Order popup ---- */
+function wireHowToPopup(){
   var link = document.getElementById('howToOrderLink');
   var popup = document.getElementById('howToOrderPopup');
-  if (!link || !popup) return;
+  if(!link || !popup) return;
   var closeBtn = popup.querySelector('.popup-close');
 
-  function openHowto(e) {
-    if (e) e.preventDefault();
-    popup.classList.remove('hidden');
-    popup.setAttribute('aria-hidden', 'false');
-  }
-  function closeHowto() {
-    popup.classList.add('hidden');
-    popup.setAttribute('aria-hidden', 'true');
-  }
+  function openHowto(e){ if(e) e.preventDefault(); popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); }
+  function closeHowto(){ popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); }
+
   link.addEventListener('click', openHowto);
-  if (closeBtn) closeBtn.addEventListener('click', closeHowto);
-  popup.addEventListener('click', function (e) { if (e.target === popup) closeHowto(); });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !popup.classList.contains('hidden')) closeHowto();
-  });
+  if(closeBtn) closeBtn.addEventListener('click', closeHowto);
+  popup.addEventListener('click', function(e){ if(e.target===popup) closeHowto(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !popup.classList.contains('hidden')) closeHowto(); });
 }
 
-/* ---- Boot -------------------------------------------------------------- */
+/* ---- Boot ---- */
 document.addEventListener('DOMContentLoaded', async function(){
   try {
-    // Load menu data (LocalStorage -> assets/menu.json -> fallback)
     MENU_META = await loadMenuData(MENU_FALLBACK);
     MENU = MENU_META.data;
 
-    // Set default category: prefer pork if present, else first category
-    var hasPork = MENU_META.categories.some(function(c){ return c.id === 'pork'; });
+    var hasPork = MENU_META.categories.some(function(c){ return c.id==='pork'; });
     currentCategory = hasPork ? 'pork' : (MENU_META.categories[0] ? MENU_META.categories[0].id : 'pork');
 
-    // Build category bar dynamically
     buildCategoryBar(MENU_META.categories);
-
-    // Render UI
     renderMenu();
     renderCart();
 
-    // Pax toggle bind + initial
     var radios = document.querySelectorAll('input[name="orderType"]');
-    for (var i = 0; i < radios.length; i++) {
-      radios[i].addEventListener('change', updatePersonsVisibility);
-    }
+    for (var i=0;i<radios.length;i++){ radios[i].addEventListener('change', updatePersonsVisibility); }
     updatePersonsVisibility();
 
-    // Mobile auto-format
     var m = $('#mobileNumber');
-    if (m) {
+    if(m){
       m.addEventListener('blur', function(){ normalizeMobile(m); });
-      m.addEventListener('input', function(){ if (m.value.indexOf('+63') !== 0) m.value = '+63 '; });
+      m.addEventListener('input', function(){ if(m.value.indexOf('+63')!==0) m.value = '+63 '; });
     }
 
-    // Form submit
     var form = $('#orderForm');
-    if (form) form.addEventListener('submit', handleSubmit);
+    if(form) form.addEventListener('submit', handleSubmit);
 
-    // Clear button
     initClearButton();
 
-    // Checkout scroll
     var checkout = $('#checkoutBtn');
-    if (checkout) checkout.addEventListener('click', function(){
-      var formEl = $('#orderForm');
-      if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if(checkout) checkout.addEventListener('click', function(){
+      var formEl = $('#orderForm'); if(formEl) formEl.scrollIntoView({ behavior:'smooth', block:'start' });
     });
 
-    // How-to popup
     wireHowToPopup();
-  } catch (e) {
+  } catch(e) {
     console.error('Init error:', e);
     showToast('Error initializing page scripts.');
   }
