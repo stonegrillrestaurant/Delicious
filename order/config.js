@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-  TELEGRAM_BOT_TOKEN: "7538084446:AAFPKNaEWB0ijOJM0BiusNOOUj6tBUmab0s",
+  TELEGRAM_BOT_TOKEN: "7538084446:AAHm40QwJxoXKwsGB6zbyyr4MbleQQ4YB0",
   TELEGRAM_CHAT_ID: "-1002531095369",
   SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbzUSx0W8ioHfeKZzI1Xy8AGWKsNAA5h49h4PcfdNH1PS9jhgyB9rGhbSsnlk8AxakFShg/exec",
   GCASH_QR_PATH: "assets/qr/gcash.png",
