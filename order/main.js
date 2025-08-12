@@ -527,9 +527,9 @@ document.addEventListener('DOMContentLoaded', async function(){
     return undefined;
   }
   window.APP = {
-    TELEGRAM_BOT_TOKEN: pick('TELEGRAM_BOT_TOKEN', 'telegramBotToken'),
-    TELEGRAM_CHAT_ID: pick('TELEGRAM_CHAT_ID', 'telegramChatId'),
-    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL', 'appsScriptUrl', 'GOOGLE_SHEETS_WEBAPP_URL'),
-    GCASH_QR_URL: pick('GCASH_QR_URL', 'gcashQrUrl') // optional
+    TELEGRAM_BOT_TOKEN: pick('7538084446:AAFOnvqicd8LwjunpLbs-VzhuSkuLPTlusA', 'telegramBotToken'),
+    TELEGRAM_CHAT_ID: pick('-1002531095369', 'telegramChatId'),
+    GOOGLE_APPS_SCRIPT_URL: pick('https://script.google.com/macros/s/AKfycbzwQesykbPaic1wpEGyYxWH9UWSekbKz9uAdwJXqoLC31a5VixRNSFj46VaDZ1jx_EymQ/exec', 'appsScriptUrl', 'GOOGLE_SHEETS_WEBAPP_URL'),
+    GCASH_QR_URL: pick('https://github.com/stonegrillrestaurant/stonegrillrestaurant.github.io/blob/e9ef8618d95100f4156ce107c3c0f26a2bcb95e7/order/assets/qr/gcash.png', 'gcashQrUrl') // optional
   };
 })();
