@@ -513,3 +513,23 @@ document.addEventListener('DOMContentLoaded', async function(){
     showToast('Error initializing page scripts.');
   }
 });
+
+(function attachConfig() {
+  var sources = [window.CFG, window.APP_CONFIG, window.app_config, window.config, window].filter(Boolean);
+  function pick() {
+    for (var i = 0; i < sources.length; i++) {
+      var src = sources[i];
+      for (var a = 0; a < arguments.length; a++) {
+        var k = arguments[a];
+        if (src && src[k] != null) return src[k];
+      }
+    }
+    return undefined;
+  }
+  window.APP = {
+    TELEGRAM_BOT_TOKEN: pick('TELEGRAM_BOT_TOKEN', 'telegramBotToken'),
+    TELEGRAM_CHAT_ID: pick('TELEGRAM_CHAT_ID', 'telegramChatId'),
+    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL', 'appsScriptUrl', 'GOOGLE_SHEETS_WEBAPP_URL'),
+    GCASH_QR_URL: pick('GCASH_QR_URL', 'gcashQrUrl') // optional
+  };
+})();
