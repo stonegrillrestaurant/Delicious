@@ -1,8 +1,8 @@
 window.APP_CONFIG = {
   TELEGRAM_BOT_TOKEN: "7538084446:AAFOnvqicd8LwjunpLbs-VzhuSkuLPTlusA",
   TELEGRAM_CHAT_ID: "-1002531095369",
-  SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbzwQesykbPaic1wpEGyYxWH9UWSekbKz9uAdwJXqoLC31a5VixRNSFj46VaDZ1jx_EymQ/exec",
-  GCASH_QR_PATH: "assets/qr/gcash.png",
+  SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbxZcnB9ENV_QiEA0v6TdvfFjs3XZIBHhm-TB4ZQtBMNx9FPowFdIX_MJxV36ngshoSBjA/exec",
+  GCASH_QR_PATH: "order/assets/qr/gcash.png",
   SHOP_NAME: "Stone Grill Restaurant",
   PHONE: "053 568 0539",
   HOURS: "Daily 10:00 AM – 9:00 PM",
