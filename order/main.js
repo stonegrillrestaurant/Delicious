@@ -145,25 +145,34 @@ var MENU_FALLBACK = {
   refreshments: [
     { name: "Halo-Halo", price: 129 },
     { name: "Mais con Yelo", price: 109 },
-    { name: "Buko Pandan", price: 109 }
+    { name: "Buko Pandan", price: 109 },
+    { name: "avocado shake", price: 75 },
+    { name: "mango shake", price: 75 },
+    { name: "caroot shake", price: 75 },
+    { name: "banana shake", price: 75 },
+    { name: "apple shake", price: 75 },
+    { name: "buko shake", price: 75 },
+    { name: "pineapple shake", price: 75 }
   ],
   drinks: [
     { name: "Softdrinks", price: 20 },
     { name: "Wilkins 500 ml", price: 20 },
     { name: "Wilkins 1 L", price: 30 },
-    { name: "San Mig Light", price: 70 },
-    { name: "San Mig Apple", price: 70 },
+    { name: "San Mig Light", price: 75 },
+    { name: "San Mig Apple", price: 75 },
     { name: "San Mig Pale Pilsen", price: 70 },
     { name: "Red Horse Stallion", price: 80 },
-    { name: "Red Horse 1 L", price: 150 },
-    { name: "San Mig Grande", price: 130 }
+    { name: "Red Horse 1 L", price: 180 },
+    { name: "San Mig Grande", price: 150 }
   ],
   pork: [
     { name: "Pork Sisig", price: 199 },
     { name: "Lechon Kawali", price: 229 },
     { name: "Crispy Pata", price: 499 },
-    { name: "Pork Adobo", price: 189 },
-    { name: "Sweet & Sour Pork", price: 209 }
+    { name: "Pork Adobo", price: 240 },
+    { name: "Sweet & Sour Pork", price: 209 },
+    { name: "Pork steak", price: 240 },
+    { name: "Pork steak solo", price: 125 }
   ]
 };
 
