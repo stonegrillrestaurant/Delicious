@@ -5,7 +5,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Stone Grill's  — Online Reservation</title>
-
+  <style>
+  .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
+  .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
+  .receipt-upload-block h4 { margin:0 0 8px; font-size:1.02rem; }
+  .receipt-status { margin-top:8px; font-size:.92rem; }
+  .popup .meta { font-size:.9rem; color:#666; margin:6px 0 10px; }
+  .popup .row-sb { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .popup .small { font-size:.9rem; }
+</style>
   <!-- Meta Pixel Code -->
   <script>
     !function(f,b,e,v,n,t,s)
@@ -231,52 +239,33 @@
     </div>
   </div>
 
-  <!-- NEW: GCash Payment Popup (QR / Mobile tabs + Receipt upload) -->
-  <div id="paymentPopup" class="popup-backdrop hidden" aria-hidden="true">
-    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
-      <button class="popup-close" aria-label="Close">×</button>
+  <!-- GCash Payment Popup (Number only + Receipt upload) -->
+<div id="paymentPopup" class="popup-backdrop hidden" aria-hidden="true">
+  <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <button class="popup-close" aria-label="Close">×</button>
 
-      <h3 id="payTitle" class="popup-title">Pay with GCash</h3>
-      <div class="meta" id="payMeta">Order: <span id="payOrderId">—</span> • Total: <span id="payTotal">₱0</span></div>
+    <h3 id="payTitle" class="popup-title">Pay with GCash</h3>
+    <div class="meta" id="payMeta">Order: <span id="payOrderId">—</span> • Total: <span id="payTotal">₱0</span></div>
 
-      <!-- Tabs -->
-      <div class="tabbar" role="tablist">
-        <button class="tab active" id="tabQR" role="tab" aria-selected="true">QR Code</button>
-        <button class="tab" id="tabNumber" role="tab" aria-selected="false">Mobile Number</button>
+    <!-- Number only -->
+    <div class="row-sb">
+      <div>
+        <div class="small">Send payment to this GCash number</div>
+        <div class="gcash-number" id="gcashMobileText">+63 9XX XXX XXXX</div>
+        <div class="small" id="gcashAccountName" style="opacity:.85;">Account: Stone Grill Restaurant</div>
       </div>
+      <button id="btnCopyNumber" class="btn">Copy</button>
+    </div>
 
-      <!-- Pane: QR -->
-      <div class="pay-pane active" id="paneQR">
-        <div class="qr-wrap">
-          <img id="gcashQrImg" src="" alt="GCash QR">
-        </div>
-        <p class="small" style="text-align:center; margin:10px 0 0;">
-          Scan the QR with your GCash app to pay.
-        </p>
-      </div>
-
-      <!-- Pane: Number -->
-      <div class="pay-pane" id="paneNumber">
-        <div class="row-sb">
-          <div>
-            <div class="small">Send to this GCash number</div>
-            <div class="gcash-number" id="gcashMobileText">+63 9XX XXX XXXX</div>
-            <div class="small" id="gcashAccountName" style="opacity:.85;">Account: Stone Grill Restaurant</div>
-          </div>
-          <button id="btnCopyNumber" class="btn">Copy</button>
-        </div>
-      </div>
-
-      <!-- Receipt upload -->
-      <div class="receipt-upload-block">
-        <h4>Upload Payment Receipt</h4>
-        <input id="gcashReceiptInput" type="file" accept="image/*" capture="environment" />
-        <button id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
-        <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
-      </div>
+    <!-- Receipt upload -->
+    <div class="receipt-upload-block">
+      <h4>Upload Payment Receipt</h4>
+      <input id="gcashReceiptInput" type="file" accept="image/*" capture="environment" />
+      <button id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
+      <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
     </div>
   </div>
-
+</div>
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
