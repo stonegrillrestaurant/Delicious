@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <!-- Document Basics -->
   <meta charset="utf-8">
@@ -71,6 +73,23 @@
     ]
   }
   </script>
+    <!-- NEW: Minimal styles for payment popup -->
+  <style>
+    .tabbar { display:flex; gap:8px; margin:8px 0 12px; }
+    .tabbar .tab { padding:8px 12px; border-radius:8px; border:1px solid #ddd; cursor:pointer; }
+    .tab.active { background:#8db600; color:#fff; border-color:#8db600; }
+    .pay-pane { display:none; }
+    .pay-pane.active { display:block; }
+    .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
+    .qr-wrap { text-align:center; }
+    .qr-wrap img { max-width:260px; width:100%; border-radius:10px; box-shadow:0 4px 14px rgba(0,0,0,.12); }
+    .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
+    .receipt-upload-block h4 { margin:0 0 8px; font-size:1.02rem; }
+    .receipt-status { margin-top:8px; font-size:.92rem; }
+    .popup .meta { font-size:.9rem; color:#666; margin:6px 0 10px; }
+    .popup .row-sb { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .popup .small { font-size:.9rem; }
+  </style>
 </head>
 
 <body>
@@ -214,12 +233,191 @@
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
+    <!-- NEW: GCash Payment Popup -->
+  <div id="paymentPopup" class="popup-backdrop hidden" aria-hidden="true">
+    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+      <button class="popup-close" aria-label="Close">×</button>
+
+      <h3 id="payTitle" class="popup-title">Pay with GCash</h3>
+      <div class="meta" id="payMeta">Order: <span id="payOrderId">—</span> • Total: <span id="payTotal">₱0</span></div>
+
+      <!-- Tabs -->
+      <div class="tabbar" role="tablist">
+        <button class="tab active" id="tabQR" role="tab" aria-selected="true">QR Code</button>
+        <button class="tab" id="tabNumber" role="tab" aria-selected="false">Mobile Number</button>
+      </div>
+
+      <!-- Pane: QR -->
+      <div class="pay-pane active" id="paneQR">
+        <div class="qr-wrap">
+          <img id="gcashQrImg" src="" alt="GCash QR">
+        </div>
+        <p class="small" style="text-align:center; margin:10px 0 0;">
+          Scan the QR with your GCash app to pay.
+        </p>
+      </div>
+
+      <!-- Pane: Number -->
+      <div class="pay-pane" id="paneNumber">
+        <div class="row-sb">
+          <div>
+            <div class="small">Send to this GCash number</div>
+            <div class="gcash-number" id="gcashMobileText">+63 9XX XXX XXXX</div>
+            <div class="small" id="gcashAccountName" style="opacity:.85;">Account: Stone Grill Restaurant</div>
+          </div>
+          <button id="btnCopyNumber" class="btn">Copy</button>
+        </div>
+      </div>
+
+      <!-- Receipt upload -->
+      <div class="receipt-upload-block">
+        <h4>Upload Payment Receipt</h4>
+        <input id="gcashReceiptInput" type="file" accept="image/*" capture="environment" />
+        <button id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
+        <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script src="config.js?v=13"></script>
   <script src="main.js?v=13"></script>
 
-  <!-- Service worker (optional, safe) -->
+  <!-- Service worker (optional, safe) --><!-- NEW: Payment popup + direct-to-Telegram receipt upload -->
+<script>
+(function () {
+  // Helper: show/hide
+  function show(el){ el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
+  function hide(el){ el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
+
+  // Tabs
+  const tabQR = document.getElementById('tabQR');
+  const tabNumber = document.getElementById('tabNumber');
+  const paneQR = document.getElementById('paneQR');
+  const paneNumber = document.getElementById('paneNumber');
+  function activate(tab, pane) {
+    [tabQR, tabNumber].forEach(t => t.classList.remove('active'));
+    [paneQR, paneNumber].forEach(p => p.classList.remove('active'));
+    tab.classList.add('active'); pane.classList.add('active');
+    tab.setAttribute('aria-selected','true');
+    (tab === tabQR ? tabNumber : tabQR).setAttribute('aria-selected','false');
+  }
+  if (tabQR && tabNumber) {
+    tabQR.addEventListener('click', () => activate(tabQR, paneQR));
+    tabNumber.addEventListener('click', () => activate(tabNumber, paneNumber));
+  }
+
+  // Copy number
+  const btnCopy = document.getElementById('btnCopyNumber');
+  if (btnCopy) {
+    btnCopy.addEventListener('click', async () => {
+      const txt = document.getElementById('gcashMobileText').textContent.trim();
+      try { await navigator.clipboard.writeText(txt); btnCopy.textContent = 'Copied'; setTimeout(()=>btnCopy.textContent='Copy',1200); }
+      catch { alert('Copy failed. Please long-press and copy.'); }
+    });
+  }
+
+  // Close button
+  document.querySelectorAll('#paymentPopup .popup-close').forEach(btn => {
+    btn.addEventListener('click', () => hide(document.getElementById('paymentPopup')));
+  });
+
+  // Expose a function your existing code can call after successful order
+  // Call: window.showGcashPopup(orderId, totalAmount)
+  window.showGcashPopup = function(orderId, totalAmount) {
+    const pop = document.getElementById('paymentPopup');
+    document.getElementById('payOrderId').textContent = orderId || '—';
+    document.getElementById('payTotal').textContent = (typeof totalAmount === 'number' ? '₱' + totalAmount.toLocaleString() : (totalAmount || '₱0'));
+
+    // Fill QR (from APP config)
+    const qr = (window.APP && (window.APP.GCASH_QR_URL || window.APP.gcashQrUrl));
+    const qrImg = document.getElementById('gcashQrImg');
+    qrImg.src = qr || 'assets/placeholder-qr.png';
+
+    // Fill Mobile number and Account name (optional APP config)
+    const mobileTxt = document.getElementById('gcashMobileText');
+    const acctName = document.getElementById('gcashAccountName');
+    const mobile = window.APP && (window.APP.GCASH_MOBILE || window.APP.gcashMobile);
+    const acct   = window.APP && (window.APP.GCASH_ACCOUNT_NAME || window.APP.gcashAccountName);
+    if (mobile) mobileTxt.textContent = mobile;
+    if (acct)   acctName.textContent = 'Account: ' + acct;
+
+    // Default to QR tab on open
+    activate(tabQR, paneQR);
+    show(pop);
+
+    // Keep a global for caption use
+    window.currentOrderId = orderId || '';
+    window.currentOrderTotal = totalAmount || '';
+  };
+
+  // === Direct-to-Telegram receipt upload ===
+  const sendBtn = document.getElementById('btnSendReceipt');
+  const fileInput = document.getElementById('gcashReceiptInput');
+  const statusEl = document.getElementById('receiptStatus');
+
+  function getField(id, fallback='') {
+    const el = document.getElementById(id);
+    return (el && el.value || fallback).toString().trim();
+  }
+
+  if (sendBtn && fileInput && statusEl) {
+    sendBtn.addEventListener('click', async () => {
+      if (!fileInput.files || !fileInput.files.length) {
+        statusEl.textContent = 'Please select a receipt image first.';
+        return;
+      }
+      const token = window.APP && (window.APP.TELEGRAM_BOT_TOKEN || window.APP.telegramBotToken);
+      const chatId = window.APP && (window.APP.TELEGRAM_CHAT_ID || window.APP.telegramChatId);
+      if (!token || !chatId) {
+        statusEl.textContent = 'Bot is not configured. Please contact the restaurant.';
+        return;
+      }
+
+      statusEl.textContent = 'Sending receipt…';
+
+      const fullName = getField('fullName', 'Unknown Customer');
+      const mobile   = getField('mobileNumber', 'N/A');
+      const orderId  = (window.currentOrderId || 'N/A');
+      const total    = (window.currentOrderTotal ? `₱${window.currentOrderTotal}` : null);
+
+      const caption = [
+        '🧾 GCash Receipt Received',
+        `• Order ID: ${orderId}`,
+        total ? `• Total: ${total}` : null,
+        `• Name: ${fullName}`,
+        `• Mobile: ${mobile}`
+      ].filter(Boolean).join('\n');
+
+      const file = fileInput.files[0];
+      const isImage = /^image\//i.test(file.type);
+
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append('caption', caption);
+      formData.append(isImage ? 'photo' : 'document', file);
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/${isImage ? 'sendPhoto' : 'sendDocument'}`, {
+          method: 'POST',
+          body: formData
+        });
+        if (res.ok) {
+          statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
+          fileInput.value = '';
+        } else {
+          const t = await res.text().catch(()=>'');
+          console.error('Telegram error:', t);
+          statusEl.textContent = '❌ Failed to send. Please try again.';
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = '❌ Error sending receipt. Check your connection and try again.';
+      }
+    });
+  }
+})();
+</script>
   <script>
     if ('serviceWorker' in navigator) {
       const onGithubIo = location.hostname.endsWith('github.io');
