@@ -68,7 +68,7 @@
   }
   </script>
 
-  <!-- Minimal styles just for the GCash popup + floating button -->
+  <!-- Minimal styles for popup + centered toast -->
   <style>
     .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
     .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
@@ -77,13 +77,19 @@
     .popup .meta { font-size:.9rem; color:#666; margin:6px 0 10px; }
     .popup .row-sb { display:flex; justify-content:space-between; align-items:center; gap:10px; }
     .popup .small { font-size:.9rem; }
-    /* Floating manual open button */
-    .fab-pay{
-      position: fixed; right: 14px; bottom: 18px; z-index: 1100;
-      background: #8db600; color:#fff; border:0; padding:10px 14px;
-      border-radius: 9999px; font-weight:700; box-shadow:0 8px 18px rgba(0,0,0,.18);
+
+    /* Center the toast on screen (overrides any bottom placement) */
+    #toast {
+      position: fixed !important;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 1100 !important;
+      max-width: 90vw;
+      text-align: center;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(0,0,0,.15);
     }
-    .fab-pay:active{ transform: translateY(1px); }
   </style>
 </head>
 
@@ -175,6 +181,11 @@
           </label>
 
           <button type="submit" class="btn primary wide">Submit Order</button>
+
+          <!-- Static Pay/Upload button (fixed location under Submit) -->
+          <button id="openPayPopupBtn" type="button" class="btn wide" style="margin-top:10px;">
+            Pay / Upload GCash
+          </button>
         </form>
       </div>
 
@@ -238,7 +249,7 @@
         <button id="btnCopyNumber" class="btn">Copy</button>
       </div>
 
-      <!-- [UPDATED] Standalone uploader that posts to Telegram via hidden iframe (no CORS, no Apps Script) -->
+      <!-- Standalone uploader that posts to Telegram via hidden iframe (no CORS, no Apps Script) -->
       <div class="receipt-upload-block">
         <h4>Upload Payment Receipt</h4>
 
@@ -256,29 +267,23 @@
           <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
         </form>
       </div>
-      <!-- [/UPDATED] -->
     </div>
   </div>
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Manual Pay / Upload floating button (kept as in your file) -->
-  <button id="openPayPopupBtn" class="fab-pay" aria-label="Pay or upload GCash receipt">
-    Pay / Upload GCash
-  </button>
-
   <!-- Scripts -->
   <script src="config.js?v=15"></script>
   <script src="main.js?v=15"></script>
 
-  <!-- Payment popup controller + Telegram upload + auto-open after order -->
+  <!-- Popup controller + Telegram upload (manual only) -->
   <script>
   (function () {
     function showBackdrop(el){ el.classList.add('show'); el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
     function hideBackdrop(el){ el.classList.remove('show'); el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
 
-    // Manual open button (customers can return any time)
+    // Static Pay/Upload button
     (function () {
       var btn = document.getElementById('openPayPopupBtn');
       if (!btn) return;
@@ -289,13 +294,12 @@
       });
     })();
 
-    // Close
+    // Close handlers
     document.addEventListener('click', (e)=>{
       if (e.target.closest('#paymentPopup .popup-close')) {
         hideBackdrop(document.getElementById('paymentPopup'));
       }
     });
-    // Close on backdrop click
     document.getElementById('paymentPopup').addEventListener('click', function(e){
       if (e.target === this) hideBackdrop(this);
     });
@@ -309,7 +313,7 @@
       }
     });
 
-    // Expose: can be called manually OR programmatically
+    // Expose popup
     window.showGcashPopup = function(orderId, totalAmount) {
       const pop = document.getElementById('paymentPopup');
       if (!pop) return;
@@ -319,41 +323,18 @@
         ? '₱' + totalAmount.toLocaleString()
         : (totalAmount || '₱0'));
 
-      // Fill number & account from config
       const mobileTxt = document.getElementById('gcashMobileText');
       const acctName  = document.getElementById('gcashAccountName');
       if (window.APP?.GCASH_MOBILE)       mobileTxt.textContent = window.APP.GCASH_MOBILE;
       if (window.APP?.GCASH_ACCOUNT_NAME) acctName.textContent  = 'Account: ' + window.APP.GCASH_ACCOUNT_NAME;
 
-      // Save globals for caption
       window.currentOrderId = orderId || '';
       window.currentOrderTotal = totalAmount || '';
 
       showBackdrop(pop);
     };
 
-    // === Auto-open after order is sent (without modifying main.js) ===
-    (function wrapSend(){
-      if (typeof window.sendToTelegram !== 'function') return;
-      var orig = window.sendToTelegram;
-      window.sendToTelegram = function(text){
-        var totalBefore = (typeof cartSubtotal === 'function') ? cartSubtotal() : null;
-        var orderId = 'ORD-' + Date.now();
-        return orig(text).then(function(res){
-          if (typeof window.showGcashPopup === 'function') {
-            window.showGcashPopup(orderId, totalBefore);
-          }
-          return res;
-        });
-      };
-    })();
-
-    /* =======================
-       [UPDATED] Upload logic
-       - Uses hidden iframe form to avoid CORS.
-       - Action & chat_id are filled from config.js (APP.TELEGRAM_BOT_TOKEN/CHAT_ID).
-       - Always uses sendDocument (works for images & PDFs).
-       ======================= */
+    /* Upload logic (manual only; hidden iframe avoids CORS) */
     (function setupTelegramUpload(){
       var form     = document.getElementById('tgUploadForm');
       var iframe   = document.getElementById('tgUploadFrame');
@@ -365,15 +346,12 @@
 
       if (!form || !iframe || !chatIn || !capIn || !fileIn || !sendBtn) return;
 
-      // Fill endpoint & chat from config (no hardcoding in HTML)
       var token  = (window.APP && window.APP.TELEGRAM_BOT_TOKEN) || '';
       var chatId = (window.APP && window.APP.TELEGRAM_CHAT_ID)   || '';
       if (token) form.action = 'https://api.telegram.org/bot' + encodeURIComponent(token) + '/sendDocument';
       if (chatId) chatIn.value = chatId;
 
-      // Success callback when Telegram responds (iframe load)
       iframe.addEventListener('load', function(){
-        // We can't parse cross-origin response, but load means Telegram replied.
         if (statusEl) statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
         if (typeof window.showToast === 'function') showToast('Receipt uploaded ✅', 2000);
         try { fileIn.value = ''; } catch(e){}
@@ -399,14 +377,13 @@
 
         capIn.value = caption;
         statusEl.textContent = 'Sending receipt…';
-        form.submit(); // posts directly to Telegram via iframe
+        form.submit();
       });
     })();
-    // [/UPDATED]
   })();
   </script>
 
-  <!-- Service worker (optional, safe) -->
+  <!-- Service worker (optional) -->
   <script>
     if ('serviceWorker' in navigator) {
       const onGithubIo = location.hostname.endsWith('github.io');
