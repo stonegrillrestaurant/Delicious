@@ -392,5 +392,76 @@
       }
     }
   </script>
+  <!-- ===== Toast upgrade: top-center, close button, auto-dismiss, click-to-dismiss ===== -->
+<script>
+(function(){
+  // Ensure a toast element exists
+  var t = document.getElementById('toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toast';
+    document.body.appendChild(t);
+  }
+
+  // Inject compact, top-center styles (won't block page center)
+  var css = document.createElement('style');
+  css.textContent = `
+    #toast{
+      position:fixed; left:50%; top:76px; transform:translateX(-50%);
+      z-index:1100; max-width:92vw; background:rgba(17,24,39,.96); color:#fff;
+      padding:12px 14px; border-radius:12px; box-shadow:0 10px 20px rgba(0,0,0,.15);
+      font-size:14px; line-height:1.35; display:none; opacity:0; transition:opacity .18s ease;
+    }
+    #toast.show{ display:block; opacity:1; }
+    #toast .toast-row{ display:flex; align-items:center; gap:10px; }
+    #toast .toast-msg{ flex:1; text-align:center; }
+    #toast .toast-close{
+      appearance:none; border:0; background:transparent; color:#fff; font-size:18px; line-height:1;
+      padding:2px 6px; cursor:pointer; opacity:.9;
+    }
+    #toast .toast-close:active{ transform:translateY(1px); }
+  `;
+  document.head.appendChild(css);
+
+  var hideTimer = null;
+
+  function hideToast(){
+    clearTimeout(hideTimer);
+    t.classList.remove('show');
+    setTimeout(function(){ if(!t.classList.contains('show')) t.style.display='none'; }, 180);
+  }
+
+  function renderToast(msg){
+    t.innerHTML = '';
+    var row = document.createElement('div'); row.className = 'toast-row';
+    var msgEl = document.createElement('div'); msgEl.className = 'toast-msg';
+    msgEl.textContent = (msg == null ? '' : String(msg));
+    var btn = document.createElement('button'); btn.className = 'toast-close'; btn.setAttribute('aria-label','Close'); btn.textContent = '×';
+    btn.onclick = hideToast;
+    row.appendChild(msgEl); row.appendChild(btn);
+    t.appendChild(row);
+    // Tap anywhere on the toast to dismiss
+    t.onclick = hideToast;
+  }
+
+  // Replace global showToast so ALL calls use this version
+  window.showToast = function(msg, ms){
+    try{
+      ms = ms || 5000; // default 5s
+      renderToast(msg);
+      clearTimeout(hideTimer);
+      t.style.display = 'block';
+      // small delay to allow CSS transition to pick up
+      requestAnimationFrame(function(){ t.classList.add('show'); });
+      hideTimer = setTimeout(hideToast, ms);
+    }catch(e){
+      // Fallback if anything ever goes wrong
+      console.warn('[toast-upgrade] error:', e);
+      alert(msg);
+    }
+  };
+})();
+</script>
+<!-- ===== /Toast upgrade ===== -->
 </body>
 </html>
