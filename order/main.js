@@ -19,11 +19,12 @@
     }
     return undefined;
   }
-  window.APP = {
+  // merge into existing window.APP (do NOT overwrite)
+  window.APP = Object.assign(window.APP || {}, {
     TELEGRAM_BOT_TOKEN: pick('TELEGRAM_BOT_TOKEN', 'telegramBotToken'),
     TELEGRAM_CHAT_ID: pick('TELEGRAM_CHAT_ID', 'telegramChatId'),
-    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL', 'appsScriptUrl', 'GOOGLE_SHEETS_WEBAPP_URL')
-  };
+    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL','appsScriptUrl','GOOGLE_SHEETS_WEBAPP_URL','SHEETS_ENDPOINT')
+  });
 })();
 
 /* ---- Helpers ---- */
@@ -40,7 +41,7 @@ function showToast(msg, ms){
   setTimeout(function(){ el.classList.remove('show'); }, ms);
 }
 
-/* ---- Fallback MENU (only if no LS/menu.json) ---- */
+/* ---- Fallback MENU ---- */
 var MENU_FALLBACK = {
   setMeals: [
     { name: "Set A", price: 1100 },
@@ -176,7 +177,7 @@ var MENU_FALLBACK = {
   ]
 };
 
-/* ---- Load menu: LocalStorage -> assets/menu.json -> fallback ---- */
+/* ---- Load menu ---- */
 async function loadMenuData(fallbackMENU) {
   try {
     var ls = localStorage.getItem('stonegrill_menu_v1');
@@ -209,7 +210,7 @@ async function loadMenuData(fallbackMENU) {
   return { categories: cats, data: (fallbackMENU || {}) };
 }
 
-/* ---- Build category bar dynamically ---- */
+/* ---- Build category bar ---- */
 function buildCategoryBar(categories) {
   var bar = document.getElementById('categoryBar');
   if (!bar) return;
@@ -220,8 +221,8 @@ function buildCategoryBar(categories) {
 }
 
 /* ---- State ---- */
-var MENU_META = null;   // {categories:[...], data:{...}}
-var MENU = {};          // convenience
+var MENU_META = null;
+var MENU = {};
 var currentCategory = 'pork';
 var cart = [];
 
@@ -361,7 +362,7 @@ function logToSheets(payload){
   });
 }
 
-/* ---- Date/Time formatting for Telegram ---- */
+/* ---- Date/Time formatting ---- */
 function formatOrderDateTime(dateStr, timeStr){
   if(!dateStr && !timeStr) return { human:'—', iso:'—' };
   var dt = new Date(dateStr + 'T' + (timeStr || '00:00'));
@@ -437,6 +438,11 @@ function handleSubmit(e){
   };
 
   sendToTelegram(message).then(function(){
+    // create an order id and open payment popup BEFORE clearing form
+    var orderId = 'ORD-' + Date.now();
+    var totalAmount = cartSubtotal();
+    window.showGcashPopup(orderId, totalAmount);
+
     logToSheets(payload); // optional
     showToast('Order sent! We’ll message you shortly.');
     clearCart();
@@ -460,7 +466,7 @@ function initClearButton(){
 
 /* ---- How to Order popup ---- */
 function wireHowToPopup(){
-  var link = document.getElementById('howToOrderLink');
+  var link = document.getElementById('howtoOrder'); // matches index.html id
   var popup = document.getElementById('howToOrderPopup');
   if(!link || !popup) return;
   var closeBtn = popup.querySelector('.popup-close');
@@ -513,4 +519,3 @@ document.addEventListener('DOMContentLoaded', async function(){
     showToast('Error initializing page scripts.');
   }
 });
-
