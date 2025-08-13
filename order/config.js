@@ -1,13 +1,13 @@
-// config.js  (TESTING — we’ll hide token later)
+// config.js  (TESTING — token visible; hide later)
 window.APP_CONFIG = {
   TELEGRAM_BOT_TOKEN: "7538084446:AAFOnvqicd8LwjunpLbs-VzhuSkuLPTlusA",
   TELEGRAM_CHAT_ID: "-1002531095369",
 
-  // GCash (number-only)
+  // GCash number-only
   GCASH_MOBILE: "+63 9276031476",
   GCASH_ACCOUNT_NAME: "ST******E F.",
 
-  // Optional (unused by uploader but okay to keep)
+  // (Optional extras you already had)
   SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbxZcnB9ENV_QiEA0v6TdvfFjs3XZIBHhm-TB4ZQtBMNx9FPowFdIX_MJxV36ngshoSBjA/exec",
   GCASH_QR_PATH: "assets/qr/gcash.png",
   SHOP_NAME: "Stone Grill Restaurant",
@@ -41,6 +41,7 @@ window.APP_CONFIG = {
     TELEGRAM_BOT_TOKEN: C.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID:   C.TELEGRAM_CHAT_ID,
     GCASH_MOBILE:       C.GCASH_MOBILE,
-    GCASH_ACCOUNT_NAME: C.GCASH_ACCOUNT_NAME
+    GCASH_ACCOUNT_NAME: C.GCASH_ACCOUNT_NAME,
+    SHEETS_ENDPOINT:    C.SHEETS_ENDPOINT
   });
 })();
