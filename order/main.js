@@ -413,7 +413,6 @@ function buildOrderMessage(form){
   msg += '\n\n(Automated message)';
   return msg;
 }
-
 /* ---- Submit ---- */
 function handleSubmit(e){
   e.preventDefault();
@@ -438,13 +437,11 @@ function handleSubmit(e){
   };
 
   sendToTelegram(message).then(function(){
-    // create an order id and open payment popup BEFORE clearing form
-    var orderId = 'ORD-' + Date.now();
-    var totalAmount = cartSubtotal();
-    window.showGcashPopup(orderId, totalAmount);
+    // NO AUTO POPUP — manual via floating button
+    var gcashNum = (window.APP && window.APP.GCASH_MOBILE) ? ' ' + window.APP.GCASH_MOBILE : '';
+    showToast('Order sent! Pay later via “Pay / Upload GCash”.' + gcashNum);
 
     logToSheets(payload); // optional
-    showToast('Order sent! We’ll message you shortly.');
     clearCart();
     form.reset();
     updatePersonsVisibility();
@@ -453,17 +450,6 @@ function handleSubmit(e){
     showToast('Failed to send to Telegram. Please try again.');
   });
 }
-
-/* ---- Clear cart ---- */
-function initClearButton(){
-  var btn = $('#clearCartBtn');
-  if(btn) btn.addEventListener('click', function(){
-    if(!cart.length) return;
-    clearCart();
-    showToast('Cart cleared.');
-  });
-}
-
 /* ---- How to Order popup ---- */
 function wireHowToPopup(){
   var link = document.getElementById('howtoOrder'); // matches index.html id
