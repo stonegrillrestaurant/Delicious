@@ -6,17 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Stone Grill's  — Online Reservation</title>
 
-  <!-- Minimal styles for GCash number popup -->
-  <style>
-    .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
-    .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
-    .receipt-upload-block h4 { margin:0 0 8px; font-size:1.02rem; }
-    .receipt-status { margin-top:8px; font-size:.92rem; }
-    .popup .meta { font-size:.9rem; color:#666; margin:6px 0 10px; }
-    .popup .row-sb { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-    .popup .small { font-size:.9rem; }
-  </style>
-
   <!-- Meta Pixel Code -->
   <script>
     !function(f,b,e,v,n,t,s)
@@ -54,7 +43,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Stone Grill Restaurant — Order Online">
-  <meta name="twitter:description" content="Order sizzling plates, seafood, and Filipino favorites from Stone Grill Restaurant.">
+  <meta name="twitter:description" content="Order sizzling plates, fresh seafood, and Filipino favorites from Stone Grill Restaurant.">
   <meta name="twitter:image" content="https://stonegrillresto.net/order/assets/og-order.jpg">
 
   <!-- Theme / Icons / CSS -->
@@ -71,18 +60,31 @@
     "name": "Stone Grill Restaurant",
     "image": "https://stonegrillresto.net/order/assets/og-order.jpg",
     "description": "Sizzling plates, seafood, and Filipino favorites. Order online for dine-in or take-out.",
-    "address": {
-      "@type": "PostalAddress",
-      "addressCountry": "PH"
-    },
+    "address": { "@type": "PostalAddress", "addressCountry": "PH" },
     "telephone": "+63 53 568 0539",
     "email": "stonegrill2014@gmail.com",
     "url": "https://stonegrillresto.net/",
-    "sameAs": [
-      "https://www.facebook.com/stonecitygrill"
-    ]
+    "sameAs": ["https://www.facebook.com/stonecitygrill"]
   }
   </script>
+
+  <!-- Minimal styles just for the GCash popup -->
+  <style>
+    .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
+    .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
+    .receipt-upload-block h4 { margin:0 0 8px; font-size:1.02rem; }
+    .receipt-status { margin-top:8px; font-size:.92rem; }
+    .popup .meta { font-size:.9rem; color:#666; margin:6px 0 10px; }
+    .popup .row-sb { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .popup .small { font-size:.9rem; }
+    /* Floating manual open button */
+    .fab-pay{
+      position: fixed; right: 14px; bottom: 18px; z-index: 1100;
+      background: #8db600; color:#fff; border:0; padding:10px 14px;
+      border-radius: 9999px; font-weight:700; box-shadow:0 8px 18px rgba(0,0,0,.18);
+    }
+    .fab-pay:active{ transform: translateY(1px); }
+  </style>
 </head>
 
 <body>
@@ -96,7 +98,7 @@
       </div>
     </a>
 
-    <!-- Cart summary (stacked) -->
+    <!-- Cart summary -->
     <div class="cart-summary">
       <div class="total-label">Total</div>
       <div id="cartTotal" class="total-value">₱0</div>
@@ -187,21 +189,6 @@
     </aside>
   </main>
 
-  <!-- TEMP: GCash popup test (remove after testing) -->
-<button id="testGcashBtn"
-        style="position:fixed;right:10px;bottom:80px;z-index:9999;padding:8px 10px;border-radius:8px;border:1px solid #8db600;background:#dbff7842">
-  Test GCash Popup
-</button>
-<script>
-  document.getElementById('testGcashBtn').addEventListener('click', function(){
-    if (typeof window.showGcashPopup === 'function') {
-      window.showGcashPopup('TEST-' + Date.now(), 1234);
-    } else {
-      alert('Popup script not loaded. Make sure the popup script block is below config.js and main.js.');
-    }
-  });
-</script>
-
   <!-- Popups -->
   <div id="categoryPopup" class="popup-backdrop hidden">
     <div class="popup">
@@ -234,7 +221,7 @@
     </div>
   </div>
 
-  <!-- GCash Payment Popup (Number only + Receipt upload) -->
+  <!-- GCash Payment Popup (manual open; Camera + Photo Album allowed) -->
   <div id="paymentPopup" class="popup-backdrop hidden" aria-hidden="true">
     <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
       <button class="popup-close" aria-label="Close">×</button>
@@ -253,7 +240,8 @@
 
       <div class="receipt-upload-block">
         <h4>Upload Payment Receipt</h4>
-        <input id="gcashReceiptInput" type="file" accept="image/*" capture="environment" />
+        <!-- IMPORTANT: no 'capture' attribute so iOS shows Camera OR Photo Library -->
+        <input id="gcashReceiptInput" type="file" accept="image/*,application/pdf">
         <button id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
         <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
       </div>
@@ -263,21 +251,41 @@
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
+  <!-- Manual Pay / Upload floating button -->
+  <button id="openPayPopupBtn" class="fab-pay" aria-label="Pay or upload GCash receipt">
+    Pay / Upload GCash
+  </button>
+
   <!-- Scripts -->
-  <script src="config.js?v=13"></script>
-  <script src="main.js?v=13"></script>
+  <script src="config.js?v=14"></script>
+  <script src="main.js?v=14"></script>
 
   <!-- Payment popup controller + Direct-to-Telegram receipt upload -->
   <script>
   (function () {
-    function show(el){ el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
-    function hide(el){ el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
+    function showBackdrop(el){ el.classList.add('show'); el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
+    function hideBackdrop(el){ el.classList.remove('show'); el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
+
+    // Manual open button
+    (function () {
+      var btn = document.getElementById('openPayPopupBtn');
+      if (!btn) return;
+      btn.addEventListener('click', function(){
+        var total = (typeof cartSubtotal === 'function' && Array.isArray(window.cart) && window.cart.length)
+          ? cartSubtotal() : null;
+        window.showGcashPopup('N/A', total);
+      });
+    })();
 
     // Close
     document.addEventListener('click', (e)=>{
       if (e.target.closest('#paymentPopup .popup-close')) {
-        hide(document.getElementById('paymentPopup'));
+        hideBackdrop(document.getElementById('paymentPopup'));
       }
+    });
+    // Close when clicking backdrop
+    document.getElementById('paymentPopup').addEventListener('click', function(e){
+      if (e.target === this) hideBackdrop(this);
     });
 
     // Copy number
@@ -289,7 +297,7 @@
       }
     });
 
-    // Expose: call this after successful order
+    // Expose: can be called manually OR by main.js (if you later want auto)
     window.showGcashPopup = function(orderId, totalAmount) {
       const pop = document.getElementById('paymentPopup');
       if (!pop) return;
@@ -309,7 +317,7 @@
       window.currentOrderId = orderId || '';
       window.currentOrderTotal = totalAmount || '';
 
-      show(pop);
+      showBackdrop(pop);
     };
 
     // Receipt upload (direct to Telegram; CORS-safe fallback)
@@ -350,7 +358,7 @@
         await fetch(`https://api.telegram.org/bot${token}/${isImage ? 'sendPhoto' : 'sendDocument'}`, {
           method: 'POST',
           body: formData,
-          mode: 'no-cors' // opaque response, but sends through CORS
+          mode: 'no-cors'
         });
         statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
         fileInput.value = '';
@@ -371,60 +379,5 @@
       }
     }
   </script>
-  <script src="config.js?v=14"></script>
-<script src="main.js?v=14"></script>
-
-<!-- Safari GCash popup fix -->
-<script>
-(function(){
-  const pop = document.getElementById('paymentPopup');
-  if (!pop) return;
-
-  window.__sgShow = function(el){
-    (el||pop).classList.add('show');
-    (el||pop).classList.remove('hidden');
-    (el||pop).setAttribute('aria-hidden','false');
-  };
-  window.__sgHide = function(el){
-    (el||pop).classList.remove('show');
-    (el||pop).classList.add('hidden');
-    (el||pop).setAttribute('aria-hidden','true');
-  };
-
-  const oldOpen = window.showGcashPopup;
-  window.showGcashPopup = function(orderId, totalAmount){
-    if (typeof oldOpen === 'function') oldOpen(orderId, totalAmount);
-    window.__sgShow(pop);
-  };
-
-  pop.addEventListener('click', function(e){
-    if (e.target === pop) window.__sgHide(pop);
-  });
-})();
-</script>
-  <!-- Manual Pay / Upload button -->
-<button id="openPayPopupBtn"
-        class="fab-pay"
-        aria-label="Pay or upload GCash receipt">
-  Pay / Upload GCash
-</button>
-
-<script>
-  // Open popup manually when button is tapped
-  (function () {
-    var btn = document.getElementById('openPayPopupBtn');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      var total = (typeof cartSubtotal === 'function' && Array.isArray(window.cart) && window.cart.length)
-        ? cartSubtotal()
-        : null; // show current cart total if any
-      if (typeof window.showGcashPopup === 'function') {
-        window.showGcashPopup('N/A', total); // manual open, no order id
-      }
-    });
-  })();
-</script>
-</body>
-</html>
 </body>
 </html>
