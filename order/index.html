@@ -187,6 +187,21 @@
     </aside>
   </main>
 
+  <!-- TEMP: GCash popup test (remove after testing) -->
+<button id="testGcashBtn"
+        style="position:fixed;right:10px;bottom:80px;z-index:9999;padding:8px 10px;border-radius:8px;border:1px solid #8db600;background:#dbff7842">
+  Test GCash Popup
+</button>
+<script>
+  document.getElementById('testGcashBtn').addEventListener('click', function(){
+    if (typeof window.showGcashPopup === 'function') {
+      window.showGcashPopup('TEST-' + Date.now(), 1234);
+    } else {
+      alert('Popup script not loaded. Make sure the popup script block is below config.js and main.js.');
+    }
+  });
+</script>
+
   <!-- Popups -->
   <div id="categoryPopup" class="popup-backdrop hidden">
     <div class="popup">
@@ -356,5 +371,38 @@
       }
     }
   </script>
+  <script src="config.js?v=14"></script>
+<script src="main.js?v=14"></script>
+
+<!-- Safari GCash popup fix -->
+<script>
+(function(){
+  const pop = document.getElementById('paymentPopup');
+  if (!pop) return;
+
+  window.__sgShow = function(el){
+    (el||pop).classList.add('show');
+    (el||pop).classList.remove('hidden');
+    (el||pop).setAttribute('aria-hidden','false');
+  };
+  window.__sgHide = function(el){
+    (el||pop).classList.remove('show');
+    (el||pop).classList.add('hidden');
+    (el||pop).setAttribute('aria-hidden','true');
+  };
+
+  const oldOpen = window.showGcashPopup;
+  window.showGcashPopup = function(orderId, totalAmount){
+    if (typeof oldOpen === 'function') oldOpen(orderId, totalAmount);
+    window.__sgShow(pop);
+  };
+
+  pop.addEventListener('click', function(e){
+    if (e.target === pop) window.__sgHide(pop);
+  });
+})();
+</script>
+</body>
+</html>
 </body>
 </html>
