@@ -221,7 +221,7 @@
     </div>
   </div>
 
-  <!-- GCash Payment Popup (manual + auto after order; album-first upload) -->
+  <!-- GCash Payment Popup -->
   <div id="paymentPopup" class="popup-backdrop hidden" aria-hidden="true">
     <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
       <button class="popup-close" aria-label="Close">×</button>
@@ -238,20 +238,32 @@
         <button id="btnCopyNumber" class="btn">Copy</button>
       </div>
 
+      <!-- [UPDATED] Standalone uploader that posts to Telegram via hidden iframe (no CORS, no Apps Script) -->
       <div class="receipt-upload-block">
         <h4>Upload Payment Receipt</h4>
-        <!-- Album-first: no 'capture' so iOS/Android show Photo Library / Files (camera still available as an option) -->
-        <input id="gcashReceiptInput" type="file" accept="image/*,application/pdf">
-        <button id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
-        <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
+
+        <!-- Hidden iframe prevents navigation -->
+        <iframe name="tgUploadFrame" id="tgUploadFrame" class="hidden" style="display:none"></iframe>
+
+        <!-- One form that always uses sendDocument (works for images & PDFs) -->
+        <form id="tgUploadForm" target="tgUploadFrame" method="post" enctype="multipart/form-data" style="display:grid;gap:8px;max-width:360px">
+          <input type="hidden" name="chat_id" id="tgChatId">
+          <input type="hidden" name="caption" id="tgCaption">
+          <!-- Action (endpoint) is set by JS from config: https://api.telegram.org/botTOKEN/sendDocument -->
+
+          <input id="gcashReceiptInput" class="input" type="file" name="document" accept="image/*,application/pdf">
+          <button type="button" id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
+          <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
+        </form>
       </div>
+      <!-- [/UPDATED] -->
     </div>
   </div>
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Manual Pay / Upload floating button -->
+  <!-- Manual Pay / Upload floating button (kept as in your file) -->
   <button id="openPayPopupBtn" class="fab-pay" aria-label="Pay or upload GCash receipt">
     Pay / Upload GCash
   </button>
@@ -321,12 +333,10 @@
     };
 
     // === Auto-open after order is sent (without modifying main.js) ===
-    // We wrap sendToTelegram to show the popup on success.
     (function wrapSend(){
       if (typeof window.sendToTelegram !== 'function') return;
       var orig = window.sendToTelegram;
       window.sendToTelegram = function(text){
-        // capture total before main.js clears cart
         var totalBefore = (typeof cartSubtotal === 'function') ? cartSubtotal() : null;
         var orderId = 'ORD-' + Date.now();
         return orig(text).then(function(res){
@@ -338,53 +348,61 @@
       };
     })();
 
-    // Receipt upload (direct to Telegram; CORS-safe fallback)
-    document.addEventListener('click', async (e)=>{
-      if (!e.target || e.target.id !== 'btnSendReceipt') return;
+    /* =======================
+       [UPDATED] Upload logic
+       - Uses hidden iframe form to avoid CORS.
+       - Action & chat_id are filled from config.js (APP.TELEGRAM_BOT_TOKEN/CHAT_ID).
+       - Always uses sendDocument (works for images & PDFs).
+       ======================= */
+    (function setupTelegramUpload(){
+      var form     = document.getElementById('tgUploadForm');
+      var iframe   = document.getElementById('tgUploadFrame');
+      var chatIn   = document.getElementById('tgChatId');
+      var capIn    = document.getElementById('tgCaption');
+      var fileIn   = document.getElementById('gcashReceiptInput');
+      var sendBtn  = document.getElementById('btnSendReceipt');
+      var statusEl = document.getElementById('receiptStatus');
 
-      const fileInput = document.getElementById('gcashReceiptInput');
-      const statusEl  = document.getElementById('receiptStatus');
-      if (!fileInput?.files?.length) { statusEl.textContent = 'Please select a receipt image first.'; return; }
+      if (!form || !iframe || !chatIn || !capIn || !fileIn || !sendBtn) return;
 
-      const token  = window.APP?.TELEGRAM_BOT_TOKEN;
-      const chatId = window.APP?.TELEGRAM_CHAT_ID;
-      if (!token || !chatId) { statusEl.textContent = 'Bot not configured.'; return; }
+      // Fill endpoint & chat from config (no hardcoding in HTML)
+      var token  = (window.APP && window.APP.TELEGRAM_BOT_TOKEN) || '';
+      var chatId = (window.APP && window.APP.TELEGRAM_CHAT_ID)   || '';
+      if (token) form.action = 'https://api.telegram.org/bot' + encodeURIComponent(token) + '/sendDocument';
+      if (chatId) chatIn.value = chatId;
 
-      statusEl.textContent = 'Sending receipt…';
+      // Success callback when Telegram responds (iframe load)
+      iframe.addEventListener('load', function(){
+        // We can't parse cross-origin response, but load means Telegram replied.
+        if (statusEl) statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
+        if (typeof window.showToast === 'function') showToast('Receipt uploaded ✅', 2000);
+        try { fileIn.value = ''; } catch(e){}
+      });
 
-      const fullName = (document.getElementById('fullName')?.value || 'Unknown Customer').trim();
-      const mobile   = (document.getElementById('mobileNumber')?.value || 'N/A').trim();
-      const orderId  = window.currentOrderId || 'N/A';
-      const total    = window.currentOrderTotal ? `₱${window.currentOrderTotal}` : null;
+      sendBtn.addEventListener('click', function(){
+        var f = fileIn.files && fileIn.files[0];
+        if (!f){ statusEl.textContent = 'Please select a receipt image or PDF first.'; return; }
+        if (!token || !chatId){ statusEl.textContent = 'Bot not configured (token/chat id).'; return; }
 
-      const caption = [
-        '🧾 GCash Receipt Received',
-        `• Order ID: ${orderId}`,
-        total ? `• Total: ${total}` : null,
-        `• Name: ${fullName}`,
-        `• Mobile: ${mobile}`
-      ].filter(Boolean).join('\\n');
+        var fullName = (document.getElementById('fullName')?.value || 'Unknown Customer').trim();
+        var mobile   = (document.getElementById('mobileNumber')?.value || 'N/A').trim();
+        var orderId  = window.currentOrderId || 'N/A';
+        var total    = window.currentOrderTotal ? ('₱' + window.currentOrderTotal) : '';
 
-      const file = fileInput.files[0];
-      const isImage = /^image\\//i.test(file.type);
-      const formData = new FormData();
-      formData.append('chat_id', chatId);
-      formData.append('caption', caption);
-      formData.append(isImage ? 'photo' : 'document', file);
+        var caption = [
+          '🧾 GCash Receipt Received',
+          '• Order ID: ' + orderId,
+          total ? ('• Total: ' + total) : '',
+          '• Name: ' + fullName,
+          '• Mobile: ' + mobile
+        ].filter(Boolean).join('\\n');
 
-      try {
-        await fetch(`https://api.telegram.org/bot${token}/${isImage ? 'sendPhoto' : 'sendDocument'}`, {
-          method: 'POST',
-          body: formData,
-          mode: 'no-cors'
-        });
-        statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
-        fileInput.value = '';
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = '❌ Failed to send. Please try again.';
-      }
-    });
+        capIn.value = caption;
+        statusEl.textContent = 'Sending receipt…';
+        form.submit(); // posts directly to Telegram via iframe
+      });
+    })();
+    // [/UPDATED]
   })();
   </script>
 
