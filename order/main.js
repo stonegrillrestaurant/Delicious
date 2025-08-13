@@ -19,7 +19,6 @@
     }
     return undefined;
   }
-  // merge into existing window.APP (do NOT overwrite)
   window.APP = Object.assign(window.APP || {}, {
     TELEGRAM_BOT_TOKEN: pick('TELEGRAM_BOT_TOKEN', 'telegramBotToken'),
     TELEGRAM_CHAT_ID: pick('TELEGRAM_CHAT_ID', 'telegramChatId'),
@@ -32,7 +31,7 @@ function $(sel){ return document.querySelector(sel); }
 function $$(sel){ return document.querySelectorAll(sel); }
 function money(n){ return '₱' + Math.round(Number(n)); } // no decimals
 function showToast(msg, ms){
-  ms = ms || 2200;
+  ms = ms || 5000;  // centered toast shows longer by default
   var el = document.getElementById('toast');
   if(!el){ alert(msg); return; }
   el.textContent = msg;
@@ -280,15 +279,15 @@ function renderCart(nudge){
   for (var i=0;i<cart.length;i++){
     var it = cart[i];
     html += '' +
-    '<div class="cart-row">' +
-      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>' +
-      '<div class="qty-wrap">' +
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>' +
-        '<span>'+it.qty+'</span>' +
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>' +
-      '</div>' +
-      '<div class="cart-price">'+money(it.price*it.qty)+'</div>' +
-      '<button class="remove-btn" data-name="'+it.name+'">Remove</button>' +
+    '<div class="cart-row">'+
+      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
+      '<div class="qty-wrap">'+
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>'+
+        '<span>'+it.qty+'</span>'+
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>'+
+      '</div>'+
+      '<div class="cart-price">'+money(it.price*it.qty)+'</div>'+
+      '<button class="remove-btn" data-name="'+it.name+'">Remove</button>'+
     '</div>';
   }
   wrap.innerHTML = html;
@@ -413,6 +412,7 @@ function buildOrderMessage(form){
   msg += '\n\n(Automated message)';
   return msg;
 }
+
 /* ---- Submit ---- */
 function handleSubmit(e){
   e.preventDefault();
@@ -437,9 +437,8 @@ function handleSubmit(e){
   };
 
   sendToTelegram(message).then(function(){
-    // NO AUTO POPUP — manual via floating button
-    var gcashNum = (window.APP && window.APP.GCASH_MOBILE) ? ' ' + window.APP.GCASH_MOBILE : '';
-    showToast('Order sent! Pay later via “Pay / Upload GCash”.' + gcashNum);
+    // NEW centered toast text (payment required before preparation)
+    showToast('✅ Thank you! Please settle your payment via GCash so we can proceed preparing your order.', 5000);
 
     logToSheets(payload); // optional
     clearCart();
@@ -450,9 +449,10 @@ function handleSubmit(e){
     showToast('Failed to send to Telegram. Please try again.');
   });
 }
+
 /* ---- How to Order popup ---- */
 function wireHowToPopup(){
-  var link = document.getElementById('howtoOrder'); // matches index.html id
+  var link = document.getElementById('howtoOrder');
   var popup = document.getElementById('howToOrderPopup');
   if(!link || !popup) return;
   var closeBtn = popup.querySelector('.popup-close');
