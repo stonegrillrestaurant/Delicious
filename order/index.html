@@ -402,6 +402,28 @@
   });
 })();
 </script>
+  <!-- Manual Pay / Upload button -->
+<button id="openPayPopupBtn"
+        class="fab-pay"
+        aria-label="Pay or upload GCash receipt">
+  Pay / Upload GCash
+</button>
+
+<script>
+  // Open popup manually when button is tapped
+  (function () {
+    var btn = document.getElementById('openPayPopupBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var total = (typeof cartSubtotal === 'function' && Array.isArray(window.cart) && window.cart.length)
+        ? cartSubtotal()
+        : null; // show current cart total if any
+      if (typeof window.showGcashPopup === 'function') {
+        window.showGcashPopup('N/A', total); // manual open, no order id
+      }
+    });
+  })();
+</script>
 </body>
 </html>
 </body>
