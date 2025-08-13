@@ -1,3 +1,5 @@
+// ==== config.js (TESTING — token visible) ====
+// Your original APP_CONFIG (completed/closed properly)
 window.APP_CONFIG = {
   TELEGRAM_BOT_TOKEN: "7538084446:AAFOnvqicd8LwjunpLbs-VzhuSkuLPTlusA",
   TELEGRAM_CHAT_ID: "-1002531095369",
@@ -25,5 +27,34 @@ window.APP_CONFIG = {
       "assets/qr/gcash.jpeg",
       "assets/gcash.jpeg"
     ]
-  }
+  },
+
+  // Optional extras (fill if you have them)
+  GCASH_MOBILE: "+63 9XX XXX XXXX",
+  GCASH_ACCOUNT_NAME: "Stone Grill Restaurant"
 };
+
+// ---- Compatibility layer: normalize to window.APP ----
+(function () {
+  const C = window.APP_CONFIG || {};
+  // prefer explicit URL key if you add one later
+  const gcashQrUrl = C.GCASH_QR_URL || C.GCASH_QR_PATH;
+
+  window.APP = Object.assign(window.APP || {}, {
+    TELEGRAM_BOT_TOKEN: C.TELEGRAM_BOT_TOKEN || C.telegramBotToken,
+    TELEGRAM_CHAT_ID:   C.TELEGRAM_CHAT_ID   || C.telegramChatId,
+
+    // GCash display
+    GCASH_QR_URL:       gcashQrUrl || (Array.isArray(C.ASSETS?.gcashQR) ? C.ASSETS.gcashQR[0] : ''),
+    GCASH_MOBILE:       C.GCASH_MOBILE || C.gcashMobile || '',
+    GCASH_ACCOUNT_NAME: C.GCASH_ACCOUNT_NAME || C.gcashAccountName || '',
+
+    // Other helpful fields if your scripts want them
+    SHEETS_ENDPOINT:    C.SHEETS_ENDPOINT || '',
+    SHOP_NAME:          C.SHOP_NAME || '',
+    PHONE:              C.PHONE || '',
+    HOURS:              C.HOURS || '',
+    ADDRESS:            C.ADDRESS || '',
+    ASSETS:             C.ASSETS || {}
+  });
+})();
