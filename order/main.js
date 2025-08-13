@@ -505,3 +505,69 @@ document.addEventListener('DOMContentLoaded', async function(){
     showToast('Error initializing page scripts.');
   }
 });
+/* ========= Stone Grill — main.js hotfix pack ========= */
+
+/* 1) Define the missing initClearButton() so startup never crashes */
+function initClearButton(){
+  var btn = document.getElementById('clearCartBtn');
+  if (!btn) return; // guard
+  btn.addEventListener('click', function(){
+    try { clearCart(); } catch(e) { console.warn('clearCart error:', e); }
+    try { showToast('Cart cleared.', 2000); } catch(e){}
+  });
+}
+
+/* 2) Harden showToast so it always dismisses (even if base CSS differs) */
+(function(){
+  var _origShowToast = window.showToast;
+  window.showToast = function(msg, ms){
+    ms = ms || 5000;
+    try{
+      var el = document.getElementById('toast');
+      if(!el){
+        el = document.createElement('div');
+        el.id = 'toast';
+        document.body.appendChild(el);
+      }
+      el.textContent = (msg == null ? '' : String(msg));
+      el.classList.remove('hidden');
+      el.classList.add('show');
+      // ensure it becomes hidden even if theme CSS doesn’t toggle display
+      clearTimeout(window.__toast_hide_t);
+      window.__toast_hide_t = setTimeout(function(){
+        el.classList.remove('show');
+        setTimeout(function(){ el.classList.add('hidden'); }, 220);
+      }, ms);
+    }catch(e){
+      console.warn('showToast fallback:', e);
+      // last resort so the user still sees something
+      if (typeof _origShowToast === 'function') return _origShowToast(msg, ms);
+      alert(msg);
+    }
+  };
+})();
+
+/* 3) Safely attach listeners ONLY if elements exist (prevents init crashes) */
+(function(){
+  // Payment popup backdrop safe binding (matches index.html)
+  var payPop = document.getElementById('paymentPopup');
+  if (payPop) {
+    payPop.addEventListener('click', function(e){
+      try {
+        if (e.target === this && typeof hideBackdrop === 'function') hideBackdrop(this);
+      } catch(err){ console.warn('hideBackdrop error:', err); }
+    });
+  }
+
+  // If you ever rename the Pay/Upload button id, this guard prevents crashes
+  var staticPayBtn = document.getElementById('openPayPopupBtn');
+  if (staticPayBtn) {
+    staticPayBtn.addEventListener('click', function(){
+      try {
+        var total = (typeof cartSubtotal === 'function' && Array.isArray(window.cart) && window.cart.length)
+          ? cartSubtotal() : null;
+        if (typeof window.showGcashPopup === 'function') window.showGcashPopup('N/A', total);
+      } catch(e){ console.warn('openPayPopupBtn error:', e); }
+    });
+  }
+})();
