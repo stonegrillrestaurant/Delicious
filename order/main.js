@@ -19,11 +19,11 @@
     }
     return undefined;
   }
-  window.APP = {
+  window.APP = Object.assign(window.APP || {}, {
     TELEGRAM_BOT_TOKEN: pick('TELEGRAM_BOT_TOKEN', 'telegramBotToken'),
     TELEGRAM_CHAT_ID: pick('TELEGRAM_CHAT_ID', 'telegramChatId'),
-    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL', 'appsScriptUrl', 'GOOGLE_SHEETS_WEBAPP_URL')
-  };
+    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL','appsScriptUrl','GOOGLE_SHEETS_WEBAPP_URL','SHEETS_ENDPOINT')
+  });
 })();
 
 /* ---- Helpers ---- */
@@ -31,7 +31,7 @@ function $(sel){ return document.querySelector(sel); }
 function $$(sel){ return document.querySelectorAll(sel); }
 function money(n){ return '₱' + Math.round(Number(n)); } // no decimals
 function showToast(msg, ms){
-  ms = ms || 2200;
+  ms = ms || 5000;  // centered toast shows longer by default
   var el = document.getElementById('toast');
   if(!el){ alert(msg); return; }
   el.textContent = msg;
@@ -40,7 +40,7 @@ function showToast(msg, ms){
   setTimeout(function(){ el.classList.remove('show'); }, ms);
 }
 
-/* ---- Fallback MENU (only if no LS/menu.json) ---- */
+/* ---- Fallback MENU ---- */
 var MENU_FALLBACK = {
   setMeals: [
     { name: "Set A", price: 1100 },
@@ -176,7 +176,7 @@ var MENU_FALLBACK = {
   ]
 };
 
-/* ---- Load menu: LocalStorage -> assets/menu.json -> fallback ---- */
+/* ---- Load menu ---- */
 async function loadMenuData(fallbackMENU) {
   try {
     var ls = localStorage.getItem('stonegrill_menu_v1');
@@ -209,7 +209,7 @@ async function loadMenuData(fallbackMENU) {
   return { categories: cats, data: (fallbackMENU || {}) };
 }
 
-/* ---- Build category bar dynamically ---- */
+/* ---- Build category bar ---- */
 function buildCategoryBar(categories) {
   var bar = document.getElementById('categoryBar');
   if (!bar) return;
@@ -220,8 +220,8 @@ function buildCategoryBar(categories) {
 }
 
 /* ---- State ---- */
-var MENU_META = null;   // {categories:[...], data:{...}}
-var MENU = {};          // convenience
+var MENU_META = null;
+var MENU = {};
 var currentCategory = 'pork';
 var cart = [];
 
@@ -279,15 +279,15 @@ function renderCart(nudge){
   for (var i=0;i<cart.length;i++){
     var it = cart[i];
     html += '' +
-    '<div class="cart-row">' +
-      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>' +
-      '<div class="qty-wrap">' +
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>' +
-        '<span>'+it.qty+'</span>' +
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>' +
-      '</div>' +
-      '<div class="cart-price">'+money(it.price*it.qty)+'</div>' +
-      '<button class="remove-btn" data-name="'+it.name+'">Remove</button>' +
+    '<div class="cart-row">'+
+      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
+      '<div class="qty-wrap">'+
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>'+
+        '<span>'+it.qty+'</span>'+
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>'+
+      '</div>'+
+      '<div class="cart-price">'+money(it.price*it.qty)+'</div>'+
+      '<button class="remove-btn" data-name="'+it.name+'">Remove</button>'+
     '</div>';
   }
   wrap.innerHTML = html;
@@ -361,7 +361,7 @@ function logToSheets(payload){
   });
 }
 
-/* ---- Date/Time formatting for Telegram ---- */
+/* ---- Date/Time formatting ---- */
 function formatOrderDateTime(dateStr, timeStr){
   if(!dateStr && !timeStr) return { human:'—', iso:'—' };
   var dt = new Date(dateStr + 'T' + (timeStr || '00:00'));
@@ -437,8 +437,10 @@ function handleSubmit(e){
   };
 
   sendToTelegram(message).then(function(){
+    // NEW centered toast text (payment required before preparation)
+    showToast('✅ Thank you! Please settle your payment via GCash so we can proceed preparing your order.', 5000);
+
     logToSheets(payload); // optional
-    showToast('Order sent! We’ll message you shortly.');
     clearCart();
     form.reset();
     updatePersonsVisibility();
@@ -448,19 +450,9 @@ function handleSubmit(e){
   });
 }
 
-/* ---- Clear cart ---- */
-function initClearButton(){
-  var btn = $('#clearCartBtn');
-  if(btn) btn.addEventListener('click', function(){
-    if(!cart.length) return;
-    clearCart();
-    showToast('Cart cleared.');
-  });
-}
-
 /* ---- How to Order popup ---- */
 function wireHowToPopup(){
-  var link = document.getElementById('howToOrderLink');
+  var link = document.getElementById('howtoOrder');
   var popup = document.getElementById('howToOrderPopup');
   if(!link || !popup) return;
   var closeBtn = popup.querySelector('.popup-close');
@@ -513,3 +505,69 @@ document.addEventListener('DOMContentLoaded', async function(){
     showToast('Error initializing page scripts.');
   }
 });
+/* ========= Stone Grill — main.js hotfix pack ========= */
+
+/* 1) Define the missing initClearButton() so startup never crashes */
+function initClearButton(){
+  var btn = document.getElementById('clearCartBtn');
+  if (!btn) return; // guard
+  btn.addEventListener('click', function(){
+    try { clearCart(); } catch(e) { console.warn('clearCart error:', e); }
+    try { showToast('Cart cleared.', 2000); } catch(e){}
+  });
+}
+
+/* 2) Harden showToast so it always dismisses (even if base CSS differs) */
+(function(){
+  var _origShowToast = window.showToast;
+  window.showToast = function(msg, ms){
+    ms = ms || 5000;
+    try{
+      var el = document.getElementById('toast');
+      if(!el){
+        el = document.createElement('div');
+        el.id = 'toast';
+        document.body.appendChild(el);
+      }
+      el.textContent = (msg == null ? '' : String(msg));
+      el.classList.remove('hidden');
+      el.classList.add('show');
+      // ensure it becomes hidden even if theme CSS doesn’t toggle display
+      clearTimeout(window.__toast_hide_t);
+      window.__toast_hide_t = setTimeout(function(){
+        el.classList.remove('show');
+        setTimeout(function(){ el.classList.add('hidden'); }, 220);
+      }, ms);
+    }catch(e){
+      console.warn('showToast fallback:', e);
+      // last resort so the user still sees something
+      if (typeof _origShowToast === 'function') return _origShowToast(msg, ms);
+      alert(msg);
+    }
+  };
+})();
+
+/* 3) Safely attach listeners ONLY if elements exist (prevents init crashes) */
+(function(){
+  // Payment popup backdrop safe binding (matches index.html)
+  var payPop = document.getElementById('paymentPopup');
+  if (payPop) {
+    payPop.addEventListener('click', function(e){
+      try {
+        if (e.target === this && typeof hideBackdrop === 'function') hideBackdrop(this);
+      } catch(err){ console.warn('hideBackdrop error:', err); }
+    });
+  }
+
+  // If you ever rename the Pay/Upload button id, this guard prevents crashes
+  var staticPayBtn = document.getElementById('openPayPopupBtn');
+  if (staticPayBtn) {
+    staticPayBtn.addEventListener('click', function(){
+      try {
+        var total = (typeof cartSubtotal === 'function' && Array.isArray(window.cart) && window.cart.length)
+          ? cartSubtotal() : null;
+        if (typeof window.showGcashPopup === 'function') window.showGcashPopup('N/A', total);
+      } catch(e){ console.warn('openPayPopupBtn error:', e); }
+    });
+  }
+})();
