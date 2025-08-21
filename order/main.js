@@ -452,18 +452,43 @@ function handleSubmit(e){
 
 /* ---- How to Order popup ---- */
 function wireHowToPopup(){
-  var link = document.getElementById('howtoOrder');
-  var popup = document.getElementById('howToOrderPopup');
-  if(!link || !popup) return;
-  var closeBtn = popup.querySelector('.popup-close');
+  const link = document.getElementById('howtoOrder');
+  const popup = document.getElementById('howToOrderPopup');
 
-  function openHowto(e){ if(e) e.preventDefault(); popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); }
-  function closeHowto(){ popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); }
+  if (!link) {
+    console.warn('[HowToOrder] Trigger link #howtoOrder not found.');
+    return;
+  }
+  if (!popup) {
+    console.warn('[HowToOrder] Popup #howToOrderPopup not found.');
+    return;
+  }
+
+  const closeBtn = popup.querySelector('.popup-close');
+
+  function openHowto(e) {
+    e?.preventDefault();
+    popup.classList.remove('hidden');
+    popup.classList.add('show');
+    popup.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeHowto() {
+    popup.classList.remove('show');
+    popup.classList.add('hidden');
+    popup.setAttribute('aria-hidden', 'true');
+  }
 
   link.addEventListener('click', openHowto);
-  if(closeBtn) closeBtn.addEventListener('click', closeHowto);
-  popup.addEventListener('click', function(e){ if(e.target===popup) closeHowto(); });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !popup.classList.contains('hidden')) closeHowto(); });
+  if (closeBtn) closeBtn.addEventListener('click', closeHowto);
+  popup.addEventListener('click', (e) => {
+    if (e.target === popup) closeHowto();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !popup.classList.contains('hidden')) closeHowto();
+  });
+
+  console.log('[HowToOrder] Popup initialized');
 }
 
 /* ---- Boot ---- */
