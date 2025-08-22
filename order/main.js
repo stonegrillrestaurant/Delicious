@@ -130,9 +130,13 @@ function buildOrderMessage(form){ /* unchanged */ }
 /* ---- Submit ---- */
 function handleSubmit(e){
   e.preventDefault();
-  if(cart.length===0){ showToast('Add at least 1 item to your order.'); return; }
+  if(cart.length===0){ 
+    showToast('Add at least 1 item to your order.'); 
+    return; 
+  }
 
-  var mobileEl = $('#mobileNumber'); if(mobileEl) normalizeMobile(mobileEl);
+  var mobileEl = $('#mobileNumber'); 
+  if(mobileEl) normalizeMobile(mobileEl);
 
   var form = e.currentTarget;
   var message = buildOrderMessage(form);
@@ -150,24 +154,41 @@ function handleSubmit(e){
     createdAt: new Date().toISOString()
   };
 
-  var orderId = 'SG-' + Date.now(); // unique event_id
+  // Unique event ID for Pixel + CAPI deduplication
+  var orderId = 'SG-' + Date.now();
 
+  // 1. Send to Telegram
   sendToTelegram(message).then(function(){
+    // 2. Toast confirmation
     showToast('✅ Thank you! Please settle your payment via GCash so we can proceed preparing your order.', 5000);
 
-    logToSheets(payload); // still logs
-    // ---- NEW: Send to Meta CAPI ----
+    // 3. Log to Google Sheets
+    logToSheets(payload);
+
+    // 4. Send to Meta Conversions API (server-side)
     sendMetaCAPI({
       event: "Purchase",
       orderId: orderId,
-      email: payload.name ? payload.name + "@example.com" : "", // if no email collected
+      email: "", // not collecting email yet
       phone: payload.mobile,
       amount: payload.subtotal
     });
 
+    // 5. Fire Pixel Purchase event with eventID (for deduplication)
+    if (typeof fbq === 'function') {
+      fbq('track', 'Purchase', {
+        value: payload.subtotal,
+        currency: 'PHP'
+      }, {
+        eventID: orderId
+      });
+    }
+
+    // 6. Cleanup
     clearCart();
     form.reset();
     updatePersonsVisibility();
+
   }).catch(function(err){
     console.error(err);
     showToast('Failed to send to Telegram. Please try again.');
