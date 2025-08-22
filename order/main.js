@@ -1,9 +1,9 @@
 /* =========================================================================
-   Stone Grill — main.js (v13+MetaCAPI)
+   Stone Grill — main.js (v14 with Pixel+CAPI)
    Menu source: LocalStorage -> assets/menu.json -> fallback.
    Keeps: cart, subtotal/total (no decimals), Dine-in pax toggle,
    How-to popup, Telegram send, Google Sheets log, readable Date/Time.
-   NEW: Fires Meta Conversions API events (Purchase).
+   NEW: Fires Meta Conversions API + Pixel Purchase (deduped).
    ========================================================================= */
 'use strict';
 
@@ -81,8 +81,140 @@ function sendMetaCAPI(orderData) {
 }
 
 /* ---- Fallback MENU ---- */
-var MENU_FALLBACK = { /* unchanged menu fallback content here */ };
-// (keeping your full MENU_FALLBACK intact; omitted here for brevity in explanation)
+var MENU_FALLBACK = {
+  setMeals: [
+    { name: "Set A", price: 1100 },
+    { name: "Set B", price: 1000 },
+    { name: "Set C", price: 1980 },
+    { name: "Boodle", price: 2300 },
+    { name: "Mix Seafood Inferno (Hot)", price: 850 },
+    { name: "Mix Seafood Heaven (Reg)", price: 850 }
+  ],
+  soup: [
+    { name: "Crab & Corn Soup", price: 190 },
+    { name: "Cream of Mushroom", price: 190 },
+    { name: "Egg Drop Soup", price: 180 },
+    { name: "Vegetable Soup", price: 230 },
+    { name: "Pork Sinigang", price: 280 },
+    { name: "Mix Seafood Tinola", price: 350 }
+  ],
+  rice: [
+    { name: "Cup Rice", price: 25 },
+    { name: "Platter Rice", price: 100 },
+    { name: "Garlic Fried Rice", price: 180 },
+    { name: "Black Rice", price: 180 },
+    { name: "Stone Grill Fried Rice", price: 200 },
+    { name: "Shrimp Fried Rice", price: 195 }
+  ],
+  vegetables: [
+    { name: "Pinakbet", price: 235 },
+    { name: "Chopsuey", price: 210 },
+    { name: "Chopsuey (Seafood)", price: 230 },
+    { name: "Beef with Ampalaya", price: 300 },
+    { name: "Beef with Broccoli", price: 320 }
+  ],
+  noodles: [
+    { name: "Lomi", price: 180 },
+    { name: "Lomi (Seafood)", price: 200 },
+    { name: "Canton", price: 200 },
+    { name: "Canton (Seafood)", price: 220 },
+    { name: "Bihon", price: 240 },
+    { name: "Bihon (Seafood)", price: 270 },
+    { name: "Bam-i", price: 220 },
+    { name: "Bam-i (Seafood)", price: 240 },
+    { name: "Sotanghon Guisado (Reg)", price: 280 },
+    { name: "Sotanghon Guisado (Large)", price: 300 }
+  ],
+  chicken: [
+    { name: "Naked Fried Chicken", price: 220 },
+    { name: "Fried Chicken", price: 200 },
+    { name: "Buttered Chicken", price: 230 },
+    { name: "Buffalo Chicken or Curry", price: 240 },
+    { name: "Chicken Teriyaki", price: 250 }
+  ],
+  beef: [
+    { name: "Beef Steak", price: 300 },
+    { name: "Beef w/ Mushroom", price: 310 },
+    { name: "Beef Caldereta", price: 320 },
+    { name: "Beef Nilaga", price: 320 }
+  ],
+  fish: [
+    { name: "Fish Fillet in Mayo Dip", price: 310 },
+    { name: "Grilled Fish", price: 300 },
+    { name: "Fried Fish", price: 320 },
+    { name: "Fish Kinilaw", price: 310 },
+    { name: "Fish Tinola", price: 340 },
+    { name: "Fish Sinigang", price: 340 },
+    { name: "Sweet & Sour Fish", price: 300 },
+    { name: "Fish with Tausi", price: 340 },
+    { name: "Fish Eskabetche", price: 330 }
+  ],
+  shrimp: [
+    { name: "Crispy Fried Shrimp", price: 240 },
+    { name: "Garlic Buttered Shrimp", price: 250 },
+    { name: "Sizzling Gambas", price: 260 },
+    { name: "Camaron Rebusado", price: 260 },
+    { name: "Shrimp Sinigang / Tinola", price: 280 },
+    { name: "Sweet Chili Shrimp", price: 260 }
+  ],
+  squid: [
+    { name: "Crispy Fried Squid", price: 280 },
+    { name: "Adobo Spicy Squid", price: 300 },
+    { name: "Calamari", price: 300 },
+    { name: "Sizzling Squid", price: 300 }
+  ],
+  crabs: [
+    { name: "Boiled Crabs", price: 310 },
+    { name: "Sweet Chili Crabs", price: 320 },
+    { name: "Salt & Pepper Crabs", price: 300 },
+    { name: "Crab Curry", price: 340 },
+    { name: "Adobo sa Gata Crab", price: 340 }
+  ],
+  bbq: [
+    { name: "Pork BBQ (3 sticks)", price: 99 },
+    { name: "Chicken BBQ", price: 119 },
+    { name: "Liempo", price: 219 },
+    { name: "Grilled Tuna Belly", price: 269 }
+  ],
+  specials: [
+    { name: "Sizzling Sisig Platter", price: 399 },
+    { name: "Seafood Platter", price: 799 },
+    { name: "Family Platter", price: 799 },
+    { name: "StoneGrill Special", price: 499 }
+  ],
+  refreshments: [
+    { name: "Halo-Halo", price: 129 },
+    { name: "Mais con Yelo", price: 109 },
+    { name: "Buko Pandan", price: 109 },
+    { name: "avocado shake", price: 75 },
+    { name: "mango shake", price: 75 },
+    { name: "caroot shake", price: 75 },
+    { name: "banana shake", price: 75 },
+    { name: "apple shake", price: 75 },
+    { name: "buko shake", price: 75 },
+    { name: "pineapple shake", price: 75 }
+  ],
+  drinks: [
+    { name: "Softdrinks", price: 20 },
+    { name: "Wilkins 500 ml", price: 20 },
+    { name: "Wilkins 1 L", price: 30 },
+    { name: "San Mig Light", price: 75 },
+    { name: "San Mig Apple", price: 75 },
+    { name: "San Mig Pale Pilsen", price: 70 },
+    { name: "Red Horse Stallion", price: 80 },
+    { name: "Red Horse 1 L", price: 180 },
+    { name: "San Mig Grande", price: 150 }
+  ],
+  pork: [
+    { name: "Pork Sisig", price: 199 },
+    { name: "Lechon Kawali", price: 229 },
+    { name: "Crispy Pata", price: 499 },
+    { name: "Pork Adobo", price: 240 },
+    { name: "Sweet & Sour Pork", price: 209 },
+    { name: "Pork steak", price: 240 },
+    { name: "Pork steak solo", price: 125 }
+  ]
+};
 
 /* ---- Load menu ---- */
 async function loadMenuData(fallbackMENU) { /* unchanged */ }
