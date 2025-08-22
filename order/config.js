@@ -7,6 +7,10 @@ window.APP_CONFIG = {
   GCASH_MOBILE: "+63 9276031476",
   GCASH_ACCOUNT_NAME: "ST******E F.",
 
+  // Meta Conversions API (Dataset + Token)
+  META_DATASET_ID: "643206718690040", // Stone Grill Restaurant Event
+  META_ACCESS_TOKEN: "EAASaVzChC5gBPPVDAXgcJmvhvL4wGJAknWPcR56x7w6CUbjnF52iv5ZCtSXtPHpBBNFWvvqvfcNnD5VhBwMKW2t4IYenJc8yZCJHgi89TzCrvflE1EV5h9xBsdsknvYuQ6XZA7wqnNIRJJCCib21ZB6hl9sr9YaZAZB8kKUJSIr3OryAfkeeYBsC8N0gUwYwZDZD", // hide later (server-side ideally)
+
   // (Optional extras you already had)
   SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbxZcnB9ENV_QiEA0v6TdvfFjs3XZIBHhm-TB4ZQtBMNx9FPowFdIX_MJxV36ngshoSBjA/exec",
   GCASH_QR_PATH: "assets/qr/gcash.png",
@@ -42,6 +46,8 @@ window.APP_CONFIG = {
     TELEGRAM_CHAT_ID:   C.TELEGRAM_CHAT_ID,
     GCASH_MOBILE:       C.GCASH_MOBILE,
     GCASH_ACCOUNT_NAME: C.GCASH_ACCOUNT_NAME,
-    SHEETS_ENDPOINT:    C.SHEETS_ENDPOINT
+    SHEETS_ENDPOINT:    C.SHEETS_ENDPOINT,
+    META_DATASET_ID:    C.META_DATASET_ID,
+    META_ACCESS_TOKEN:  C.META_ACCESS_TOKEN
   });
 })();
