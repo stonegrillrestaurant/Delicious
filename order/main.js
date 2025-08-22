@@ -217,10 +217,47 @@ var MENU_FALLBACK = {
 };
 
 /* ---- Load menu ---- */
-async function loadMenuData(fallbackMENU) { /* unchanged */ }
+async function loadMenuData(fallbackMENU) {
+  try {
+    var ls = localStorage.getItem('stonegrill_menu_v1');
+    if (ls) {
+      var j = JSON.parse(ls);
+      if (j && j.categories && j.data) return j;
+    }
+  } catch(e) {}
+
+  try {
+    var res = await fetch('assets/menu.json?v=' + Date.now(), { cache: 'no-store' });
+    if (res.ok) {
+      var j2 = await res.json();
+      if (j2 && j2.categories && j2.data) return j2;
+    }
+  } catch(e) {}
+
+  var cats = Object.keys(fallbackMENU || {}).map(function(id){
+    var map = {
+      setMeals:{label:'Set Meal',emoji:'🍱'}, soup:{label:'Soup',emoji:'🍲'}, rice:{label:'Rice',emoji:'🍚'},
+      vegetables:{label:'Veggies',emoji:'🥦'}, noodles:{label:'Noodles/Pasta',emoji:'🍜'},
+      chicken:{label:'Chicken',emoji:'🐓'}, beef:{label:'Beef',emoji:'🐄'}, fish:{label:'Fish',emoji:'🐟'},
+      shrimp:{label:'Shrimp',emoji:'🦐'}, squid:{label:'Squid',emoji:'🦑'}, crabs:{label:'Crabs',emoji:'🦀'},
+      bbq:{label:'Grilled/BBQ',emoji:'🔥'}, specials:{label:'Specialties',emoji:'⭐'},
+      refreshments:{label:'Refreshments',emoji:'🧊'}, drinks:{label:'Drinks',emoji:'🥤'}, pork:{label:'Pork',emoji:'🐖'}
+    };
+    var meta = map[id] || {label:id, emoji:''};
+    return { id:id, label:meta.label, emoji:meta.emoji };
+  });
+  return { categories: cats, data: (fallbackMENU || {}) };
+}
 
 /* ---- Build category bar ---- */
-function buildCategoryBar(categories) { /* unchanged */ }
+function buildCategoryBar(categories) {
+  var bar = document.getElementById('categoryBar');
+  if (!bar) return;
+  bar.innerHTML = categories.map(function(c){
+    var emo = c.emoji ? '<span class="cat-emoji">'+c.emoji+'</span>' : '';
+    return '<button onclick="showCategory(\''+c.id+'\')">'+ emo + '<span>' + (c.label || c.id) + '</span></button>';
+  }).join('');
+}
 
 /* ---- State ---- */
 var MENU_META = null;
@@ -233,136 +270,199 @@ function showCategory(cat){ currentCategory = cat; renderMenu(); }
 window.showCategory = showCategory;
 
 /* ---- Menu rendering ---- */
-function renderMenu() { /* unchanged */ }
+function renderMenu() {
+  var list = $('#menuList'); if (!list) return;
+  var items = (MENU[currentCategory] || []);
+  var html = '';
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    html += '' +
+      '<div class="item" data-idx="'+i+'">' +
+        '<div class="item-title" title="'+it.name+'">'+it.name+'</div>' +
+        '<div class="item-actions">' +
+          '<span class="item-price">'+money(it.price)+'</span>' +
+          '<button class="add-btn" data-idx="'+i+'" aria-label="Add '+it.name+'">Add</button>' +
+        '</div>' +
+      '</div>';
+  }
+  list.innerHTML = html;
+
+  var btns = list.querySelectorAll('.add-btn');
+  for (var b = 0; b < btns.length; b++) {
+    btns[b].addEventListener('click', function(e){
+      var idx = parseInt(e.currentTarget.getAttribute('data-idx'), 10);
+      var item = MENU[currentCategory][idx];
+      addToCart(item);
+    });
+  }
+}
 
 /* ---- Cart ---- */
-function addToCart(item){ /* unchanged */ }
-function changeQty(name, delta){ /* unchanged */ }
-function removeItem(name){ /* unchanged */ }
-function cartSubtotal(){ /* unchanged */ }
-function renderCart(nudge){ /* unchanged */ }
+function addToCart(item){
+  var found = null;
+  for (var i=0;i<cart.length;i++){ if(cart[i].name===item.name){ found=cart[i]; break; } }
+  if(found) found.qty += 1; else cart.push({ name:item.name, price:item.price, qty:1 });
+  renderCart(true);
+}
+function changeQty(name, delta){
+  for (var i=0;i<cart.length;i++){
+    if(cart[i].name===name){ cart[i].qty += delta; if(cart[i].qty<=0){ cart.splice(i,1); } break; }
+  }
+  renderCart();
+}
+function removeItem(name){ cart = cart.filter(function(c){ return c.name!==name; }); renderCart(); }
+function cartSubtotal(){ var s=0; for(var i=0;i<cart.length;i++){ s += cart[i].price*cart[i].qty; } return s; }
+
+function renderCart(nudge){
+  var wrap = $('#cartItems'); if(!wrap) return;
+  var html = '';
+  for (var i=0;i<cart.length;i++){
+    var it = cart[i];
+    html += '' +
+    '<div class="cart-row">'+
+      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
+      '<div class="qty-wrap">'+
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>'+
+        '<span>'+it.qty+'</span>'+
+        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>'+
+      '</div>'+
+      '<div class="cart-price">'+money(it.price*it.qty)+'</div>'+
+      '<button class="remove-btn" data-name="'+it.name+'">Remove</button>'+
+    '</div>';
+  }
+  wrap.innerHTML = html;
+
+  var sub = $('#cartSubtotal'); if(sub) sub.textContent = money(cartSubtotal());
+  var tot = $('#cartTotal');    if(tot) tot.textContent = money(cartSubtotal());
+
+  var qbtns = wrap.querySelectorAll('.qty-btn');
+  for (var q=0;q<qbtns.length;q++){
+    qbtns[q].addEventListener('click', function(e){
+      var nm = e.currentTarget.getAttribute('data-name');
+      var d  = parseInt(e.currentTarget.getAttribute('data-delta'),10);
+      changeQty(nm, d);
+    });
+  }
+  var rbtns = wrap.querySelectorAll('.remove-btn');
+  for (var r=0;r<rbtns.length;r++){
+    rbtns[r].addEventListener('click', function(e){ removeItem(e.currentTarget.getAttribute('data-name')); });
+  }
+
+  if(nudge){
+    var card = document.querySelector('.card.highlight');
+    if(card){ card.classList.remove('nudge'); void card.offsetWidth; card.classList.add('nudge'); }
+  }
+}
 function clearCart(){ cart = []; renderCart(); }
 
 /* ---- Dine-in pax toggle ---- */
-function updatePersonsVisibility(){ /* unchanged */ }
+function updatePersonsVisibility(){
+  var selected = document.querySelector('input[name="orderType"]:checked');
+  var wrap = $('#personsWrap'); if(!wrap) return;
+  var isDineIn = selected && /dine[\s-]*in/i.test(String(selected.value||''));
+  if(isDineIn) wrap.classList.remove('hidden'); else wrap.classList.add('hidden');
+}
 
 /* ---- Mobile number formatting (+63) ---- */
-function normalizeMobile(inputEl){ /* unchanged */ }
+function normalizeMobile(inputEl){
+  var val = inputEl.value.replace(/[^\d+]/g,'');
+  if(val.indexOf('0')===0) val = '+63' + val.slice(1);
+  if(val.indexOf('+63')!==0){ val = '+63' + val; }
+  inputEl.value = val;
+}
 
-/* ---- Telegram / Sheets ---- */
-function sendToTelegram(text){ /* unchanged */ }
-function logToSheets(payload){ /* unchanged */ }
-
-/* ---- Date/Time formatting ---- */
-function formatOrderDateTime(dateStr, timeStr){ /* unchanged */ }
-
-/* ---- Build Telegram message ---- */
-function buildOrderMessage(form){ /* unchanged */ }
-
-/* ---- Submit ---- */
-function handleSubmit(e){
+/* ---- Order submit ---- */
+async function handleSubmit(e){
   e.preventDefault();
-  if(cart.length===0){ 
-    showToast('Add at least 1 item to your order.'); 
-    return; 
-  }
+  if(cart.length===0){ showToast("Cart is empty"); return; }
 
-  var mobileEl = $('#mobileNumber'); 
-  if(mobileEl) normalizeMobile(mobileEl);
+  var name = $('#custName')?.value.trim() || '';
+  var mobile = $('#custMobile')?.value.trim() || '';
+  var date = $('#custDate')?.value.trim() || '';
+  var time = $('#custTime')?.value.trim() || '';
+  var reqs = $('#custReq')?.value.trim() || '';
+  var type = document.querySelector('input[name="orderType"]:checked')?.value || '';
+  var pax  = $('#custPersons')?.value.trim() || '';
+  normalizeMobile({value: mobile, set value(v){ mobile=v; }});
 
-  var form = e.currentTarget;
-  var message = buildOrderMessage(form);
+  var orderId = 'ORD' + Date.now();
+  var total = cartSubtotal();
 
-  var payload = {
-    name: ($('#fullName')||{}).value || '',
-    mobile: ($('#mobileNumber')||{}).value || '',
-    orderType: (form.querySelector('input[name="orderType"]:checked')||{}).value || '',
-    persons: ($('#persons')||{}).value || '',
-    date: ($('#orderDate')||{}).value || '',
-    time: ($('#orderTime')||{}).value || '',
-    requests: ($('#specialRequests')||{}).value || '',
-    items: cart.map(function(it){ return { name:it.name, qty:it.qty, price:it.price }; }),
-    subtotal: cartSubtotal(),
-    createdAt: new Date().toISOString()
-  };
+  var lines = cart.map(function(c){ return c.qty+'x '+c.name; }).join('\n');
+  var msg = '*New Order* %0A' +
+    'ID: '+orderId+'%0A'+
+    'Name: '+name+'%0A'+
+    'Mobile: '+mobile+'%0A'+
+    'Type: '+type+(type.match(/dine/i)?' ('+pax+' pax)':'')+'%0A'+
+    'When: '+date+' '+time+'%0A'+
+    'Requests: '+reqs+'%0A'+
+    'Items:%0A'+lines+'%0A'+
+    'Total: '+money(total);
 
-  // Unique event ID for Pixel + CAPI deduplication
-  var orderId = 'SG-' + Date.now();
+  try {
+    if(APP.TELEGRAM_BOT_TOKEN && APP.TELEGRAM_CHAT_ID){
+      var url = 'https://api.telegram.org/bot'+APP.TELEGRAM_BOT_TOKEN+'/sendMessage';
+      var body = { chat_id: APP.TELEGRAM_CHAT_ID, text: decodeURIComponent(msg), parse_mode:'Markdown' };
+      await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }
+  } catch(err){ console.error('Telegram send failed',err); }
 
-  // 1. Send to Telegram
-  sendToTelegram(message).then(function(){
-    // 2. Toast confirmation
-    showToast('✅ Thank you! Please settle your payment via GCash so we can proceed preparing your order.', 5000);
-
-    // 3. Log to Google Sheets
-    logToSheets(payload);
-
-    // 4. Send to Meta Conversions API (server-side)
-    sendMetaCAPI({
-      event: "Purchase",
-      orderId: orderId,
-      email: "", // not collecting email yet
-      phone: payload.mobile,
-      amount: payload.subtotal
-    });
-
-    // 5. Fire Pixel Purchase event with eventID (for deduplication)
-    if (typeof fbq === 'function') {
-      fbq('track', 'Purchase', {
-        value: payload.subtotal,
-        currency: 'PHP'
-      }, {
-        eventID: orderId
+  try {
+    if(APP.GOOGLE_APPS_SCRIPT_URL){
+      var gbody = { orderId, name, mobile, date, time, type, pax, reqs, items:cart, total };
+      await fetch(APP.GOOGLE_APPS_SCRIPT_URL, {
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(gbody)
       });
     }
+  } catch(err){ console.error('Google Sheets log failed',err); }
 
-    // 6. Cleanup
-    clearCart();
-    form.reset();
-    updatePersonsVisibility();
+  try {
+    sendMetaCAPI({ orderId, amount:total, phone:mobile, email:"", event:"Purchase" });
+    if(window.fbq){
+      fbq('trackSingle','643206718690040','Purchase',{
+        value: total, currency: 'PHP'
+      },{eventID: orderId});
+    }
+  } catch(err){ console.error('Meta tracking failed',err); }
 
-  }).catch(function(err){
-    console.error(err);
-    showToast('Failed to send to Telegram. Please try again.');
-  });
+  showToast("✅ Order sent! Please pay to confirm. (GCash QR below)", 6000);
+  var qr = $('#gcashPopup'); if(qr){ qr.classList.remove('hidden'); qr.setAttribute('aria-hidden','false'); }
+  clearCart();
 }
 
 /* ---- How to Order popup ---- */
-function wireHowToPopup(){ /* unchanged */ }
+function wireHowToPopup(){
+  var link = document.getElementById('howtoOrder');
+  var popup = document.getElementById('howToOrderPopup');
+  if(!link || !popup) return;
+  var closeBtn = popup.querySelector('.popup-close');
 
-/* ---- Boot ---- */
+  function openHowto(e){ if(e) e.preventDefault(); popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); }
+  function closeHowto(){ popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); }
+
+  link.addEventListener('click', openHowto);
+  if(closeBtn) closeBtn.addEventListener('click', closeHowto);
+  popup.addEventListener('click', function(e){ if(e.target===popup) closeHowto(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !popup.classList.contains('hidden')) closeHowto(); });
+}
+
+/* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', async function(){
-  try {
-    MENU_META = await loadMenuData(MENU_FALLBACK);
-    MENU = MENU_META.data;
-    var hasPork = MENU_META.categories.some(function(c){ return c.id==='pork'; });
-    currentCategory = hasPork ? 'pork' : (MENU_META.categories[0] ? MENU_META.categories[0].id : 'pork');
-    buildCategoryBar(MENU_META.categories);
-    renderMenu();
-    renderCart();
-    var radios = document.querySelectorAll('input[name="orderType"]');
-    for (var i=0;i<radios.length;i++){ radios[i].addEventListener('change', updatePersonsVisibility); }
-    updatePersonsVisibility();
-    var m = $('#mobileNumber');
-    if(m){
-      m.addEventListener('blur', function(){ normalizeMobile(m); });
-      m.addEventListener('input', function(){ if(m.value.indexOf('+63')!==0) m.value = '+63 '; });
-    }
-    var form = $('#orderForm');
-    if(form) form.addEventListener('submit', handleSubmit);
-    initClearButton();
-    var checkout = $('#checkoutBtn');
-    if(checkout) checkout.addEventListener('click', function(){
-      var formEl = $('#orderForm'); if(formEl) formEl.scrollIntoView({ behavior:'smooth', block:'start' });
-    });
-    wireHowToPopup();
-  } catch(e) {
-    console.error('Init error:', e);
-    showToast('Error initializing page scripts.');
-  }
-});
+  var meta = await loadMenuData(MENU_FALLBACK);
+  MENU_META = meta.categories;
+  MENU = meta.data;
 
-/* ========= Stone Grill — main.js hotfix pack ========= */
-function initClearButton(){ /* unchanged */ }
-(function(){ /* hardened showToast */ })();
-(function(){ /* safe popup guards */ })();
+  buildCategoryBar(MENU_META);
+  showCategory(MENU_META[0].id);
+
+  renderCart();
+  updatePersonsVisibility();
+
+  var typeRadios = document.querySelectorAll('input[name="orderType"]');
+  for(var i=0;i<typeRadios.length;i++){ typeRadios[i].addEventListener('change', updatePersonsVisibility); }
+
+  var mEl = $('#custMobile'); if(mEl){ mEl.addEventListener('blur', function(){ normalizeMobile(mEl); }); }
+  var form = $('#orderForm'); if(form){ form.addEventListener('submit', handleSubmit); }
+
+  wireHowToPopup();
+});
