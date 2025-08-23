@@ -412,16 +412,39 @@ function sendToTelegram(text){
 }
 function logToSheets(payload){
   return new Promise(function(resolve){
-    var endpoint = (window.APP && window.APP.GOOGLE_APPS_SCRIPT_URL) || '';
-    if(!endpoint) return resolve({ok:false, skipped:true});
+    // ✅ Basahin pareho: GOOGLE_APPS_SCRIPT_URL at SHEETS_ENDPOINT
+    var endpoint =
+      (window.APP && (window.APP.GOOGLE_APPS_SCRIPT_URL || window.APP.SHEETS_ENDPOINT)) ||
+      (window.APP_CONFIG && (window.APP_CONFIG.GOOGLE_APPS_SCRIPT_URL || window.APP_CONFIG.SHEETS_ENDPOINT)) ||
+      '';
+
+    if(!endpoint){
+      console.warn('[Sheets] Missing endpoint (GOOGLE_APPS_SCRIPT_URL / SHEETS_ENDPOINT)');
+      return resolve({ok:false, reason:'no-endpoint'});
+    }
+
+    // Debug print para makita sa DevTools
+    try {
+      console.log('[Sheets] POST ->', endpoint, payload);
+    } catch(e){}
+
     fetch(endpoint, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify(payload)
-    }).then(function(r){ resolve({ok: !!r && r.ok}); })
-      .catch(function(){ resolve({ok:false}); });
+    })
+    .then(function(r){
+      // kahit ma-CORS, r.ok usually available; log status for debugging
+      console.log('[Sheets] status:', r.status, r.type);
+      resolve({ ok: !!r && r.ok, status:r.status, type:r.type });
+    })
+    .catch(function(err){
+      console.error('[Sheets] fetch error:', err);
+      resolve({ok:false, error:String(err)});
+    });
   });
 }
+
 
 /* ---- Date/Time formatting ---- */
 function formatOrderDateTime(dateStr, timeStr){
