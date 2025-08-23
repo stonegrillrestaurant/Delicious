@@ -12,8 +12,8 @@ window.APP_CONFIG = {
   META_ACCESS_TOKEN: "EAASaVzChC5gBPPVDAXgcJmvhvL4wGJAknWPcR56x7w6CUbjnF52iv5ZCtSXtPHpBBNFWvvqvfcNnD5VhBwMKW2t4IYenJc8yZCJHgi89TzCrvflE1EV5h9xBsdsknvYuQ6XZA7wqnNIRJJCCib21ZB6hl9sr9YaZAZB8kKUJSIr3OryAfkeeYBsC8N0gUwYwZDZD", // hide later (server-side ideally)
 
   // (Optional extras you already had)
-  SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbx0QejE304Xq3FlPoqZCeJNHER4iB4EFy_-9_nPu8xn6E4mM3dHYR1ctEKlLGWp0N1z/exec",
-  GOOGLE_APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbx0QejE304Xq3FlPoqZCeJNHER4iB4EFy_-9_nPu8xn6E4mM3dHYR1ctEKlLGWp0N1z/exec", // ✅ added duplicate key for safety
+  SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbw9i9quNAyvOHNRv2zRLd886ECBrXBUfZ7RP2crpvz_Y9gP4qDbvYyZcoZBqnn3Ni_k/exec",
+  GOOGLE_APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw9i9quNAyvOHNRv2zRLd886ECBrXBUfZ7RP2crpvz_Y9gP4qDbvYyZcoZBqnn3Ni_k/exec", // ✅ added duplicate key for safety
   GCASH_QR_PATH: "assets/qr/gcash.png",
   SHOP_NAME: "Stone Grill Restaurant",
   PHONE: "053 568 0539",
