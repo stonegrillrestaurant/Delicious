@@ -40,6 +40,61 @@ function showToast(msg, ms){
   setTimeout(function(){ el.classList.remove('show'); }, ms);
 }
 
+/* >>> PIXEL: ecom helper (safe wrapper; OK even if fbq not ready) */
+(function(){
+  function send(evt, params, opts){
+    try{ if (typeof fbq === 'function') fbq('track', evt, params || {}, opts || undefined); }
+    catch(e){ console.warn('[pixel]', e); }
+  }
+  function mapItem(x){
+    // Your cart uses { name, price, qty }. We’ll present "name" as id.
+    return {
+      id: String(x.id || x.name || 'unknown'),
+      quantity: Number(x.qty || 1),
+      item_price: Number(x.price || 0)
+    };
+  }
+  function buildContents(items){
+    if (!items) return [];
+    return Array.isArray(items) ? items.map(mapItem) : [mapItem(items)];
+  }
+  function computeValue(items){
+    try{
+      var arr = Array.isArray(items) ? items : [items];
+      return arr.reduce(function(sum, it){
+        var q = Number(it.qty || it.quantity || 1) || 1;
+        var p = Number(it.price || it.item_price || it.unitPrice || 0) || 0;
+        return sum + q * p;
+      }, 0);
+    }catch(_){ return 0; }
+  }
+  window.sgTrack = {
+    addToCart: function(item){
+      var contents = buildContents(item);
+      var value = computeValue(item);
+      send('AddToCart', {
+        content_type: 'product',
+        contents: contents,
+        value: value,
+        currency: 'PHP'
+      });
+    },
+    purchase: function(orderId, total, items){
+      var contents = buildContents(items || []);
+      var value = (typeof total === 'number' && !isNaN(total)) ? total : computeValue(items || []);
+      var eventId = 'sg_' + String(orderId || Date.now());
+      send('Purchase', {
+        content_type: 'product',
+        contents: contents,
+        value: value,
+        currency: 'PHP',
+        order_id: String(orderId || 'N/A')
+      }, { eventID: eventId });
+    }
+  };
+})();
+/* <<< PIXEL: end helper */
+
 /* ---- Fallback MENU ---- */
 var MENU_FALLBACK = {
   setMeals: [
@@ -263,6 +318,13 @@ function addToCart(item){
   for (var i=0;i<cart.length;i++){ if(cart[i].name===item.name){ found=cart[i]; break; } }
   if(found) found.qty += 1; else cart.push({ name:item.name, price:item.price, qty:1 });
   renderCart(true);
+
+  /* >>> PIXEL: AddToCart */
+  try {
+    var last = found || { name:item.name, price:item.price, qty:1 };
+    window.sgTrack && window.sgTrack.addToCart(last);
+  } catch(e){ console.warn('pixel AddToCart error:', e); }
+  /* <<< PIXEL */
 }
 function changeQty(name, delta){
   for (var i=0;i<cart.length;i++){
@@ -439,6 +501,14 @@ function handleSubmit(e){
   sendToTelegram(message).then(function(){
     // NEW centered toast text (payment required before preparation)
     showToast('✅ Thank you! Please settle your payment via GCash so we can proceed preparing your order.', 5000);
+
+    // >>> PIXEL: Purchase (fires only after successful Telegram send)
+    try {
+      var orderId = (window.currentOrderId || payload.createdAt || Date.now()).toString();
+      var totalNum = cartSubtotal();
+      window.sgTrack && window.sgTrack.purchase(orderId, Number(totalNum)||0, cart);
+    } catch(e){ console.warn('pixel Purchase error:', e); }
+    // <<< PIXEL
 
     logToSheets(payload); // optional
     clearCart();
