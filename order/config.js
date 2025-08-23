@@ -13,6 +13,7 @@ window.APP_CONFIG = {
 
   // (Optional extras you already had)
   SHEETS_ENDPOINT: "https://script.google.com/macros/s/AKfycbw9i9quNAyvOHNRv2zRLd886ECBrXBUfZ7RP2crpvz_Y9gP4qDbvYyZcoZBqnn3Ni_k/exec",
+  GOOGLE_APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw9i9quNAyvOHNRv2zRLd886ECBrXBUfZ7RP2crpvz_Y9gP4qDbvYyZcoZBqnn3Ni_k/exec", // ✅ added duplicate key for safety
   GCASH_QR_PATH: "assets/qr/gcash.png",
   SHOP_NAME: "Stone Grill Restaurant",
   PHONE: "053 568 0539",
@@ -47,6 +48,7 @@ window.APP_CONFIG = {
     GCASH_MOBILE:       C.GCASH_MOBILE,
     GCASH_ACCOUNT_NAME: C.GCASH_ACCOUNT_NAME,
     SHEETS_ENDPOINT:    C.SHEETS_ENDPOINT,
+    GOOGLE_APPS_SCRIPT_URL: C.GOOGLE_APPS_SCRIPT_URL, // ✅ mapped here
     META_DATASET_ID:    C.META_DATASET_ID,
     META_ACCESS_TOKEN:  C.META_ACCESS_TOKEN
   });
