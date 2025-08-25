@@ -205,12 +205,12 @@ function renderCart(nudge){
     var it = cart[i];
     html += '' +
     '<div class="cart-row">'+
-      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
       '<div class="qty-wrap">'+
         '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>'+
         '<span>'+it.qty+'</span>'+
         '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>'+
       '</div>'+
+      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
       '<div class="cart-price">'+money(it.price*it.qty)+'</div>'+
     '</div>';
   }
@@ -232,6 +232,7 @@ function renderCart(nudge){
     if(card){ card.classList.remove('nudge'); void card.offsetWidth; card.classList.add('nudge'); }
   }
 }
+
 function clearCart(){ cart = []; renderCart(); }
 
 /* ---- Dine-in pax toggle ---- */
