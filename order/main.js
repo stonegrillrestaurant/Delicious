@@ -326,56 +326,78 @@ function addToCart(item){
   } catch(e){ console.warn('pixel AddToCart error:', e); }
   /* <<< PIXEL */
 }
-function changeQty(name, delta){
-  for (var i=0;i<cart.length;i++){
-    if(cart[i].name===name){ cart[i].qty += delta; if(cart[i].qty<=0){ cart.splice(i,1); } break; }
+
+// --- New subtotal calculation ---
+function cartSubtotal() {
+  let s = 0;
+  for (let i = 0; i < cart.length; i++) {
+    s += cart[i].price * cart[i].qty;
   }
+  return s;
+}
+
+// --- New renderCart ---
+function renderCart(nudge) {
+  const wrap = document.getElementById("cartItems");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+
+  if (cart.length === 0) {
+    wrap.classList.remove("has-items");
+    wrap.innerHTML = "<p class='empty-cart'>Your cart is empty.</p>";
+    document.getElementById("cartSubtotal").textContent = money(0);
+    document.getElementById("cartTotal").textContent = money(0);
+    return;
+  } else {
+    wrap.classList.add("has-items");
+  }
+
+  // Build cart rows
+  cart.forEach((it, index) => {
+    const row = document.createElement("div");
+    row.className = "cart-row";
+    row.innerHTML = `
+      <input type="number" class="cart-qty" min="0" value="${it.qty}" data-index="${index}">
+      <div class="cart-name" title="${it.name}">${it.name}</div>
+      <div class="cart-price">${money(it.price * it.qty)}</div>
+    `;
+    wrap.appendChild(row);
+  });
+
+  // Attach quantity change events
+  wrap.querySelectorAll(".cart-qty").forEach(input => {
+    input.addEventListener("change", (e) => {
+      let idx = e.target.dataset.index;
+      let newQty = parseInt(e.target.value, 10);
+      if (newQty <= 0) {
+        cart.splice(idx, 1); // auto-remove if 0
+      } else {
+        cart[idx].qty = newQty;
+      }
+      renderCart();
+    });
+  });
+
+  // Update subtotal/total
+  document.getElementById("cartSubtotal").textContent = money(cartSubtotal());
+  document.getElementById("cartTotal").textContent = money(cartSubtotal());
+
+  // Optional nudge animation if used
+  if (nudge) {
+    const card = document.querySelector(".card.highlight");
+    if (card) {
+      card.classList.remove("nudge");
+      void card.offsetWidth;
+      card.classList.add("nudge");
+    }
+  }
+}
+
+// --- Clear Cart ---
+function clearCart() {
+  cart = [];
   renderCart();
 }
-function removeItem(name){ cart = cart.filter(function(c){ return c.name!==name; }); renderCart(); }
-function cartSubtotal(){ var s=0; for(var i=0;i<cart.length;i++){ s += cart[i].price*cart[i].qty; } return s; }
-
-function renderCart(nudge){
-  var wrap = $('#cartItems'); if(!wrap) return;
-  var html = '';
-  for (var i=0;i<cart.length;i++){
-    var it = cart[i];
-    html += '' +
-    '<div class="cart-row">'+
-      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
-      '<div class="qty-wrap">'+
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>'+
-        '<span>'+it.qty+'</span>'+
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>'+
-      '</div>'+
-      '<div class="cart-price">'+money(it.price*it.qty)+'</div>'+
-      '<button class="remove-btn" data-name="'+it.name+'">Remove</button>'+
-    '</div>';
-  }
-  wrap.innerHTML = html;
-
-  var sub = $('#cartSubtotal'); if(sub) sub.textContent = money(cartSubtotal());
-  var tot = $('#cartTotal');    if(tot) tot.textContent = money(cartSubtotal());
-
-  var qbtns = wrap.querySelectorAll('.qty-btn');
-  for (var q=0;q<qbtns.length;q++){
-    qbtns[q].addEventListener('click', function(e){
-      var nm = e.currentTarget.getAttribute('data-name');
-      var d  = parseInt(e.currentTarget.getAttribute('data-delta'),10);
-      changeQty(nm, d);
-    });
-  }
-  var rbtns = wrap.querySelectorAll('.remove-btn');
-  for (var r=0;r<rbtns.length;r++){
-    rbtns[r].addEventListener('click', function(e){ removeItem(e.currentTarget.getAttribute('data-name')); });
-  }
-
-  if(nudge){
-    var card = document.querySelector('.card.highlight');
-    if(card){ card.classList.remove('nudge'); void card.offsetWidth; card.classList.add('nudge'); }
-  }
-}
-function clearCart(){ cart = []; renderCart(); }
 
 /* ---- Dine-in pax toggle ---- */
 function updatePersonsVisibility(){
