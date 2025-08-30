@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Document Basics -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <title>Stone Grill's  — Online Reservation</title>
+
+  <!-- Meta Pixel Code -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '643206718690040');
+    fbq('track', 'PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id=643206718690040&ev=PageView&noscript=1" />
+  </noscript>
+  <!-- End Meta Pixel Code -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+
+  <!-- Basic SEO -->
+  <meta name="description" content="Order sizzling plates, fresh seafood, and Filipino favorites from Stone Grill Restaurant in Leyte. Dine-in or take-out — fast, easy, and delicious!">
+  <meta name="keywords" content="Stone Grill, Stone Grill Restaurant, sizzling plates, seafood Leyte, Filipino food, online order, dine-in, take-out, Bato Leyte restaurant">
+  <meta name="author" content="Stone Grill Restaurant">
+  <link rel="canonical" href="https://stonegrillresto.net/order/">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Stone Grill Restaurant — Order Online">
+  <meta property="og:description" content="Enjoy hot sizzling meals, seafood platters, and more — order online for dine-in or take-out at Stone Grill Restaurant, Leyte.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://stonegrillresto.net/order/">
+  <meta property="og:site_name" content="Stone Grill Restaurant">
+  <meta property="og:image" content="https://stonegrillresto.net/order/assets/og-order.jpg">
+  <meta property="fb:app_id" content="2895055444086567">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Stone Grill Restaurant — Order Online">
+  <meta name="twitter:description" content="Order sizzling plates, seafood, and Filipino favorites from Stone Grill Restaurant.">
+  <meta name="twitter:image" content="https://stonegrillresto.net/order/assets/og-order.jpg">
+
+  <!-- Theme / Icons / CSS -->
+  <meta name="theme-color" content="#8db600">
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-180.png">
+  <link rel="stylesheet" href="style.css?v=13">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Restaurant",
+    "name": "Stone Grill Restaurant",
+    "image": "https://stonegrillresto.net/order/assets/og-order.jpg",
+    "description": "Sizzling plates, seafood, and Filipino favorites. Order online for dine-in or take-out.",
+    "address": { "@type": "PostalAddress", "addressCountry": "PH" },
+    "telephone": "+63 53 568 0539",
+    "email": "stonegrill2014@gmail.com",
+    "url": "https://stonegrillresto.net/",
+    "sameAs": ["https://www.facebook.com/stonecitygrill"]
+  }
+  </script>
+
+  <!-- Minimal styles for popup + centered toast -->
+  <style>
+    .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
+    .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
+    .receipt-upload-block h4 { margin:0 0 8px; font-size:1.02rem; }
+    .receipt-status { margin-top:8px; font-size:.92rem; }
+    .popup .meta { font-size:.9rem; color:#666; margin:6px 0 10px; }
+    .popup .row-sb { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .popup .small { font-size:.9rem; }
+
+    /* Center the toast on screen (overrides any bottom placement) */
+    #toast {
+      position: fixed !important;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 1100 !important;
+      max-width: 90vw;
+      text-align: center;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(0,0,0,.15);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <a href="/" class="brand" aria-label="Stone Grill home">
+      <img id="logoImg" src="assets/icons/icon-192.png" alt="Stone Grill" class="logo">
+      <div class="brand-text">
+        <h1>Stone Grill</h1>
+        <p>Enjoyable & Relaxing</p>
+      </div>
+    </a>
+
+    <!-- Cart summary -->
+    <div class="cart-summary">
+      <div class="total-label">Total</div>
+      <div id="cartTotal" class="total-value">₱0</div>
+      <button id="checkoutBtn" class="btn primary">Checkout</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="app-main">
+    <!-- Menu -->
+    <section class="menu-col">
+      <div class="category-bar" id="categoryBar"></div>
+      <div id="menuList" class="menu-list"></div>
+    </section>
+
+    <!-- Cart + Form -->
+    <aside class="cart-col">
+      <div class="card highlight breathe">
+        <h2 class="card-title">🦾 Your Order</h2>
+        <div id="cartItems" class="cart-items"></div>
+
+        <div class="cart-totals">
+          <div class="row">
+            <span>Subtotal</span>
+            <span id="cartSubtotal">₱0</span>
+          </div>
+        </div>
+
+        <div class="cart-actions">
+          <button id="clearCartBtn" class="btn ghost">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">👤 Customer Info</h2>
+        <form id="orderForm" autocomplete="on">
+          <label>Full Name
+            <input type="text" id="fullName" required placeholder="Juan Dela Cruz">
+          </label>
+
+          <label>Mobile Number
+            <input type="tel" id="mobileNumber" inputmode="numeric" required placeholder="+63 9XX XXX XXXX">
+            <small style="display:block; margin-top:4px; color:#FF0000; font-size:0.85rem;">
+              Please enter an <strong>active contact number</strong> so we can reach you to confirm your order.
+            </small>
+          </label>
+
+          <label>Order Type</label>
+          <div class="inline">
+            <label>
+              <input type="radio" name="orderType" value="Dine-in" required>
+              <span>Dine-in</span>
+            </label>
+            <label>
+              <input type="radio" name="orderType" value="Take-out" required>
+              <span>Take-out</span>
+            </label>
+          </div>
+
+          <div id="personsWrap" class="hidden">
+            <label>Number of Persons
+              <input type="number" id="persons" min="1" value="1">
+            </label>
+          </div>
+
+          <div class="inline-2">
+            <label>Date
+              <input type="date" id="orderDate" required>
+            </label>
+            <label>Time
+              <input type="time" id="orderTime" required>
+            </label>
+          </div>
+
+          <label>Special Requests
+            <textarea id="specialRequests" rows="3" placeholder="Less spicy, extra rice, no peanuts…"></textarea>
+          </label>
+
+          <button type="submit" class="btn primary wide">Submit Order</button>
+
+          <!-- Static Pay/Upload button (fixed location under Submit) -->
+          <button id="openPayPopupBtn" type="button" class="btn wide" style="margin-top:10px;">
+            Pay / Upload GCash
+          </button>
+        </form>
+      </div>
+
+      <!-- Removed the extra sidebar policy card so footer remains the only policy permalink -->
+    </aside>
+  </main>
+
+  <!-- Popups -->
+  <div id="categoryPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <h3 class="popup-title">Browse Categories</h3>
+      <div id="popupCategories" class="popup-grid"></div>
+    </div>
+  </div>
+
+  <div id="itemPopup" class="popup-backdrop hidden">
+    <div class="popup">
+      <button class="popup-close" aria-label="Close">×</button>
+      <div id="itemDetail"></div>
+    </div>
+  </div>
+
+  <div id="howToOrderPopup" class="popup-backdrop hidden" aria-hidden="true">
+    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+      <button class="popup-close" aria-label="Close">×</button>
+      <h3 id="howtoTitle" class="popup-title">How to Order</h3>
+      <ol style="padding-left:20px; margin:10px 0;">
+        <li>Select a category and tap <strong>Add</strong> beside each dish.</li>
+        <li>Review <strong>Your Order</strong>; adjust quantities or remove items.</li>
+        <li>Fill in your details (Full Name, Mobile, Order Type).</li>
+        <li>If Dine-in → enter <strong>Number of Persons</strong>.</li>
+        <li>Pick your <strong>Date & Time</strong>.</li>
+        <li>Click <strong>Submit Order</strong> — you’ll see a confirmation toast.</li>
+      </ol>
+      <p class="small" style="color:#666;">Tip: Keep your phone nearby in case we need to confirm details.</p>
+    </div>
+  </div>
+
+  <!-- GCash Payment Popup -->
+  <div id="paymentPopup" class="popup-backdrop hidden" aria-hidden="true">
+    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+      <button class="popup-close" aria-label="Close">×</button>
+
+      <h3 id="payTitle" class="popup-title">Pay with GCash</h3>
+      <div class="meta" id="payMeta">Order: <span id="payOrderId">—</span> • Total: <span id="payTotal">₱0</span></div>
+
+      <div class="row-sb">
+        <div>
+          <div class="small">Send payment to this GCash number</div>
+          <div class="gcash-number" id="gcashMobileText">+63 9XX XXX XXXX</div>
+          <div class="small" id="gcashAccountName" style="opacity:.85;">Account: Stone Grill Restaurant</div>
+        </div>
+        <button id="btnCopyNumber" class="btn">Copy</button>
+      </div>
+
+      <!-- Standalone uploader that posts to Telegram via hidden iframe (no CORS, no Apps Script) -->
+      <div class="receipt-upload-block">
+        <h3>Upload Gcash Receipt here</h3>
+
+        <!-- Hidden iframe prevents navigation -->
+        <iframe name="tgUploadFrame" id="tgUploadFrame" class="hidden" style="display:none"></iframe>
+
+        <!-- One form that always uses sendDocument (works for images & PDFs) -->
+        <form id="tgUploadForm" target="tgUploadFrame" method="post" enctype="multipart/form-data" style="display:grid;gap:8px;max-width:360px">
+          <input type="hidden" name="chat_id" id="tgChatId">
+          <input type="hidden" name="caption" id="tgCaption">
+          <!-- Action (endpoint) is set by JS from config: https://api.telegram.org/botTOKEN/sendDocument -->
+
+          <input id="gcashReceiptInput" class="input" type="file" name="document" accept="image/*,application/pdf">
+          <button type="button" id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
+          <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- How to Order link stays in current location -->
+  <div class="cart-summary">
+    <a href="#" id="howToOrderLink" class="btn ghost">How to Order</a>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Scripts -->
+  <script src="config.js?v=15"></script>
+  <script src="main.js?v=16.2"></script>
+
+  <!-- Popup controller + Telegram upload (manual only) -->
+  <script>
+  (function () {
+    function showBackdrop(el){ el.classList.add('show'); el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
+    function hideBackdrop(el){ el.classList.remove('show'); el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
+
+    // Static Pay/Upload button
+    (function () {
+      var btn = document.getElementById('openPayPopupBtn');
+      if (!btn) return;
+      btn.addEventListener('click', function(){
+        var total = (typeof cartSubtotal === 'function' && Array.isArray(window.cart) && window.cart.length)
+          ? cartSubtotal() : null;
+        window.showGcashPopup('N/A', total);
+      });
+    })();
+
+    // Close handlers
+    document.addEventListener('click', (e)=>{
+      if (e.target.closest('#paymentPopup .popup-close')) {
+        hideBackdrop(document.getElementById('paymentPopup'));
+      }
+    });
+    document.getElementById('paymentPopup').addEventListener('click', function(e){
+      if (e.target === this) hideBackdrop(this);
+    });
+
+    // Copy number
+    document.addEventListener('click', async (e)=>{
+      if (e.target && e.target.id === 'btnCopyNumber') {
+        const txt = (document.getElementById('gcashMobileText')?.textContent || '').trim();
+        try { await navigator.clipboard.writeText(txt); e.target.textContent='Copied'; setTimeout(()=>e.target.textContent='Copy',1200); }
+        catch { alert('Copy failed. Long-press to copy.'); }
+      }
+    });
+
+    // Expose popup
+    window.showGcashPopup = function(orderId, totalAmount) {
+      const pop = document.getElementById('paymentPopup');
+      if (!pop) return;
+
+      document.getElementById('payOrderId').textContent = orderId || '—';
+      document.getElementById('payTotal').textContent = (typeof totalAmount === 'number'
+        ? '₱' + totalAmount.toLocaleString()
+        : (totalAmount || '₱0'));
+
+      const mobileTxt = document.getElementById('gcashMobileText');
+      const acctName  = document.getElementById('gcashAccountName');
+      if (window.APP?.GCASH_MOBILE)       mobileTxt.textContent = window.APP.GCASH_MOBILE;
+      if (window.APP?.GCASH_ACCOUNT_NAME) acctName.textContent  = 'Account: ' + window.APP.GCASH_ACCOUNT_NAME;
+
+      window.currentOrderId = orderId || '';
+      window.currentOrderTotal = totalAmount || '';
+
+      showBackdrop(pop);
+    };
+
+    /* Upload logic (manual only; hidden iframe avoids CORS) */
+    (function setupTelegramUpload(){
+      var form     = document.getElementById('tgUploadForm');
+      var iframe   = document.getElementById('tgUploadFrame');
+      var chatIn   = document.getElementById('tgChatId');
+      var capIn    = document.getElementById('tgCaption');
+      var fileIn   = document.getElementById('gcashReceiptInput');
+      var sendBtn  = document.getElementById('btnSendReceipt');
+      var statusEl = document.getElementById('receiptStatus');
+
+      if (!form || !iframe || !chatIn || !capIn || !fileIn || !sendBtn) return;
+
+      var token  = (window.APP && window.APP.TELEGRAM_BOT_TOKEN) || '';
+      var chatId = (window.APP && window.APP.TELEGRAM_CHAT_ID)   || '';
+      if (token) form.action = 'https://api.telegram.org/bot' + encodeURIComponent(token) + '/sendDocument';
+      if (chatId) chatIn.value = chatId;
+
+      // After Telegram responds (iframe load), THEN clear + refresh
+      iframe.addEventListener('load', function(){
+        if (statusEl) statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
+        if (typeof window.showToast === 'function') showToast('Receipt uploaded ✅', 1600);
+
+        // Clear file input
+        try { fileIn.value = ''; } catch(e){}
+
+        // Now that receipt is sent, clear cart & reset form, then refresh
+        try {
+          if (typeof clearCart === 'function') clearCart();
+          var orderForm = document.getElementById('orderForm') || (window.pendingOrder && window.pendingOrder.formEl);
+          if (orderForm && typeof orderForm.reset === 'function') {
+            orderForm.reset();
+            if (typeof updatePersonsVisibility === 'function') updatePersonsVisibility();
+          }
+        } catch(e){}
+
+        // Give the toast time to show, then refresh the page
+        setTimeout(function(){ location.reload(); }, 1200);
+      });
+
+      sendBtn.addEventListener('click', function(){
+        var f = fileIn.files && fileIn.files[0];
+        if (!f){ statusEl.textContent = 'Please select a receipt image or PDF first.'; return; }
+        if (!token || !chatId){ statusEl.textContent = 'Bot not configured (token/chat id).'; return; }
+
+        // Pull details; fall back to pendingOrder if fields were changed
+        var fullName = (document.getElementById('fullName')?.value || (window.pendingOrder && window.pendingOrder.name) || 'Unknown Customer').trim();
+        var mobile   = (document.getElementById('mobileNumber')?.value || (window.pendingOrder && window.pendingOrder.mobile) || 'N/A').trim();
+        var orderId  = window.currentOrderId || (window.pendingOrder && window.pendingOrder.orderId) || 'N/A';
+        var total    = (typeof window.currentOrderTotal === 'number' ? window.currentOrderTotal : (window.pendingOrder && window.pendingOrder.total)) || '';
+
+        var caption = [
+          '🧾 GCash Receipt Received',
+          '• Order ID: ' + orderId,
+          total ? ('• Total: ₱' + Number(total).toLocaleString()) : '',
+          '• Name: ' + fullName,
+          '• Mobile: ' + mobile
+        ].filter(Boolean).join('\n');
+
+        capIn.value = caption;
+        statusEl.textContent = 'Sending receipt…';
+        form.submit();
+      });
+    })();
+  })();
+  </script>
+
+  <!-- Service worker (optional) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      const onGithubIo = location.hostname.endsWith('github.io');
+      if (!onGithubIo) {
+        navigator.serviceWorker.register('pwa/sw.js?v=13').catch(()=>{});
+      }
+    }
+  </script>
+
+  <!-- ===== Toast upgrade: top-center, close button, auto-dismiss, click-to-dismiss ===== -->
+  <script>
+  (function(){
+    // Ensure a toast element exists
+    var t = document.getElementById('toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'toast';
+      document.body.appendChild(t);
+    }
+
+    // Inject compact, top-center styles (won't block page center)
+    var css = document.createElement('style');
+    css.textContent = `
+      #toast{
+        position:fixed; left:50%; top:76px; transform:translateX(-50%);
+        z-index:1100; max-width:92vw; background:rgba(17,24,39,.96); color:#fff;
+        padding:12px 14px; border-radius:12px; box-shadow:0 10px 20px rgba(0,0,0,.15);
+        font-size:14px; line-height:1.35; display:none; opacity:0; transition:opacity .18s ease;
+      }
+      #toast.show{ display:block; opacity:1; }
+      #toast .toast-row{ display:flex; align-items:center; gap:10px; }
+      #toast .toast-msg{ flex:1; text-align:center; }
+      #toast .toast-close{
+        appearance:none; border:0; background:transparent; color:#fff; font-size:18px; line-height:1;
+        padding:2px 6px; cursor:pointer; opacity:.9;
+      }
+      #toast .toast-close:active{ transform:translateY(1px); }
+    `;
+    document.head.appendChild(css);
+
+    var hideTimer = null;
+
+    function hideToast(){
+      clearTimeout(hideTimer);
+      var t = document.getElementById('toast');
+      t.classList.remove('show');
+      setTimeout(function(){ if(!t.classList.contains('show')) t.style.display='none'; }, 180);
+    }
+
+    function renderToast(msg){
+      var t = document.getElementById('toast');
+      t.innerHTML = '';
+      var row = document.createElement('div'); row.className = 'toast-row';
+      var msgEl = document.createElement('div'); msgEl.className = 'toast-msg';
+      msgEl.textContent = (msg == null ? '' : String(msg));
+      var btn = document.createElement('button'); btn.className = 'toast-close'; btn.setAttribute('aria-label','Close'); btn.textContent = '×';
+      btn.onclick = hideToast;
+      row.appendChild(msgEl); row.appendChild(btn);
+      t.appendChild(row);
+      t.onclick = hideToast;
+    }
+
+    window.showToast = function(msg, ms){
+      try{
+        ms = ms || 5000;
+        renderToast(msg);
+        clearTimeout(hideTimer);
+        var t = document.getElementById('toast');
+        t.style.display = 'block';
+        requestAnimationFrame(function(){ t.classList.add('show'); });
+        hideTimer = setTimeout(function(){ 
+          var t = document.getElementById('toast'); 
+          t.classList.remove('show'); 
+        }, ms);
+      }catch(e){
+        console.warn('[toast-upgrade] error:', e);
+        alert(msg);
+      }
+    };
+  })();
+  </script>
+
+  <footer style="text-align:center; padding:16px; font-size:0.9em; color:#555; background:#f9f9f9; margin-top:24px;">
+    © 2025 Stone Grill Restaurant • 
+    <a href="/privacy-policy.html">Privacy Policy</a> • 
+    <a href="/data-deletion.html">Data Deletion</a>
+  </footer>
+
+</body>
+</html>
