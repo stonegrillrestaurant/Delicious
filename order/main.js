@@ -1,12 +1,8 @@
 /* =========================================================================
-   Stone Grill — main.js (v15)
-   - Cart: − / + buttons (no input/remove)
-   - Prevents duplicate cart entries
-   - Cart highlight background when items exist
-   - Active category button stays green
-   - Auto “Pay with GCash” toast + popup after successful submit
-   - Adds Order ID and passes total to payment popup
-   - All features from v14 intact
+   Stone Grill — main.js (v16.2)
+   - Defer refresh until AFTER GCash receipt upload (keeps name/mobile)
+   - How to Order popup binds to #howToOrderLink or #howtoOrder
+   - FIX: addToCart increments found.qty correctly
    ========================================================================= */
 'use strict';
 
@@ -338,11 +334,20 @@ function handleSubmit(e){
   var orderId = generateOrderId();
   var totalBefore = cartSubtotal();
 
+  // Persist key info for the upload caption (in case fields change)
+  window.pendingOrder = {
+    orderId: orderId,
+    total: totalBefore,
+    name: ($('#fullName')||{}).value || '',
+    mobile: ($('#mobileNumber')||{}).value || '',
+    formEl: form
+  };
+
   var message = buildOrderMessage(form, orderId);
   var payload = {
     orderId: orderId,
-    name: ($('#fullName')||{}).value || '',
-    mobile: ($('#mobileNumber')||{}).value || '',
+    name: window.pendingOrder.name,
+    mobile: window.pendingOrder.mobile,
     orderType: (form.querySelector('input[name="orderType"]:checked')||{}).value || '',
     persons: ($('#persons')||{}).value || '',
     date: ($('#orderDate')||{}).value || '',
@@ -360,11 +365,9 @@ function handleSubmit(e){
       window.showGcashPopup(orderId, totalBefore);
     }
 
-    // Log (non-blocking) then reset UI
+    // IMPORTANT: Do NOT clear/reset here.
+    // We wait until the receipt upload succeeds (tgUploadFrame load) to refresh/clear.
     logToSheets(payload);
-    clearCart();
-    form.reset();
-    updatePersonsVisibility();
   }).catch(function(err){
     console.error(err);
     showToast('Failed to send to Telegram. Please try again.');
@@ -373,12 +376,23 @@ function handleSubmit(e){
 
 /* ---- How to Order popup ---- */
 function wireHowToPopup(){
-  const link = document.getElementById('howtoOrder');
+  // Support either id spelling
+  const link = document.getElementById('howToOrderLink') || document.getElementById('howtoOrder');
   const popup = document.getElementById('howToOrderPopup');
   if (!link || !popup) return;
   const closeBtn = popup.querySelector('.popup-close');
-  function openHowto(e){ e?.preventDefault(); popup.classList.remove('hidden'); popup.classList.add('show'); popup.setAttribute('aria-hidden','false'); }
-  function closeHowto(){ popup.classList.remove('show'); popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); }
+
+  function openHowto(e){
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    popup.classList.remove('hidden');
+    popup.classList.add('show');
+    popup.setAttribute('aria-hidden','false');
+  }
+  function closeHowto(){
+    popup.classList.remove('show');
+    popup.classList.add('hidden');
+    popup.setAttribute('aria-hidden','true');
+  }
   link.addEventListener('click', openHowto);
   if (closeBtn) closeBtn.addEventListener('click', closeHowto);
   popup.addEventListener('click', (e) => { if (e.target === popup) closeHowto(); });
