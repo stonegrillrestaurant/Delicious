@@ -93,37 +93,6 @@
       border-radius: 12px;
       box-shadow: 0 10px 20px rgba(0,0,0,.15);
     }
-
-    /* === SG Privacy/Data Notice (keepable base styles; injector adds its own too) === */
-    #sg-privacy-fab{
-      position:fixed; right:12px; bottom:12px; z-index:2147483647;
-      padding:10px 12px; border:1px solid #ddd; background:#ffffff; color:#333;
-      border-radius:999px; font-size:.9rem; box-shadow:0 2px 10px rgba(0,0,0,.08);
-    }
-    #sg-privacy-fab:hover{ background:#f7f7f7; }
-    #sg-privacy-modal[hidden]{ display:none; }
-    #sg-privacy-modal{ position:fixed; inset:0; z-index:2147483646; }
-    #sg-privacy-modal .sg-privacy-modal__backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
-    #sg-privacy-modal .sg-privacy-modal__panel{
-      position:absolute; right:12px; bottom:64px; width:min(95vw, 360px);
-      background:#fff; border:1px solid #e6e6e6; border-radius:14px;
-      box-shadow:0 10px 30px rgba(0,0,0,.18); overflow:hidden;
-    }
-    .sg-privacy-modal__hdr{ display:flex; align-items:center; justify-content:space-between;
-      padding:10px 12px; background:#f8f8f8; border-bottom:1px solid #eee; }
-    .sg-privacy-modal__hdr h3{ margin:0; font-size:1rem; }
-    .sg-privacy-modal__close{ border:0; background:transparent; font-size:1.2rem; line-height:1; cursor:pointer; color:#555; }
-    .sg-privacy-modal__content{ padding:12px; font-size:.95rem; line-height:1.5; }
-    .sg-privacy-modal__content a{ color:#333; text-decoration:underline; }
-    #sg-privacy-toast[hidden]{ display:none; }
-    #sg-privacy-toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:80px; z-index:2147483645; max-width:min(92vw, 520px); }
-    .sg-privacy-toast__card{ display:flex; gap:6px; align-items:center; padding:10px 12px; background:#111; color:#fff; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.3); font-size:.9rem; }
-    .sg-privacy-toast__card a{ color:#fff; text-decoration:underline; }
-    .sg-privacy-toast__close{ margin-left:auto; border:0; background:transparent; color:#fff; font-size:1.1rem; cursor:pointer; }
-    @media (max-width:480px){
-      #sg-privacy-fab{ bottom:56px; }      /* lift if you have a bottom bar */
-      #sg-privacy-toast{ bottom:120px; }   /* lift toast above bars */
-    }
   </style>
 </head>
 
@@ -180,11 +149,11 @@
           </label>
 
           <label>Mobile Number
-  <input type="tel" id="mobileNumber" inputmode="numeric" required placeholder="+63 9XX XXX XXXX">
-  <small style="display:block; margin-top:4px; color:#FF0000; font-size:0.85rem;">
-    Please enter an <strong>active contact number</strong> so we can reach you to confirm your order.
-  </small>
-</label>
+            <input type="tel" id="mobileNumber" inputmode="numeric" required placeholder="+63 9XX XXX XXXX">
+            <small style="display:block; margin-top:4px; color:#FF0000; font-size:0.85rem;">
+              Please enter an <strong>active contact number</strong> so we can reach you to confirm your order.
+            </small>
+          </label>
 
           <label>Order Type</label>
           <div class="inline">
@@ -226,12 +195,7 @@
         </form>
       </div>
 
-      <div class="card muted">
-         <p style="margin-top:6px; font-size:0.88rem; color:#666;">
-           <a href="/privacy-policy.html">Privacy Policy</a> • 
-          <a href="/data-deletion.html">Data Deletion</a>
-        </p>
-      </div>
+      <!-- Removed the extra sidebar policy card so footer remains the only policy permalink -->
     </aside>
   </main>
 
@@ -305,135 +269,17 @@
     </div>
   </div>
 
+  <!-- How to Order link stays in current location -->
   <div class="cart-summary">
-  <a href="#" id="howToOrderLink" class="btn ghost">How to Order</a>
-</div>
-
-
-
-  <!-- === SG Privacy/Data Notice — Single-File Injector (v4) [UPDATED] === -->
-  <script>
-  (function(){
-    // Remove any old duplicates if present
-    ['sg-privacy-fab','sg-privacy-modal','sg-privacy-toast'].forEach(function(id){
-      var el = document.getElementById(id);
-      if (el && el.parentNode) el.parentNode.removeChild(el);
-    });
-    var oldStyle = document.querySelector('style[data-sg-privacy]');
-    if (oldStyle && oldStyle.parentNode) oldStyle.parentNode.removeChild(oldStyle);
-
-    function ready(fn){ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',fn);} else { fn(); } }
-
-    ready(function(){
-      // --- Inject CSS ---
-      var style = document.createElement('style');
-      style.setAttribute('data-sg-privacy','v4');
-      style.textContent = `
-#sg-privacy-fab{
-  position:fixed; right:12px; bottom:12px; z-index:2147483647;
-  padding:10px 12px; border:1px solid #ddd; background:#ffffff; color:#333;
-  border-radius:999px; font-size:.9rem; box-shadow:0 2px 10px rgba(0,0,0,.08);
-}
-#sg-privacy-fab:hover{ background:#f7f7f7; }
-#sg-privacy-modal[hidden]{ display:none; }
-#sg-privacy-modal{ position:fixed; inset:0; z-index:2147483646; }
-#sg-privacy-modal .sg-privacy-modal__backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
-#sg-privacy-modal .sg-privacy-modal__panel{
-  position:absolute; right:12px; bottom:64px; width:min(95vw, 360px);
-  background:#fff; border:1px solid #e6e6e6; border-radius:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,.18); overflow:hidden;
-}
-.sg-privacy-modal__hdr{ display:flex; align-items:center; justify-content:space-between;
-  padding:10px 12px; background:#f8f8f8; border-bottom:1px solid #eee; }
-.sg-privacy-modal__hdr h3{ margin:0; font-size:1rem; }
-.sg-privacy-modal__close{ border:0; background:transparent; font-size:1.2rem; line-height:1; cursor:pointer; color:#555; }
-.sg-privacy-modal__content{ padding:12px; font-size:.95rem; line-height:1.5; }
-.sg-privacy-modal__content a{ color:#333; text-decoration:underline; }
-#sg-privacy-toast[hidden]{ display:none; }
-#sg-privacy-toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:80px; z-index:2147483645; max-width:min(92vw, 520px); }
-.sg-privacy-toast__card{ display:flex; gap:6px; align-items:center; padding:10px 12px; background:#111; color:#fff; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.3); font-size:.9rem; }
-.sg-privacy-toast__card a{ color:#fff; text-decoration:underline; }
-.sg-privacy-toast__close{ margin-left:auto; border:0; background:transparent; color:#fff; font-size:1.1rem; cursor:pointer; }
-@media (max-width:480px){
-  #sg-privacy-fab{ bottom:56px; }
-  #sg-privacy-toast{ bottom:120px; }
-}`;
-      document.head.appendChild(style);
-
-      // --- Inject HTML ---
-      var wrap = document.createElement('div');
-      wrap.innerHTML = `
-<button id="sg-privacy-fab" aria-haspopup="dialog" aria-controls="sg-privacy-modal" aria-label="Privacy & Data">
-  Privacy • Data
-</button>
-
-<div id="sg-privacy-modal" role="dialog" aria-modal="true" aria-labelledby="sg-privacy-title" hidden>
-  <div class="sg-privacy-modal__panel">
-    <header class="sg-privacy-modal__hdr">
-      <h3 id="sg-privacy-title">Your privacy matters</h3>
-      <button class="sg-privacy-modal__close" aria-label="Close">×</button>
-    </header>
-    <div class="sg-privacy-modal__content">
-      <p>Review how we handle your info:</p>
-      <p>
-        <a href="/privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a> •
-        <a href="/data-deletion.html" target="_blank" rel="noopener">Data Deletion</a>
-      </p>
-    </div>
+    <a href="#" id="howToOrderLink" class="btn ghost">How to Order</a>
   </div>
-  <div class="sg-privacy-modal__backdrop" aria-hidden="true"></div>
-</div>
-
-<div id="sg-privacy-toast" hidden role="status" aria-live="polite">
-  <div class="sg-privacy-toast__card">
-    <span>We value your privacy. Read our</span>
-    <a href="/privacy-policy.html" target="_blank" rel="noopener">Policy</a>
-    <span>and</span>
-    <a href="/data-deletion.html" target="_blank" rel="noopener">Deletion</a>.
-    <button class="sg-privacy-toast__close" aria-label="Dismiss">×</button>
-  </div>
-</div>
-      `.trim();
-      document.body.appendChild(wrap);
-
-      // --- Behavior wiring ---
-      var fab = document.getElementById('sg-privacy-fab');
-      var modal = document.getElementById('sg-privacy-modal');
-      var backdrop = modal.querySelector('.sg-privacy-modal__backdrop');
-      var btnClose = modal.querySelector('.sg-privacy-modal__close');
-      var toast = document.getElementById('sg-privacy-toast');
-      var toastClose = toast.querySelector('.sg-privacy-toast__close');
-      var LS_KEY = 'sg_privacy_toast_dismissed_v1';
-
-      function openModal(){ modal.hidden=false; document.body.style.overflow='hidden'; fab.setAttribute('aria-expanded','true'); }
-      function closeModal(){ modal.hidden=true; document.body.style.overflow=''; fab.setAttribute('aria-expanded','false'); }
-
-      fab.addEventListener('click', openModal);
-      backdrop.addEventListener('click', closeModal);
-      btnClose.addEventListener('click', closeModal);
-      document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
-
-      try{
-        if(localStorage.getItem(LS_KEY)!=='1'){
-          toast.hidden=false;
-          setTimeout(function(){ toast.hidden=true; }, 6000);
-        }
-      }catch(e){}
-      toastClose.addEventListener('click', function(){
-        toast.hidden=true;
-        try{ localStorage.setItem(LS_KEY,'1'); }catch(e){}
-      });
-    });
-  })();
-  </script>
-  <!-- === SG Privacy/Data Notice — END [UPDATED] === -->
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
   <!-- Scripts -->
   <script src="config.js?v=15"></script>
-  <script src="main.js?v=15"></script>
+  <script src="main.js?v=16.2"></script>
 
   <!-- Popup controller + Telegram upload (manual only) -->
   <script>
@@ -509,10 +355,26 @@
       if (token) form.action = 'https://api.telegram.org/bot' + encodeURIComponent(token) + '/sendDocument';
       if (chatId) chatIn.value = chatId;
 
+      // After Telegram responds (iframe load), THEN clear + refresh
       iframe.addEventListener('load', function(){
         if (statusEl) statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
-        if (typeof window.showToast === 'function') showToast('Receipt uploaded ✅', 2000);
+        if (typeof window.showToast === 'function') showToast('Receipt uploaded ✅', 1600);
+
+        // Clear file input
         try { fileIn.value = ''; } catch(e){}
+
+        // Now that receipt is sent, clear cart & reset form, then refresh
+        try {
+          if (typeof clearCart === 'function') clearCart();
+          var orderForm = document.getElementById('orderForm') || (window.pendingOrder && window.pendingOrder.formEl);
+          if (orderForm && typeof orderForm.reset === 'function') {
+            orderForm.reset();
+            if (typeof updatePersonsVisibility === 'function') updatePersonsVisibility();
+          }
+        } catch(e){}
+
+        // Give the toast time to show, then refresh the page
+        setTimeout(function(){ location.reload(); }, 1200);
       });
 
       sendBtn.addEventListener('click', function(){
@@ -520,15 +382,16 @@
         if (!f){ statusEl.textContent = 'Please select a receipt image or PDF first.'; return; }
         if (!token || !chatId){ statusEl.textContent = 'Bot not configured (token/chat id).'; return; }
 
-        var fullName = (document.getElementById('fullName')?.value || 'Unknown Customer').trim();
-        var mobile   = (document.getElementById('mobileNumber')?.value || 'N/A').trim();
-        var orderId  = window.currentOrderId || 'N/A';
-        var total    = window.currentOrderTotal ? ('₱' + window.currentOrderTotal) : '';
+        // Pull details; fall back to pendingOrder if fields were changed
+        var fullName = (document.getElementById('fullName')?.value || (window.pendingOrder && window.pendingOrder.name) || 'Unknown Customer').trim();
+        var mobile   = (document.getElementById('mobileNumber')?.value || (window.pendingOrder && window.pendingOrder.mobile) || 'N/A').trim();
+        var orderId  = window.currentOrderId || (window.pendingOrder && window.pendingOrder.orderId) || 'N/A';
+        var total    = (typeof window.currentOrderTotal === 'number' ? window.currentOrderTotal : (window.pendingOrder && window.pendingOrder.total)) || '';
 
         var caption = [
           '🧾 GCash Receipt Received',
           '• Order ID: ' + orderId,
-          total ? ('• Total: ' + total) : '',
+          total ? ('• Total: ₱' + Number(total).toLocaleString()) : '',
           '• Name: ' + fullName,
           '• Mobile: ' + mobile
         ].filter(Boolean).join('\n');
@@ -586,11 +449,13 @@
 
     function hideToast(){
       clearTimeout(hideTimer);
+      var t = document.getElementById('toast');
       t.classList.remove('show');
       setTimeout(function(){ if(!t.classList.contains('show')) t.style.display='none'; }, 180);
     }
 
     function renderToast(msg){
+      var t = document.getElementById('toast');
       t.innerHTML = '';
       var row = document.createElement('div'); row.className = 'toast-row';
       var msgEl = document.createElement('div'); msgEl.className = 'toast-msg';
@@ -599,19 +464,21 @@
       btn.onclick = hideToast;
       row.appendChild(msgEl); row.appendChild(btn);
       t.appendChild(row);
-      // Tap anywhere on the toast to dismiss
       t.onclick = hideToast;
     }
 
-    // Replace global showToast so ALL calls use this version
     window.showToast = function(msg, ms){
       try{
-        ms = ms || 5000; // default 5s
+        ms = ms || 5000;
         renderToast(msg);
         clearTimeout(hideTimer);
+        var t = document.getElementById('toast');
         t.style.display = 'block';
         requestAnimationFrame(function(){ t.classList.add('show'); });
-        hideTimer = setTimeout(hideToast, ms);
+        hideTimer = setTimeout(function(){ 
+          var t = document.getElementById('toast'); 
+          t.classList.remove('show'); 
+        }, ms);
       }catch(e){
         console.warn('[toast-upgrade] error:', e);
         alert(msg);
@@ -619,11 +486,12 @@
     };
   })();
   </script>
+
   <footer style="text-align:center; padding:16px; font-size:0.9em; color:#555; background:#f9f9f9; margin-top:24px;">
-  © 2025 Stone Grill Restaurant • 
-  <a href="/privacy-policy.html">Privacy Policy</a> • 
-  <a href="/data-deletion.html">Data Deletion</a>
-</footer>
+    © 2025 Stone Grill Restaurant • 
+    <a href="/privacy-policy.html">Privacy Policy</a> • 
+    <a href="/data-deletion.html">Data Deletion</a>
+  </footer>
 
 </body>
 </html>
