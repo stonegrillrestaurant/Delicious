@@ -1,10 +1,12 @@
 /* =========================================================================
-   Stone Grill — main.js (v14)
+   Stone Grill — main.js (v15)
    - Cart: − / + buttons (no input/remove)
    - Prevents duplicate cart entries
    - Cart highlight background when items exist
    - Active category button stays green
-   - All features from v13 intact
+   - Auto “Pay with GCash” toast + popup after successful submit
+   - Adds Order ID and passes total to payment popup
+   - All features from v14 intact
    ========================================================================= */
 'use strict';
 
@@ -40,6 +42,13 @@ function showToast(msg, ms){
   el.classList.remove('hidden');
   el.classList.add('show');
   setTimeout(function(){ el.classList.remove('show'); }, ms);
+}
+
+/* Generate a compact Order ID like SG202509011230 */
+function generateOrderId(){
+  var d = new Date();
+  function p(n){ return String(n).padStart(2,'0'); }
+  return 'SG' + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes());
 }
 
 /* ---- Fallback MENU ---- */
@@ -294,7 +303,7 @@ function formatOrderDateTime(dateStr, timeStr){
 }
 
 /* ---- Build Telegram message ---- */
-function buildOrderMessage(form){
+function buildOrderMessage(form, orderId){
   var name = ($('#fullName')||{}).value || '';
   var mobile = ($('#mobileNumber')||{}).value || '';
   var orderType = (form.querySelector('input[name="orderType"]:checked')||{}).value || '';
@@ -305,6 +314,7 @@ function buildOrderMessage(form){
   var items = cart.map(it=> '• '+it.name+' x'+it.qty+' — '+money(it.qty*it.price)).join('\n') || '—';
   var when = formatOrderDateTime(date, time);
   var msg = '<b>Stone Grill — New Order</b>\n';
+  if (orderId) msg += '\n<b>Order ID:</b> ' + orderId;
   msg += '\n<b>Customer:</b> ' + name;
   msg += '\n<b>Mobile:</b> ' + mobile;
   msg += '\n<b>Type:</b> ' + orderType;
@@ -323,8 +333,14 @@ function handleSubmit(e){
   if(cart.length===0){ showToast('Add at least 1 item to your order.'); return; }
   var mobileEl = $('#mobileNumber'); if(mobileEl) normalizeMobile(mobileEl);
   var form = e.currentTarget;
-  var message = buildOrderMessage(form);
+
+  // Prepare metadata BEFORE we clear the cart
+  var orderId = generateOrderId();
+  var totalBefore = cartSubtotal();
+
+  var message = buildOrderMessage(form, orderId);
   var payload = {
+    orderId: orderId,
     name: ($('#fullName')||{}).value || '',
     mobile: ($('#mobileNumber')||{}).value || '',
     orderType: (form.querySelector('input[name="orderType"]:checked')||{}).value || '',
@@ -333,11 +349,18 @@ function handleSubmit(e){
     time: ($('#orderTime')||{}).value || '',
     requests: ($('#specialRequests')||{}).value || '',
     items: cart.map(it=>({ name:it.name, qty:it.qty, price:it.price })),
-    subtotal: cartSubtotal(),
+    subtotal: totalBefore,
     createdAt: new Date().toISOString()
   };
+
   sendToTelegram(message).then(function(){
-    showToast('✅ Thank you! Please settle your payment via GCash so we can proceed preparing your order.', 5000);
+    // Friendly toast + auto-open GCash popup with Order ID & Total
+    showToast('✅ Order received! Please pay via GCash now. Order ID: ' + orderId, 6000);
+    if (typeof window.showGcashPopup === 'function') {
+      window.showGcashPopup(orderId, totalBefore);
+    }
+
+    // Log (non-blocking) then reset UI
     logToSheets(payload);
     clearCart();
     form.reset();
