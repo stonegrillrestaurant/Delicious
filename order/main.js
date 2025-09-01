@@ -1,8 +1,9 @@
 /* =========================================================================
-   Stone Grill — main.js (v16.2)
+   Stone Grill — main.js (v16.4)
    - Defer refresh until AFTER GCash receipt upload (keeps name/mobile)
    - How to Order popup binds to #howToOrderLink or #howtoOrder
    - FIX: addToCart increments found.qty correctly
+   - ADD: Infobip SMS confirmation to customer after Telegram send
    ========================================================================= */
 'use strict';
 
@@ -45,6 +46,51 @@ function generateOrderId(){
   var d = new Date();
   function p(n){ return String(n).padStart(2,'0'); }
   return 'SG' + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes());
+}
+
+/* ---- Infobip SMS Sender (customer confirmation) ----
+   NOTE: This runs client-side because your site is static.
+   If you later prefer to hide your API key, move this call to Apps Script.
+-------------------------------------------------------------------------- */
+function sendInfobipSMS(toNumber, custName, orderId) {
+  try {
+    if (!toNumber) return;
+    // Ensure E.164 format (e.g., +639XXXXXXXXX) and strip spaces
+    var cleanNum = String(toNumber).replace(/\s+/g, '');
+
+    var gcashName = "STONEGRILL";           // <-- edit if needed
+    var gcashNumber = "+63 927 603 1476";   // <-- edit if needed
+
+    var smsText =
+      `Hi ${custName || 'Customer'}! ✅ We received your order #${orderId}.\n` +
+      `To proceed, please pay via GCash:\n` +
+      `• Account: ${gcashName}\n` +
+      `• Number: ${gcashNumber}\n` +
+      `We’ll start preparing once paid. Thank you! – Stone Grill`;
+
+    fetch("https://xk649q.api.infobip.com/sms/2/text/advanced", {
+      method: "POST",
+      headers: {
+        "Authorization": "App 536fed848779025c9feef75dc507639e-9fef9036-b887-4059-99ee-9a8ea8a22070",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            destinations: [{ to: cleanNum }],
+            text: smsText,
+            from: "STONEGRILL"
+          }
+        ]
+      })
+    })
+    .then(r => r.json())
+    .then(data => console.log("Infobip SMS sent:", data))
+    .catch(err => console.error("Infobip SMS error:", err));
+  } catch (e) {
+    console.error("Infobip SMS exception:", e);
+  }
 }
 
 /* ---- Fallback MENU ---- */
@@ -359,14 +405,16 @@ function handleSubmit(e){
   };
 
   sendToTelegram(message).then(function(){
+    // Send customer SMS via Infobip (immediately after Telegram succeeds)
+    sendInfobipSMS(window.pendingOrder.mobile, window.pendingOrder.name, orderId);
+
     // Friendly toast + auto-open GCash popup with Order ID & Total
     showToast('✅ Order received! Please pay via GCash now. Order ID: ' + orderId, 6000);
     if (typeof window.showGcashPopup === 'function') {
       window.showGcashPopup(orderId, totalBefore);
     }
 
-    // IMPORTANT: Do NOT clear/reset here.
-    // We wait until the receipt upload succeeds (tgUploadFrame load) to refresh/clear.
+    // Do NOT clear/reset yet; wait for successful receipt upload elsewhere
     logToSheets(payload);
   }).catch(function(err){
     console.error(err);
