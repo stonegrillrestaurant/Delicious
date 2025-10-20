@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Multilingual Mind — Reading Edition</title>
-  <meta name="description" content="A book-style reading edition of Multilingual Mind with built-in text-to-speech controls.">
+  <meta name="description" content="A book-style reading edition of Multilingual Mind with a floating text-to-speech player.">
   <meta name="author" content="Ninox Antolihao">
   <meta property="og:title" content="Multilingual Mind — Reading Edition">
   <meta property="og:type" content="article">
@@ -14,6 +14,9 @@
     :root{
       --bg:#0e0e0f; --paper:#141415; --ink:#f1f1f1; --muted:#aaa; --accent:#ffb020; --rule:#252526;
       --maxw: 860px;
+      --fs: 18px;            /* base font size (controls A-/A+) */
+      --lh: 1.8;             /* line-height */
+      --radius: 16px;
     }
     @media (prefers-color-scheme: light){
       :root{ --bg:#ffffff; --paper:#ffffff; --ink:#161616; --muted:#555; --rule:#e8e8e8; --accent:#d64a00; }
@@ -21,92 +24,131 @@
     *{box-sizing:border-box}
     html, body{height:100%; margin:0}
     body{
-      font-family: ui-serif, Georgia, 'Times New Roman', serif;
+      font-family: ui-serif, Georgia, "Times New Roman", serif;
       background: radial-gradient(60% 40% at 50% 0%, #151515 0%, var(--bg) 50%);
       color: var(--ink);
+      font-size: var(--fs);
+      line-height: var(--lh);
     }
-    header, footer{border-color: var(--rule)}
+
+    /* Top progress bar */
+    .progress{
+      position: fixed; top:0; left:0; height:3px; width:100vw; background: transparent; z-index: 60;
+    }
+    .progress .bar{
+      height:100%; width:0; background: linear-gradient(90deg, var(--accent), #ffd38a);
+      transition: width .08s linear;
+    }
+
     header{
       position: sticky; top:0; z-index: 20;
       background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.25));
       backdrop-filter: blur(6px);
       border-bottom: 1px solid var(--rule);
     }
-    .wrap{max-width: var(--maxw); margin: 0 auto; padding: 14px 16px;}
+    .wrap{max-width: var(--maxw); margin: 0 auto; padding: 12px 16px;}
     .row{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap: wrap;}
-    .brand{display:flex; align-items:center; gap:12px; font-weight:700}
-    .brand img{width:34px; height:34px; border-radius:50%; object-fit:cover}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:700}
+    .brand img{width:30px; height:30px; border-radius:50%; object-fit:cover}
     .controls{
-      display:flex; gap:10px; align-items:center; flex-wrap: wrap;
-      background: var(--paper); border:1px solid var(--rule); padding:8px 10px; border-radius:12px;
+      display:flex; gap:8px; align-items:center; flex-wrap: wrap;
+      background: var(--paper); border:1px solid var(--rule); padding:6px 8px; border-radius:12px;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
     label{font-size:12px; color:var(--muted)}
-    select, input[type="range"]{
+    select, button{
       background: transparent; border: 1px solid var(--rule); border-radius: 8px; color: var(--ink);
       padding: 6px 8px; font-size: 14px;
     }
-    button{
-      border:1px solid var(--rule); background: var(--paper); color: var(--ink);
-      padding: 8px 12px; border-radius:10px; cursor:pointer; font-weight:600;
-    }
-    button:disabled{opacity:.5; cursor:not-allowed}
-    main{padding: 18px 16px 60px;}
+    button{cursor:pointer; font-weight:600}
+    .btn-ghost{border-color: transparent}
+    .a-ctrl{display:flex; gap:6px; align-items:center}
+    .a-ctrl button{min-width: 34px}
+
+    main{padding: 18px 16px 72px;}
     article{
       max-width: var(--maxw); margin: 0 auto;
-      background: var(--paper); border:1px solid var(--rule); border-radius: 16px;
+      background: var(--paper); border:1px solid var(--rule); border-radius: var(--radius);
       padding: 26px 22px;
       box-shadow: 0 10px 30px rgba(0,0,0,.25);
     }
     h1{margin: 0 0 8px; font-size: clamp(26px, 5vw, 40px); letter-spacing:.3px}
+    h2{margin: 18px 0 8px}
+    p{margin: 10px 0}
     .meta{color: var(--muted); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin-bottom: 18px}
     hr{border:0; height:1px; background:linear-gradient(90deg, transparent, var(--rule), transparent); margin:20px 0}
     .divider{ text-align:center; color:var(--muted); margin: 18px 0}
     .divider span{padding:0 10px}
-    p{font-size: 18px; line-height: 1.8; margin: 10px 0}
     blockquote{margin: 0; padding: 12px 16px; border-left: 4px solid var(--accent); background: rgba(255,176,32,.08); border-radius: 8px}
     .small{font-size: 14px; color: var(--muted)}
     .toc{background: rgba(255,255,255,.02); border:1px dashed var(--rule); border-radius: 10px; padding: 10px 12px; margin: 8px 0 18px}
     .toc a{color: var(--accent); text-decoration:none}
+
     footer{border-top:1px solid var(--rule);}
     .foot{max-width: var(--maxw); margin:0 auto; padding: 18px 16px; color: var(--muted); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;}
-    .sr-only{position:absolute; left:-9999px}
-    .note{font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; font-size:13px; color: var(--muted);}
+
+    /* Floating Mini Player */
+    .mini-player{
+      position: fixed; right: 16px; bottom: 16px; z-index: 50;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      box-shadow: 0 10px 25px rgba(0,0,0,.35);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex; align-items: center; gap: 10px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      backdrop-filter: blur(6px);
+    }
+    .mini-player .btn{
+      border:1px solid var(--rule); background: transparent; color: var(--ink);
+      padding: 6px 8px; border-radius: 8px; cursor:pointer; font-weight:600; min-width: 40px;
+    }
+    .mini-player .btn:disabled{opacity:.5; cursor:not-allowed}
+    .mini-player .meta{display:flex; flex-direction:column; gap:4px; min-width: 160px}
+    .mini-player .meta b{font-size:12px; color: var(--muted); font-weight:600}
+    .mini-player progress{width: 220px; height: 8px; accent-color: var(--accent)}
+    @media (max-width: 480px){
+      .mini-player{left: 10px; right: 10px}
+      .mini-player progress{width: 100%}
+      .mini-player .meta{display:none}
+    }
   </style>
 </head>
 <body>
+  <!-- Scroll progress -->
+  <div class="progress" aria-hidden="true"><div id="bar" class="bar"></div></div>
+
   <header>
     <div class="wrap row">
       <div class="brand">
         <img src="/reflections/assets/logo.png" alt="Stone Grill Logo">
         <span>Multilingual Mind — Reading Edition</span>
       </div>
-      <div class="controls" role="region" aria-label="Text-to-speech controls">
+      <div class="controls" role="region" aria-label="Reading controls">
         <label for="lang">Lang</label>
         <select id="lang" aria-label="Language">
           <option value="en" selected>EN</option>
           <option value="fil">FIL</option>
           <option value="ceb">CEB</option>
         </select>
-        <label for="voice">Voice</label>
-        <select id="voice" aria-label="Voice"></select>
-        <label for="rate">Rate</label>
-        <input id="rate" type="range" min="0.7" max="1.4" step="0.05" value="1">
-        <label for="pitch">Pitch</label>
-        <input id="pitch" type="range" min="0.8" max="1.3" step="0.05" value="1">
-        <button id="play">▶ Play</button>
-        <button id="pause" disabled>⏸ Pause</button>
-        <button id="resume" disabled>⏯ Resume</button>
-        <button id="stop" disabled>⏹ Stop</button>
+
+        <div class="a-ctrl" aria-label="Font size">
+          <label class="sr-only" for="fsdown">Font smaller</label>
+          <button id="fsdown" title="Smaller">A−</button>
+          <label class="sr-only" for="fsup">Font larger</label>
+          <button id="fsup" title="Larger">A+</button>
+        </div>
+
+        <a class="btn-ghost" href="./index.html" title="Back to interactive page">Back ↗</a>
       </div>
     </div>
   </header>
 
   <main>
-    <article>
+    <article id="article">
       <h1 id="t_title">Build a Multilingual Mind</h1>
       <p class="meta"><span id="t_meta">By Ninox Antolihao • First Edition 2025</span></p>
-      <div class="toc">
+      <div class="toc" role="navigation" aria-label="Table of contents">
         <strong id="t_toc">Table of Contents</strong>
         <ul class="small">
           <li><a href="#intro" id="toc_intro">Introduction</a></li>
@@ -147,10 +189,8 @@
 
       <section id="playbook">
         <h2 id="t_play_h">Playbook</h2>
-        <p id="t_play_0">
-          Treat languages like gears. Shift depending on terrain.
-        </p>
-        <p><strong id="t_play_1h">1) Cold reasoning (EN):</strong> <span id="t_play_1">Use a non‑native language for high‑stakes choices. Psychological distance reduces emotional noise and risk bias.</span></p>
+        <p id="t_play_0">Treat languages like gears. Shift depending on terrain.</p>
+        <p><strong id="t_play_1h">1) Cold reasoning (EN):</strong> <span id="t_play_1">Use a non-native language for high-stakes choices. Psychological distance reduces emotional noise and risk bias.</span></p>
         <p><strong id="t_play_2h">2) Warm connection (FIL):</strong> <span id="t_play_2">Use your native tongue for empathy, storytelling, and team energy.</span></p>
         <p><strong id="t_play_3h">3) Creativity sprints (CEB/FIL → EN):</strong> <span id="t_play_3">Brainstorm in Cebuano or Filipino, then converge in English. Diverge → converge cycles boost originality and precision.</span></p>
         <p><strong id="t_play_4h">4) Bias breaker (Translate):</strong> <span id="t_play_4">Render the same statement across languages to surface hidden assumptions.</span></p>
@@ -162,7 +202,7 @@
         <h2 id="t_drills_h">Daily Drills (5–7 minutes)</h2>
         <ul>
           <li id="t_drill_1">Label your current mood in two languages.</li>
-          <li id="t_drill_2">Re‑explain a problem using different verbs and metaphors.</li>
+          <li id="t_drill_2">Re-explain a problem using different verbs and metaphors.</li>
           <li id="t_drill_3">Summarize a decision in one sentence per language.</li>
         </ul>
       </section>
@@ -180,8 +220,19 @@
         <p class="small">© First Edition 2025 · Stone Grill • All rights reserved</p>
       </section>
     </article>
-    <p class="wrap note">Tip: The voice list depends on the device. If Filipino/Cebuano voices aren’t available, choose the closest voice and keep the language set to FIL or CEB for correct pronunciation rules.</p>
   </main>
+
+  <!-- Floating Mini Player -->
+  <div class="mini-player" role="region" aria-label="Floating reader">
+    <button class="btn" id="play" title="Play">▶</button>
+    <button class="btn" id="pause" title="Pause" disabled>⏸</button>
+    <button class="btn" id="resume" title="Resume" disabled>⏯</button>
+    <button class="btn" id="stop" title="Stop" disabled>⏹</button>
+    <div class="meta">
+      <b id="miniLabel">Reading…</b>
+      <progress id="pbar" max="100" value="0" aria-label="Audio progress"></progress>
+    </div>
+  </div>
 
   <footer>
     <div class="foot">
@@ -191,7 +242,9 @@
   </footer>
 
   <script>
-    // Multilingual text blocks
+    /* =========================
+       Multilingual Text Blocks
+       ========================= */
     const TXT = {
       en: {
         t_title: "Build a Multilingual Mind",
@@ -214,14 +267,14 @@
 
         t_play_h: "Playbook",
         t_play_0: "Treat languages like gears. Shift depending on terrain.",
-        t_play_1h: "1) Cold reasoning (EN):", t_play_1: "Use a non‑native language for high‑stakes choices. Psychological distance reduces emotional noise and risk bias.",
+        t_play_1h: "1) Cold reasoning (EN):", t_play_1: "Use a non-native language for high-stakes choices. Psychological distance reduces emotional noise and risk bias.",
         t_play_2h: "2) Warm connection (FIL):", t_play_2: "Use your native tongue for empathy, storytelling, and team energy.",
         t_play_3h: "3) Creativity sprints (CEB/FIL → EN):", t_play_3: "Brainstorm in Cebuano or Filipino, then converge in English. Diverge → converge cycles boost originality and precision.",
         t_play_4h: "4) Bias breaker (Translate):", t_play_4: "Render the same statement across languages to surface hidden assumptions.",
 
         t_drills_h: "Daily Drills (5–7 minutes)",
         t_drill_1: "Label your current mood in two languages.",
-        t_drill_2: "Re‑explain a problem using different verbs and metaphors.",
+        t_drill_2: "Re-explain a problem using different verbs and metaphors.",
         t_drill_3: "Summarize a decision in one sentence per language.",
 
         t_about_h: "About the Author",
@@ -235,11 +288,11 @@
         toc_intro: "Panimula",
         toc_why: "Bakit Multilingual na Isip",
         toc_playbook: "Playbook",
-        toc_drills: "Araw‑araw na Drills",
-        toc_about: "Tungkol sa May‑akda",
+        toc_drills: "Araw-araw na Drills",
+        toc_about: "Tungkol sa May-akda",
 
         t_intro_h: "Panimula",
-        t_intro_1: "Ang wika ay isang lente. Kapag pinalitan mo ang lente, nag-iiba ang hitsura ng parehong tanawin—lumiliit o lumalaki ang problema, may sumusulpot na opsyon, humuhupa o umiinit ang emosyon. Ang edisyong ito ay maikling gabay sa paggamit ng English, Filipino, at Cebuano bilang mga ‘mental mode’ na maaari mong i‑switch nang sinasadya.",
+        t_intro_1: "Ang wika ay isang lente. Kapag pinalitan mo ang lente, nag-iiba ang hitsura ng parehong tanawin—lumiliit o lumalaki ang problema, may sumusulpot na opsyon, humuhupa o umiinit ang emosyon. Ang edisyong ito ay maikling gabay sa paggamit ng English, Filipino, at Cebuano bilang mga ‘mental mode’ na maaari mong i-switch nang sinasadya.",
         t_intro_2: "Isipin itong praktikal na operating system para sa atensyon, linaw, at pagkamalikhain. Hindi kailangan ng perpektong gramatika; kailangan lang ng layunin: anong wika para sa anong gawain?",
         t_intro_q: "“Palitan ang wika at napapalitan ang frame; kapag nabago ang frame, nag-iiba ang pagpili.”",
 
@@ -249,17 +302,17 @@
 
         t_play_h: "Playbook",
         t_play_0: "Ituring ang mga wika na parang kambyo. Lumipat ayon sa daan.",
-        t_play_1h: "1) Cold reasoning (EN):", t_play_1: "Gamitin ang di‑inang wika sa malalaking desisyon. Ang sikolohikal na distansya ay nagpapahinahon ng emosyon at bias.",
+        t_play_1h: "1) Cold reasoning (EN):", t_play_1: "Gamitin ang di-inang wika sa malalaking desisyon. Ang sikolohikal na distansya ay nagpapahinahon ng emosyon at bias.",
         t_play_2h: "2) Warm connection (FIL):", t_play_2: "Gamitin ang inang wika para sa empatiya, pagkukuwento, at lakas ng grupo.",
-        t_play_3h: "3) Creativity sprints (CEB/FIL → EN):", t_play_3: "Mag‑brainstorm sa Cebuano o Filipino, saka mag‑converge sa English. Ang diverge → converge cycles ay nagpapalakas ng orihinalidad at katumpakan.",
+        t_play_3h: "3) Creativity sprints (CEB/FIL → EN):", t_play_3: "Mag-brainstorm sa Cebuano o Filipino, saka mag-converge sa English. Ang diverge → converge cycles ay nagpapalakas ng orihinalidad at katumpakan.",
         t_play_4h: "4) Bias breaker (Isalin):", t_play_4: "Isalin ang parehong pahayag sa iba’t ibang wika upang lumitaw ang mga nakatagong akala.",
 
-        t_drills_h: "Araw‑araw na Drills (5–7 minuto)",
+        t_drills_h: "Araw-araw na Drills (5–7 minuto)",
         t_drill_1: "Pangalanan ang kasalukuyang damdamin sa dalawang wika.",
         t_drill_2: "Ipaliwanag muli ang problema gamit ang ibang pandiwa at talinghaga.",
-        t_drill_3: "Buodin ang isang desisyon sa tig‑iisang pangungusap bawat wika.",
+        t_drill_3: "Buodin ang isang desisyon sa tig-iisang pangungusap bawat wika.",
 
-        t_about_h: "Tungkol sa May‑akda",
+        t_about_h: "Tungkol sa May-akda",
         t_about_1: "Si Ninox Antolihao ay isang tagapagbuo at manunulat mula sa Pilipinas. Bilang isip sa likod ng Stone Grill Restaurant at ilang inisyatiba sa komunidad, pinagsasama niya ang lohika, intuwisyon, at karanasan tungo sa praktikal na pagninilay.",
         t_about_2: "Tinutuklas ng kanyang mga gawa ang ugnayan ng wika, atensyon, at aksyon—upang tulungan ang mambabasa na magdisenyo ng buhay na mas payapa, mas malinaw, at mas malikhain."
       },
@@ -270,7 +323,7 @@
         toc_intro: "Pasiuna",
         toc_why: "Ngano Multilingual nga Hunahuna",
         toc_playbook: "Playbook",
-        toc_drills: "Adlaw‑adlaw nga Drills",
+        toc_drills: "Adlaw-adlaw nga Drills",
         toc_about: "Mahitungod sa Awtor",
 
         t_intro_h: "Pasiuna",
@@ -284,18 +337,18 @@
 
         t_play_h: "Playbook",
         t_play_0: "Tratara ang pinulongan sama sa kambyo. Ilisi sumala sa dalan.",
-        t_play_1h: "1) Cold reasoning (EN):", t_play_1: "Gamita ang dili‑tinubdan nga pinulongan sa taas nga pusta nga mga desisyon aron mopaubos sa emosyon ug risk bias.",
+        t_play_1h: "1) Cold reasoning (EN):", t_play_1: "Gamita ang dili-tinubdan nga pinulongan sa taas nga pusta nga mga desisyon aron mopaubos sa emosyon ug risk bias.",
         t_play_2h: "2) Warm connection (FIL):", t_play_2: "Gamita ang inahan nga pinulongan para sa empatiya, sugilanon, ug kusog sa grupo.",
-        t_play_3h: "3) Creativity sprints (CEB/FIL → EN):", t_play_3: "Mag‑brainstorm sa Cebuano o Filipino, dayon mag‑converge sa English. Ang diverge → converge cycles mopalapad sa orihinalidad ug katukma.",
-        t_play_4h: "4) Bias breaker (Hubara):", t_play_4: "Hubara ang parehas nga pamahayag sa lain‑laing pinulongan aron motuhaw ang natagong asumpsyon.",
+        t_play_3h: "3) Creativity sprints (CEB/FIL → EN):", t_play_3: "Mag-brainstorm sa Cebuano o Filipino, dayon mag-converge sa English. Ang diverge → converge cycles mopalapad sa orihinalidad ug katukma.",
+        t_play_4h: "4) Bias breaker (Hubara):", t_play_4: "Hubara ang parehas nga pamahayag sa lain-laing pinulongan aron motuhaw ang natagong asumpsyon.",
 
-        t_drills_h: "Adlaw‑adlaw nga Drills (5–7 minutos)",
+        t_drills_h: "Adlaw-adlaw nga Drills (5–7 minutos)",
         t_drill_1: "Ihingalan ang imong gibati karon sa duha ka pinulongan.",
-        t_drill_2: "Ipasabot pag-usab ang problema gamit lain‑laing berbo ug hulagway.",
-        t_drill_3: "I‑summary ang desisyon sa usa ka tudling matag pinulongan.",
+        t_drill_2: "Ipasabot pag-usab ang problema gamit lain-laing berbo ug hulagway.",
+        t_drill_3: "I-summary ang desisyon sa usa ka tudling matag pinulongan.",
 
         t_about_h: "Mahitungod sa Awtor",
-        t_about_1: "Si Ninox Antolihao usa ka magtutukod ug manug‑saysay nga natawo sa Pilipinas. Isip hunahuna sa luyo sa Stone Grill Restaurant ug daghang kalihokan sa komunidad, iyang giuyonan ang lohika, intuwisyon, ug kasinatian sa praktikal nga pag‑pamalandong.",
+        t_about_1: "Si Ninox Antolihao usa ka magtutukod ug manug-saysay nga natawo sa Pilipinas. Isip hunahuna sa luyo sa Stone Grill Restaurant ug daghang kalihokan sa komunidad, iyang giuyonan ang lohika, intuwisyon, ug kasinatian sa praktikal nga pag-pamalandong.",
         t_about_2: "Gisusi sa iyang mga buhat ang sumpay sa pinulongan, atensyon, ug lihok—aron tabangan ang magbasa sa pagdisenyo sa kinabuhi nga mas malinawon, mas klaro, ug mas mamugnaon."
       }
     };
@@ -306,122 +359,98 @@
                  "t_drills_h","t_drill_1","t_drill_2","t_drill_3",
                  "t_about_h","t_about_1","t_about_2"];
 
+    const $ = (id) => document.getElementById(id);
+
     function applyLang(lang){
       const L = TXT[lang] || TXT.en;
       document.documentElement.lang = lang;
-      ids.forEach(id => { const el = document.getElementById(id); if (el && L[id]) el.textContent = L[id]; });
+      ids.forEach(id => { const el = $(id); if (el && L[id]) el.textContent = L[id]; });
       localStorage.setItem('mm.read.lang', lang);
       refreshVoicesFor(lang);
     }
 
-    // ====== TTS controls ======
-    const $ = (id) => document.getElementById(id);
-    const voiceSel = $("voice");
-    const langSel = $("lang");
-    const rate = $("rate");
-    const pitch = $("pitch");
-    const btnPlay = $("play");
-    const btnPause = $("pause");
-    const btnResume = $("resume");
-    const btnStop = $("stop");
+    // Font size controls
+    const fsUp = $("fsup"), fsDown = $("fsdown");
+    function setFs(px){
+      document.documentElement.style.setProperty("--fs", px + "px");
+      localStorage.setItem("mm.read.fs", px);
+    }
+    fsUp.addEventListener("click", ()=>{ const cur=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fs")); setFs(Math.min(cur+1, 22)); });
+    fsDown.addEventListener("click", ()=>{ const cur=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fs")); setFs(Math.max(cur-1, 14)); });
 
+    // Scroll progress
+    const bar = $("bar");
+    window.addEventListener("scroll", ()=>{
+      const el = document.documentElement;
+      const h = el.scrollHeight - el.clientHeight;
+      const p = h ? (el.scrollTop / h) * 100 : 0;
+      bar.style.width = p + "%";
+    });
+
+    // ====== TTS (floating mini-player) ======
+    const btnPlay = $("play"), btnPause = $("pause"), btnResume = $("resume"), btnStop = $("stop");
+    const pbar = $("pbar");
     let voices = [];
-    let currentUtterances = [];
+    let utterances = [];
     let playing = false;
 
     function getAllText(){
       const article = document.querySelector("article");
       return article.innerText.replace(/\s+\n/g, "\n").trim();
     }
-
     function splitIntoChunks(text, size = 1200){
       const parts = [];
       let chunk = "";
       const sentences = text.match(/[^.!?…\n]+[.!?…\n]+|.+$/g) || [text];
       for (const s of sentences){
-        if ((chunk + s).length > size){
-          if (chunk) parts.push(chunk);
-          chunk = s;
-        } else {
-          chunk += s;
-        }
+        if ((chunk + s).length > size){ if (chunk) parts.push(chunk); chunk = s; }
+        else { chunk += s; }
       }
       if (chunk) parts.push(chunk);
       return parts;
     }
-
     function populateVoices(){
       voices = speechSynthesis.getVoices();
-      refreshVoicesFor(langSel.value);
+      refreshVoicesFor(localStorage.getItem('mm.read.lang') || 'en');
     }
-
     function refreshVoicesFor(lang){
+      // nothing to render in mini-player; just ensure we have voices cached
       if (!voices.length) voices = speechSynthesis.getVoices();
-      const prefer = lang === "en" ? "en" : (lang === "fil" ? "fil" : "ceb");
-      const list = voices.filter(v => (v.lang || "").toLowerCase().includes(prefer))
-                     .concat(voices.filter(v => !(v.lang || "").toLowerCase().includes(prefer)));
-      voiceSel.innerHTML = "";
-      list.forEach((v) => {
-        const opt = document.createElement("option");
-        opt.value = v.name;
-        opt.textContent = v.name + (v.lang ? ` — ${v.lang}` : "");
-        voiceSel.appendChild(opt);
-      });
-      if (list.length) voiceSel.value = list[0].name;
     }
-
     function makeUtterances(text){
       const chunks = splitIntoChunks(text);
-      const arr = chunks.map(t => {
+      let count = 0, total = chunks.join("").length;
+      const langMap = { en: "en-US", fil: "fil-PH", ceb: "ceb-PH" };
+      return chunks.map(t=>{
         const u = new SpeechSynthesisUtterance(t);
-        u.rate = parseFloat(rate.value);
-        u.pitch = parseFloat(pitch.value);
-        const v = voices.find(v => v.name === voiceSel.value);
-        if (v) u.voice = v;
-        const langMap = { en: "en-US", fil: "fil-PH", ceb: "ceb-PH" };
-        u.lang = langMap[langSel.value] || "en-US";
-        u.onend = handleChunkEnd;
-        u.onerror = (e) => { console.error("TTS error:", e); stopReading(); };
+        u.lang = langMap[localStorage.getItem('mm.read.lang') || 'en'] || "en-US";
+        u.rate = 1; u.pitch = 1;
+        u.onboundary = (e)=>{ // update progress
+          count += (t.length/5); // rough estimate to keep it smooth
+          pbar.value = Math.min(100, (count/total)*100);
+        };
+        u.onend = handleEnd;
+        u.onerror = stopReading;
         return u;
       });
-      return arr;
     }
-
+    function handleEnd(){
+      if (!speechSynthesis.speaking && !speechSynthesis.pending){
+        playing = false; toggleButtons(); pbar.value = 100;
+      }
+    }
     function playText(){
       if (playing) return;
       speechSynthesis.cancel();
-      currentUtterances = makeUtterances(getAllText());
-      if (!currentUtterances.length) return;
-      playing = true;
-      toggleButtons();
-      currentUtterances.forEach(u => speechSynthesis.speak(u));
+      pbar.value = 0;
+      utterances = makeUtterances(getAllText());
+      if (!utterances.length) return;
+      playing = true; toggleButtons();
+      utterances.forEach(u => speechSynthesis.speak(u));
     }
-
-    function pauseReading(){
-      if (!playing) return;
-      speechSynthesis.pause();
-      toggleButtons();
-    }
-
-    function resumeReading(){
-      if (!playing) return;
-      speechSynthesis.resume();
-      toggleButtons();
-    }
-
-    function stopReading(){
-      speechSynthesis.cancel();
-      playing = false;
-      currentUtterances = [];
-      toggleButtons();
-    }
-
-    function handleChunkEnd(){
-      if (!speechSynthesis.speaking && !speechSynthesis.pending){
-        playing = false;
-        toggleButtons();
-      }
-    }
+    function pauseReading(){ if (!playing) return; speechSynthesis.pause(); toggleButtons(); }
+    function resumeReading(){ if (!playing) return; speechSynthesis.resume(); toggleButtons(); }
+    function stopReading(){ speechSynthesis.cancel(); playing=false; utterances=[]; pbar.value=0; toggleButtons(); }
 
     function toggleButtons(){
       btnPlay.disabled = playing;
@@ -429,25 +458,22 @@
       btnResume.disabled = !playing;
       btnStop.disabled = !playing;
     }
-
     btnPlay.addEventListener("click", playText);
     btnPause.addEventListener("click", pauseReading);
     btnResume.addEventListener("click", resumeReading);
     btnStop.addEventListener("click", stopReading);
 
-    rate.addEventListener("input", ()=>{ if (playing) { stopReading(); playText(); }});
-    pitch.addEventListener("input", ()=>{ if (playing) { stopReading(); playText(); }});
-    langSel.addEventListener("change", (e)=> applyLang(e.target.value));
-    voiceSel.addEventListener("change", ()=>{ if (playing) { stopReading(); playText(); }});
-
+    // Init language + settings
     if (typeof speechSynthesis !== "undefined"){
       speechSynthesis.addEventListener("voiceschanged", populateVoices);
       populateVoices();
     }
-    const saved = localStorage.getItem('mm.read.lang');
-    const initial = saved || 'en';
-    langSel.value = initial;
-    applyLang(initial);
+    const savedLang = localStorage.getItem('mm.read.lang') || 'en';
+    const savedFs = parseFloat(localStorage.getItem('mm.read.fs') || 18);
+    document.getElementById('lang').value = savedLang;
+    setFs(savedFs);
+    document.getElementById('lang').addEventListener('change', e => applyLang(e.target.value));
+    applyLang(savedLang);
   </script>
 </body>
 </html>
