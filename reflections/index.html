@@ -1,131 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Stone Grill Restaurant</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ninox Reflections — Stone Grill</title>
+  <meta name="description" content="All reflections in one page — read or download.">
+  <link rel="icon" href="/reflections/assets/favicon.ico">
   <style>
-    body {
-      font-family: 'Georgia', serif;
-      margin: 0;
-      background: #fff4ea;
-      color: #5a2a27;
+    :root{
+      --bg:#fff4ea; --paper:#fffaf0; --ink:#5a2a27; --muted:#7b514d;
+      --accent:#d93404; --accent2:#f7b733; --rule:#fc4a1a;
+      --maxw:1100px; --radius:14px;
     }
-    header {
-      background: linear-gradient(to right, #f7b733, #fc4a1a);
-      padding: 20px;
-      text-align: center;
+    @media (prefers-color-scheme: dark){
+      :root{ --bg:#171311; --paper:#241d1a; --ink:#f3e3d9; --muted:#c7a69f; --accent:#ff6a3e; --accent2:#ffcc67; --rule:#ff6a3e; }
     }
-    header img {
-      max-height: 60px;
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%}
+    body{font-family: Georgia, ui-serif, serif; background:var(--bg); color:var(--ink)}
+    header{background:linear-gradient(to right,var(--accent2),var(--rule)); padding:20px 16px; text-align:center}
+    header img{max-height:56px}
+    header h1{margin:8px 0 0; font-size:clamp(24px,4.5vw,40px)}
+    .hero{padding:14px 16px; text-align:center; color:var(--muted)}
+    .wrap{max-width:var(--maxw); margin:0 auto; padding: 10px 16px 40px}
+    .grid{display:grid; gap:16px; grid-template-columns: repeat(12,1fr)}
+    .card{
+      grid-column: span 12; display:grid; grid-template-columns: 120px 1fr; gap:12px;
+      background:var(--paper); border:2px solid #e67e22; border-radius:var(--radius); padding:12px;
+      align-items: start;
     }
-    nav {
-      background: #d93404;
-      padding: 10px;
-      text-align: center;
+    .thumb{width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid #e67e22;background:#fff6e6}
+    .card h3{margin:0 0 6px}
+    .card p{margin:0; color:var(--muted)}
+    .meta{margin-top:6px; font-size:13px; color:var(--muted)}
+    .actions{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap}
+    .btn{background:var(--accent); color:#fff; text-decoration:none; padding:8px 12px; border-radius:10px; font-weight:700}
+    .btn.secondary{background:#a94a1e}
+    @media (min-width:780px){ .card{grid-column: span 6} }
+    @media (min-width:1060px){ .card{grid-column: span 4} }
+
+    /* Reading popup (native <dialog>) */
+    dialog#reader{
+      width:min(980px, 96vw); height:min(82vh, 800px); border:none; padding:0; border-radius:16px; overflow:hidden;
+      background:var(--paper); box-shadow:0 20px 60px rgba(0,0,0,.45);
     }
-    nav a {
-      color: white;
-      margin: 0 15px;
-      text-decoration: none;
-      font-weight: bold;
+    .r-head{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px; border-bottom:1px solid #e67e22; background:var(--paper)
     }
-    section {
-      padding: 30px;
-    }
-    .hero {
-      text-align: center;
-      background: #fff6e6;
-      padding: 50px 20px;
-    }
-    .hero h1 {
-      font-size: 48px;
-    }
-    .featured {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .dish {
-      margin: 15px;
-      border: 2px solid #e67e22;
-      padding: 15px;
-      background: #fffaf0;
-      border-radius: 10px;
-      max-width: 250px;
-    }
-    .reviews, .updates {
-      background: #fff;
-      border-top: 4px solid #fc4a1a;
-      padding: 20px;
-    }
-    footer {
-      background: #5a2a27;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
-    .btn {
-      background: #d93404;
-      color: white;
-      padding: 10px 20px;
-      text-decoration: none;
-      border-radius: 5px;
-      display: inline-block;
-      margin-top: 20px;
-    }
+    .r-head b{font-size:14px; color:var(--muted)}
+    .r-btn{background:transparent; border:1px solid #e67e22; border-radius:8px; padding:6px 10px; cursor:pointer; color:var(--ink); font-weight:700}
+    .r-body{width:100%; height:calc(100% - 46px); background:#000}
+    .r-body iframe{width:100%; height:100%; border:0; background:#000}
+    dialog::backdrop{background:rgba(0,0,0,.55)}
+    footer{background:#5a2a27; color:#fff; text-align:center; padding:20px}
   </style>
 </head>
 <body>
-
   <header>
-    <img src="logo.png" alt="Stone Grill Logo">
-    <h1>Stone Grill Restaurant</h1>
-    <p><em>Enjoyable and Relaxing</em></p>
+    <img src="/reflections/assets/logo.png" alt="Stone Grill Logo">
+    <h1>Ninox Reflections</h1>
   </header>
+  <div class="hero">All topics in one place. Tap <strong>Read</strong> to open a clean reading mode, or <strong>Download PDF</strong> for print.</div>
 
-  <nav>
-    <a href="#menu">Menu</a>
-    <a href="reflections/assets">Reflections</a>
-    <a href="reflections/assets/Moments of Solitude.pdf">Moments of Solitude</a>
-    <a href="tel:0535680539">Call Us</a>
-    <a href="https://www.facebook.com/stonecitygrill" target="_blank">Facebook</a>
-  </nav>
+  <main class="wrap">
+    <section class="grid">
 
-  <section class="hero">
-    <h1>Deliciously Crafted Moments</h1>
-    <p>Indulge in our favorites: Calamari, Crispy Pata, Pancit Canton, and more!</p>
-    <a class="btn" href="https://m.me/stonecitygrill" target="_blank">Message Us</a>
-  </section>
+      <!-- Multilingual Mind -->
+      <article class="card" data-title="Multilingual Mind">
+        <img loading="lazy" class="thumb" src="/reflections/pages/multilingual-mind/cover.jpg" alt="Multilingual Mind cover" onerror="this.src='/reflections/assets/placeholder.jpg'">
+        <div>
+          <h3>Multilingual Mind — How Language Shapes Thought</h3>
+          <p>How language frames attention, emotion, and decision-making — and how to use that awareness in daily life.</p>
+          <div class="meta">First Edition 2025 • Essay</div>
+          <div class="actions">
+            <a class="btn" data-read="/reflections/pages/multilingual-mind/read.html" data-title="Multilingual Mind — Reading Mode" href="/reflections/pages/multilingual-mind/read.html" target="_blank">Read</a>
+            <a class="btn secondary" href="/reflections/pages/multilingual-mind/multilingual-mind.pdf">Download PDF</a>
+          </div>
+        </div>
+      </article>
 
-  <section id="menu">
-    <h2>Ninox Reflections</h2>
-    <div class="featured">
-      <div class="dish"><strong>Moments of solitude</strong><br>To the seekers who still believe there is more.
-To the ones who carry silence like prayer, and light like memory.
+      <!-- Moments of Solitude -->
+      <article class="card" data-title="Moments of Solitude">
+        <img loading="lazy" class="thumb" src="/reflections/pages/moments-of-solitude/cover.jpg" alt="Moments of Solitude cover" onerror="this.src='/reflections/assets/placeholder.jpg'">
+        <div>
+          <h3>Moments of Solitude — How Silence Teaches</h3>
+          <p>A quiet invitation to stillness and presence. Learn the pace of enough and the gentleness of honest attention.</p>
+          <div class="meta">First Edition 2025 • Short Book</div>
+          <div class="actions">
+            <a class="btn" data-read="/reflections/pages/moments-of-solitude/read.html" data-title="Moments of Solitude — Reading Mode" href="/reflections/pages/moments-of-solitude/read.html" target="_blank">Read</a>
+            <a class="btn secondary" href="/reflections/pages/moments-of-solitude/moments-of-solitude.pdf">Download PDF</a>
+          </div>
+        </div>
+      </article>
 
-May this book remind you that every breath is a conversation with eternity.
-</div>
-      <div class="dish"><strong>Crispy Pata</strong><br>Crunchy, juicy pork knuckle delight</div>
-      <div class="dish"><strong>Pancit Canton</strong><br>Savory stir-fried noodles</div>
-      <div class="dish"><strong>The Triune Reflection</strong><br>To every seeker who has questioned the light, yet still walked toward it.</div>
+      <!-- The Triune Reflection -->
+      <article class="card" data-title="The Triune Reflection">
+        <img loading="lazy" class="thumb" src="/reflections/pages/the-triune-reflection/cover.jpg" alt="The Triune Reflection cover" onerror="this.src='/reflections/assets/placeholder.jpg'">
+        <div>
+          <h3>The Triune Reflection</h3>
+          <p>For every seeker who questioned the light yet walked toward it—on unity, devotion, and becoming.</p>
+          <div class="meta">Reflection • Essay</div>
+          <div class="actions">
+            <a class="btn" data-read="/reflections/pages/the-triune-reflection/read.html" data-title="The Triune Reflection — Reading Mode" href="/reflections/pages/the-triune-reflection/read.html" target="_blank">Read</a>
+            <a class="btn secondary" href="/reflections/pages/the-triune-reflection/the-triune-reflection.pdf">Download PDF</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Between Nothing and Space -->
+      <article class="card" data-title="Between Nothing and Space">
+        <img loading="lazy" class="thumb" src="/reflections/pages/between-nothing-and-space/cover.jpg" alt="Between Nothing and Space cover" onerror="this.src='/reflections/assets/placeholder.jpg'">
+        <div>
+          <h3>Between Nothing and Space</h3>
+          <p>An essay on emptiness, meaning, and the interval where action begins.</p>
+          <div class="meta">Reflection • Essay</div>
+          <div class="actions">
+            <a class="btn" data-read="/reflections/pages/between-nothing-and-space/read.html" data-title="Between Nothing and Space — Reading Mode" href="/reflections/pages/between-nothing-and-space/read.html" target="_blank">Read</a>
+            <a class="btn secondary" href="/reflections/pages/between-nothing-and-space/between-nothing-and-space.pdf">Download PDF</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- The Mirror of Worship -->
+      <article class="card" data-title="The Mirror of Worship">
+        <img loading="lazy" class="thumb" src="/reflections/pages/mirror-of-worship/cover.jpg" alt="The Mirror of Worship cover" onerror="this.src='/reflections/assets/placeholder.jpg'">
+        <div>
+          <h3>The Mirror of Worship</h3>
+          <p>On devotion as reflection — how what we honor, we become.</p>
+          <div class="meta">Reflection • Essay</div>
+          <div class="actions">
+            <a class="btn" data-read="/reflections/pages/mirror-of-worship/read.html" data-title="The Mirror of Worship — Reading Mode" href="/reflections/pages/mirror-of-worship/read.html" target="_blank">Read</a>
+            <a class="btn secondary" href="/reflections/pages/mirror-of-worship/mirror-of-worship.pdf">Download PDF</a>
+          </div>
+        </div>
+      </article>
+
+    </section>
+  </main>
+
+  <!-- Popup Reader -->
+  <dialog id="reader">
+    <div class="r-head">
+      <b id="rTitle">Reading Mode</b>
+      <div>
+        <a id="openInTab" class="r-btn" href="#" target="_blank" rel="noopener">Open in new tab ↗</a>
+        <button class="r-btn" onclick="document.getElementById('reader').close()">Close ✕</button>
+      </div>
     </div>
-  </section>
-
-  <section id="updates" class="updates">
-    <h2>Latest Updates</h2>
-    <p>[Post pictures, videos, events and promos here...]</p>
-  </section>
-
-  <section id="reviews" class="reviews">
-    <h2>Customer Reviews</h2>
-    <p>[Add space or script for live reviews, testimonials, or ratings]</p>
-  </section>
+    <div class="r-body">
+      <iframe id="rFrame" title="Reading Mode"></iframe>
+    </div>
+  </dialog>
 
   <footer>
-    <p>Contact us at <a href="mailto:stonegrill2014@gmail.com">stonegrill2014@gmail.com</a> or call 053 568 0539</p>
-    <p>&copy; 2025 Stone Grill Restaurant</p>
+    © 2025 Stone Grill Restaurant · <a href="tel:0535680539" style="color:#fff; font-weight:700">Call 053 568 0539</a>
   </footer>
 
+  <script>
+    // Light popup logic with graceful fallback
+    const dlg = document.getElementById('reader');
+    const frame = document.getElementById('rFrame');
+    const rTitle = document.getElementById('rTitle');
+    const btns = document.querySelectorAll('[data-read]');
+    const openInTab = document.getElementById('openInTab');
+
+    function openReader(url, title){
+      if (!dlg.showModal){ window.open(url, '_blank'); return; } // fallback
+      rTitle.textContent = title || 'Reading Mode';
+      frame.src = url;
+      openInTab.href = url;
+      dlg.showModal();
+    }
+    btns.forEach(b=>{
+      b.addEventListener('click', (e)=>{
+        // use popup by default; allow long-press “open in new tab” on mobile
+        e.preventDefault();
+        openReader(b.getAttribute('data-read'), b.getAttribute('data-title'));
+      })
+    });
+  </script>
 </body>
 </html>
