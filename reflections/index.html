@@ -7,29 +7,82 @@
   <meta name="description" content="All reflections in one page — read or download.">
   <link rel="icon" href="/reflections/IMG_0688.png">
   <style>
-    /* Buttons under the cover */
-.cover-actions {
-  display: flex;
-  flex-direction: column;     /* stack them vertically */
-  align-items: center;
-  gap: 6px;                   /* small space between buttons */
+    /* --- Fix full card layout --- */
+.card {
+  display: grid;
+  grid-template-columns: 180px 1fr; /* left column = cover area, right = text */
+  gap: 20px;
+  align-items: start;
+  position: relative;
 }
 
-/* Smaller, balanced button style */
+/* left side = cover + buttons */
+.card .left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* portrait cover image */
+.book-cover {
+  width: 140px;
+  height: 210px;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  background: #fff6e6;
+  margin-bottom: 10px;
+}
+
+/* read + download buttons stacked neatly */
+.cover-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .cover-actions .btn {
+  display: inline-block;
   background: var(--accent);
   color: #fff;
   text-decoration: none;
-  padding: 6px 10px;          /* smaller padding */
+  padding: 6px 12px;
   border-radius: 8px;
   font-weight: 600;
   font-size: 14px;
-  width: 90px;                /* narrower width */
+  min-width: 100px;
   text-align: center;
 }
+.cover-actions .btn.secondary { background: #a94a1e; }
 
-.cover-actions .btn.secondary {
-  background: #a94a1e;
+/* right side = text only */
+.card .right {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-width: 0;            /* prevents content overflow */
+  overflow: hidden;        /* ensures no overlap */
+}
+
+/* ensure text wraps nicely */
+.card h3, .card p {
+  margin: 0 0 8px 0;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* responsive: stack vertically on small screens */
+@media (max-width: 700px) {
+  .card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .card .left, .card .right {
+    align-items: center;
+  }
 }
     :root{
       --bg:#fff4ea; --paper:#fffaf0; --ink:#5a2a27; --muted:#7b514d;
@@ -105,7 +158,7 @@
       </article>
 
       <!-- Moments of Solitude -->
-      <article class="card">
+     <article class="card">
   <div class="left">
     <img class="book-cover"
          src="/reflections/pages/moments-of-solitude/moments-of-solitude.png"
