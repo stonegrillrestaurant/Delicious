@@ -1,1 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The Mirror of Worship — Ninox Antolihao</title>
+  <meta name="description" content="A clear, practical reflection on worship—what it does to us, and how it shapes what we become." />
+  <link rel="icon" href="/reflections/assets/favicon.ico" />
 
+  <style>
+    /* ===== Palette (warm, bookish) ===== */
+    :root{
+      --bg:#1f1815;        /* page background */
+      --paper:#2a211e;     /* reading surface */
+      --ink:#f3e6dd;       /* main text */
+      --muted:#c9b0a4;     /* meta text */
+      --accent:#ffb873;    /* soft accent */
+      --rule:#6b5248;      /* divider */
+      --link:#ffd6a8;      /* links */
+    }
+
+    /* ===== Base ===== */
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font: 16px/1.7 "Georgia", "Times New Roman", Times, serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    a{color:var(--link); text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .page{
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px 96px;
+    }
+    .paper{
+      background: var(--paper);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+      overflow:hidden;
+    }
+
+    /* ===== Cover ===== */
+    .cover{
+      display:grid;
+      grid-template-columns: 140px 1fr;
+      gap:16px;
+      padding: clamp(22px,4vw,44px);
+      border-bottom: 1px dashed var(--rule);
+      align-items:center;
+    }
+    .cover img{
+      width:100%; height:auto; border-radius:10px; display:block;
+      background:#00000020;
+    }
+    .cover h1{
+      font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+      line-height:1.15; margin:0 0 .25rem; letter-spacing:.02em;
+    }
+    .cover .meta{
+      color: var(--muted); font-size:.95rem; margin:.25rem 0 .75rem;
+    }
+    .actions{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.25rem}
+    .btn{
+      display:inline-block; padding:.55rem .9rem; border:1px solid var(--rule);
+      border-radius:8px; background: rgba(255,255,255,.03);
+      line-height:1; font-size:.95rem;
+    }
+
+    @media (max-width:720px){
+      .cover{ grid-template-columns: 1fr; text-align:center; }
+      .actions{ justify-content:center; }
+      .cover img{ max-width: 220px; margin:0 auto; }
+    }
+
+    /* ===== Header (inside article) ===== */
+    header.article{
+      text-align:center;
+      padding: 0 clamp(22px,4vw,44px);
+      margin-top: 1.1rem;
+    }
+    header.article .kicker{
+      color: var(--muted);
+      letter-spacing:.08em; font-variant: small-caps; font-size:.9rem;
+    }
+
+    /* ===== Typography ===== */
+    .content{ padding: 0 clamp(22px,4vw,44px) clamp(28px,6vw,56px); }
+
+    p{margin: .9rem 0;}
+    .lead{font-size:1.1rem}
+    .dropcap:first-letter{
+      float:left; font-size:3rem; line-height:1; padding-right:.28rem;
+      margin-top:.2rem; font-weight:700; color: var(--accent);
+    }
+    em{font-style:italic}
+    strong{font-weight:700}
+
+    blockquote{
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+      border-left: 3px solid var(--accent);
+      background: rgba(255,255,255,.03);
+      font-style: italic;
+    }
+
+    .rule{
+      display:flex; align-items:center; gap:.75rem;
+      margin: 1.4rem 0 1.1rem; color: var(--muted);
+    }
+    .rule::before, .rule::after{ content:""; flex:1; height:1px; background: var(--rule); }
+    .rule span{white-space:nowrap; letter-spacing:.12em; font-variant:small-caps; font-size:.9rem}
+
+    .divider{ text-align:center; color:var(--muted); margin:1.1rem 0; letter-spacing:.35em }
+    .divider::before{ content:"— ❖ —"; }
+
+    h2{
+      font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+      margin: 1.2rem 0 .4rem; line-height:1.25; letter-spacing:.01em;
+    }
+    h3{
+      font-size: 1.05rem; letter-spacing:.06em; font-variant: small-caps;
+      color: var(--muted); margin:.8rem 0 .2rem;
+    }
+
+    .highlight{
+      background: linear-gradient(transparent 55%, rgba(255,184,115,.28) 55%);
+      padding: 0 .15rem;
+    }
+    .aside{ color: var(--muted); font-style: italic; margin:.2rem 0 1rem; }
+
+    /* ===== Footer ===== */
+    footer{
+      padding: 0 clamp(22px,4vw,44px) clamp(22px,4vw,44px);
+      margin-bottom: 24px;
+      color: var(--muted); font-size:.95rem;
+      display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+      border-top: 1px dashed var(--rule); padding-top: 10px;
+    }
+
+    /* ===== Print (white paper, black ink) ===== */
+    @media print{
+      :root{ --paper:#ffffff; --ink:#111111; --muted:#666; --rule:#ccc; --accent:#aa5a00; --link:#0044aa; }
+      body{ background:#fff; color:#111; }
+      .paper{ box-shadow:none; border:1px solid #eee; border-radius:0; }
+      .page{ padding: 0; }
+      a{ text-decoration:none }
+      .btn{ border-color:#bbb; background:#fff; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <article class="paper" role="article">
+
+      <!-- ===== Cover (image + title + actions) ===== -->
+      <section class="cover">
+        <a href="/reflections/pages/mirror-of-worship/cover.jpg" title="Open cover">
+          <img class="cover"
+               src="/reflections/pages/mirror-of-worship/cover.jpg"
+               alt="The Mirror of Worship — cover"
+               onerror="this.src='/reflections/assets/cover-fallback.png'">
+        </a>
+
+        <div>
+          <h1><a href="/reflections/pages/mirror-of-worship/mirror-of-worship.pdf" title="Open PDF">The Mirror of Worship</a></h1>
+          <div class="meta">By <strong>Ninox Antolihao</strong> • Stone Grill Press • First Edition — 2025</div>
+
+          <p class="aside">What we worship shapes us. The mirror isn’t out there—it’s in who we become when we bow.</p>
+
+          <div class="actions">
+            <a class="btn" href="/reflections/pages/mirror-of-worship/read.html">Read Online</a>
+            <a class="btn" href="/reflections/pages/mirror-of-worship/mirror-of-worship.pdf" download>Download PDF</a>
+            <a class="btn" href="/reflections/pages/mirror-of-worship/mirror-of-worship.epub" download>Download EPUB</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Article header ===== -->
+      <header class="article">
+        <div class="kicker">Reflection</div>
+        <blockquote>“We do not merely worship what is great—we become what we treat as great.”</blockquote>
+      </header>
+
+      <!-- ===== Main content ===== -->
+      <section class="content" id="content">
+        <div class="rule"><span>Introduction</span></div>
+        <p class="lead dropcap">
+          Worship is attention, affection, and allegiance pointed at what we call “most important.” Whether to God, glory, money, beauty, or self—worship trains the heart to resemble its object. In time, it becomes a mirror.
+        </p>
+        <p>
+          This reflection is not about arguing who deserves worship, but <em>what worship does to a human being</em>. It asks a simple, demanding question: <span class="highlight">If your life slowly imitates what you adore, what are you becoming?</span>
+        </p>
+
+        <div class="divider"></div>
+
+        <h2>Part I — What Is Worship?</h2>
+        <p>
+          Worship is not limited to rituals. It is daily orientation. What you think about first in the morning and last at night, what you cannot bear to lose, what defines success or failure for you—that is your altar.
+        </p>
+        <p>
+          In practice, worship is three movements:
+        </p>
+        <p><strong>Attention</strong> — where the mind rests.</p>
+        <p><strong>Affection</strong> — what the heart delights in.</p>
+        <p><strong>Allegiance</strong> — what the will serves when it costs.</p>
+        <blockquote>
+          The secret is simple: the object of worship becomes the template of the soul.
+        </blockquote>
+
+        <h2>Part II — The Mirror Effect</h2>
+        <p>
+          We are impressionable. Fix your gaze on anger long enough, and your speech hardens. Fix it on mercy, and your hands open. Our inner life copies the patterns we repeatedly honor.
+        </p>
+        <p>
+          This is why worship is powerful: it is not just praise; it is <em>formation</em>. It bends habits, calibrates conscience, and rewires what we call “normal.”
+        </p>
+        <p class="aside">You move toward what you magnify.</p>
+
+        <h3>Healthy Worship Looks Like</h3>
+        <p>• <strong>Truth</strong> over convenience, even when it corrects me.</p>
+        <p>• <strong>Humility</strong> that remembers I am not the center.</p>
+        <p>• <strong>Compassion</strong> that turns awe into service.</p>
+        <p>• <strong>Joy</strong> that does not require winning to be alive.</p>
+
+        <h3>Unhealthy Worship Feels Like</h3>
+        <p>• <strong>Idolatry</strong>: when good things demand ultimate loyalty.</p>
+        <p>• <strong>Fear</strong>: when loss of the idol feels like loss of self.</p>
+        <p>• <strong>Contempt</strong>: when outsiders become enemies, not neighbors.</p>
+
+        <div class="divider"></div>
+
+        <h2>Part III — The Practice</h2>
+        <p>
+          You don’t change by trying once—you change by <em>training</em> often. These simple practices polish the mirror.
+        </p>
+        <p><strong>1) Daily Aim:</strong> Name in one sentence what is “worthy” today. Keep it visible.</p>
+        <p><strong>2) Honest Inventory:</strong> Ask, “What did I actually adore with my time, money, and attention?”</p>
+        <p><strong>3) Awe to Action:</strong> Let admiration become a small act of service within 24 hours.</p>
+        <p><strong>4) Silence and Breath:</strong> A minute of quiet re-centers the heart on what matters more than noise.</p>
+        <p><strong>5) Community:</strong> Walk with people who love what you want to become.</p>
+
+        <div class="divider"></div>
+
+        <h2>Part IV — The Mirror of Worship</h2>
+        <p>
+          Stand before the mirror and ask:
+        </p>
+        <p>• What am I becoming like?<br>
+           • Who benefits from my devotion?<br>
+           • Does my worship make me larger in love—or only larger in ego?</p>
+        <blockquote>
+          True worship does not shrink the world to “me and mine.” It enlarges the self until it can hold others without fear.
+        </blockquote>
+        <p>
+          If worship leaves you proud, suspicious, and easily offended, the mirror is cracked. If it leaves you honest, grounded, and brave in kindness, the mirror is clear.
+        </p>
+
+        <div class="divider"></div>
+
+        <h2>Reflection — A Short Litany</h2>
+        <p><em>What I give my best to, I become.</em></p>
+        <p><em>What I look at long, I learn to love.</em></p>
+        <p><em>What I call “worthy,” I slowly wear.</em></p>
+        <p><span class="highlight">May my worship make me more human, not less.</span></p>
+
+        <div class="rule"><span>Afterword</span></div>
+        <p>
+          You do not have to force devotion. You can choose direction. Start small. Aim your attention toward what you would be proud to resemble in ten years. The mirror will do the rest.
+        </p>
+
+        <div class="rule"><span>About the Author</span></div>
+        <p>
+          <strong>Ninox Antolihao</strong> is a Filipino writer-restaurateur exploring the meeting point of science, spirit, and daily life. His reflections seek clear language, calm courage, and practical wonder.
+        </p>
+      </section>
+
+      <!-- ===== Footer ===== -->
+      <footer>
+        <div>© 2025 Stone Grill Press • “Enjoyable and Relaxing”</div>
+        <div>First Edition — 2025</div>
+      </footer>
+    </article>
+  </main>
+</body>
+</html>
