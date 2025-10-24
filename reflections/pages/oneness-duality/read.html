@@ -26,6 +26,7 @@
   background: #e65c2c;       /* Darker orange on hover */
   transform: translateY(-2px);
 }
+
 body{
   font-family:'Georgia',serif;
   background:#fffdf9;
@@ -34,10 +35,24 @@ body{
   line-height:1.8;
   padding:40px 10%;
 }
-header{text-align:center;margin-bottom:40px;}
-header h1{font-size:2.2rem;margin-bottom:8px;}
+
+/* 🔒 Sticky header so it stays visible while scrolling */
+header{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background:#fffdf9;
+  text-align:center;
+  padding-top:18px;
+  padding-bottom:14px;
+  margin-bottom:40px;
+  border-bottom:1px solid #e6d2b5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+header h1{font-size:2.2rem;margin-bottom:8px;margin-top:8px;}
 header h2{font-size:1.2rem;font-weight:normal;color:#7b5f54;margin:4px 0;}
 header p{margin:2px 0;color:#9c7e74;}
+
 h3{margin-top:40px;text-align:center;border-top:1px solid #e6d2b5;
     padding-top:20px;color:#5a392e;font-weight:bold;}
 p{text-align:justify;margin:14px 0;font-size:1.05rem;}
@@ -67,15 +82,17 @@ footer{
 </style>
 </head>
 <body>
+
 <header>
-<div class="back-button">
-  <a href="/reflections/index.html">← Back to Reflections</a>
-</div>
+  <div class="back-button">
+    <a href="/reflections/index.html">← Back to Reflections</a>
+  </div>
   <h1>Oneness & Duality</h1>
   <h2>The Space Where Duality Acts</h2>
   <p>First Edition -- 2025</p>
 </header>
 
+<main id="readContent">
 <section>
 <h3>A Journey from Duality to Oneness</h3>
 <p>Today's conversation charted a fascinating course through philosophy, theology, and psychology, ultimately converging on a single, profound idea: that duality--the perceived separation between the self and the world--is a tool of consciousness, and its misidentification as ultimate reality is the root of human suffering</p>
@@ -102,8 +119,6 @@ footer{
 : All the world's problems--from ethical failures to mental distress--are not inherent to existence but are a consequence of a lack of balance, where the dualistic self-focus of the "I" overrides the unifying truth of Oneness.</p>
 
 <div class="divider">-- ❖ --</div>
-
-
 
 <h3>ONENESS AS THE GROUND OF BEING</h3>
 <p>Behind every motion lies stillness. Behind every form, the formless. Oneness is that silent field from which all dualities arise and into which all dissolve. It is the space in which Duality acts, just as silence is the space in which sound appears.</p>
@@ -139,7 +154,6 @@ footer{
 
 <blockquote>"You are not a drop in the ocean; you are the ocean looking at itself through a drop." -- Ninox Antolihao</blockquote>
 
-
 <div class="divider">-- ❖ --</div>
 
 <h3>ABOUT THE AUTHOR</h3>
@@ -149,10 +163,12 @@ footer{
 <blockquote>"Awareness is the bridge between Oneness and Duality." -- Ninox Antolihao</blockquote>
 
 </section>
+</main>
 
 <footer>
   <p>Stone Grill Press · Leyte, Philippines · © 2025 Ninox Antolihao<br>First Edition -- 2025</p>
 </footer>
+
 <!-- ===== Floating TTS Reader (drop-in) ===== -->
 <style>
   /* Floating button */
@@ -277,7 +293,6 @@ footer{
   let idx = -1;
   let speaking = false;
   let paused = false;
-  let currentSelOnly = false;
 
   // ---- UI wiring
   el.fab.onclick = ()=> { el.panel.style.display = (el.panel.style.display==='block'?'none':'block'); };
@@ -291,16 +306,8 @@ footer{
   el.readSel.onclick = ()=> begin(true);
   el.readAll.onclick = ()=> begin(false);
 
-  el.rate.oninput = ()=>{
-    localStorage.setItem('ttsRate', el.rate.value);
-    if(speaking && !paused){
-      // rate applies to next utterance
-    }
-  };
-  el.voice.onchange = ()=>{
-    localStorage.setItem('ttsVoiceName', el.voice.value);
-    // applies on next utterance
-  };
+  el.rate.oninput = ()=>{ localStorage.setItem('ttsRate', el.rate.value); };
+  el.voice.onchange = ()=>{ localStorage.setItem('ttsVoiceName', el.voice.value); };
 
   // Persisted settings
   const savedRate = localStorage.getItem('ttsRate');
@@ -316,7 +323,6 @@ footer{
       opt.textContent = `${v.name} — ${v.lang}`;
       el.voice.appendChild(opt);
     });
-    // pick saved voice or a sensible default (en-PH or en-* or first)
     const saved = localStorage.getItem('ttsVoiceName');
     let def = voices.find(v=>v.name===saved)
            || voices.find(v=>/^en-PH/i.test(v.lang))
@@ -325,7 +331,6 @@ footer{
     if(def){ el.voice.value = def.name; }
   }
   loadVoices();
-  // some browsers fire this later
   if (typeof speechSynthesis !== 'undefined') {
     speechSynthesis.onvoiceschanged = loadVoices;
   }
@@ -386,7 +391,6 @@ footer{
 
   // ---- Reading flows
   function begin(selectionOnly){
-    currentSelOnly = !!selectionOnly;
     const scope = selectionOnly && window.getSelection && !window.getSelection().isCollapsed
       ? rangeContainer(window.getSelection())
       : area;
@@ -483,22 +487,21 @@ footer{
   }
 
   function updateButtons(){
-    el.play.disabled = speaking && !paused;   // playing -> disable Play
-    el.pause.disabled = !speaking || paused;
-    el.stop.disabled = !speaking;
-    el.prev.disabled = !(speaking && idx>0);
-    el.next.disabled = !(speaking && idx<chunks.length-1);
+    const playDisabled = speaking && !paused;
+    document.getElementById('ttsPlay').disabled = playDisabled;
+    document.getElementById('ttsPause').disabled = !speaking || paused;
+    document.getElementById('ttsStop').disabled = !speaking;
+    document.getElementById('ttsPrev').disabled = !(speaking && idx>0);
+    document.getElementById('ttsNext').disabled = !(speaking && idx<chunks.length-1);
   }
 
   // Utility: get a Node that contains current selection (or area as fallback)
   function rangeContainer(sel){
     try{
       const range = sel.getRangeAt(0).cloneRange();
-      // Create a wrapper around the selection to isolate splitting
       const wrapper = document.createElement('span');
       wrapper.setAttribute('data-tts-scope','1');
       range.surroundContents(wrapper);
-      // Expand wrapper to parent block if selection is within one
       return wrapper;
     }catch(e){
       return area;
