@@ -312,5 +312,360 @@
       </footer>
     </article>
   </main>
+  <!-- ===== Floating TTS Reader (drop-in) ===== -->
+<style>
+  /* Floating button */
+  #ttsFab{
+    position:fixed; right:18px; bottom:18px; z-index:9999;
+    width:52px; height:52px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--accent, #ff6a3d); color:#000; border:none; cursor:pointer;
+    box-shadow:0 10px 28px rgba(0,0,0,.35); font-weight:700;
+  }
+  #ttsFab:active{ transform:translateY(1px); }
+
+  /* Panel */
+  #ttsPanel{
+    position:fixed; right:18px; bottom:84px; z-index:9999;
+    width:320px; max-width:90vw;
+    background:var(--paper, #29211e); color:var(--ink, #f3e6dd);
+    border:1px solid #3a2f2b; border-radius:14px; overflow:hidden;
+    box-shadow:0 12px 36px rgba(0,0,0,.4);
+    display:none;
+  }
+  #ttsHead{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 12px; background:linear-gradient(180deg,#2e2522,#231b18);
+    border-bottom:1px solid #3a2f2b;
+  }
+  #ttsHead strong{ font-size:14px; letter-spacing:.3px; }
+  #ttsClose{ background:none; border:none; color:inherit; font-size:18px; cursor:pointer; }
+
+  #ttsBody{ padding:12px; display:grid; gap:10px; }
+  #ttsControls{ display:flex; gap:8px; flex-wrap:wrap; }
+  #ttsControls button{
+    flex:1 1 auto; min-width:78px;
+    padding:8px 10px; border-radius:10px; border:1px solid #4a3b35; background:#2d231f;
+    color:inherit; cursor:pointer;
+  }
+  #ttsControls button:disabled{ opacity:.5; cursor:not-allowed; }
+  #ttsRow{ display:grid; grid-template-columns:1fr 110px; gap:8px; }
+  #ttsBody select, #ttsBody input[type="range"]{
+    width:100%; background:#211a17; color:inherit; border:1px solid #4a3b35; border-radius:8px; padding:8px;
+  }
+  #ttsNote{
+    font-size:12px; color:var(--muted,#c9b0a4); line-height:1.4;
+    border-top:1px dashed #3a2f2b; padding-top:8px;
+  }
+
+  /* Sentence highlight */
+  .tts-current{
+    background:rgba(255,106,61,.22);
+    box-shadow:0 0 0 2px rgba(255,106,61,.15) inset;
+    border-radius:6px;
+    transition:background .2s ease;
+  }
+</style>
+
+<button id="ttsFab" aria-label="Listen">▶︎</button>
+
+<div id="ttsPanel" role="dialog" aria-label="Text to Speech Reader">
+  <div id="ttsHead">
+    <strong>Reader — ❖ —</strong>
+    <button id="ttsClose" aria-label="Close">×</button>
+  </div>
+  <div id="ttsBody">
+    <div id="ttsRow">
+      <select id="ttsVoice" aria-label="Voice"></select>
+      <label style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;opacity:.85;white-space:nowrap;">Speed</span>
+        <input id="ttsRate" type="range" min="0.7" max="1.4" step="0.05" value="1" />
+      </label>
+    </div>
+
+    <div id="ttsControls">
+      <button id="ttsPlay">Play</button>
+      <button id="ttsPause" disabled>Pause</button>
+      <button id="ttsStop" disabled>Stop</button>
+      <button id="ttsPrev" disabled>◀︎ Prev</button>
+      <button id="ttsNext" disabled>Next ▶︎</button>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button id="ttsReadSel" style="flex:1;">Read Selection</button>
+      <button id="ttsReadAll" style="flex:1;">Read All</button>
+    </div>
+
+    <div id="ttsNote">
+      Tip: On iPhone/iPad, tap <em>Play</em> once to unlock audio (Safari requires a user gesture).
+      The reader highlights each sentence as it speaks.
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const area = document.querySelector('#readContent') || document.querySelector('main') || document.body;
+  const synth = window.speechSynthesis;
+  const supportsTTS = !!synth;
+
+  const el = {
+    fab: document.getElementById('ttsFab'),
+    panel: document.getElementById('ttsPanel'),
+    close: document.getElementById('ttsClose'),
+    voice: document.getElementById('ttsVoice'),
+    rate: document.getElementById('ttsRate'),
+    play: document.getElementById('ttsPlay'),
+    pause: document.getElementById('ttsPause'),
+    stop: document.getElementById('ttsStop'),
+    prev: document.getElementById('ttsPrev'),
+    next: document.getElementById('ttsNext'),
+    readSel: document.getElementById('ttsReadSel'),
+    readAll: document.getElementById('ttsReadAll'),
+  };
+
+  if(!supportsTTS){
+    el.fab.style.display='none';
+    console.warn('Speech Synthesis not supported in this browser.');
+    return;
+  }
+
+  // State
+  let voices = [];
+  let chunks = [];       // [{el:span, text:string}]
+  let idx = -1;
+  let speaking = false;
+  let paused = false;
+  let currentSelOnly = false;
+
+  // ---- UI wiring
+  el.fab.onclick = ()=> { el.panel.style.display = (el.panel.style.display==='block'?'none':'block'); };
+  el.close.onclick = ()=> { el.panel.style.display='none'; };
+
+  el.play.onclick = startOrResume;
+  el.pause.onclick = pauseSpeech;
+  el.stop.onclick = stopSpeech;
+  el.prev.onclick = ()=> jump(-1);
+  el.next.onclick = ()=> jump(+1);
+  el.readSel.onclick = ()=> begin(true);
+  el.readAll.onclick = ()=> begin(false);
+
+  el.rate.oninput = ()=>{
+    localStorage.setItem('ttsRate', el.rate.value);
+    if(speaking && !paused){
+      // rate applies to next utterance
+    }
+  };
+  el.voice.onchange = ()=>{
+    localStorage.setItem('ttsVoiceName', el.voice.value);
+    // applies on next utterance
+  };
+
+  // Persisted settings
+  const savedRate = localStorage.getItem('ttsRate');
+  if(savedRate) el.rate.value = savedRate;
+
+  // ---- Voice loading
+  function loadVoices(){
+    voices = synth.getVoices().sort((a,b)=> (a.lang||'').localeCompare(b.lang||'') || (a.name||'').localeCompare(b.name||''));
+    el.voice.innerHTML = '';
+    voices.forEach(v=>{
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = `${v.name} — ${v.lang}`;
+      el.voice.appendChild(opt);
+    });
+    // pick saved voice or a sensible default (en-PH or en-* or first)
+    const saved = localStorage.getItem('ttsVoiceName');
+    let def = voices.find(v=>v.name===saved)
+           || voices.find(v=>/^en-PH/i.test(v.lang))
+           || voices.find(v=>/^en-/i.test(v.lang))
+           || voices[0];
+    if(def){ el.voice.value = def.name; }
+  }
+  loadVoices();
+  // some browsers fire this later
+  if (typeof speechSynthesis !== 'undefined') {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  // ---- Prepare content into sentence spans
+  function splitToSentences(root){
+    // Clear previous wrapping
+    root.querySelectorAll('span[data-tts]').forEach(s=>{
+      const t = document.createTextNode(s.textContent);
+      s.replaceWith(t);
+    });
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node){
+        const t = (node.nodeValue||'').replace(/\s+/g,' ');
+        return t.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+
+    const nodes = [];
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+
+    const sentenceEnd = /([^\s].*?[\.!\?…]+)(\s+|$)/g; // simple sentence chunker
+
+    nodes.forEach(node=>{
+      const text = node.nodeValue.replace(/\s+/g,' ');
+      let lastIndex = 0;
+      const frag = document.createDocumentFragment();
+      let match;
+
+      while ((match = sentenceEnd.exec(text)) !== null) {
+        const before = text.slice(lastIndex, match.index);
+        if(before.trim()){
+          frag.appendChild(spanFor(before));
+        }
+        frag.appendChild(spanFor(match[1]));
+        lastIndex = sentenceEnd.lastIndex;
+      }
+      const tail = text.slice(lastIndex);
+      if(tail.trim()){
+        frag.appendChild(spanFor(tail));
+      }
+      node.parentNode.replaceChild(frag, node);
+    });
+
+    function spanFor(t){
+      const s = document.createElement('span');
+      s.textContent = t.trim() + ' ';
+      s.setAttribute('data-tts','1');
+      return s;
+    }
+  }
+
+  function harvestChunks(scope){
+    chunks = Array.from(scope.querySelectorAll('span[data-tts]')).map(s=>({el:s, text:s.textContent.trim()}))
+                   .filter(o=>o.text && o.text.length>0);
+  }
+
+  // ---- Reading flows
+  function begin(selectionOnly){
+    currentSelOnly = !!selectionOnly;
+    const scope = selectionOnly && window.getSelection && !window.getSelection().isCollapsed
+      ? rangeContainer(window.getSelection())
+      : area;
+
+    splitToSentences(scope);
+    harvestChunks(scope);
+
+    if(chunks.length===0){
+      alert('No readable text found.');
+      return;
+    }
+    idx = 0;
+    speakCurrent();
+    updateButtons();
+  }
+
+  function startOrResume(){
+    if(!speaking){
+      // if nothing queued, treat as "read selection" if user has one, else read all
+      const hasSel = window.getSelection && !window.getSelection().isCollapsed;
+      begin(hasSel);
+      return;
+    }
+    if(paused){
+      synth.resume();
+      paused = false;
+      updateButtons();
+    }
+  }
+
+  function pauseSpeech(){
+    if(speaking && !paused){
+      synth.pause();
+      paused = true;
+      updateButtons();
+    }
+  }
+
+  function stopSpeech(){
+    synth.cancel();
+    clearHighlight();
+    speaking = false;
+    paused = false;
+    idx = -1;
+    updateButtons();
+  }
+
+  function jump(delta){
+    if(!speaking) return;
+    synth.cancel();
+    clearHighlight();
+    idx = Math.max(0, Math.min(chunks.length-1, idx + delta));
+    speakCurrent();
+  }
+
+  function speakCurrent(){
+    if(idx<0 || idx>=chunks.length) { stopSpeech(); return; }
+
+    const rate = parseFloat(el.rate.value || '1') || 1;
+    const voice = voices.find(v=>v.name===el.voice.value) || null;
+
+    const {el:node, text} = chunks[idx];
+    clearHighlight();
+    node.classList.add('tts-current');
+    node.scrollIntoView({block:'center', behavior:'smooth'});
+
+    const utt = new SpeechSynthesisUtterance(text);
+    if(voice) utt.voice = voice;
+    utt.rate = rate;
+
+    utt.onend = ()=>{
+      node.classList.remove('tts-current');
+      idx++;
+      if(idx < chunks.length){
+        // slight gap to avoid overlap on some browsers
+        setTimeout(speakCurrent, 60);
+      }else{
+        stopSpeech();
+      }
+    };
+    utt.onerror = (e)=> {
+      console.warn('TTS error:', e);
+      stopSpeech();
+    };
+
+    speaking = true;
+    paused = false;
+    updateButtons();
+    synth.speak(utt);
+  }
+
+  function clearHighlight(){
+    document.querySelectorAll('.tts-current').forEach(n=> n.classList.remove('tts-current'));
+  }
+
+  function updateButtons(){
+    el.play.disabled = speaking && !paused;   // playing -> disable Play
+    el.pause.disabled = !speaking || paused;
+    el.stop.disabled = !speaking;
+    el.prev.disabled = !(speaking && idx>0);
+    el.next.disabled = !(speaking && idx<chunks.length-1);
+  }
+
+  // Utility: get a Node that contains current selection (or area as fallback)
+  function rangeContainer(sel){
+    try{
+      const range = sel.getRangeAt(0).cloneRange();
+      // Create a wrapper around the selection to isolate splitting
+      const wrapper = document.createElement('span');
+      wrapper.setAttribute('data-tts-scope','1');
+      range.surroundContents(wrapper);
+      // Expand wrapper to parent block if selection is within one
+      return wrapper;
+    }catch(e){
+      return area;
+    }
+  }
+
+})();
+</script>
+<!-- ===== /Floating TTS Reader ===== -->
 </body>
 </html>
