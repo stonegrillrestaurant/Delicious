@@ -1,198 +1,254 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- ========== META & HEAD ========== -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Solitude Reflections — Stone Grill</title>
   <meta name="description" content="All reflections in one page — read or download.">
   <link rel="icon" href="/reflections/assets/favicon.ico">
-    <meta property="og:image" content="https://stonegrillresto.net/reflections/Untitled.png">
-<meta property="og:image:width" content="240">
-<meta property="og:image:height" content="371">
-<meta property="og:image:alt" content="A Journey from Duality to Oneness">
+
+  <!-- Social share preview (OG) -->
+  <meta property="og:image" content="https://stonegrillresto.net/reflections/Untitled.png">
+  <meta property="og:image:width" content="240">
+  <meta property="og:image:height" content="371">
+  <meta property="og:image:alt" content="A Journey from Duality to Oneness">
+
+  <!-- ========== GLOBAL ASSETS ========== -->
   <link rel="stylesheet" href="/reflections/assets/reflections.css">
-<script src="/reflections/assets/audio-system.js"></script>
+  <script src="/reflections/assets/audio-system.js"></script>
 
-
+  <!-- ========== PAGE STYLES (scoped) ========== -->
   <style>
-  
-  .audio-section{text-align:center;margin:1.5em 0;}
-.audio-label{font-size:1.1em;color:#ffb380;margin-bottom:0.5em;}
-.audio-player{width:95%;max-width:650px;height:40px;border-radius:6px;background-color:#2b201d;}
-.audio-stop{margin-top:0.6em;background-color:#ff6b2b;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;}
-.audio-stop:hover{background-color:#ff8752;}
-
-    /* ===== Theme ===== */
+    /* ------------------------------------------
+       THEME TOKENS
+       ------------------------------------------ */
     :root{
       --bg:#1f1815; --paper:#2a211e; --ink:#f3e6dd; --muted:#c9b0a4;
       --accent:#ff6a3e; --accent2:#f7b733; --rule:#ff6a3e;
       --maxw:1100px; --radius:16px;
     }
     @media (prefers-color-scheme: light){
-      :root{ --bg:#fff4ea; --paper:#fffaf0; --ink:#5a2a27; --muted:#7b514d; --accent:#d93404; --accent2:#f7b733; --rule:#fc4a1a;}
+      :root{
+        --bg:#fff4ea; --paper:#fffaf0; --ink:#5a2a27; --muted:#7b514d;
+        --accent:#d93404; --accent2:#f7b733; --rule:#fc4a1a;
+      }
     }
+
+    /* ------------------------------------------
+       BASE
+       ------------------------------------------ */
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%}
+    html,body{margin:0}
     body{font-family:Georgia,ui-serif,serif;background:var(--bg);color:var(--ink)}
 
-    /* ===== Header ===== */
+    /* ------------------------------------------
+       HEADER
+       ------------------------------------------ */
     header{
       background: linear-gradient(to right, var(--accent2), var(--rule));
       padding: 15px 10px; text-align:center;
     }
     header img{max-height:56px}
-    header h1{margin:8px 0 0; font-size:clamp(24px,4.5vw,40px)}
+    header h1{margin:8px 0 4px; font-size:clamp(24px,4.5vw,40px)}
+    header p{margin:0 0 6px; color:var(--ink); opacity:.9}
+
     .hero{padding:14px 16px; text-align:center; color:var(--muted)}
 
-    /* ===== Layout ===== */
+    /* ------------------------------------------
+       LAYOUT WRAPPER & GRID
+       ------------------------------------------ */
     .wrap{max-width:var(--maxw); margin:0 auto; padding: 12px 16px 42px}
     .grid{display:grid; gap:18px; grid-template-columns:repeat(12,1fr)}
 
-    /* ===== Card (true left-right layout) ===== */
+    /* ------------------------------------------
+       CARD (LEFT COVER • RIGHT CONTENT)
+       ------------------------------------------ */
     .card{
       grid-column: span 12;
       display:grid;
-      grid-template-columns:160px 1fr;
+      grid-template-columns:160px 1fr;  /* Right side wider */
       gap:16px;
       align-items:flex-start;
       background:var(--paper);
-      border:2px solid #e67e22;
+      border:2px solid var(--rule);     /* use theme var */
       border-radius:var(--radius);
       padding:14px;
     }
     @media (min-width:820px){ .card{grid-column: span 6} }
     @media (min-width:1080px){ .card{grid-column: span 4} }
 
-    /* Left side */
+    /* LEFT SIDE (cover) */
     .left{display:flex;justify-content:center;align-items:flex-start;}
     .book-link{display:block;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.35);transition:transform .15s ease}
     .book-link:hover{transform:translateY(-2px)}
     .book-cover{width:150px;height:220px;object-fit:cover;display:block;border-radius:10px;background:#fff6e6;}
 
-    /* Right side */
+    /* RIGHT SIDE (title, meta, desc, actions) */
     .right{min-width:0}
-    .right h3{margin:0 0 6px;font-size:0.6rem;line-height:1.1;}
+    .right h3{margin:0 0 6px;font-size:1.05rem;line-height:1.2;}
     .title-link{color:inherit;text-decoration:none}
     .title-link:hover{text-decoration:underline}
-    .right p{margin:4px 0 8px;color:var(--muted);font-size:.90rem;}
-    .meta{font-size:.85rem;color:var(--muted)}
+    .right p{margin:4px 0 8px;color:var(--muted);font-size:.95rem;}
+    .meta{font-size:.9rem;color:var(--muted)}
 
-    /* Buttons */
-    .cover-actions{margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-start}
-    .btn{background:var(--accent);color:#fff;text-decoration:none;padding:5px 6px;border-radius:6px;font-weight:600;font-size:8px;transition:filter .15s ease;}
+    /* ACTION BUTTONS (Read / Download / Share / Listen) */
+    .cover-actions{
+      margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start
+    }
+    .btn{
+      background:var(--accent);color:#fff;text-decoration:none;
+      padding:6px 10px;border-radius:8px;font-weight:600;font-size:.9rem;
+      transition:filter .15s ease; display:inline-flex; align-items:center; gap:6px;
+    }
     .btn:hover{filter:brightness(.95)}
     .btn.secondary{background:#a94a1e}
+    .btn.share{background:#1877F2} /* Facebook blue */
 
-    /* Keep left-right layout even on small phones */
+    /* AUDIO (slim look) */
+    .audio-section{text-align:left;margin:10px 0 0;}
+    .audio-label{font-size:.95rem;color:#ffb380;margin:0 0 6px;}
+    .audio-player{
+      width:100%;
+      height:28px;          /* slimmer native controls */
+      border-radius:6px;
+    }
+    .audio-stop{
+      margin-top:6px;background-color:#ff6b2b;color:#fff;border:none;
+      padding:6px 14px;border-radius:6px;cursor:pointer;
+    }
+    .audio-stop:hover{background-color:#ff8752;}
+
+    /* SMALL SCREENS (keep L/R feel) */
     @media (max-width:700px){
       .card{grid-template-columns:140px 1fr !important;text-align:left;}
       .book-cover{width:130px;height:190px;}
       .right h3{font-size:1rem;}
-      .btn{font-size:12px;padding:4px 8px;}
-      .right p,.meta{font-size:.70rem;}
+      .btn{font-size:.85rem;padding:4px 8px;}
+      .right p,.meta{font-size:.9rem;}
     }
 
+    /* FOOTER */
     footer{background:#5a2a27;color:#fff;text-align:center;padding:20px}
     footer a{color:#fff;font-weight:700}
   </style>
+
+  <!-- ========== PAGE SCRIPTS ========== -->
+  <script>
+    // Facebook share popup helper (re-usable for all cards)
+    function shareToFacebook(url){
+      const shareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+      window.open(shareUrl, '_blank', 'width=680,height=560');
+    }
+  </script>
 </head>
 
 <body>
+  <!-- ========== HEADER ========== -->
   <header>
     <img src="/reflections/IMG_0690.png" alt="Stone Grill Logo">
     <h1>SOLITUDE</h1>
     <p>The Inner Kingdom of Faith, Mind and Light</p>
   </header>
-  <div class="hero">All topics in one place. Tap <strong>Read</strong> for a clean reading mode, or <strong>Download PDF</strong> for print.</div>
 
+  <!-- ========== HERO / SUBHEADER ========== -->
+  <div class="hero">
+    All topics in one place. Tap <strong>Read</strong> for a clean reading mode, or <strong>Download PDF</strong> for print.
+  </div>
+
+  <!-- ========== MAIN CONTENT ========== -->
   <main class="wrap">
     <section class="grid">
 
-    
-<!-- ==== DIETY ==== -->
-<article class="card">
-  <div class="left">
-    <a class="book-link" href="/reflections/pages/diety/read.html" target="_blank" rel="noopener">
-      <img class="book-cover"
-           src="/reflections/pages/diety/diety.jpg"
-           alt="diety cover"
-           onerror="this.src='/reflections/assets/placeholder.jpg'">
-    </a>
+      <!-- =========================================
+           CARD: DIETY
+           Links kept exactly as provided
+           ========================================= -->
+      <article class="card">
+        <div class="left">
+          <a class="book-link" href="/reflections/pages/diety/read.html" target="_blank" rel="noopener">
+            <img class="book-cover"
+                 src="/reflections/pages/diety/diety.jpg"
+                 alt="diety cover"
+                 onerror="this.src='/reflections/assets/placeholder.jpg'">
+          </a>
+        </div>
 
-    
-  </div>
+        <div class="right">
+          <h3>
+            <a class="title-link" href="/reflections/pages/diety/read.html" target="_blank" rel="noopener">the diety</a>
+          </h3>
 
-  <div class="right">
-    <h3>
-      <a class="title-link" href="/reflections/pages/diety/read.html" target="_blank" rel="noopener"></a>
-      the diety
-    </h3>
+          <p>What if the god who made this world — with its wars, cancers, and cruelty — isn’t the ultimate source of love</p>
 
-    <p>What if the god who made this world — with its wars, cancers, and cruelty — isn’t the ultimate source of love</p>
+          <div class="meta">
+            First Edition 2025 • 
+            <a class="title-link" href="/reflections/pages/diety/The_False_God_Reflection_by_Ninox copy.pdf">PDF</a>
+          </div>
 
-    <div class="meta">
-      First Edition 2025 • 
-      <a class="title-link" href="/reflections/pages/diety/The_False_God_Reflection_by_Ninox copy.pdf">PDF</a>
-    </div>
+          <div class="cover-actions">
+            <a class="btn" href="/reflections/pages/diety/read.html" target="_blank" rel="noopener">Read</a>
+            <a class="btn secondary" href="/reflections/pages/diety/The_False_God_Reflection_by_Ninox copy.pdf">Download</a>
+            <!-- Facebook Share (shares the Read URL) -->
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/diety/read.html')">Share</button>
+          </div>
 
-    <div class="cover-actions">
-      <a class="btn" href="/reflections/pages/diety/read.html" target="_blank" rel="noopener">Read</a>
-      <a class="btn secondary" href="/reflections/pages/diety/The_False_God_Reflection_by_Ninox copy.pdf">Download</a>
-    </div>
-      <!-- 🎧 Audio Player -->
-    <script>
-      document.write(createAudioPlayer(
-        '/reflections/pages/diety/diety.mp3',
-        'Diety'
-      ));
-    </script>
-  </div>
-</article>
+          <!-- 🎧 Audio -->
+          <script>
+            document.write(createAudioPlayer(
+              '/reflections/pages/diety/diety.mp3',
+              'Diety'
+            ));
+          </script>
+        </div>
+      </article>
 
+      <!-- =========================================
+           CARD: THE GOD WE CREATED
+           ========================================= -->
+      <article class="card">
+        <div class="left">
+          <a class="book-link" href="/reflections/pages/the-god-we-created/read.html" target="_blank" rel="noopener">
+            <img class="book-cover"
+                 src="/reflections/pages/the-god-we-created/thegodwecreated.png"
+                 alt="The God We Created cover"
+                 onerror="this.src='/reflections/assets/placeholder.jpg'">
+          </a>
+        </div>
 
-      <!-- ==== The God We Created ==== -->
-      
-<article class="card">
-  <div class="left">
-    <a class="book-link" href="/reflections/pages/the-god-we-created/read.html" target="_blank" rel="noopener">
-      <img class="book-cover"
-           src="/reflections/pages/the-god-we-created/thegodwecreated.png"
-           alt="The God We Created cover"
-           onerror="this.src='/reflections/assets/placeholder.jpg'">
-    </a>
-  </div>
+        <div class="right">
+          <h3>
+            <a class="title-link" href="/reflections/pages/the-god-we-created/read.html" target="_blank" rel="noopener">
+              The God We Created
+            </a>
+          </h3>
 
-  <div class="right">
-    <h3>
-      <a class="title-link" href="/reflections/pages/the-god-we-created/read.html" target="_blank" rel="noopener">
-        The God We Created
-      </a>
-    </h3>
-    <p>Do you think recognizing that our concept of God has evolved helps or hinders interfaith dialogue?</p>
+          <p>Do you think recognizing that our concept of God has evolved helps or hinders interfaith dialogue?</p>
 
-    <div class="meta">
-      First Edition 2025 • 
-      <a class="title-link" href="/reflections/pages/the-god-we-created/The_God_We_created.pdf">PDF</a>
-    </div>
+          <div class="meta">
+            First Edition 2025 • 
+            <a class="title-link" href="/reflections/pages/the-god-we-created/The_God_We_created.pdf">PDF</a>
+          </div>
 
-    <div class="cover-actions">
-      <a class="btn" href="/reflections/pages/the-god-we-created/read.html" target="_blank" rel="noopener">Read</a>
-      <button class="btn secondary" onclick="toggleAudio(this)">Listen</button>
-    </div>
+          <div class="cover-actions">
+            <a class="btn" href="/reflections/pages/the-god-we-created/read.html" target="_blank" rel="noopener">Read</a>
+            <button class="btn secondary" onclick="toggleAudio && toggleAudio(this)">Listen</button>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/the-god-we-created/read.html')">Share</button>
+          </div>
 
-   <!-- 🎧 Audio Player -->
-    <script>
-      document.write(createAudioPlayer(
-        '/reflections/pages/the-god-we-created/the-god-we-create.mp3',
-        ''
-      ));
-    </script>
-    
-    </div>
-  </div>
-</article>
+          <!-- 🎧 Audio -->
+          <script>
+            document.write(createAudioPlayer(
+              '/reflections/pages/the-god-we-created/the-god-we-create.mp3',
+              ''
+            ));
+          </script>
+        </div>
+      </article>
 
-      <!-- ==== Belief and Goodness ==== -->
+      <!-- =========================================
+           CARD: BELIEF AND GOODNESS
+           ========================================= -->
       <article class="card">
         <div class="left">
           <a class="book-link" href="/reflections/pages/belief/index.html" target="_blank" rel="noopener">
@@ -202,29 +258,37 @@
                  onerror="this.src='/reflections/assets/placeholder.jpg'">
           </a>
         </div>
+
         <div class="right">
-          <h3><a class="title-link" href="/reflections/pages/belief/index.html" target="_blank" rel="noopener">
-              Belief and Goodness</a></h3>
+          <h3>
+            <a class="title-link" href="/reflections/pages/belief/index.html" target="_blank" rel="noopener">
+              Belief and Goodness
+            </a>
+          </h3>
+
           <p>Belief shows awareness of the light, but goodness is walking toward it.</p>
-          <div class="meta">First Edition 2025 • Essay ·
+
+          <div class="meta">
+            First Edition 2025 • Essay ·
             <a class="title-link" href="/reflections/pages/belief/belief.pdf">PDF</a>
           </div>
+
           <div class="cover-actions">
             <a class="btn" href="/reflections/pages/belief/index.html" target="_blank" rel="noopener">Read</a>
             <a class="btn secondary" href="/reflections/pages/belief/belief.pdf">Download</a>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/belief/index.html')">Share</button>
           </div>
-          
-    <!-- 🎧 Audio Player (same folder) -->
-            <div>
-             <script>
-               document.write(createAudioPlayer('/reflections/pages/belief/beliefxgood.mp3', 'Belief'));
-            </script>
-          </div>
+
+          <!-- 🎧 Audio -->
+          <script>
+            document.write(createAudioPlayer('/reflections/pages/belief/beliefxgood.mp3', 'Belief'));
+          </script>
         </div>
       </article>
 
-      
-      <!-- ==== Moments of Solitude ==== -->
+      <!-- =========================================
+           CARD: MOMENTS OF SOLITUDE
+           ========================================= -->
       <article class="card">
         <div class="left">
           <a class="book-link" href="/reflections/pages/moments-of-solitude/index.html" target="_blank" rel="noopener">
@@ -234,21 +298,32 @@
                  onerror="this.src='/reflections/assets/placeholder.jpg'">
           </a>
         </div>
+
         <div class="right">
-          <h3><a class="title-link" href="/reflections/pages/moments-of-solitude/index.html" target="_blank" rel="noopener">
-              Moments of Solitude — How Silence Teaches</a></h3>
+          <h3>
+            <a class="title-link" href="/reflections/pages/moments-of-solitude/index.html" target="_blank" rel="noopener">
+              Moments of Solitude — How Silence Teaches
+            </a>
+          </h3>
+
           <p>A quiet invitation to stillness and presence. Learn the pace of enough and the gentleness of honest attention.</p>
-          <div class="meta">First Edition 2025 • Short Book ·
+
+          <div class="meta">
+            First Edition 2025 • Short Book ·
             <a class="title-link" href="/reflections/pages/moments-of-solitude/moments-of-solitude.pdf">PDF</a>
           </div>
+
           <div class="cover-actions">
             <a class="btn" href="/reflections/pages/moments-of-solitude/read.html" target="_blank" rel="noopener">Read</a>
             <a class="btn secondary" href="/reflections/pages/moments-of-solitude/moments-of-solitude.pdf">Download</a>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/moments-of-solitude/read.html')">Share</button>
           </div>
         </div>
       </article>
 
-       <!-- ==== The Triune Reflection ==== -->
+      <!-- =========================================
+           CARD: THE TRIUNE REFLECTION
+           ========================================= -->
       <article class="card">
         <div class="left">
           <a class="book-link" href="/reflections/pages/triune-reflection/read.html" target="_blank" rel="noopener">
@@ -260,20 +335,31 @@
         </div>
 
         <div class="right">
-          <h3><a class="title-link" href="/reflections/pages/triune-reflection/read.html" target="_blank" rel="noopener">
-              The Triune Reflection</a></h3>
+          <h3>
+            <a class="title-link" href="/reflections/pages/triune-reflection/read.html" target="_blank" rel="noopener">
+              The Triune Reflection
+            </a>
+          </h3>
+
           <p>For every seeker who questioned the light yet walked toward it—on unity, devotion, and becoming.</p>
-          <div class="meta">First Edition 2025 • Reflection • Essay ·
+
+          <div class="meta">
+            First Edition 2025 • Reflection • Essay ·
             <a class="title-link" href="/reflections/pages/triune-reflection/triune-reflection.pdf">PDF</a>
           </div>
+
           <div class="cover-actions">
             <a class="btn" href="/reflections/pages/triune-reflection/read.html" target="_blank" rel="noopener">Read</a>
             <a class="btn secondary" href="/reflections/pages/triune-reflection/triune-reflection.pdf">Download</a>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/triune-reflection/read.html')">Share</button>
           </div>
         </div>
       </article>
 
-      <!-- ==== Oneness and Duality ==== -->
+      <!-- =========================================
+           CARD: ONENESS & DUALITY
+           (kept your PDF link exactly as provided)
+           ========================================= -->
       <article class="card">
         <div class="left">
           <a class="book-link" href="/reflections/pages/oneness-duality/index2.html" target="_blank" rel="noopener">
@@ -283,23 +369,32 @@
                  onerror="this.src='/reflections/assets/placeholder.jpg'">
           </a>
         </div>
+
         <div class="right">
-          <h3><a class="title-link" href="/reflections/pages/oneness-duality/index2.html" target="_blank" rel="noopener">
-              From Oneness to Duality</a></h3>
+          <h3>
+            <a class="title-link" href="/reflections/pages/oneness-duality/index2.html" target="_blank" rel="noopener">
+              From Oneness to Duality
+            </a>
+          </h3>
+
           <p>through philosophy, theology, and psychology, converging a profound idea that duality—the perceived separation between the self and the world</p>
-          <div class="meta">First Edition 2025 •
+
+          <div class="meta">
+            First Edition 2025 •
             <a class="title-link" href="/reflections/pages/oneness-dualityindex.html">PDF</a>
           </div>
+
           <div class="cover-actions">
             <a class="btn" href="/reflections/pages/oneness-duality/read.html" target="_blank" rel="noopener">Read</a>
             <a class="btn secondary" href="/reflections/pages/oneness-duality/oneness-duality.pdf">Download</a>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/oneness-duality/read.html')">Share</button>
           </div>
         </div>
       </article>
-  
-      
-      <!-- ==== Multilingual Mind ==== -->
-      
+
+      <!-- =========================================
+           CARD: MULTILINGUAL MIND
+           ========================================= -->
       <article class="card">
         <div class="left">
           <a class="book-link" href="/reflections/pages/multilingual-mind/read.html" target="_blank" rel="noopener">
@@ -309,21 +404,32 @@
                  onerror="this.src='/reflections/assets/placeholder.jpg'">
           </a>
         </div>
+
         <div class="right">
-          <h3><a class="title-link" href="/reflections/pages/multilingual-mind/read.html" target="_blank" rel="noopener">
-              Multilingual Mind — How Language Shapes Thought</a></h3>
+          <h3>
+            <a class="title-link" href="/reflections/pages/multilingual-mind/read.html" target="_blank" rel="noopener">
+              Multilingual Mind — How Language Shapes Thought
+            </a>
+          </h3>
+
           <p>How language frames attention, emotion, and decision-making — and how to use that awareness in daily life.</p>
-          <div class="meta">First Edition 2025 • Essay ·
+
+          <div class="meta">
+            First Edition 2025 • Essay ·
             <a class="title-link" href="/reflections/pages/multilingual-mind/multilingual-mind.pdf">PDF</a>
           </div>
+
           <div class="cover-actions">
             <a class="btn" href="/reflections/pages/multilingual-mind/read.html" target="_blank" rel="noopener">Read</a>
             <a class="btn secondary" href="/reflections/pages/multilingual-mind/multilingual-mind.pdf">Download</a>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/multilingual-mind/read.html')">Share</button>
           </div>
         </div>
       </article>
 
-      <!-- ==== Between Nothing and Space ==== -->
+      <!-- =========================================
+           CARD: BETWEEN NOTHING AND SPACE
+           ========================================= -->
       <article class="card">
         <div class="left">
           <a class="book-link" href="/reflections/pages/between-nothing-and-space/between-nothing-and-space.pdf" target="_blank" rel="noopener">
@@ -333,21 +439,32 @@
                  onerror="this.src='/reflections/assets/placeholder.jpg'">
           </a>
         </div>
+
         <div class="right">
-          <h3><a class="title-link" href="/reflections/pages/between-nothing-and-space/read.html" target="_blank" rel="noopener">
-              Between Nothing and Space</a></h3>
+          <h3>
+            <a class="title-link" href="/reflections/pages/between-nothing-and-space/read.html" target="_blank" rel="noopener">
+              Between Nothing and Space
+            </a>
+          </h3>
+
           <p>An essay on emptiness, meaning, and the interval where action begins.</p>
-          <div class="meta">Reflection • Essay ·
+
+          <div class="meta">
+            Reflection • Essay ·
             <a class="title-link" href="/reflections/pages/between-nothing-and-space/between-nothing-and-space.pdf">PDF</a>
           </div>
+
           <div class="cover-actions">
             <a class="btn" href="/reflections/pages/between-nothing-and-space/read.html" target="_blank" rel="noopener">Read</a>
             <a class="btn secondary" href="/reflections/pages/between-nothing-and-space/between-nothing-and-space.pdf">Download</a>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/between-nothing-and-space/read.html')">Share</button>
           </div>
         </div>
       </article>
 
-      <!-- ==== The Mirror of Worship ==== -->
+      <!-- =========================================
+           CARD: THE MIRROR OF WORSHIP
+           ========================================= -->
       <article class="card">
         <div class="left">
           <a class="book-link" href="/reflections/pages/mirror-of-worship/read.html" target="_blank" rel="noopener">
@@ -357,28 +474,36 @@
                  onerror="this.src='/reflections/assets/placeholder.jpg'">
           </a>
         </div>
+
         <div class="right">
-          <h3><a class="title-link" href="/reflections/pages/mirror-of-worship/read.html" target="_blank" rel="noopener">
-              The Mirror of Worship</a></h3>
+          <h3>
+            <a class="title-link" href="/reflections/pages/mirror-of-worship/read.html" target="_blank" rel="noopener">
+              The Mirror of Worship
+            </a>
+          </h3>
+
           <p>On devotion as reflection — how what we honor, we become.</p>
-          <div class="meta">Reflection • Essay ·
+
+          <div class="meta">
+            Reflection • Essay ·
             <a class="title-link" href="/reflections/pages/mirror-of-worship/mirror-of-worship.pdf">PDF</a>
           </div>
+
           <div class="cover-actions">
             <a class="btn" href="/reflections/pages/mirror-of-worship/read.html" target="_blank" rel="noopener">Read</a>
             <a class="btn secondary" href="/reflections/pages/mirror-of-worship/mirror-of-worship.pdf">Download</a>
+            <button class="btn share" type="button" onclick="shareToFacebook('/reflections/pages/mirror-of-worship/read.html')">Share</button>
           </div>
         </div>
       </article>
 
     </section>
   </main>
+
+  <!-- ========== FOOTER ========== -->
   <footer>
     © 2025 Stone Grill Restaurant ·
     <a href="tel:0535680539">Call 053 568 0539</a>
   </footer>
-
-  <!-- Link the Omnibus Audio System -->
-  <script src="/reflections/assets/audio-system.js"></script>
 </body>
 </html>
