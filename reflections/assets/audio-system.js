@@ -1,4 +1,3 @@
-<script>
 // === Omnibus Audio Embed System v2 ===
 // One player plays at a time. Using: createAudioPlayer(src, title)
 
@@ -30,4 +29,3 @@ document.addEventListener('click', function(e) {
     audio.currentTime = 0;
   }
 });
-</script>
