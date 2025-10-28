@@ -1,184 +1,143 @@
 /* =========================================
-   STONE GRILL REFLECTIONS — Unified Layout
+   STONE GRILL — Reflections (Clean Unified)
+   Works for: index cards + read.html
    ========================================= */
 
-/* ===== Root Theme ===== */
-:root {
-  --bg: #1f1815;
-  --paper: #2a211e;
-  --ink: #f3e6dd;
-  --muted: #c9b0a4;
-  --accent: #ffcc66;
-  --line: #3a2f2b;
+/* ===== Theme (fallbacks; safe if you also set these inline) ===== */
+:root{
+  --bg:#1f1815;
+  --paper:#2a211e;
+  --ink:#f3e6dd;
+  --muted:#c9b0a4;
+  --accent:#ff6a3e;   /* main accent */
+  --accent2:#f7b733;  /* gradient accent (header) */
+  --line:#3a2f2b;     /* hairline stroke */
 }
 
-/* ===== Audio Player (used in read.html + cards) ===== */
-.audio-section, .audio {
-  text-align: center;
-  margin: 1em 0;
+/* ===== Base ===== */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Georgia, ui-serif, serif; background:var(--bg); color:var(--ink);}
+a{color:inherit; text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* =========================================
+   CARD LAYOUT (index)
+   ========================================= */
+article.card{
+  display:grid;
+  grid-template-columns:160px 1fr;  /* left cover | right content */
+  column-gap:16px;
+  align-items:start;
+  background:var(--paper);
+  border:2px solid var(--accent);   /* matches your index border */
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:18px;
+  transition:transform .15s ease, box-shadow .15s ease;
 }
-.audio-label, .audio .label {
-  font-size: 1em;
-  color: #ffb380;
-  margin-bottom: 0.5em;
-}
-.audio-player, .audio audio {
-  width: 90%;
-  max-width: 650px;
-  height: 28px;
-  border-radius: 4px;
-  background-color: #2b201d;
-}
-.audio-stop, #stopBtn {
-  margin-top: 0.6em;
-  background-color: #ff6b2b;
-  color: #fff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.audio-stop:hover, #stopBtn:hover {
-  background-color: #ff8752;
+article.card:hover{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.35); }
+
+article.card .left{ grid-column:1; display:flex; justify-content:center; }
+article.card .right{ grid-column:2; min-width:0; } /* min-width:0 fixes iOS wrap */
+
+/* Cover image — force visible and consistent */
+img.book-cover{
+  display:block;
+  width:150px; height:220px;        /* card size */
+  object-fit:cover;
+  border-radius:10px;
+  box-shadow:0 8px 20px rgba(0,0,0,.35);
+  background:#111;                  /* shows even if image missing */
 }
 
-/* ===== Share Buttons ===== */
-.share-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 0;
-}
-.share-group .btn {
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
-  color: var(--ink);
-  font: 600 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  cursor: pointer;
-}
-.btn.fb { background: #1877f2; border-color: #1877f2; color: #fff; }
-.btn.msg { background: #00b2ff; border-color: #00b2ff; color: #fff; }
-.btn.x   { background: #111; border-color: #111; color: #fff; }
-.share-group .btn:hover { opacity: 0.88; }
+/* Titles + meta */
+article.card h3{ margin:0 0 6px; font-size:1.05rem; line-height:1.2; }
+.title-link{ color:inherit; }
+.right p{ margin:4px 0 8px; color:var(--muted); font-size:.95rem; }
+.meta{ font-size:.9rem; color:var(--muted); }
 
-/* Compact share style when inside cards */
-.card .share-group .btn {
-  padding: 8px 10px;
-  font-size: 13px;
-  line-height: 1.15;
-}
-.card .share-group { margin-top: 8px; }
-
-/* ===== Card Layout ===== */
-article.card {
-  display: grid !important;
-  grid-template-columns: 130px 1fr;
-  column-gap: 20px;
-  align-items: start;
-  padding: 16px 18px;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  border-radius: 12px;
-  margin-bottom: 24px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-article.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+/* Card action rows (share left | buttons right) */
+.cover-actions{
+  margin-top:6px;
+  display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;
 }
 
-/* Left side (cover) */
-article.card .left {
-  grid-column: 1;
-}
-article.card .book-cover {
-  width: 100%;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-  object-fit: cover;
-  background: #000;
+/* Action groups (support both classes you use) */
+.action-group, .action-buttons{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center;
 }
 
-/* Right side (text + buttons) */
-article.card .right {
-  grid-column: 2;
-  min-width: 0; /* Fix Safari overflow */
-  padding-inline: 12px;
+/* =========================================
+   BUTTONS (share + read/download + listen)
+   ========================================= */
+.btn{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:8px 12px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--accent);
+  color:#fff;
+  font:600 .9rem/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  cursor:pointer;
+  transition:filter .15s ease, opacity .15s ease;
 }
-article.card h3 {
-  margin: 0.2em 0 0.3em;
-  font-weight: 700;
-}
-article.card .meta {
-  color: var(--muted);
-  font-size: 0.9em;
-}
+.btn:hover{ filter:brightness(.95); }
 
-/* ===== Action Buttons (Read / Download) ===== */
-.action-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-.action-buttons .btn {
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-read {
-  background: var(--accent);
-  color: #1f1815;
-}
-.btn-download {
-  background: var(--paper);
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-.action-buttons .btn:hover {
-  opacity: 0.9;
-}
+/* Variants used in your page */
+.btn.read, .btn-read{ background:var(--accent); color:#fff; border-color:transparent; }
+.btn.down, .btn-download{ background:#a94a1e; color:#fff; border-color:transparent; }
+.btn.listen{ background:#ff6b2b; color:#fff; border-color:transparent; }
 
-/* ===== Mobile Layout ===== */
-@media (max-width: 600px) {
-  article.card {
-    grid-template-columns: 1fr;
-    row-gap: 12px;
-    padding: 14px 14px;
+.btn.fb{ background:#1877F2; border-color:#1877F2; color:#fff; }
+.btn.msg{ background:#0084FF; border-color:#0084FF; color:#fff; }
+
+/* Share bar container (works with your enhancer JS or the global share system) */
+.share-group{ display:flex; gap:8px; align-items:center; }
+.card .share-group .btn{ padding:6px 10px; font-size:.85rem; line-height:1.15; }
+
+/* =========================================
+   AUDIO (index + read.html)
+   ========================================= */
+.audio-section, .audio{ text-align:center; margin:10px 0 0; }
+.audio-label, .audio .label{ font-size:.95rem; color:#ffb380; margin:0 0 6px; }
+.audio-player, .audio audio{
+  width:100%; max-width:650px; height:28px;
+  border-radius:6px; background:#2b201d;
+}
+.audio-stop, #stopBtn{
+  margin-top:6px; background:#ff6b2b; color:#fff; border:none;
+  padding:6px 14px; border-radius:6px; cursor:pointer;
+}
+.audio-stop:hover, #stopBtn:hover{ background:#ff8752; }
+
+/* =========================================
+   READ PAGE (optional polish; safe defaults)
+   ========================================= */
+.read-header img{ width:120px; height:auto; border-radius:8px; margin-bottom:10px; }
+.read-header h1{ color:var(--accent); font-size:1.8em; margin-bottom:.3em; }
+.read-header p.meta{ color:var(--muted); font-size:.9em; margin-bottom:1.2em; }
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+@media (max-width:700px){
+  article.card{
+    grid-template-columns:140px 1fr;
+    padding:12px;
   }
-  article.card .right {
-    padding-inline: 6px;
-    text-align: center;
-  }
-  .card .share-group {
-    justify-content: center;
-  }
-  .action-buttons {
-    justify-content: center;
-  }
-  .audio-player, .audio audio {
-    width: 100%;
-  }
+  img.book-cover{ width:130px; height:190px; }
+  .btn{ padding:6px 10px; font-size:.85rem; }
 }
 
-/* ===== Read Page (optional extra polish) ===== */
-.read-header img {
-  width: 120px;
-  height: auto;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-.read-header h1 {
-  color: var(--accent);
-  font-size: 1.8em;
-  margin-bottom: 0.3em;
-}
-.read-header p.meta {
-  color: var(--muted);
-  font-size: 0.9em;
-  margin-bottom: 1.2em;
+@media (max-width:520px){
+  article.card{
+    grid-template-columns:1fr; row-gap:12px;
+  }
+  .left{ justify-content:center; }
+  .right{ text-align:center; }
+  .cover-actions{ justify-content:center; }
+  .action-group, .action-buttons{ justify-content:center; }
+  .share-group{ justify-content:center; }
+  .audio-player, .audio audio{ width:100%; }
 }
