@@ -1,70 +1,88 @@
-.audio-section{text-align:center;margin:1em 0;}
-.audio-label{font-size:1em;color:#ffb380;margin-bottom:0.5em;}
-.audio-player{width:90%;max-width:650px;height:25px;border-radius:3px;background-color:#2b201d;}
-.audio-stop{margin-top:0.6em;background-color:#ff6b2b;color:#fff;border:none;padding:4px 8px;border-radius:2px;cursor:pointer;}
-.audio-stop:hover{background-color:#ff8752;}
+/* =========================================
+   THEME (fallbacks if not already defined)
+   ========================================= */
+:root{
+  --bg:#1f1815;        /* deep espresso */
+  --paper:#2a211e;     /* warm dark paper */
+  --ink:#f3e6dd;       /* soft cream text */
+  --muted:#c9b0a4;     /* secondary text */
+  --accent:#ffcc66;    /* gentle gold */
+  --line:#3a2f2b;      /* hairline divider */
+}
 
+/* =========================================
+   AUDIO (works for index + read.html)
+   - supports both .audio-section (old) and .audio (read.html)
+   ========================================= */
+.audio-section, .audio{ text-align:center; margin:1em 0; }
+.audio-label, .audio .label{ font-size:1em; color:#ffb380; margin:0 0 .5em; }
+.audio-player, .audio audio{
+  width:90%; max-width:650px; height:28px; border-radius:4px; background:#2b201d;
+}
+.audio-stop, #stopBtn{
+  margin-top:.6em; background:#ff6b2b; color:#fff; border:0; padding:6px 10px;
+  border-radius:4px; cursor:pointer;
+}
+.audio-stop:hover, #stopBtn:hover{ background:#ff8752; }
+
+/* =========================================
+   SHARE BAR (global)
+   ========================================= */
 .share-group{
-  display:flex;flex-wrap:wrap;gap:10px;margin:12px 0;
+  display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;
 }
 .share-group .btn{
-  padding:10px 14px;
-  border:1px solid #3a2f2b;
-  border-radius:8px;
-  background:#2a211e;
-  color:#f3e6dd;
+  padding:10px 14px; border:1px solid var(--line); border-radius:8px;
+  background:var(--paper); color:var(--ink);
   font:600 14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   cursor:pointer;
 }
-.btn.fb {background:#1877f2;border-color:#1877f2;color:#fff}
-.btn.msg{background:#00b2ff;border-color:#00b2ff;color:#fff}
-.btn.x  {background:#111;border-color:#111;color:#fff}
-.share-group .btn:hover{opacity:.88}
+.btn.fb{ background:#1877f2; border-color:#1877f2; color:#fff; }
+.btn.msg{ background:#00b2ff; border-color:#00b2ff; color:#fff; }
+.btn.x  { background:#111;   border-color:#111;   color:#fff; }
+.share-group .btn:hover{ opacity:.88; }
 
-/* === Fix uneven card spacing === */
-.card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 20px;
-  padding: 16px 18px;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  border-radius: 12px;
-  margin-bottom: 24px;
+/* Compact variant when share is inside a card */
+.card .share-group .btn{ padding:8px 10px; font-size:13px; line-height:1.15; }
+.card .share-group{ margin-top:8px; }
+
+/* =========================================
+   CARD LAYOUT (balanced + Safari-safe)
+   - switches to CSS Grid for perfect 130px | fluid columns
+   ========================================= */
+article.card{
+  display:grid !important;
+  grid-template-columns:130px 1fr;
+  column-gap:20px; row-gap:0;
+  align-items:start;
+  padding:16px 18px;
+  border:1px solid var(--line);
+  background:var(--paper);
+  border-radius:12px;
+  margin-bottom:24px;
+}
+article.card .left{ grid-column:1; }
+article.card .right{
+  grid-column:2; min-width:0;           /* critical for iOS text/button wrap */
+  padding-inline:12px;                   /* equal left & right breathing room */
+}
+article.card .book-cover{
+  width:100%; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,.35);
 }
 
-/* Left side (cover) */
-.card .left {
-  flex: 0 0 130px; /* fixed width for cover area */
-}
+/* Optional: tidy common card text */
+article.card h3{ margin:.2em 0 .3em; }
+article.card .meta{ color:var(--muted); }
 
-/* Right side (text + buttons) */
-.card .right {
-  flex: 1;
-  padding-left: 10px;
-  padding-right: 10px;  /* gives right side breathing space */
-}
-
-/* Cover image */
-.card .book-cover {
-  width: 100%;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,.35);
-}
-
-/* Optional: make buttons and share section more compact on mobile */
-@media (max-width: 600px) {
-  .card {
-    flex-direction: column;
-    align-items: center;
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+@media (max-width:600px){
+  article.card{
+    grid-template-columns:1fr; row-gap:12px;
+    padding:14px 14px;
   }
-  .card .left, .card .right {
-    flex: 1 1 100%;
-    padding: 0;
-    text-align: center;
-  }
-  .card .share-group {
-    justify-content: center;
-  }
+  article.card .right{ padding-inline:6px; text-align:center; }
+  .card .share-group{ justify-content:center; }
+  .audio-player, .audio audio{ width:100%; }
 }
