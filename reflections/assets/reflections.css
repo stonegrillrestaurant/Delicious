@@ -141,3 +141,41 @@ article.card h3{ margin:0 0 6px; font-size:1.05rem; line-height:1.2; }
   .share-group{ justify-content:center; }
   .audio-player, .audio audio{ width:100%; }
 }
+/* === Right-side cleanup (cards) === */
+article.card{ grid-template-columns:160px minmax(0,1fr); }
+
+article.card .right{
+  padding-inline:12px;
+  min-width:0;                 /* critical for iOS wrapping */
+  display:grid;
+  row-gap:10px;                /* consistent vertical rhythm */
+  align-content:start;
+}
+article.card .right > *{ max-width:100%; }   /* stop overflow */
+
+article.card h3{ margin:2px 0 4px; line-height:1.2; }
+article.card p{ margin:0 0 8px; }
+
+/* Share + actions: neat two-row flow */
+.cover-actions{
+  display:grid;
+  grid-template-columns: 1fr auto;  /* left: share | right: buttons */
+  gap:10px;
+  align-items:center;
+}
+.share-group{ justify-content:flex-start; flex-wrap:wrap; gap:8px; }
+.action-group .btn{ margin:0; }
+.action-group{ justify-content:flex-end; }
+
+/* Keep buttons from squeezing text */
+.card .share-group .btn{ padding:8px 10px; font-size:13px; line-height:1.15; }
+.btn{ white-space:nowrap; }
+
+/* Mobile: stack cleanly and center */
+@media (max-width:700px){
+  .cover-actions{
+    grid-template-columns:1fr;
+    row-gap:8px;
+  }
+  .action-group, .share-group{ justify-content:center; }
+}
