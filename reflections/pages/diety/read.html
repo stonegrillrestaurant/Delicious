@@ -110,5 +110,29 @@
       <a class="back" href="/reflections/index.html" style="color:var(--accent); text-decoration:none; font-weight:700">← Back to Reflections</a>
     </div>
   </footer>
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const audio = document.querySelector('audio');
+  const p = new URLSearchParams(location.search);
+  const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
+
+  if (fromIndex && audio) {
+    audio.play().catch(() => {
+      console.log('Autoplay blocked; user must press play.');
+    });
+    sessionStorage.removeItem('autoplayAudio');
+  }
+
+  // Optional: show Back button if user came from index
+  if (p.get('back') === '1' || sessionStorage.getItem('showBack') === 'true') {
+    const back = document.createElement('a');
+    back.href = '/reflections/index.html';
+    back.className = 'btn ghost';
+    back.textContent = '← Back to Reflections';
+    (document.querySelector('header') || document.body).prepend(back);
+    sessionStorage.removeItem('showBack');
+  }
+});
+</script>
 </body>
 </html>
