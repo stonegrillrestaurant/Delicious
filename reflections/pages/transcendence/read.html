@@ -214,22 +214,29 @@
     © 2025 Ninox Antolihao · Stone Grill Press · Leyte, Philippines
   </footer>
 
-  <!-- ===== Minimal Audio Logic (no external JS) ===== -->
   <script>
-    (function(){
-      const audio = document.getElementById('audioPlayer');
-      const stop  = document.getElementById('stopBtn');
+document.addEventListener('DOMContentLoaded', () => {
+  const audio = document.querySelector('audio');
+  const p = new URLSearchParams(location.search);
+  const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
 
-      // Pause any other audio if more are added in future pages
-      document.addEventListener('play', function(e){
-        const audios = document.querySelectorAll('audio');
-        audios.forEach(a => { if(a !== e.target) a.pause(); });
-      }, true);
+  if (fromIndex && audio) {
+    audio.play().catch(() => {
+      console.log('Autoplay blocked; user must press play.');
+    });
+    sessionStorage.removeItem('autoplayAudio');
+  }
 
-      stop.addEventListener('click', () => {
-        audio.pause(); audio.currentTime = 0;
-      });
-    })();
-  </script>
+  // Optional: show Back button if user came from index
+  if (p.get('back') === '1' || sessionStorage.getItem('showBack') === 'true') {
+    const back = document.createElement('a');
+    back.href = '/reflections/index.html';
+    back.className = 'btn ghost';
+    back.textContent = '← Back to Reflections';
+    (document.querySelector('header') || document.body).prepend(back);
+    sessionStorage.removeItem('showBack');
+  }
+});
+</script>
 </body>
 </html>
