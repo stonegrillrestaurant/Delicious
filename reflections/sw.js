@@ -1,5 +1,5 @@
 /* Reflections SW — cache+offline, Ninox 2025 */
-const VERSION = 'v1.0.0-2025-11-01';
+const VERSION = 'v2.0.0-2025-11-01';
 const STATIC_CACHE = `reflections-static-${VERSION}`;
 const RUNTIME_CACHE = `reflections-runtime-${VERSION}`;
 
