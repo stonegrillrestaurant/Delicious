@@ -441,121 +441,129 @@
     .share-fallback { display:flex; gap:.5rem; flex-wrap:wrap; }
   </style>
 
-  <script>
-  (function () {
-    // ---------- 1) AUTOPLAY BRIDGE ----------
-    // Any click on cover/title -> stash autoplay + back hints, and ensure ?autoplay=1&back=1 is on URL.
-    function addAutoplayAndBackToHref(href) {
-      try {
-        const u = new URL(href, location.origin);
-        u.searchParams.set('autoplay', '1');
-        u.searchParams.set('back', '1');
-        return u.pathname + (u.search ? u.search : '') + (u.hash || '');
-      } catch (e) { return href; }
-    }
+ <script>
+(function () {
+  // ---------- 1) AUTOPLAY BRIDGE ----------
+  function addAutoplayAndBackToHref(href) {
+    try {
+      const u = new URL(href, location.origin);
+      // avoid duplicates
+      if (!u.searchParams.has('autoplay')) u.searchParams.set('autoplay', '1');
+      if (!u.searchParams.has('back'))     u.searchParams.set('back', '1');
+      return u.pathname + (u.search ? u.search : '') + (u.hash || '');
+    } catch (e) { return href; }
+  }
 
-    function interceptReadClicks() {
-      document.querySelectorAll('a.book-link, a.title-link').forEach(a => {
-        a.addEventListener('click', () => {
-          try {
-            sessionStorage.setItem('autoplayAudio', 'true');
-            sessionStorage.setItem('showBack', 'true');
-          } catch (e) {}
-          // rewrite href to carry flags
-          a.href = addAutoplayAndBackToHref(a.getAttribute('href'));
-        }, { once:false });
-      });
-    }
+  function interceptReadClicks() {
+    document.querySelectorAll('a.book-link, a.title-link').forEach(a => {
+      a.addEventListener('click', () => {
+        // store in BOTH scopes for robustness (same-tab + new-tab)
+        try {
+          sessionStorage.setItem('autoplayAudio', 'true');
+          sessionStorage.setItem('showBack', 'true');
+        } catch (e) {}
+        try {
+          localStorage.setItem('autoplayOnce', '1');
+        } catch (e) {}
 
-    // ---------- 2) OMNIBUS SHARE ----------
-    const enc = encodeURIComponent;
-
-    function buildFallbackLinks(url, title) {
-      const fb = `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`;
-      const messengerDeep = `fb-messenger://share?link=${enc(url)}&app_id=0`;
-      const messengerWeb  = `https://www.facebook.com/dialog/send?link=${enc(url)}&app_id=0&redirect_uri=${enc(url)}`;
-      const whatsapp = `https://api.whatsapp.com/send?text=${enc(title + " " + url)}`;
-      const xshare   = `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`;
-      return `
-        <a class="btn" href="${fb}" target="_blank" rel="noopener">Facebook</a>
-        <a class="btn" href="${messengerDeep}" target="_blank" rel="noopener">Messenger</a>
-        <a class="btn" href="${messengerWeb}" target="_blank" rel="noopener" style="display:none">Messenger (web)</a>
-        <a class="btn" href="${whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
-        <a class="btn" href="${xshare}" target="_blank" rel="noopener">X</a>
-        <button class="btn ghost copy-link" data-url="${url}">Copy Link</button>
-      `;
-    }
-
-    function attachCopyHandlers(root) {
-      root.querySelectorAll('.copy-link').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(btn.getAttribute('data-url'));
-            const old = btn.textContent;
-            btn.textContent = '✓ Copied';
-            setTimeout(() => (btn.textContent = old), 1500);
-          } catch {
-            alert('Copy failed. Long-press the link to copy.');
-          }
-        });
-      });
-    }
-
-    function renderOmniShare(container) {
-      const shareUrl   = container.getAttribute('data-share-url');
-      const shareTitle = container.getAttribute('data-share-title') || 'Share';
-
-      // Main Share button
-      const mainBtn = document.createElement('button');
-      mainBtn.className = 'btn primary';
-      mainBtn.textContent = 'Share';
-      container.appendChild(mainBtn);
-
-      // Fallback buttons (hidden until needed)
-      const fallbackWrap = document.createElement('div');
-      fallbackWrap.className = 'share-fallback';
-      fallbackWrap.innerHTML = buildFallbackLinks(shareUrl, shareTitle);
-      fallbackWrap.style.display = 'none';
-      container.appendChild(fallbackWrap);
-
-      const canNativeShare =
-        !!navigator.share &&
-        (typeof window.ontouchstart !== 'undefined'); // favor mobile environments
-
-      mainBtn.addEventListener('click', async () => {
-        if (canNativeShare) {
-          try {
-            await navigator.share({ title: shareTitle, text: shareTitle, url: shareUrl });
-            return;
-          } catch (err) {
-            // cancelled or failed -> fall through to fallback
-          }
-        }
-        fallbackWrap.style.display = '';
-        attachCopyHandlers(fallbackWrap);
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      interceptReadClicks();
-      document.querySelectorAll('.share-group').forEach(renderOmniShare);
+        // rewrite href to carry flags (no duplicates)
+        a.href = addAutoplayAndBackToHref(a.getAttribute('href') || a.href);
+      }, { once:false });
     });
-  })();
-  </script>
-  <script>
-document.addEventListener('DOMContentLoaded', () => {
-  // 1) Open covers/titles in the same tab
-  document.querySelectorAll('a.book-link, a.title-link').forEach(a => {
-    a.removeAttribute('target');     // no new tab
-    a.rel = 'noopener';              // safety
+  }
 
-    // 2) Preserve your autoplay + back flags
+  // ---------- 2) OMNIBUS SHARE ----------
+  const enc = encodeURIComponent;
+
+  function buildFallbackLinks(url, title) {
+    const fb = `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`;
+    const messengerDeep = `fb-messenger://share?link=${enc(url)}&app_id=0`;
+    const messengerWeb  = `https://www.facebook.com/dialog/send?link=${enc(url)}&app_id=0&redirect_uri=${enc(url)}`;
+    const whatsapp = `https://api.whatsapp.com/send?text=${enc(title + " " + url)}`;
+    const xshare   = `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`;
+    return `
+      <a class="btn" href="${fb}" target="_blank" rel="noopener">Facebook</a>
+      <a class="btn" href="${messengerDeep}" target="_blank" rel="noopener">Messenger</a>
+      <a class="btn" href="${messengerWeb}" target="_blank" rel="noopener" style="display:none">Messenger (web)</a>
+      <a class="btn" href="${whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn" href="${xshare}" target="_blank" rel="noopener">X</a>
+      <button class="btn ghost copy-link" data-url="${url}">Copy Link</button>
+    `;
+  }
+
+  function attachCopyHandlers(root) {
+    root.querySelectorAll('.copy-link').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(btn.getAttribute('data-url'));
+          const old = btn.textContent;
+          btn.textContent = '✓ Copied';
+          setTimeout(() => (btn.textContent = old), 1500);
+        } catch {
+          alert('Copy failed. Long-press the link to copy.');
+        }
+      });
+    });
+  }
+
+  function renderOmniShare(container) {
+    const shareUrl   = container.getAttribute('data-share-url');
+    const shareTitle = container.getAttribute('data-share-title') || 'Share';
+
+    const mainBtn = document.createElement('button');
+    mainBtn.className = 'btn primary';
+    mainBtn.textContent = 'Share';
+    container.appendChild(mainBtn);
+
+    const fallbackWrap = document.createElement('div');
+    fallbackWrap.className = 'share-fallback';
+    fallbackWrap.innerHTML = buildFallbackLinks(shareUrl, shareTitle);
+    fallbackWrap.style.display = 'none';
+    container.appendChild(fallbackWrap);
+
+    const canNativeShare =
+      !!navigator.share &&
+      (typeof window.ontouchstart !== 'undefined'); // prefer mobile envs
+
+    mainBtn.addEventListener('click', async () => {
+      if (canNativeShare) {
+        try {
+          await navigator.share({ title: shareTitle, text: shareTitle, url: shareUrl });
+          return;
+        } catch (err) {
+          // cancelled or failed -> show fallback
+        }
+      }
+      fallbackWrap.style.display = '';
+      attachCopyHandlers(fallbackWrap);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    interceptReadClicks();
+    document.querySelectorAll('.share-group').forEach(renderOmniShare);
+  });
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Open covers/titles in the same tab (no tab explosion)
+  document.querySelectorAll('a.book-link, a.title-link').forEach(a => {
+    // only change internal links under /reflections/
+    const isInternal = a.href.startsWith(location.origin + '/reflections/');
+    if (isInternal) {
+      a.removeAttribute('target'); // same tab
+      a.rel = 'noopener';          // safety
+    }
+
+    // Keep flags without duplicating them if the first script already added them
     a.addEventListener('click', () => {
       try { localStorage.setItem('autoplayOnce', '1'); } catch (e) {}
       try {
         const u = new URL(a.href, location.origin);
-        u.searchParams.set('autoplay', '1');
-        u.searchParams.set('back', '1');
+        if (!u.searchParams.has('autoplay')) u.searchParams.set('autoplay', '1');
+        if (!u.searchParams.has('back'))     u.searchParams.set('back', '1');
         a.href = u.toString();
       } catch (e) {}
     }, { once: false });
