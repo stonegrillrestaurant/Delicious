@@ -542,5 +542,25 @@
     });
   })();
   </script>
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1) Open covers/titles in the same tab
+  document.querySelectorAll('a.book-link, a.title-link').forEach(a => {
+    a.removeAttribute('target');     // no new tab
+    a.rel = 'noopener';              // safety
+
+    // 2) Preserve your autoplay + back flags
+    a.addEventListener('click', () => {
+      try { localStorage.setItem('autoplayOnce', '1'); } catch (e) {}
+      try {
+        const u = new URL(a.href, location.origin);
+        u.searchParams.set('autoplay', '1');
+        u.searchParams.set('back', '1');
+        a.href = u.toString();
+      } catch (e) {}
+    }, { once: false });
+  });
+});
+</script>
 </body>
 </html>
