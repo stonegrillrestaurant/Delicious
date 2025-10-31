@@ -79,44 +79,29 @@
     <p>© 2025 Ninox Antolihao · Stone Grill Press</p>
   </footer>
 
-  <!-- Load once, then enhance -->
-  <script src="/reflections/assets/audio-system.js"></script>
   <script>
-    (function () {
-      try {
-        // If your audio-system injects a custom player, feed it the primary FAITH.mp3.
-        if (typeof createAudioPlayer === 'function') {
-          const mount = document.getElementById('audioMount');
-          const title = "The Madness of Faith";
-          const primarySrc = "/reflections/pages/the-madness-of-fath/the-madness-of-faith.mp3";
-          const fallbackSrc = "/reflections/pages/the-madness-of-fath/the-madness-of-fath.mp3";
-          mount.innerHTML = createAudioPlayer(primarySrc, title);
+document.addEventListener('DOMContentLoaded', () => {
+  const audio = document.querySelector('audio');
+  const p = new URLSearchParams(location.search);
+  const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
 
-          // Auto-fallback if the first filename doesn't exist
-          const audioEl = mount.querySelector('audio');
-          if (audioEl) {
-            audioEl.addEventListener('error', function () {
-              if (audioEl.dataset.altTried === '1') return;
-              audioEl.dataset.altTried = '1';
-              const s = audioEl.querySelector('source');
-              if (s) { s.src = fallbackSrc; }
-              audioEl.load();
-              audioEl.play().catch(() => {});
-            }, { once: false });
-          }
-        }
-      } catch (e) {
-        console.warn("Audio enhancement failed; native player remains.", e);
-      }
+  if (fromIndex && audio) {
+    audio.play().catch(() => {
+      console.log('Autoplay blocked; user must press play.');
+    });
+    sessionStorage.removeItem('autoplayAudio');
+  }
 
-      // Stop button works for both native/enhanced players
-      document.addEventListener('click', function (e) {
-        if (e.target && (e.target.id === 'stopAudio' || e.target.classList.contains('audio-stop'))) {
-          const audio = document.querySelector('audio');
-          if (audio) { audio.pause(); audio.currentTime = 0; }
-        }
-      });
-    })();
-  </script>
+  // Optional: show Back button if user came from index
+  if (p.get('back') === '1' || sessionStorage.getItem('showBack') === 'true') {
+    const back = document.createElement('a');
+    back.href = '/reflections/index.html';
+    back.className = 'btn ghost';
+    back.textContent = '← Back to Reflections';
+    (document.querySelector('header') || document.body).prepend(back);
+    sessionStorage.removeItem('showBack');
+  }
+});
+</script>
 </body>
 </html>
