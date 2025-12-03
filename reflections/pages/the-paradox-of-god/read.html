@@ -24,7 +24,6 @@
   <meta property="og:title" content="The Paradox of God — Solitude Reflections">
   <meta property="og:description" content=" A quiet, honest reflection by Ninox Antolihao.">
   <meta property="og:url" content="https://stonegrillresto.net/reflections/pages/the-paradox-of-god/read.html">
-  <!-- Update this cover path to your final image -->
   <meta property="og:image" content="https://stonegrillresto.net/reflections/pages/the-paradox-of-god/paradoxofgod.jpg">
 
   <!-- Twitter Card -->
@@ -64,7 +63,6 @@
   </script>
 
   <style>
-    /* Light layout helpers on top of your main reflections.css */
     body {
       background:#1f1815;
       color:#f3e6dd;
@@ -133,26 +131,6 @@
       background:linear-gradient(135deg, #2b201d, #3a2721);
       border:1px solid rgba(255,107,61,0.35);
     }
-    .audio-top {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:.75rem;
-      margin-bottom:.75rem;
-      font-size:.85rem;
-      color:#f6d2bd;
-    }
-    .audio-top strong {
-      font-size:.9rem;
-    }
-    .audio-meta {
-      font-size:.75rem;
-      color:#d9baaa;
-    }
-    audio {
-      width:100%;
-      outline:none;
-    }
     main.article {
       line-height:1.8;
       font-size:1rem;
@@ -161,7 +139,7 @@
     main.article p {
       margin:0 0 1rem;
     }
-    main.article p+ p {
+    main.article p + p {
       margin-top:.35rem;
     }
     .share-row {
@@ -214,6 +192,69 @@
       opacity:1;
       transform:translateX(-50%) translateY(-4px);
     }
+
+    /* Audio playlist styles */
+    .audio-wrapper {
+      margin: 0.4rem 0 0;
+      padding: 0.8rem 0.2rem 0.2rem;
+      border-radius: 10px;
+    }
+    #reflectionAudio {
+      width: 100%;
+      display: block;
+    }
+    .playlist {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .playlist-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 1rem;
+      background: #1f1815;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid #2b221f;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .playlist-row:hover {
+      border-color: #ff6b3d;
+    }
+    .playlist-row.active {
+      background: #322621;
+      border-color: #ff6b3d;
+      box-shadow: 0 0 6px rgba(255, 107, 61, 0.45);
+    }
+    .playlist-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      overflow: hidden;
+    }
+    .playlist-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #f3e6dd;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .playlist-sub {
+      font-size: 0.8rem;
+      color: #b29587;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .playlist-duration {
+      font-size: 0.85rem;
+      color: #c9b0a4;
+      margin-left: 1rem;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -240,174 +281,90 @@
       </div>
     </div>
 
-    <!-- Audio Player -->
+    <!-- 🎧 Audio Player with playlist -->
     <section class="audio-wrap">
-    <div class="audio-wrapper">
-  <!-- Actual audio player -->
-  <audio id="reflectionAudio" controls preload="metadata">
-    <source id="audioSource" src="" type="audio/mpeg">
-    Your browser does not support the audio element.
-  </audio>
+      <div class="audio-wrapper">
+        <audio id="reflectionAudio" controls preload="metadata">
+          <source id="audioSource" src="" type="audio/mpeg">
+          Your browser does not support the audio element.
+        </audio>
 
-  <!-- Playlist-style track list -->
-  <div class="playlist">
-    <div class="playlist-row active"
-         data-src="/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3">
-      <div class="playlist-main">
-        <div class="playlist-title">The Paradox of God</div>
-        <div class="playlist-sub">Narrated reflection</div>
+        <div class="playlist">
+          <div class="playlist-row active"
+               data-src="/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3">
+            <div class="playlist-main">
+              <div class="playlist-title">The Paradox of God</div>
+              <div class="playlist-sub">Narrated reflection</div>
+            </div>
+            <div class="playlist-duration">--:--</div>
+          </div>
+
+          <div class="playlist-row"
+               data-src="/reflections/pages/diety/diety.mp3">
+            <div class="playlist-main">
+              <div class="playlist-title">The Deity</div>
+              <div class="playlist-sub">Alternative narration</div>
+            </div>
+            <div class="playlist-duration">--:--</div>
+          </div>
+        </div>
       </div>
-      <div class="playlist-duration">--:--</div>
-    </div>
 
-    <div class="playlist-row"
-         data-src="/reflections/pages/diety/diety.mp3">
-      <div class="playlist-main">
-        <div class="playlist-title">The Deity</div>
-        <div class="playlist-sub">Alternative narration</div>
-      </div>
-      <div class="playlist-duration">--:--</div>
-    </div>
-  </div>
-</div>
+      <script>
+        (function () {
+          const audioPlayer = document.getElementById('reflectionAudio');
+          const audioSource  = document.getElementById('audioSource');
+          const rows         = document.querySelectorAll('.playlist-row');
 
-<script>
-  const audioPlayer = document.getElementById('reflectionAudio');
-  const audioSource = document.getElementById('audioSource');
-  const rows = document.querySelectorAll('.playlist-row');
+          // Default track = first row
+          if (rows.length > 0) {
+            const firstSrc = rows[0].dataset.src;
+            audioSource.src = firstSrc;
+            audioPlayer.load();
+          }
 
-  // Set default track = first row
-  if (rows.length > 0) {
-    const firstSrc = rows[0].dataset.src;
-    audioSource.src = firstSrc;
-    audioPlayer.load();
-  }
+          // Click to switch track
+          rows.forEach(row => {
+            row.addEventListener('click', () => {
+              rows.forEach(r => r.classList.remove('active'));
+              row.classList.add('active');
 
-  // Clicking a row switches track
-  rows.forEach(row => {
-    row.addEventListener('click', () => {
-      // change active highlight
-      rows.forEach(r => r.classList.remove('active'));
-      row.classList.add('active');
+              const src = row.dataset.src;
+              audioSource.src = src;
+              audioPlayer.load();
+              audioPlayer.play().catch(() => {});
+            });
+          });
 
-      // swap audio source
-      const src = row.dataset.src;
-      audioSource.src = src;
-      audioPlayer.load();
-      audioPlayer.play();
-    });
-  });
-
-  // OPTIONAL: auto-fill durations from audio metadata
-  rows.forEach(row => {
-    const src = row.dataset.src;
-    const tempAudio = new Audio(src);
-    tempAudio.addEventListener('loadedmetadata', () => {
-      const dur = tempAudio.duration;
-      if (!isNaN(dur)) {
-        const total = Math.floor(dur);
-        const min = String(Math.floor(total / 60)).padStart(2, '0');
-        const sec = String(total % 60).padStart(2, '0');
-        const durEl = row.querySelector('.playlist-duration');
-        if (durEl) durEl.textContent = `${min}:${sec}`;
-      }
-    });
-  });
-</script>
-
-<style>
-  .audio-wrapper {
-    margin: 1.6rem 0;
-    padding: 1.2rem;
-    background: #2a211e;
-    border-radius: 14px;
-  }
-
-  #reflectionAudio {
-    width: 100%;
-    display: block;
-  }
-
-  .playlist {
-    margin-top: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  .playlist-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.7rem 1rem;
-    background: #1f1815;
-    border-radius: 8px;
-    cursor: pointer;
-    border: 1px solid #2b221f;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  }
-
-  .playlist-row:hover {
-    border-color: #ff6b3d;
-  }
-
-  .playlist-row.active {
-    background: #322621;
-    border-color: #ff6b3d;
-    box-shadow: 0 0 6px rgba(255, 107, 61, 0.45);
-  }
-
-  .playlist-main {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    overflow: hidden;
-  }
-
-  .playlist-title {
-    font-size: 0.98rem;
-    font-weight: 600;
-    color: #f3e6dd;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .playlist-sub {
-    font-size: 0.8rem;
-    color: #b29587;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .playlist-duration {
-    font-size: 0.85rem;
-    color: #c9b0a4;
-    margin-left: 1rem;
-    flex-shrink: 0;
-  }
-</style>
+          // Auto-fill durations when metadata is available
+          rows.forEach(row => {
+            const src = row.dataset.src;
+            const tempAudio = new Audio(src);
+            tempAudio.addEventListener('loadedmetadata', () => {
+              const dur = tempAudio.duration;
+              if (!isNaN(dur)) {
+                const total = Math.floor(dur);
+                const min = String(Math.floor(total / 60)).padStart(2, '0');
+                const sec = String(total % 60).padStart(2, '0');
+                const durEl = row.querySelector('.playlist-duration');
+                if (durEl) durEl.textContent = `${min}:${sec}`;
+              }
+            });
+          });
+        })();
+      </script>
     </section>
 
     <!-- Article Content -->
     <main class="article">
       <p>There is a strange tension at the heart of the divine — a paradox that religion often avoids but the soul keeps returning to.</p>
-
       <p>We are told that God is perfect, yet creates what is flawed. All-knowing, yet surprised by disobedience. All-powerful, yet wounded by human failure. Loving, yet capable of wrath so great that entire worlds tremble.</p>
-
       <p>If everything is foreseen, written, and woven into a plan, then what part of us is truly free? And why would a perfect being design a story where the creation is destined to fail, only to be judged for fulfilling the script?</p>
-
       <p>Free will is described as a gift of love — but a gift that leads to condemnation feels less like love and more like a test that no one asked for.</p>
-
       <p>If the creator knew the ending from the beginning, if the architect designed both the flaw and the consequence, then where does accountability begin? How can the clay be blamed for cracks that the potter himself shaped into its form?</p>
-
       <p>Perhaps the paradox isn’t about God at all, but about the image of God humanity created — a being modeled after our fears, our longing for order, our desperate need to make meaning out of suffering.</p>
-
       <p>Maybe what we call “God” is not a judge writing destinies, but a metaphor for the mystery we cannot name — the vastness that invites us to question, to seek, to wonder.</p>
-
       <p>And in that wondering, we discover something deeper: that truth is not found in answers that silence the mind, but in questions that awaken the soul.</p>
-
       <p>This is the paradox of God.</p>
     </main>
 
@@ -430,99 +387,84 @@
 
   <script>
     (function () {
-      const audio = document.getElementById('reflectionAudio');
-      const playToggleBtn = document.getElementById('playToggleBtn');
+      const audio    = document.getElementById('reflectionAudio');
       const replayBtn = document.getElementById('replayBtn');
-      const shareBtn = document.getElementById('shareBtn');
-      const toast = document.getElementById('toast');
-      const backLink = document.getElementById('backLink');
+      const shareBtn  = document.getElementById('shareBtn');
+      const toast     = document.getElementById('toast');
+      const backLink  = document.getElementById('backLink');
 
-      const params = new URLSearchParams(location.search);
+      const params        = new URLSearchParams(location.search);
       const shouldAutoplay = params.get('autoplay') === '1';
-      const hasBackHint = params.get('back') === '1';
+      const hasBackHint    = params.get('back') === '1';
 
-      // Back hint: if opened from index with ?back=1, try history.back()
-      if (hasBackHint && document.referrer && document.referrer.indexOf('/reflections') !== -1) {
+      // Smarter back: if opened from index with ?back=1 and referrer is reflections, use history.back()
+      if (hasBackHint && document.referrer && document.referrer.indexOf('/reflections') !== -1 && backLink) {
         backLink.addEventListener('click', function (e) {
           e.preventDefault();
           history.back();
         });
       }
 
-      function updatePlayButton() {
-        if (audio.paused) {
-          playToggleBtn.querySelector('.icon').textContent = '▶︎';
-          playToggleBtn.querySelector('span:nth-child(2)').textContent = 'Play';
-        } else {
-          playToggleBtn.querySelector('.icon').textContent = '⏸';
-          playToggleBtn.querySelector('span:nth-child(2)').textContent = 'Pause';
-        }
+      // Replay from start
+      if (replayBtn && audio) {
+        replayBtn.addEventListener('click', function () {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+        });
       }
 
-      playToggleBtn.addEventListener('click', function () {
-        if (audio.paused) {
-          audio.play().catch(()=>{});
-        } else {
-          audio.pause();
-        }
-      });
-
-      replayBtn.addEventListener('click', function () {
-        audio.currentTime = 0;
-        audio.play().catch(()=>{});
-      });
-
-      audio.addEventListener('play', updatePlayButton);
-      audio.addEventListener('pause', updatePlayButton);
-      audio.addEventListener('ended', updatePlayButton);
-
       // Autoplay support from index
-      if (shouldAutoplay) {
-        audio.play().catch(()=>{ /* silent fail if browser blocks */ });
+      if (shouldAutoplay && audio) {
+        audio.play().catch(() => {
+          // ignore if blocked
+        });
       }
 
       function showToast(msg) {
+        if (!toast) return;
         toast.textContent = msg;
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 1800);
       }
 
       // Share button logic
-      shareBtn.addEventListener('click', async function () {
-        const url = window.location.href;
-        const title = 'The Paradox of God — Solitude Reflections';
-        const text = 'A reflection by Ninox Antolihao on the paradox of a perfect God and a flawed world.';
+      if (shareBtn) {
+        shareBtn.addEventListener('click', async function () {
+          const url   = window.location.href;
+          const title = 'The Paradox of God — Solitude Reflections';
+          const text  = 'A reflection by Ninox Antolihao on the paradox of a perfect God and a flawed world.';
 
-        if (navigator.share) {
-          try {
-            await navigator.share({ title, text, url });
-          } catch (e) {
-            // user cancelled; no need to show error
+          if (navigator.share) {
+            try {
+              await navigator.share({ title, text, url });
+            } catch (e) {
+              // user cancelled
+            }
+          } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+              await navigator.clipboard.writeText(url);
+              showToast('Link copied to clipboard');
+            } catch (e) {
+              showToast('Unable to copy link');
+            }
+          } else {
+            // Older fallback
+            const dummy = document.createElement('input');
+            dummy.value = url;
+            document.body.appendChild(dummy);
+            dummy.select();
+            try {
+              document.execCommand('copy');
+              showToast('Link copied to clipboard');
+            } catch (e) {
+              showToast('Unable to copy link');
+            }
+            document.body.removeChild(dummy);
           }
-        } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          try {
-            await navigator.clipboard.writeText(url);
-            showToast('Link copied to clipboard');
-          } catch (e) {
-            showToast('Unable to copy link');
-          }
-        } else {
-          // Final fallback
-          const dummy = document.createElement('input');
-          dummy.value = url;
-          document.body.appendChild(dummy);
-          dummy.select();
-          try {
-            document.execCommand('copy');
-            showToast('Link copied to clipboard');
-          } catch (e) {
-            showToast('Unable to copy link');
-          }
-          document.body.removeChild(dummy);
-        }
-      });
+        });
+      }
 
-      // Register reflections service worker (same pattern you already use)
+      // Service worker for reflections
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/reflections/sw.js')
           .catch(function (err) {
