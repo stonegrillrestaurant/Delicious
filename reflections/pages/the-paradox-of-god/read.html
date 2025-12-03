@@ -242,22 +242,79 @@
 
     <!-- Audio Player -->
     <section class="audio-wrap">
-      <div class="audio-top">
-        <div>
-          <strong>Listen to this reflection</strong>
-          <div class="audio-meta">Narrated version of “The Paradox of God”</div>
-        </div>
-        <button class="btn secondary" id="playToggleBtn">
-          <span class="icon">▶︎</span>
-          <span>Play</span>
-        </button>
-      </div>
+     <div class="audio-wrapper">
+  <audio id="reflectionAudio" controls preload="metadata">
+    <source id="audioSource" src="" type="audio/mpeg">
+  </audio>
 
-      <!-- Update src to your actual mp3 -->
-      <audio id="reflectionAudio" preload="metadata">
-        <source src="/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3?=v2" type="audio/mpeg">
-        Your browser does not support the audio element.
-      </audio>
+  <div class="track-buttons">
+    <button onclick="switchTrack(1)" id="btn1" class="active">Track 1</button>
+    <button onclick="switchTrack(2)" id="btn2">Track 2</button>
+  </div>
+</div>
+
+<script>
+  const audioPlayer = document.getElementById("reflectionAudio");
+  const audioSource = document.getElementById("audioSource");
+
+  // ⭐ THIS IS WHERE YOU PUT YOUR FILE LOCATIONS ⭐
+  const track1 = "/reflections/pages/paradox-of-god/paradox-caleb.mp3";
+  const track2 = "/reflections/pages/paradox-of-god/paradox-gwyneth.mp3";
+
+  // ⭐ This sets the default track on page load
+  audioSource.src = track1;
+
+  function switchTrack(num) {
+    if (num === 1) {
+      audioSource.src = track1;
+      document.getElementById("btn1").classList.add("active");
+      document.getElementById("btn2").classList.remove("active");
+    } else {
+      audioSource.src = track2;
+      document.getElementById("btn2").classList.add("active");
+      document.getElementById("btn1").classList.remove("active");
+    }
+
+    audioPlayer.load();
+    audioPlayer.play();
+  }
+</script>
+
+<style>
+  .audio-wrapper {
+    margin: 1.6rem 0;
+    padding: 1.2rem;
+    background: #2a211e;
+    border-radius: 14px;
+  }
+
+  #reflectionAudio {
+    width: 100%;
+  }
+
+  .track-buttons {
+    display: flex;
+    gap: .7rem;
+    margin-top: 1rem;
+  }
+
+  .track-buttons button {
+    flex: 1;
+    padding: .7rem;
+    background: #1f1815;
+    border: 1px solid #ff6b3d;
+    border-radius: 10px;
+    color: #ff6b3d;
+    font-size: .9rem;
+    transition: .15s ease;
+  }
+
+  .track-buttons button.active {
+    background: #ff6b3d;
+    color: #1f1815;
+    box-shadow: 0 0 6px rgba(255, 107, 61, 0.7);
+  }
+</style>
     </section>
 
     <!-- Article Content -->
