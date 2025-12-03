@@ -242,47 +242,77 @@
 
     <!-- Audio Player -->
     <section class="audio-wrap">
-<div class="audio-wrapper">
+    <div class="audio-wrapper">
+  <!-- Actual audio player -->
   <audio id="reflectionAudio" controls preload="metadata">
     <source id="audioSource" src="" type="audio/mpeg">
+    Your browser does not support the audio element.
   </audio>
 
-  <div class="track-list">
-    <div class="track-item active" onclick="switchTrack(1, this)">
-      <span class="track-number">1</span>
-      <span class="track-title">Paradox of God</span>
+  <!-- Playlist-style track list -->
+  <div class="playlist">
+    <div class="playlist-row active"
+         data-src="/reflections/pages/the-paradox-of-god/paradoxofgod.mp3">
+      <div class="playlist-main">
+        <div class="playlist-title">Paradox of God</div>
+        <div class="playlist-sub">Narrated reflection</div>
+      </div>
+      <div class="playlist-duration">--:--</div>
     </div>
 
-    <div class="track-item" onclick="switchTrack(2, this)">
-      <span class="track-number">2</span>
-      <span class="track-title">The Paradox of God</span>
+    <div class="playlist-row"
+         data-src="/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3">
+      <div class="playlist-main">
+        <div class="playlist-title">The Paradox of God</div>
+        <div class="playlist-sub">Alternative narration</div>
+      </div>
+      <div class="playlist-duration">--:--</div>
     </div>
   </div>
 </div>
 
 <script>
-  const audioPlayer = document.getElementById("reflectionAudio");
-  const audioSource = document.getElementById("audioSource");
+  const audioPlayer = document.getElementById('reflectionAudio');
+  const audioSource = document.getElementById('audioSource');
+  const rows = document.querySelectorAll('.playlist-row');
 
-  // ⭐ Your actual file locations
-  const track1 = "/reflections/pages/the-paradox-of-god/paradoxofgod.mp3";
-  const track2 = "/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3";
-
-  // ⭐ Default track
-  audioSource.src = track1;
-
-  function switchTrack(num, element) {
-    if (num === 1) audioSource.src = track1;
-    if (num === 2) audioSource.src = track2;
-
+  // Set default track = first row
+  if (rows.length > 0) {
+    const firstSrc = rows[0].dataset.src;
+    audioSource.src = firstSrc;
     audioPlayer.load();
-    audioPlayer.play();
-
-    // Highlight active track
-    document.querySelectorAll('.track-item')
-      .forEach(item => item.classList.remove('active'));
-    element.classList.add('active');
   }
+
+  // Clicking a row switches track
+  rows.forEach(row => {
+    row.addEventListener('click', () => {
+      // change active highlight
+      rows.forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+
+      // swap audio source
+      const src = row.dataset.src;
+      audioSource.src = src;
+      audioPlayer.load();
+      audioPlayer.play();
+    });
+  });
+
+  // OPTIONAL: auto-fill durations from audio metadata
+  rows.forEach(row => {
+    const src = row.dataset.src;
+    const tempAudio = new Audio(src);
+    tempAudio.addEventListener('loadedmetadata', () => {
+      const dur = tempAudio.duration;
+      if (!isNaN(dur)) {
+        const total = Math.floor(dur);
+        const min = String(Math.floor(total / 60)).padStart(2, '0');
+        const sec = String(total % 60).padStart(2, '0');
+        const durEl = row.querySelector('.playlist-duration');
+        if (durEl) durEl.textContent = `${min}:${sec}`;
+      }
+    });
+  });
 </script>
 
 <style>
@@ -295,57 +325,69 @@
 
   #reflectionAudio {
     width: 100%;
+    display: block;
   }
 
-  .track-list {
+  .playlist {
     margin-top: 1rem;
     display: flex;
     flex-direction: column;
-    gap: .6rem;
+    gap: 0.4rem;
   }
 
-  .track-item {
+  .playlist-row {
     display: flex;
     align-items: center;
-    gap: .9rem;
-    padding: .75rem 1rem;
+    justify-content: space-between;
+    padding: 0.7rem 1rem;
     background: #1f1815;
-    border: 1px solid #3a2f2a;
-    border-radius: 10px;
-    color: #c9b0a4;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 1rem;
-    transition: .15s ease;
+    border: 1px solid #2b221f;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
 
-  .track-item:hover {
+  .playlist-row:hover {
     border-color: #ff6b3d;
-    color: #ff6b3d;
   }
 
-  .track-item.active {
-    border-color: #ff6b3d;
+  .playlist-row.active {
     background: #322621;
-    color: #ff6b3d;
-    box-shadow: 0 0 6px rgba(255, 107, 61, 0.5);
+    border-color: #ff6b3d;
+    box-shadow: 0 0 6px rgba(255, 107, 61, 0.45);
   }
 
-  .track-number {
-    background: #ff6b3d;
-    color: #1f1815;
-    border-radius: 6px;
-    padding: 3px 8px;
-    font-weight: bold;
-    font-size: .85rem;
-    min-width: 24px;
-    text-align: center;
+  .playlist-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow: hidden;
   }
 
-  .track-title {
-    flex: 1;
+  .playlist-title {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #f3e6dd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlist-sub {
+    font-size: 0.8rem;
+    color: #b29587;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlist-duration {
+    font-size: 0.85rem;
+    color: #c9b0a4;
+    margin-left: 1rem;
+    flex-shrink: 0;
   }
 </style>
-
     </section>
 
     <!-- Article Content -->
