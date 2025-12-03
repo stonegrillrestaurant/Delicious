@@ -242,14 +242,21 @@
 
     <!-- Audio Player -->
     <section class="audio-wrap">
-     <div class="audio-wrapper">
+<div class="audio-wrapper">
   <audio id="reflectionAudio" controls preload="metadata">
     <source id="audioSource" src="" type="audio/mpeg">
   </audio>
 
-  <div class="track-buttons">
-    <button onclick="switchTrack(1)" id="btn1" class="active">The paradox of god</button>
-    <button onclick="switchTrack(2)" id="btn2">Paradox of God</button>
+  <div class="track-list">
+    <div class="track-item active" onclick="switchTrack(1, this)">
+      <span class="track-number">1</span>
+      <span class="track-title">Paradox of God</span>
+    </div>
+
+    <div class="track-item" onclick="switchTrack(2, this)">
+      <span class="track-number">2</span>
+      <span class="track-title">The Paradox of God</span>
+    </div>
   </div>
 </div>
 
@@ -257,26 +264,24 @@
   const audioPlayer = document.getElementById("reflectionAudio");
   const audioSource = document.getElementById("audioSource");
 
-  // ⭐ THIS IS WHERE YOU PUT YOUR FILE LOCATIONS ⭐
-  const track1 = "/reflections/pages/paradox-of-god/theparadoxofgod.mp3";
-  const track2 = "/reflections/pages/paradox-of-god/paradoxofgod.mp3";
+  // ⭐ Your actual file locations
+  const track1 = "/reflections/pages/the-paradox-of-god/paradoxofgod.mp3";
+  const track2 = "/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3";
 
-  // ⭐ This sets the default track on page load
+  // ⭐ Default track
   audioSource.src = track1;
 
-  function switchTrack(num) {
-    if (num === 1) {
-      audioSource.src = track1;
-      document.getElementById("btn1").classList.add("active");
-      document.getElementById("btn2").classList.remove("active");
-    } else {
-      audioSource.src = track2;
-      document.getElementById("btn2").classList.add("active");
-      document.getElementById("btn1").classList.remove("active");
-    }
+  function switchTrack(num, element) {
+    if (num === 1) audioSource.src = track1;
+    if (num === 2) audioSource.src = track2;
 
     audioPlayer.load();
     audioPlayer.play();
+
+    // Highlight active track
+    document.querySelectorAll('.track-item')
+      .forEach(item => item.classList.remove('active'));
+    element.classList.add('active');
   }
 </script>
 
@@ -292,29 +297,55 @@
     width: 100%;
   }
 
-  .track-buttons {
-    display: flex;
-    gap: .7rem;
+  .track-list {
     margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
   }
 
-  .track-buttons button {
-    flex: 1;
-    padding: .7rem;
+  .track-item {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: .75rem 1rem;
     background: #1f1815;
-    border: 1px solid #ff6b3d;
+    border: 1px solid #3a2f2a;
     border-radius: 10px;
-    color: #ff6b3d;
-    font-size: .9rem;
+    color: #c9b0a4;
+    cursor: pointer;
+    font-size: 1rem;
     transition: .15s ease;
   }
 
-  .track-buttons button.active {
+  .track-item:hover {
+    border-color: #ff6b3d;
+    color: #ff6b3d;
+  }
+
+  .track-item.active {
+    border-color: #ff6b3d;
+    background: #322621;
+    color: #ff6b3d;
+    box-shadow: 0 0 6px rgba(255, 107, 61, 0.5);
+  }
+
+  .track-number {
     background: #ff6b3d;
     color: #1f1815;
-    box-shadow: 0 0 6px rgba(255, 107, 61, 0.7);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-weight: bold;
+    font-size: .85rem;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  .track-title {
+    flex: 1;
   }
 </style>
+
     </section>
 
     <!-- Article Content -->
