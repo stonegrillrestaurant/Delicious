@@ -148,49 +148,172 @@
       </div>
 
       <script>
-        (function () {
-          const audioPlayer = document.getElementById('reflectionAudio');
-          const audioSource  = document.getElementById('audioSource');
-          const rows         = document.querySelectorAll('.playlist-row');
+    // Scroll only when text is wider than its container
+    function applySmartScroll() {
+      const wraps = document.querySelectorAll('.scroll-wrap');
 
-          // Default track = first row
-          if (rows.length > 0) {
-            const firstSrc = rows[0].dataset.src;
-            audioSource.src = firstSrc;
-            audioPlayer.load();
+      wraps.forEach(wrap => {
+        const text = wrap.querySelector('.scroll-text');
+        if (!text) return;
+
+        // Reset animation first
+        text.style.animation = 'none';
+
+        // Only animate if text overflows horizontally
+        if (text.scrollWidth > wrap.clientWidth) {
+          const duration = text.scrollWidth / 40; // adjust speed here
+          text.style.animation = `scroll-left ${duration}s linear infinite`;
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const audioPlayer = document.getElementById('reflectionAudio');
+      const audioSource = document.getElementById('audioSource');
+      const rows = document.querySelectorAll('.playlist-row');
+
+      // Default track: first row
+      if (rows.length > 0) {
+        const firstSrc = rows[0].dataset.src;
+        audioSource.src = firstSrc;
+        audioPlayer.load();
+      }
+
+      // Clicking a row switches track
+      rows.forEach(row => {
+        row.addEventListener('click', () => {
+          rows.forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+
+          const src = row.dataset.src;
+          audioSource.src = src;
+          audioPlayer.load();
+          audioPlayer.play();
+        });
+      });
+
+      // Auto-fill durations (if metadata available)
+      rows.forEach(row => {
+        const src = row.dataset.src;
+        const tempAudio = new Audio(src);
+        tempAudio.addEventListener('loadedmetadata', () => {
+          const dur = tempAudio.duration;
+          if (!isNaN(dur)) {
+            const total = Math.floor(dur);
+            const min = String(Math.floor(total / 60)).padStart(2, '0');
+            const sec = String(total % 60).padStart(2, '0');
+            const durEl = row.querySelector('.playlist-duration');
+            if (durEl) durEl.textContent = `${min}:${sec}`;
           }
+        });
+      });
 
-          // Click to switch track
-          rows.forEach(row => {
-            row.addEventListener('click', () => {
-              rows.forEach(r => r.classList.remove('active'));
-              row.classList.add('active');
+      // Apply scrolling after layout
+      applySmartScroll();
+      window.addEventListener('resize', applySmartScroll);
+    });
+  </script>
 
-              const src = row.dataset.src;
-              audioSource.src = src;
-              audioPlayer.load();
-              audioPlayer.play().catch(() => {});
-            });
-          });
+  <!-- CSS: playlist look + scrolling style -->
+  <style>
+    .audio-wrapper {
+      margin: 1.6rem 0;
+      padding: 1.2rem;
+      background: #2a211e;
+      border-radius: 14px;
+    }
 
-          // Auto-fill durations when metadata is available
-          rows.forEach(row => {
-            const src = row.dataset.src;
-            const tempAudio = new Audio(src);
-            tempAudio.addEventListener('loadedmetadata', () => {
-              const dur = tempAudio.duration;
-              if (!isNaN(dur)) {
-                const total = Math.floor(dur);
-                const min = String(Math.floor(total / 60)).padStart(2, '0');
-                const sec = String(total % 60).padStart(2, '0');
-                const durEl = row.querySelector('.playlist-duration');
-                if (durEl) durEl.textContent = `${min}:${sec}`;
-              }
-            });
-          });
-        })();
-      </script>
-    </section>
+    #reflectionAudio {
+      width: 100%;
+      display: block;
+    }
+
+    .playlist {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .playlist-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 1rem;
+      background: #1f1815;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid #2b221f;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .playlist-row:hover {
+      border-color: #ff6b3d;
+    }
+
+    .playlist-row.active {
+      background: #322621;
+      border-color: #ff6b3d;
+      box-shadow: 0 0 6px rgba(255, 107, 61, 0.45);
+    }
+
+    .playlist-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      overflow: hidden;
+    }
+
+    .playlist-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #f3e6dd;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .playlist-sub {
+      font-size: 0.8rem;
+      color: #b29587;
+    }
+
+    .playlist-duration {
+      font-size: 0.85rem;
+      color: #c9b0a4;
+      margin-left: 1rem;
+      flex-shrink: 0;
+    }
+
+    /* scrolling wrapper */
+    .scroll-wrap {
+      position: relative;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .scroll-text {
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    @keyframes scroll-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+    /* Smooth right-to-left subtitle scroll */
+.scrolling-subtitle span {
+  animation: smoothScroll 18s linear infinite;
+}
+
+@keyframes smoothScroll {
+  0% { transform: translateX(100%); }   /* start off-screen on the right */
+  10% { transform: translateX(0); }     /* glide in smoothly */
+  100% { transform: translateX(-100%); } /* scroll fully to the left */
+}
+  </style>
+</section>
+    
 
 
     <hr />
