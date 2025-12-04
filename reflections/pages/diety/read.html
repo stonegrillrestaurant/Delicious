@@ -10,7 +10,7 @@
   <!-- 🔗 Omnibus player + stylesheet -->
   <link rel="stylesheet" href="/reflections/assets/reflections.css">
   <script src="/reflections/assets/audio-system.js"></script>
-  <link rel="stylesheet" href="/reflections/assets/reflections-header.css">
+
   <style>
     :root{
       --bg:#0e0e0f; --paper:#141415; --ink:#f1f1f1; --muted:#aaa; --accent:#ffb020; --rule:#252526;
@@ -21,48 +21,336 @@
     }
     *{box-sizing:border-box}
     html,body{margin:0;height:100%}
-    body{font-family: Georgia, ui-serif, serif; background:var(--bg); color:var(--ink); font-size:var(--fs); line-height:var(--lh)}
-    header{
-      position: sticky; top:0; z-index:10; background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.15));
-      backdrop-filter: blur(6px); border-bottom:1px solid var(--rule);
+    body{
+      font-family: Georgia, ui-serif, serif;
+      background:var(--bg);
+      color:var(--ink);
+      font-size:var(--fs);
+      line-height:var(--lh)
     }
-    .wrap{max-width:var(--maxw); margin:0 auto; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .back{color:var(--accent); text-decoration:none; font-weight:700}
-    .dl{border:1px solid var(--rule); border-radius:10px; padding:6px 10px; color:var(--ink); text-decoration:none}
-    main{padding: 18px 16px 60px}
+
+    /* =========================
+       GLOBAL FIXED HEADER
+    ========================== */
+    .ref-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: #0f0f10;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+      backdrop-filter: blur(6px);
+    }
+
+    .ref-header-inner {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 0.5rem 16px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    /* Brand */
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: var(--accent);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .brand-subtitle {
+      font-size: 0.7rem;
+      color: #e5d9c7;
+      opacity: 0.85;
+    }
+
+    /* Nav links */
+    .ref-nav {
+      margin-left: 1rem;
+      flex: 1;
+    }
+
+    .ref-nav ul {
+      display: flex;
+      gap: 0.75rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .ref-nav a {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      text-decoration: none;
+      color: #f3e4d5;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .ref-nav a:hover {
+      background: rgba(255, 176, 32, 0.14);
+      border-color: rgba(255, 176, 32, 0.45);
+    }
+
+    .ref-nav a.active {
+      background: var(--accent);
+      color: #141415;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Right side */
+    .ref-header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .current-page-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 0.72rem;
+      color: #f7e9dd;
+    }
+
+    .page-icon {
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+
+    .back-home-link {
+      font-size: 0.74rem;
+      text-decoration: none;
+      color: var(--accent);
+      padding: 0.28rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 176, 32, 0.5);
+      background: rgba(0,0,0,0.25);
+      white-space: nowrap;
+    }
+
+    .back-home-link:hover {
+      background: var(--accent);
+      color: #141415;
+    }
+
+    .pdf-link {
+      font-size: 0.74rem;
+      text-decoration: none;
+      color: #111;
+      background: #f8f0dc;
+      padding: 0.28rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid rgba(249, 230, 193, 0.7);
+      white-space: nowrap;
+    }
+
+    .pdf-link:hover {
+      background: #ffe1a6;
+    }
+
+    .nav-toggle {
+      display: none;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: transparent;
+      border-radius: 6px;
+      padding: 0.2rem 0.45rem;
+      font-size: 1.1rem;
+      color: #f7e9dd;
+    }
+
+    /* Main layout */
+    .page-content {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 4.4rem 16px 60px; /* space for fixed header */
+    }
+
+    @media (max-width: 900px) {
+      .brand-subtitle {
+        display: none;
+      }
+      .ref-nav ul {
+        gap: 0.4rem;
+      }
+      .ref-nav a {
+        padding: 0.25rem 0.55rem;
+        font-size: 0.75rem;
+      }
+      .current-page-badge {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .ref-header-inner {
+        flex-wrap: nowrap;
+      }
+      .ref-nav {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        background: #111113;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.25s ease;
+        margin-left: 0;
+      }
+      .ref-nav ul {
+        flex-direction: column;
+        padding: 0.55rem 1rem 0.8rem;
+        gap: 0.25rem;
+      }
+      .ref-nav a {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .ref-header.nav-open .ref-nav {
+        max-height: 260px;
+      }
+      .nav-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .back-home-link {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.45rem;
+      }
+      .page-content {
+        padding-top: 4.8rem;
+      }
+    }
+
+    /* =========================
+       PAGE-SPECIFIC STYLES
+    ========================== */
+
     article{
-      max-width:var(--maxw); margin:0 auto; background:var(--paper); border:1px solid var(--rule);
-      border-radius:var(--radius); padding:26px 22px; box-shadow:0 10px 30px rgba(0,0,0,.25)
+      max-width:var(--maxw);
+      margin:0 auto;
+      background:var(--paper);
+      border:1px solid var(--rule);
+      border-radius:var(--radius);
+      padding:26px 22px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25)
     }
     h1{margin:0 0 6px; font-size:clamp(24px,5vw,38px)}
     .meta{color:var(--muted); margin-bottom:16px}
     h2{margin:20px 0 8px}
     p{margin:10px 0}
-    blockquote{margin:14px 0; padding:12px 16px; border-left:4px solid var(--accent); background:rgba(255,176,32,.08); border-radius:10px}
+    blockquote{
+      margin:14px 0;
+      padding:12px 16px;
+      border-left:4px solid var(--accent);
+      background:rgba(255,176,32,.08);
+      border-radius:10px
+    }
     .divider{ text-align:center; color:var(--muted); margin: 18px 0}
     .divider span{padding:0 10px}
     .small{font-size:14px; color:var(--muted)}
     footer{max-width:var(--maxw); margin:0 auto; padding:18px 16px; color:var(--muted)}
+
   </style>
 </head>
 
 <body>
-  <div id="ref-header-placeholder"></div>
 
-<main class="page-content">
-  <header>
-    <div class="wrap">
-      <a class="back" href="/reflections/index.html">← Back to Reflections</a>
-      <a class="dl" href="./The_False_God_Reflection_by_Ninox copy.pdf" download>Download PDF</a>
+  <!-- GLOBAL FIXED HEADER -->
+  <header class="ref-header">
+    <div class="ref-header-inner">
+
+      <!-- Left: brand -->
+      <div class="ref-header-left">
+        <a href="/reflections/index.html" class="brand-link">
+          <span class="brand-mark">✦</span>
+          <span class="brand-text">
+            <span class="brand-title">Moments of Solitude</span>
+            <span class="brand-subtitle">Stone Grill Reflections</span>
+          </span>
+        </a>
+      </div>
+
+      <!-- Center: navigation to other reflections -->
+      <nav class="ref-nav" aria-label="Reflections navigation">
+        <ul>
+          <li><a href="/reflections/index.html">All Reflections</a></li>
+          <li><a href="/reflections/pages/the-paradox-of-god/read.html">The Paradox of God</a></li>
+          <li><a href="/reflections/pages/divine-hiddeness/read.html">The Divine Premise</a></li>
+          <li><a href="/reflections/pages/the-diety/read.html" class="active">The Diety</a></li>
+          <li><a href="/reflections/pages/the-lost-language-of-metaphor/read.html">The Lost Language of Metaphor</a></li>
+          <!-- add more as needed -->
+        </ul>
+      </nav>
+
+      <!-- Right: current page badge, PDF, back, hamburger -->
+      <div class="ref-header-right">
+        <div class="current-page-badge">
+          <span class="page-icon">✶</span>
+          <span class="page-label">The Diety</span>
+        </div>
+
+        <a class="pdf-link" href="./The_False_God_Reflection_by_Ninox copy.pdf" download>
+          ⤓ PDF
+        </a>
+
+        <a href="/reflections/index.html" class="back-home-link">← Back</a>
+
+        <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+          ☰
+        </button>
+      </div>
+
     </div>
   </header>
 
-  <!-- 🎧 Audio Player (same folder) -->
-  <script>
-    document.write(createAudioPlayer('diety.mp3', 'The Diety — Audio Reflection'));
-  </script>
+  <main class="page-content">
 
-  <main>
+    <!-- 🎧 Audio Player (same folder) -->
+    <script>
+      document.write(createAudioPlayer('diety.mp3', 'The Diety — Audio Reflection'));
+    </script>
+
     <article>
       <h2>Introduction</h2>
       <p>This reflection was born out of a question too powerful to ignore: If God is perfect, why does creation feel so flawed? Why does suffering seem woven into the very fabric of the world? And if the stories we were told do not match the world we experience... what then?</p>
@@ -81,7 +369,7 @@
       <p>And maybe that’s why the system still fights doubt today. Because when you start to ask the real questions — about suffering, control, punishment, and power — the story starts to unravel. And what you’re left with… is a quiet truth, buried under centuries of noise.</p>
       <p>That the true God was never in the sky, or the book, or the threat. The true God is the light you carry. And waking up to it… is the beginning of freedom.</p>
 
-     <div class="divider"><span>—--- ❖ ---—</span></div>
+      <div class="divider"><span>—--- ❖ ---—</span></div>
 
       <p>What if everything we were told about God… was only half the story?</p>
       <p>What if the god who made this world — with its wars, cancers, and cruelty — isn’t the ultimate source of love, but a flawed architect? One who believes himself to be God… but isn’t.</p>
@@ -109,41 +397,67 @@
   </main>
 
   <footer>
-    <div class="wrap" style="display:flex; text-align:left;">
-      <a class="back" href="/reflections/index.html" style="color:var(--accent); text-decoration:none; font-weight:700">← Back to Reflections</a>
+    <div class="wrap" style="max-width:var(--maxw);margin:0 auto;display:flex; text-align:left; padding:18px 16px;">
+      <a class="back" href="/reflections/index.html" style="color:var(--accent); text-decoration:none; font-weight:700">
+        ← Back to Reflections
+      </a>
     </div>
   </footer>
+
   <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const audio = document.querySelector('audio');
-  const p = new URLSearchParams(location.search);
-  const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
+    // Hamburger toggle
+    (function () {
+      const header = document.querySelector('.ref-header');
+      const toggle = document.querySelector('.nav-toggle');
+      const nav = document.querySelector('.ref-nav');
 
-  if (fromIndex && audio) {
-    audio.play().catch(() => {
-      console.log('Autoplay blocked; user must press play.');
+      if (!header || !toggle || !nav) return;
+
+      toggle.addEventListener('click', () => {
+        const isOpen = header.classList.toggle('nav-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      nav.addEventListener('click', (e) => {
+        if (e.target.tagName.toLowerCase() === 'a') {
+          header.classList.remove('nav-open');
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const audio = document.querySelector('audio');
+      const p = new URLSearchParams(location.search);
+      const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
+
+      if (fromIndex && audio) {
+        audio.play().catch(() => {
+          console.log('Autoplay blocked; user must press play.');
+        });
+        sessionStorage.removeItem('autoplayAudio');
+      }
+
+      // Optional: show Back button if user came from index
+      if (p.get('back') === '1' || sessionStorage.getItem('showBack') === 'true') {
+        const back = document.createElement('a');
+        back.href = '/reflections/index.html';
+        back.className = 'btn ghost';
+        back.textContent = '← Back to Reflections';
+        (document.querySelector('header') || document.body).prepend(back);
+        sessionStorage.removeItem('showBack');
+      }
     });
-    sessionStorage.removeItem('autoplayAudio');
-  }
+  </script>
 
-  // Optional: show Back button if user came from index
-  if (p.get('back') === '1' || sessionStorage.getItem('showBack') === 'true') {
-    const back = document.createElement('a');
-    back.href = '/reflections/index.html';
-    back.className = 'btn ghost';
-    back.textContent = '← Back to Reflections';
-    (document.querySelector('header') || document.body).prepend(back);
-    sessionStorage.removeItem('showBack');
-  }
-});
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/reflections/sw.js')
-      .then(reg => console.log("SW registered"))
-      .catch(err => console.log("SW failed:", err));
-  }
-</script>
-  <script src="/reflections/assets/reflections-header.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/reflections/sw.js')
+        .then(reg => console.log("SW registered"))
+        .catch(err => console.log("SW failed:", err));
+    }
+  </script>
 </body>
 </html>
