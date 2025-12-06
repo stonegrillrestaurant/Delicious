@@ -18,30 +18,251 @@
   <meta property="og:image:alt" content="When questions grow louder than the answers we were told.">
 
   <!-- Global assets -->
-  <link rel="stylesheet" href="/reflections/assets/reflections.css?v=12">
-  <script src="/reflections/assets/audio-system.js?v=12"></script>
+  <link rel="stylesheet" href="/reflections/assets/styles/reflections.css?v=15">
   <link rel="manifest" href="/reflections/manifest.json?v=2">
   <link rel="apple-touch-icon" href="/reflections/icon-180.png">
   <meta name="theme-color" content="#ff6b3d">
-  
-  <!-- 🔗 Omnibus player + stylesheet -->
-  <link rel="stylesheet" href="/reflections/assets/reflections.css">
-  <script src="/reflections/assets/audio-system.js"></script>
-  
+
+  <!-- (Optional, safe to keep even if not used directly here) -->
+  <link rel="stylesheet" href="/reflections/assets/reflections.css?v=12">
+  <script src="/reflections/assets/audio-system.js?v=12"></script>
+
   <style>
+    /* =========================
+       GLOBAL FIXED HEADER
+    ========================== */
+    .ref-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: #1f1815;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .ref-header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    /* Brand / logo */
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #ff6b3d;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: #ff6b3d;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .brand-subtitle {
+      font-size: 0.7rem;
+      color: #f0e0d0;
+      opacity: 0.8;
+    }
+
+    /* Nav */
+    .ref-nav {
+      margin-left: 1rem;
+      flex: 1;
+    }
+
+    .ref-nav ul {
+      display: flex;
+      gap: 0.75rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .ref-nav a {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      text-decoration: none;
+      color: #f3e4d5;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .ref-nav a:hover {
+      background: rgba(255, 107, 61, 0.14);
+      border-color: rgba(255, 107, 61, 0.4);
+    }
+
+    .ref-nav a.active {
+      background: #ff6b3d;
+      color: #1f1815;
+      border-color: #ff6b3d;
+      font-weight: 600;
+    }
+
+    /* Right side of header */
+    .ref-header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .current-page-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 0.75rem;
+      color: #f7e9dd;
+    }
+
+    .page-icon {
+      font-size: 0.85rem;
+      color: #ffb347;
+    }
+
+    .back-home-link {
+      font-size: 0.75rem;
+      text-decoration: none;
+      color: #ffb347;
+      padding: 0.3rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 179, 71, 0.5);
+      background: rgba(0, 0, 0, 0.25);
+      white-space: nowrap;
+    }
+
+    .back-home-link:hover {
+      background: #ffb347;
+      color: #1f1815;
+    }
+
+    .nav-toggle {
+      display: none;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: transparent;
+      border-radius: 6px;
+      padding: 0.2rem 0.45rem;
+      font-size: 1.1rem;
+      color: #f7e9dd;
+    }
+
+    @media (max-width: 900px) {
+      .brand-subtitle {
+        display: none;
+      }
+
+      .ref-nav ul {
+        gap: 0.4rem;
+      }
+
+      .ref-nav a {
+        padding: 0.25rem 0.55rem;
+        font-size: 0.75rem;
+      }
+
+      .current-page-badge {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .ref-header-inner {
+        flex-wrap: nowrap;
+      }
+
+      .ref-nav {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        background: #1f1815;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.25s ease;
+        margin-left: 0;
+      }
+
+      .ref-nav ul {
+        flex-direction: column;
+        padding: 0.5rem 1rem 0.8rem;
+        gap: 0.25rem;
+      }
+
+      .ref-nav a {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .ref-header.nav-open .ref-nav {
+        max-height: 260px;
+      }
+
+      .nav-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .back-home-link {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.45rem;
+      }
+    }
+
+    /* =========================
+       PAGE-SPECIFIC STYLES
+    ========================== */
+
     body {
       background: #1f1815;
       color: #f3e6dd;
       font-family: "Georgia", "Times New Roman", serif;
       line-height: 1.75;
       margin: 0;
-      padding: 0;
+      padding: 4.2rem 0 0 0; /* space for fixed header */
     }
+
     main {
       max-width: 780px;
-      margin: 60px auto;
+      margin: 0 auto;
       padding: 0 20px 80px;
     }
+
     header {
       text-align: center;
       margin-bottom: 50px;
@@ -82,139 +303,8 @@
       color: #c9b0a4;
       margin-top: 50px;
     }
-    a.back {
-      display: inline-block;
-      background: #ff7a00;
-      color: white;
-      text-decoration: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      font-weight: bold;
-      margin-bottom: 40px;
-    }
-    a.back:hover { background: #ff8f26; }
-  </style>
-</head>
 
-<body>
-  <main>
-  <!-- Inside read.html -->
-<header>
-  <img src="11EFF0F0-7760-4F66-9581-D2B1F2DD522E.png" alt="Stone Grill Logo">
-  <h1>The God We Created</h1>
-  <p class="meta">By Ninox Antolihao • First Edition — 2025</p>
-</header>
-
-  <a href="/reflections/index.html" class="back">← Back to Reflections</a>
-
- <!-- 🎧 Audio Player (same folder) -->
-   <!-- 🎧 Audio Player (same folder) -->
-<section class="audio-wrap">
-  <div class="audio-wrapper">
-    <!-- Actual audio element -->
-    <audio id="reflectionAudio" controls preload="metadata">
-      <source id="audioSource" src="" type="audio/mpeg">
-      Your browser does not support the audio element.
-    </audio>
-
-    <!-- Playlist-style track list -->
-    <div class="playlist">
-      <!-- Track 1 -->
-      <div class="playlist-row active"
-           data-src="/reflections/pages/the-god-we-created/the-gods-we-create.mp3">
-        <div class="playlist-main">
-          <div class="playlist-title">The God We Created</div>
-          <div class="playlist-sub scroll-wrap">
-            <div class="scroll-text">When questions grow louder than the answers…</div>
-          </div>
-        </div>
-        <div class="playlist-duration">--:--</div>
-      </div>
-
-      <!-- Track 2 -->
-      <div class="playlist-row"
-           data-src="/reflections/pages/the-madness-of-fath/the-madness-of-faith.mp3">
-        <div class="playlist-main">
-          <div class="playlist-title">The Madness of Faith</div>
-          <div class="playlist-sub scroll-wrap">
-            <div class="scroll-text">When a belief demands the death of reason…</div>
-          </div>
-        </div>
-        <div class="playlist-duration">--:--</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- JS: playlist + smart auto-scroll -->
-  <script>
-    // Scroll only when text is wider than its container
-    function applySmartScroll() {
-      const wraps = document.querySelectorAll('.scroll-wrap');
-
-      wraps.forEach(wrap => {
-        const text = wrap.querySelector('.scroll-text');
-        if (!text) return;
-
-        // Reset animation first
-        text.style.animation = 'none';
-
-        // Only animate if text overflows horizontally
-        if (text.scrollWidth > wrap.clientWidth) {
-          const duration = text.scrollWidth / 40; // adjust speed here
-          text.style.animation = `scroll-left ${duration}s linear infinite`;
-        }
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const audioPlayer = document.getElementById('reflectionAudio');
-      const audioSource = document.getElementById('audioSource');
-      const rows = document.querySelectorAll('.playlist-row');
-
-      // Default track: first row
-      if (rows.length > 0) {
-        const firstSrc = rows[0].dataset.src;
-        audioSource.src = firstSrc;
-        audioPlayer.load();
-      }
-
-      // Clicking a row switches track
-      rows.forEach(row => {
-        row.addEventListener('click', () => {
-          rows.forEach(r => r.classList.remove('active'));
-          row.classList.add('active');
-
-          const src = row.dataset.src;
-          audioSource.src = src;
-          audioPlayer.load();
-          audioPlayer.play();
-        });
-      });
-
-      // Auto-fill durations (if metadata available)
-      rows.forEach(row => {
-        const src = row.dataset.src;
-        const tempAudio = new Audio(src);
-        tempAudio.addEventListener('loadedmetadata', () => {
-          const dur = tempAudio.duration;
-          if (!isNaN(dur)) {
-            const total = Math.floor(dur);
-            const min = String(Math.floor(total / 60)).padStart(2, '0');
-            const sec = String(total % 60).padStart(2, '0');
-            const durEl = row.querySelector('.playlist-duration');
-            if (durEl) durEl.textContent = `${min}:${sec}`;
-          }
-        });
-      });
-
-      // Apply scrolling after layout
-      applySmartScroll();
-      window.addEventListener('resize', applySmartScroll);
-    });
-  </script>
-
-  <!-- CSS: playlist look + scrolling style -->
-  <style>
+    /* Audio + playlist styling */
     .audio-wrapper {
       margin: 1.6rem 0;
       padding: 1.2rem;
@@ -284,7 +374,6 @@
       flex-shrink: 0;
     }
 
-    /* scrolling wrapper */
     .scroll-wrap {
       position: relative;
       overflow: hidden;
@@ -300,18 +389,188 @@
       0% { transform: translateX(0); }
       100% { transform: translateX(-100%); }
     }
-    /* Smooth right-to-left subtitle scroll */
-.scrolling-subtitle span {
-  animation: smoothScroll 18s linear infinite;
-}
 
-@keyframes smoothScroll {
-  0% { transform: translateX(100%); }   /* start off-screen on the right */
-  10% { transform: translateX(0); }     /* glide in smoothly */
-  100% { transform: translateX(-100%); } /* scroll fully to the left */
-}
+    /* Smooth right-to-left subtitle scroll (if needed elsewhere) */
+    .scrolling-subtitle span {
+      animation: smoothScroll 18s linear infinite;
+    }
+
+    @keyframes smoothScroll {
+      0% { transform: translateX(100%); }
+      10% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
   </style>
-</section>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/reflections/sw.js')
+        .then(reg => console.log("SW registered"))
+        .catch(err => console.log("SW failed:", err));
+    }
+  </script>
+</head>
+
+<body>
+
+  <!-- FIXED GLOBAL HEADER -->
+  <header class="ref-header">
+    <div class="ref-header-inner">
+
+      <!-- Left brand -->
+      <div class="ref-header-left">
+        <a href="/reflections/index.html" class="brand-link">
+          <span class="brand-mark">✦</span>
+          <span class="brand-text">
+            <span class="brand-title">Moments of Solitude</span>
+            <span class="brand-subtitle">Stone Grill Reflections</span>
+          </span>
+        </a>
+      </div>
+
+      <!-- Center nav: add more reflections as needed -->
+      <nav class="ref-nav" aria-label="Reflections navigation">
+        <ul>
+          <li><a href="/reflections/index.html">All Reflections</a></li>
+          <li><a href="/reflections/pages/the-paradox-of-god/read.html">The Paradox of God</a></li>
+          <li><a href="/reflections/pages/divine-hiddeness/read.html">The Divine Premise</a></li>
+          <li><a href="/reflections/pages/the-lost-language-of-metaphor/read.html">The Lost Language of Metaphor</a></li>
+          <li><a href="/reflections/pages/the-god-we-created/read.html" class="active">The God We Created</a></li>
+          <li><a href="/reflections/pages/initial-premise/read.html">The Fullness that Needs Nothing</a></li>
+        </ul>
+      </nav>
+
+      <!-- Right: badge + back + hamburger -->
+      <div class="ref-header-right">
+        <div class="current-page-badge">
+          <span class="page-icon">△</span>
+          <span class="page-label">The God We Created</span>
+        </div>
+
+        <a href="/reflections/index.html" class="back-home-link">← Back to Reflections</a>
+
+        <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+          ☰
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <main>
+    <!-- Inside read.html -->
+    <header>
+      <img src="11EFF0F0-7760-4F66-9581-D2B1F2DD522E.png" alt="Stone Grill Logo">
+      <h1>The God We Created</h1>
+      <p class="meta">By Ninox Antolihao • First Edition — 2025</p>
+    </header>
+
+    <!-- 🎧 Audio Player (same folder) -->
+    <section class="audio-wrap">
+      <div class="audio-wrapper">
+        <!-- Actual audio element -->
+        <audio id="reflectionAudio" controls preload="metadata">
+          <source id="audioSource" src="" type="audio/mpeg">
+          Your browser does not support the audio element.
+        </audio>
+
+        <!-- Playlist-style track list -->
+        <div class="playlist">
+          <!-- Track 1 -->
+          <div class="playlist-row active"
+               data-src="/reflections/pages/the-god-we-created/the-gods-we-create.mp3">
+            <div class="playlist-main">
+              <div class="playlist-title">The God We Created</div>
+              <div class="playlist-sub scroll-wrap">
+                <div class="scroll-text">When questions grow louder than the answers…</div>
+              </div>
+            </div>
+            <div class="playlist-duration">--:--</div>
+          </div>
+
+          <!-- Track 2 -->
+          <div class="playlist-row"
+               data-src="/reflections/pages/the-madness-of-fath/the-madness-of-faith.mp3">
+            <div class="playlist-main">
+              <div class="playlist-title">The Madness of Faith</div>
+              <div class="playlist-sub scroll-wrap">
+                <div class="scroll-text">When a belief demands the death of reason…</div>
+              </div>
+            </div>
+            <div class="playlist-duration">--:--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- JS: playlist + smart auto-scroll -->
+      <script>
+        // Scroll only when text is wider than its container
+        function applySmartScroll() {
+          const wraps = document.querySelectorAll('.scroll-wrap');
+
+          wraps.forEach(wrap => {
+            const text = wrap.querySelector('.scroll-text');
+            if (!text) return;
+
+            // Reset animation first
+            text.style.animation = 'none';
+
+            // Only animate if text overflows horizontally
+            if (text.scrollWidth > wrap.clientWidth) {
+              const duration = text.scrollWidth / 40; // adjust speed here
+              text.style.animation = `scroll-left ${duration}s linear infinite`;
+            }
+          });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const audioPlayer = document.getElementById('reflectionAudio');
+          const audioSource = document.getElementById('audioSource');
+          const rows = document.querySelectorAll('.playlist-row');
+
+          // Default track: first row
+          if (rows.length > 0) {
+            const firstSrc = rows[0].dataset.src;
+            audioSource.src = firstSrc;
+            audioPlayer.load();
+          }
+
+          // Clicking a row switches track
+          rows.forEach(row => {
+            row.addEventListener('click', () => {
+              rows.forEach(r => r.classList.remove('active'));
+              row.classList.add('active');
+
+              const src = row.dataset.src;
+              audioSource.src = src;
+              audioPlayer.load();
+              audioPlayer.play();
+            });
+          });
+
+          // Auto-fill durations (if metadata available)
+          rows.forEach(row => {
+            const src = row.dataset.src;
+            const tempAudio = new Audio(src);
+            tempAudio.addEventListener('loadedmetadata', () => {
+              const dur = tempAudio.duration;
+              if (!isNaN(dur)) {
+                const total = Math.floor(dur);
+                const min = String(Math.floor(total / 60)).padStart(2, '0');
+                const sec = String(total % 60).padStart(2, '0');
+                const durEl = row.querySelector('.playlist-duration');
+                if (durEl) durEl.textContent = `${min}:${sec}`;
+              }
+            });
+          });
+
+          // Apply scrolling after layout
+          applySmartScroll();
+          window.addEventListener('resize', applySmartScroll);
+        });
+      </script>
+    </section>
 
     <h2>About the Author</h2>
     <p>Ninox Antolihao is a seeker of truth, a writer of questions, and a student of the unseen. Rooted in both community life and contemplative solitude, he writes to explore the gaps between faith and fact, spirit and story, myth and meaning. His reflections are not written to teach—but to open doors. Each one invites the reader to look again, and to listen more closely. In a world clouded by noise, Ninox writes to rediscover clarity.</p>
@@ -362,39 +621,45 @@
       <p>© 2025 Ninox Antolihao · First Edition — Stone Grill Press · Leyte, Philippines</p>
     </footer>
   </main>
-    <div class="wrap" style="display:flex; text-align:left;">
-      <a class="back" href="/reflections/index.html" style="color:var(--accent); text-decoration:none; font-weight:700">← Back to Reflections</a>
-    </div>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const audio = document.querySelector('audio');
-  const p = new URLSearchParams(location.search);
-  const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
 
-  if (fromIndex && audio) {
-    audio.play().catch(() => {
-      console.log('Autoplay blocked; user must press play.');
+  <!-- Autoplay logic (back-button part removed; header handles navigation now) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const audio = document.querySelector('audio');
+      const p = new URLSearchParams(location.search);
+      const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
+
+      if (fromIndex && audio) {
+        audio.play().catch(() => {
+          console.log('Autoplay blocked; user must press play.');
+        });
+        sessionStorage.removeItem('autoplayAudio');
+      }
     });
-    sessionStorage.removeItem('autoplayAudio');
-  }
+  </script>
 
-  // Optional: show Back button if user came from index
-  if (p.get('back') === '1' || sessionStorage.getItem('showBack') === 'true') {
-    const back = document.createElement('a');
-    back.href = '/reflections/index.html';
-    back.className = 'btn ghost';
-    back.textContent = '← Back to Reflections';
-    (document.querySelector('header') || document.body).prepend(back);
-    sessionStorage.removeItem('showBack');
-  }
-});
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/reflections/sw.js')
-      .then(reg => console.log("SW registered"))
-      .catch(err => console.log("SW failed:", err));
-  }
-</script>
+  <!-- Hamburger toggle for mobile header -->
+  <script>
+    (function () {
+      const header = document.querySelector('.ref-header');
+      const toggle = document.querySelector('.nav-toggle');
+      const nav = document.querySelector('.ref-nav');
+
+      if (!header || !toggle || !nav) return;
+
+      toggle.addEventListener('click', () => {
+        const isOpen = header.classList.toggle('nav-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      nav.addEventListener('click', (e) => {
+        if (e.target.tagName.toLowerCase() === 'a') {
+          header.classList.remove('nav-open');
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+  </script>
+
 </body>
 </html>
