@@ -52,168 +52,299 @@
   }
   </script>
 
-  <style>
-    .back-button {
-  text-align: center;
-  margin: 40px 0;
-}
+   <style>
+    /* =========================
+       GLOBAL FIXED HEADER
+    ========================== */
+    .ref-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: #1f1815;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
 
-.back-button a {
-  background: #ff6b3d;      /* 🔸 Bright orange background */
-  color: #ffffff;            /* 🔸 White font */
-  text-decoration: none;
-  font-weight: 600;
-  padding: 10px 24px;
-  border-radius: 8px;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
-  transition: all 0.3s ease;
-}
+    .ref-header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
 
-.back-button a:hover {
-  background: #e65c2c;       /* Darker orange on hover */
-  transform: translateY(-2px);
-}
-  
-    :root{
-      --bg:#1f1815; --paper:#29211e; --ink:#f3e6dd; --muted:#c9b0a4; --accent:#ff6a3d;
+    /* Brand / logo */
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
     }
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:16px/1.7 "Georgia", "Times New Roman", serif;}
-    .wrap{max-width:860px;margin:0 auto;padding:24px;}
-    header{
-      display:grid;grid-template-columns:120px 1fr;gap:18px;align-items:center;
-      background:linear-gradient(180deg, #2e2522, #231b18);border:1px solid #3a2f2b;border-radius:16px;padding:16px 18px;
-      box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #ff6b3d;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: #ff6b3d;
     }
-    .cover{
-      width:100%;height:auto;border-radius:12px;border:1px solid #433730;display:block;overflow:hidden;
-      background:#1b1512;
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
     }
-    .title{margin:0;font-size:1.75rem;letter-spacing:.2px}
-    .meta{margin:.25rem 0 0 0;color:var(--muted);font-size:.95rem}
-    .actions{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
-    .btn{
-      display:inline-block;padding:10px 14px;border:1px solid #4a3b35;border-radius:10px;text-decoration:none;color:var(--ink);
-      background:#2d231f;transition:.2s ease;font-size:.95rem
+
+    .brand-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      position: relative;
+      margin-top: 6px;
+      color: #444;
+      font-size: 14px;
     }
-    .btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
-    main{
-      background:var(--paper);border:1px solid #3a2f2b;border-radius:16px;padding:28px;margin-top:18px;
-      box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+
+    .scrolling-subtitle span {
+      display: inline-block;
+      animation: smoothScroll 18s linear infinite;
     }
-    h1.read{font-size:1.4rem;margin:0 0 6px 0}
-    h2.subtitle{font-weight:normal;color:var(--muted);font-size:1rem;margin:0 0 22px 0}
-    p{margin:0 0 14px 0}
-    em{font-style:italic}
-    blockquote{
-      margin:18px 0;padding:12px 16px;border-left:3px solid var(--accent);background:#241c19;border-radius:6px;color:#f8efe8
+
+    @keyframes smoothScroll {
+      0% { transform: translateX(100%); }
+      10% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
     }
-    footer{
-      color:var(--muted);font-size:.9rem;margin:18px 0 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap
+
+    /* Audio playlist styling */
+    .audio-wrapper {
+      margin: 1rem 0;
+      padding: 0.8rem;
+      background: #2a211e;
+      border-radius: 14px;
     }
-    .divider{margin:18px 0;height:1px;background:linear-gradient(90deg, transparent, #473a34, transparent);border:none}
-    @media (max-width:640px){
-      header{grid-template-columns:90px 1fr}
-      .title{font-size:1.4rem}
+
+    #reflectionAudio {
+      width: 100%;
+      display: block;
+    }
+
+    .playlist {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .playlist-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4rem 1rem;
+      background: #1f1815;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid #2b221f;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .playlist-row:hover {
+      border-color: #ff6b3d;
+    }
+
+    .playlist-row.active {
+      background: #322621;
+      border-color: #ff6b3d;
+      box-shadow: 0 0 6px rgba(255, 107, 61, 0.45);
+    }
+
+    .playlist-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      overflow: hidden;
+    }
+
+    .playlist-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #f3e6dd;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .playlist-sub {
+      font-size: 0.8rem;
+      color: #b29587;
+    }
+
+    .playlist-duration {
+      font-size: 0.85rem;
+      color: #c9b0a4;
+      margin-left: 1rem;
+      flex-shrink: 0;
+    }
+
+    /* Local nav buttons (back / share / audio) */
+    .nav-buttons {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .nav-buttons button {
+      background: #1f1f1f;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 13px;
     }
   </style>
-</head>
-<body>
-  
- 
-  
-  <div class="wrap">
-    <header>
-      <!-- Make the cover clickable to open the image (or your PDF if you prefer) -->
-      <a href="cover.jpg" target="_blank" rel="noopener">
-        <img class="cover" src="belief.png" alt="Belief and Goodness — cover"
-             onerror="this.onerror=null;this.src='/reflections/assets/cover-fallback.jpg'">
-      </a>
-      <div>
-        <h1 class="title">Belief and Goodness</h1>
-        <p class="meta">By <strong>Ninox Antolihao</strong> • Stone Grill Press · Leyte, Philippines • First Edition — 2025</p>
-        <div class="actions">
-          <!-- If you have a PDF/EPUB, link here -->
-          <a class="btn" href="read.html" aria-label="Read online">Read Online</a>
-          <a class="btn" href="belief.pdf" aria-label="Download PDF">Download PDF</a>
-        </div>
-      </div>
-    </header>
-    
-     <div class="back-button">
-      <a href="/reflections/index.html">← Back to Reflections</a>
-    </div>
-    
-     <!-- 🎧 Inline audio player -->
-<div class="audio-section" style="text-align:center; margin: 1.5em 0;">
-  <audio controls preload="none" style="width:90%; max-width:600px; border-radius:6px;">
-    <source src="/reflections/pages/belief/beliefxgood.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-  </audio>
-</div>
-    
-    <main>
-      <h1 class="read">Belief and Goodness</h1>
-      <h2 class="subtitle"><em>Belief is awareness — not alignment.</em></h2>
 
-      <p>They say that not believing in God makes one evil. But if that were true, then believing in God must make one good. And yet—even the devil believes in God. So where does that leave us?</p>
-
-      <p><strong>Belief is not goodness.</strong> It is only awareness. The devil does not lack knowledge of God; he lacks alignment with what is good. He believes, but he does not <em>become</em>.</p>
-
-      <blockquote>To know of the light is one thing—<br>to walk toward it is another.</blockquote>
-
-      <p>Faith without transformation is an empty echo. Even truth, if not lived, becomes a lie we tell ourselves.</p>
-
-      <p>Goodness begins not in belief, but in the quiet choices we make when no one is watching. It is not found in prayers spoken loudly, but in compassion carried silently.</p>
-
-      <p>So no—disbelief does not make you evil, and belief alone does not make you good. Goodness is not a claim; it is a direction. It is not what you <em>profess</em> to believe, but what you <em>choose</em> to become.</p>
-  
-      <p>Believing in God doesn’t automatically make someone good, just as not believing doesn’t automatically make someone evil. Belief is awareness — not alignment.</p>
-      <p>The devil believes in God — in fact, he knows God exists better than anyone. But his will opposes the good that God represents. So belief alone doesn’t define morality; intention and action do.</p>
-      <p>“Belief shows awareness of the light, but goodness is walking toward it.”</p>
-      <p>A good person, whether religious or not, acts with compassion, truth, and integrity. An evil person may hide behind faith or reject it entirely — the point isn’t the label, it’s the direction of the heart.</p>
-      <p>So to answer your paradox:</p>
-      <p>	The devil believes in God, but that belief doesn’t make him good — it only proves that knowledge and goodness are not the same.</p>
-      <p>	True goodness isn’t in believing God exists, but in becoming the reflection of what is good.</p>
-      
-      
-      <hr class="divider">
-      <footer>
-        <span>© 2025 Ninox Antolihao</span>
-        <span>— ❖ —</span>
-        <span>First Edition 2025</span>
-      </footer>
-    </main>
-  </div>
+  <!-- Service Worker -->
   <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const audio = document.querySelector('audio');
-  const p = new URLSearchParams(location.search);
-  const fromIndex = p.get('autoplay') === '1' || sessionStorage.getItem('autoplayAudio') === 'true';
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/reflections/sw.js');
+    }
+  </script>
+  
+  </head>
+<body>
 
-  if (fromIndex && audio) {
-    audio.play().catch(() => {
-      console.log('Autoplay blocked; user must press play.');
+    <div class="container">
+        <div class="/reflections/pages/question-label-sinner/label-sinner.jpeg">
+            Placeholder for Reflection Image/Cover
+            </div>
+
+        <div class="audio-player">
+            <p style="margin-top:0; font-size: 0.9em; color: #666;">Listen to the reading:</p>
+            <audio controls style="width: 100%;">
+                <source src="labeled-sinner.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+
+        <h1>When Seeking Assurance is Labeled as Sin</h1>
+
+        <p>The philosophical tension explored in our conversation today cuts directly to the core of what it means to be a human attempting to reconcile faith with experience. We began by questioning a fundamental contradiction: a relationship that prioritizes "free, genuine love" while simultaneously demanding that one partner--the less powerful one--must endlessly prove their commitment to a partner who remains consistently absent and unassured.</p>
+
+        <p>Our inquiry focused on the logic of the "Divine Hiddenness" defense--the idea that God's hiddenness is a benevolent act designed to prevent the human will from being coerced by overwhelming, undeniable proof. However, as we subjected this analogy to the test of human experience, a profound failure of logic emerged.</p>
+
+        <p>A genuine, freely given love in a human relationship requires three non-negotiable elements: presence, availability, and assurance. If a partner hid, offered no time, and gave no assurance, we rightly concluded that the relationship was not merely difficult--it was impossible, and the partner was not acting in a "perfectly loving" way. The powerful party, the boyfriend or girlfriend, must be the one to prove their commitment to the less secure partner.</p>
+
+        <p>This revealed the disproportionate burden placed on the human soul in the theological model. The logic states: You must believe I exist without proof so your love is genuine, and if you can't, it is your fault. This effectively asks the finite creature to generate certainty from ambiguity, to establish a relationship with a being who is actively refusing to meet on common ground. It is, as we noted, a requirement "meant to fail."</p>
+
+        <p>The most painful and significant observation, however, was not the intellectual failure of the hiddenness defense, but the social and spiritual consequence of questioning it.</p>
+
+        <p>In many contexts, the sincere, non-resistant seeker who articulates this injustice is not met with dialogue, but with condemnation. When an individual honestly states, "I am searching, but I have not found the proof I need," they are not seen as a seeker but as a "sinner," "rebellious," or "blasphemous."</p>
+
+        <p>This labeling has two destructive effects:</p>
+
+        <ol>
+            <li><strong>The Shift of Blame</strong>: It absolves the system of providing sufficient evidence by shifting the blame onto the individual's will or moral character. The problem is no longer divine hiddenness but human resistance.</li>
+            <li><strong>The New Coercion</strong>: The very thing the Hiddenness defense claims to avoid--coerced belief--is ironically reintroduced by the social fear of being labeled an outcast or a heretic. A person may cease to ask questions and profess belief, not out of genuine, free love, but out of the primal human fear of social exclusion and eternal punishment.</li>
+        </ol>
+
+        <h2>Conclusion</h2>
+
+        <p>Our discussion has demonstrated that the argument from Divine Hiddenness is not merely an intellectual puzzle; it is a profound ethical challenge. The concept that a perfectly loving being would demand an impossible leap of faith while simultaneously punishing the honest doubt created by their absence establishes a paradox that seems incompatible with the concept of perfect love.</p>
+
+        <p>Ultimately, the person who asks, "Should we be the one who has to prove to someone we don't see?" is voicing a core demand for fairness and genuine assurance in the relationship that matters most. To label this sincere cry a sin is to replace the promise of a "free, genuine love" with a relationship founded on unjustifiable obligation and emotional coercion. The greatest act of faith, therefore, might not be the quiet acceptance of hiddenness, but the courageous act of demanding transparency from the one who claims to love you perfectly.</p>
+
+        <div class="button-group">
+            <p>Share this reflection:</p>
+            <a href="https://twitter.com/intent/tweet?url=YOUR_PAGE_URL&text=When%20Seeking%20Assurance%20is%20Labeled%20as%20Sin%3A" target="_blank" class="share-button twitter">Share on Twitter</a>
+            <a href="mailto:?subject=A%20Powerful%20Reflection%3A%20When%20Seeking%20Assurance%20is%20Labeled%20as%20Sin&body=I%20came%20across%20this%20thought-provoking%20piece%20and%20wanted%20to%20share%20it%20with%20you.%20Read%20it%20here%3A%20YOUR_PAGE_URL" class="share-button email">Share via Email</a>
+        </div>
+
+    </div>
+  
+    <script>
+    // Hamburger toggle for mobile
+    (function () {
+      const header = document.querySelector('.ref-header');
+      const toggle = document.querySelector('.nav-toggle');
+      const nav = document.querySelector('.ref-nav');
+
+      if (!header || !toggle || !nav) return;
+
+      toggle.addEventListener('click', () => {
+        const isOpen = header.classList.toggle('nav-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      nav.addEventListener('click', (e) => {
+        if (e.target.tagName.toLowerCase() === 'a') {
+          header.classList.remove('nav-open');
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+
+    // Audio playlist logic
+    document.addEventListener('DOMContentLoaded', () => {
+      const audioPlayer = document.getElementById('reflectionAudio');
+      const audioSource = document.getElementById('audioSource');
+      const rows = document.querySelectorAll('.playlist-row');
+
+      // Default track: first row
+      if (rows.length > 0) {
+        const firstSrc = rows[0].dataset.src;
+        audioSource.src = firstSrc;
+        audioPlayer.load();
+      }
+
+      // Clicking a row switches track
+      rows.forEach(row => {
+        row.addEventListener('click', () => {
+          rows.forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+
+          const src = row.dataset.src;
+          audioSource.src = src;
+          audioPlayer.load();
+          audioPlayer.play();
+        });
+      });
+
+      // Auto-fill durations
+      rows.forEach(row => {
+        const src = row.dataset.src;
+        const tempAudio = new Audio(src);
+        tempAudio.addEventListener('loadedmetadata', () => {
+          const dur = tempAudio.duration;
+          if (!isNaN(dur)) {
+            const total = Math.floor(dur);
+            const min = String(Math.floor(total / 60)).padStart(2, '0');
+            const sec = String(total % 60).padStart(2, '0');
+            const durEl = row.querySelector('.playlist-duration');
+            if (durEl) durEl.textContent = `${min}:${sec}`;
+          }
+        });
+      });
     });
-    sessionStorage.removeItem('autoplayAudio');
-  }
 
-  // Optional: show Back button if user came from index
-  if (p.get('back') === '1' || sessionStorage.getItem('showBack') === 'true') {
-    const back = document.createElement('a');
-    back.href = '/reflections/index.html';
-    back.className = 'btn ghost';
-    back.textContent = '← Back to Reflections';
-    (document.querySelector('header') || document.body).prepend(back);
-    sessionStorage.removeItem('showBack');
-  }
-});
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/reflections/sw.js')
-      .then(reg => console.log("SW registered"))
-      .catch(err => console.log("SW failed:", err));
-  }
-</script>
+    function sharePage() {
+      if (navigator.share) {
+        navigator.share({
+          title: "The Primacy of Moral Accountability -- Ninox Antolihao",
+          url: window.location.href
+        });
+      } else {
+        alert("Sharing not supported on this device.");
+      }
+    }
+  </script>
 </body>
 </html>
+  
