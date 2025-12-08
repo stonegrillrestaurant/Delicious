@@ -37,10 +37,17 @@
     .ref-header-inner {
       max-width: 1100px;
       margin: 1 auto;
-      padding: 0.5rem 1rem;
+      padding: 0.8rem 1rem; /* slightly taller header */
       display: flex;
       align-items: center;
       gap: 1rem;
+    }
+
+    .ref-header-left {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
     }
 
     /* Brand / logo */
@@ -81,6 +88,13 @@
       font-size: 0.7rem;
       color: #f0e0d0;
       opacity: 0.8;
+    }
+
+    /* Under-logo actions: hamburger + local nav buttons */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     /* Nav */
@@ -146,6 +160,7 @@
       color: #ffb347;
     }
 
+    /* old back-home-link styles kept but button removed in markup
     .back-home-link {
       font-size: 0.75rem;
       text-decoration: none;
@@ -161,22 +176,46 @@
       background: #ffb347;
       color: #1f1815;
     }
+    */
 
     .nav-toggle {
       display: none;
       border: 1px solid rgba(255, 255, 255, 0.3);
       background: transparent;
       border-radius: 6px;
-      padding: 0.2rem 0.45rem;
-      font-size: 1.1rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 1.05rem;
       color: #f7e9dd;
+    }
+
+    /* Local nav buttons (Back / Share / Audio) placed next to hamburger */
+    .nav-buttons {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .nav-buttons button {
+      background: #26201c;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .nav-buttons button:hover {
+      background: #ff6b3d;
+      border-color: #ff6b3d;
+      color: #1f1815;
     }
 
     /* Main layout */
     .page-content {
       max-width: 1100px;
       margin: 0 auto;
-      padding: 4.2rem 1rem 2rem; /* header space */
+      padding: 5rem 1rem 2rem; /* more top padding for taller header + actions */
     }
 
     @media (max-width: 900px) {
@@ -201,11 +240,12 @@
     @media (max-width: 768px) {
       .ref-header-inner {
         flex-wrap: nowrap;
+        align-items: flex-start;
       }
 
       .ref-nav {
         position: fixed;
-        top: 56px;
+        top: 64px;
         left: 0;
         right: 0;
         background: #1f1815;
@@ -237,13 +277,8 @@
         justify-content: center;
       }
 
-      .back-home-link {
-        font-size: 0.7rem;
-        padding: 0.45rem 0.45rem;
-      }
-
       .page-content {
-        padding-top: 6.5rem;
+        padding-top: 7rem;
       }
     }
 
@@ -358,22 +393,6 @@
       margin-left: 0.75rem;
       flex-shrink: 0;
     }
-
-    /* Local nav buttons (back / share / audio) */
-    .nav-buttons {
-      margin-top: 0.5px;
-      display: flex;
-      gap: 8px;
-    }
-
-    .nav-buttons button {
-      background: #1f1f1f;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 13px;
-    }
   </style>
 
   <!-- Service Worker -->
@@ -389,7 +408,7 @@
   <header class="ref-header">
     <div class="ref-header-inner">
 
-      <!-- Left brand -->
+      <!-- Left brand + hamburger + local buttons -->
       <div class="ref-header-left">
         <a href="/reflections/index.html" class="brand-link">
           <span class="brand-mark">✦</span>
@@ -398,6 +417,18 @@
             <span class="brand-subtitle">Stone Grill Reflections</span>
           </span>
         </a>
+
+        <div class="header-actions">
+          <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+            ☰
+          </button>
+
+          <div class="nav-buttons">
+            <button type="button" onclick="history.back()">Back</button>
+            <button type="button" onclick="sharePage()">Share</button>
+            <button type="button" onclick="document.getElementById('reflectionAudio').scrollIntoView()">Audio</button>
+          </div>
+        </div>
       </div>
 
       <!-- Center nav: add more reflections as needed -->
@@ -413,31 +444,21 @@
           <!-- Add other reflections here -->
         </ul>
       </nav>
-      <!-- Right: badge + back + hamburger -->
+
+      <!-- Right: page badge only -->
       <div class="ref-header-right">
         <div class="current-page-badge">
           <span class="page-icon">△</span>
           <span class="page-label">The Divine Premise</span>
         </div>
-
-        <a href="/reflections/index.html" class="back-home-link">← Back to Reflections</a>
-
-        <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
-          ☰
-        </button>
       </div>
     </div>
   </header>
+
   <main class="page-content">
-     <div class="nav-buttons">
-        <button onclick="history.back()">Back</button>
-        <button onclick="sharePage()">Share</button>
-        <button onclick="document.getElementById('reflectionAudio').scrollIntoView()">Audio</button>
-      </div>
-      
-    <!-- Local title + subtitle + buttons (not fixed) -->
+    <!-- Local title + subtitle -->
     <section style="max-width:800px;margin:0 auto 0.8rem auto;">
-     <div class="scrolling-subtitle">
+      <div class="scrolling-subtitle">
         <span>A reflection on will, love, and divine design.</span>
       </div>
     </section>
@@ -456,7 +477,7 @@
                  data-src="/reflections/pages/divine-hiddeness/premiseofgod.mp3">
               <div class="playlist-main">
                 <div class="playlist-title">The Divine Premise</div>
-                                <div class="playlist-sub">The Primacy of Moral Accountability. A Reflection on Will, Love, and Design.</div>
+                <div class="playlist-sub">The Primacy of Moral Accountability. A Reflection on Will, Love, and Design.</div>
               </div>
               <div class="playlist-duration">--:--</div>
             </div>
@@ -489,10 +510,11 @@
 
       <p>The final, compelling realization is this: If a just and omniscient God is to administer judgment, that judgment cannot possibly be based on whether a person simply followed directions. A just measure must be based on the individual's moral struggle--the sincerity and effort involved in using reason and conscience to discern good from evil. The ambiguity of the system ultimately forces the individual away from the easy path of compliance and toward the difficult, autonomous work of developing true moral character. Thus, the integrity of a single, self-directed moral choice is fundamentally more important, and more deserving of recognition, than any act of unquestioning obedience.</p>
     </div>
-  <footer>
+
+    <footer>
       <p>© 2025 Ninox Antolihao · First Edition — Stone Grill Press · Leyte, Philippines</p>
-  </footer>
-</main>
+    </footer>
+  </main>
 
   <script>
     // Hamburger toggle for mobile
