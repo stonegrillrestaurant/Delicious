@@ -1,8 +1,7 @@
 // ============================================================
 // SOLITUDE REFLECTIONS — UNIFIED HEADER SCRIPT
 // File: /reflections/assets/reflections-header.js
-// Loads the shared header, handles hamburger menu, buttons,
-// current-page badge, and audio playlist.
+// Loads the shared header, handles menu, buttons, badge, playlist
 // ============================================================
 
 function loadReflectionsHeader() {
@@ -23,8 +22,8 @@ function initReflectionsHeader() {
   if (!header) return;
 
   const toggle = header.querySelector('.nav-toggle');
-  const overlay = document.querySelector('.ref-menu-overlay');
-  const menuPanel = document.querySelector('.ref-menu-panel');
+  const overlay = header.querySelector('.ref-menu-overlay');
+  const menuPanel = header.querySelector('.ref-menu-panel');
   const menuLinks = header.querySelectorAll('.ref-menu-link');
   const badgeLabel = header.querySelector('#current-page-label');
   const badgeIcon = header.querySelector('#current-page-icon');
@@ -82,12 +81,12 @@ function initReflectionsHeader() {
     const href = link.getAttribute('href');
     if (!href) return;
 
-    // exact path match
+    // Exact path match
     if (currentPath === href) {
       matched = link;
     }
 
-    // treat /reflections/ as index
+    // Treat /reflections/ as index
     if (!matched &&
         (currentPath === '/reflections/' || currentPath === '/reflections') &&
         href === '/reflections/index.html') {
@@ -195,5 +194,5 @@ function initReflectionsHeader() {
   }
 }
 
-// Auto-run on every reflections read page
+// Auto-run
 document.addEventListener('DOMContentLoaded', loadReflectionsHeader);
