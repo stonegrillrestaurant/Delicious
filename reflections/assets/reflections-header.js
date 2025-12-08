@@ -1,175 +1,153 @@
-// /reflections/assets/reflections-header.js
+// =========================================
+// SOLITUDE REFLECTIONS — READ PAGE JS
+// - Loads shared header
+// - Handles hamburger + overlay + links
+// - Handles Back / Share / Audio buttons
+// - Handles simple audio playlist
+// =========================================
 
-function loadReflectionsHeader() {
+// Load shared header into #ref-header-placeholder
+document.addEventListener('DOMContentLoaded', () => {
   const placeholder = document.getElementById('ref-header-placeholder');
-  if (!placeholder) return;
+  if (placeholder) {
+    fetch('/reflections/reflections-header.html')
+      .then(res => res.text())
+      .then(html => {
+        placeholder.innerHTML = html;
+        initRefHeader(placeholder);
+      })
+      .catch(err => console.warn('Reflections header load failed:', err));
+  }
 
-  fetch('/reflections/reflections-header.html')
-    .then(res => res.text())
-    .then(html => {
-      placeholder.innerHTML = html;
-      initReflectionsHeader();
-    })
-    .catch(err => console.error('Failed to load reflections header:', err));
-}
+  initPlaylist(); // audio playlist for this page
+});
 
-function initReflectionsHeader() {
-  const header = document.querySelector('.ref-header');
+// -----------------------------------------
+// HEADER + HAMBURGER LOGIC
+// -----------------------------------------
+function initRefHeader(root) {
+  const header   = root.querySelector('.ref-header');
   if (!header) return;
 
-  const toggle = header.querySelector('.nav-toggle');
-  const overlay = document.querySelector('.ref-menu-overlay');
-  const menuPanel = header.querySelector('.ref-menu-panel');
-  const menuLinks = header.querySelectorAll('.ref-menu-link');
-  const badgeLabel = header.querySelector('#current-page-label');
-  const badgeIcon = header.querySelector('#current-page-icon');
+  const toggle   = header.querySelector('.nav-toggle');
+  const panel    = header.querySelector('.ref-menu-panel');
+  const overlay  = document.querySelector('.ref-menu-overlay'); // sibling after header
+  const links    = header.querySelectorAll('.ref-menu-link');
 
-  const currentPath = window.location.pathname;
+  const btnBack  = header.querySelector('#btnBack');
+  const btnShare = header.querySelector('#btnShare');
+  const btnAudio = header.querySelector('#btnAudio');
 
-  // -----------------------------
-  // Hamburger open / close
-  // -----------------------------
-  if (toggle && menuPanel) {
-    toggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = header.classList.toggle('menu-open');
-      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  function openMenu() {
+    header.classList.add('is-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeMenu() {
+    header.classList.remove('is-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  // ☰ toggle
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      if (header.classList.contains('is-open')) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
     });
   }
 
-  // Close when clicking overlay
+  // Click overlay closes menu
   if (overlay) {
     overlay.addEventListener('click', () => {
-      header.classList.remove('menu-open');
-      if (toggle) toggle.setAttribute('aria-expanded', 'false');
+      closeMenu();
     });
   }
 
-  // Close when clicking outside header/menu
-  document.addEventListener('click', (e) => {
-    if (!header.classList.contains('menu-open')) return;
-    if (header.contains(e.target)) return;
-    header.classList.remove('menu-open');
-    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  // Menu links: close menu then navigate normally
+  links.forEach(link => {
+    link.addEventListener('click', () => {
+      closeMenu();
+      // let browser follow href
+    });
   });
 
-  // -----------------------------
-  // Active link + badge content
-  // -----------------------------
-  let matched = null;
-
-  menuLinks.forEach(link => {
-    const href = link.getAttribute('href');
-    if (!href) return;
-
-    // Exact path match
-    if (currentPath === href) {
-      matched = link;
-    }
-
-    // Also treat "/reflections/" as index page
-    if (!matched &&
-        (currentPath === '/reflections/' || currentPath === '/reflections') &&
-        href === '/reflections/index.html') {
-      matched = link;
-    }
-  });
-
-  if (matched) {
-    matched.classList.add('active');
-    if (badgeLabel) {
-      badgeLabel.textContent = matched.textContent.trim();
-    }
-    if (badgeIcon) {
-      const icon = matched.getAttribute('data-icon');
-      if (icon) badgeIcon.textContent = icon;
-    }
-  }
-
-  // -----------------------------
-  // Local header buttons
-  // -----------------------------
-  const btnBack = document.getElementById('btnBack');
-  const btnShare = document.getElementById('btnShare');
-  const btnAudio = document.getElementById('btnAudio');
-
+  // Back button
   if (btnBack) {
     btnBack.addEventListener('click', () => {
-      history.back();
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = '/reflections/index.html';
+      }
     });
   }
 
+  // Share button — uses global sharePage() if provided, else native share
   if (btnShare) {
     btnShare.addEventListener('click', () => {
+      if (typeof sharePage === 'function') {
+        sharePage();
+        return;
+      }
       if (navigator.share) {
         navigator.share({
-          title: document.title || 'Solitude Reflection',
+          title: document.title,
+          text: 'Read this reflection by Ninox Antolihao.',
           url: window.location.href
-        });
+        }).catch(() => {});
       } else {
-        alert('Sharing is not supported on this device.');
+        alert('Sharing not supported on this device.');
       }
     });
   }
 
+  // Audio button — scroll to audio section
   if (btnAudio) {
     btnAudio.addEventListener('click', () => {
-      const audio = document.getElementById('reflectionAudio');
-      if (audio) {
-        audio.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const audioSection = document.querySelector('.audio-wrap');
+      if (audioSection) {
+        audioSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    });
-  }
-
-  // -----------------------------
-  // Audio playlist (generic)
-  // -----------------------------
-  const audioPlayer = document.getElementById('reflectionAudio');
-  const audioSource = document.getElementById('audioSource');
-  const rows = document.querySelectorAll('.playlist-row');
-
-  if (audioPlayer && audioSource && rows.length > 0) {
-    // Default track = first row
-    const firstSrc = rows[0].dataset.src;
-    if (firstSrc) {
-      audioSource.src = firstSrc;
-      audioPlayer.load();
-    }
-
-    // Click to switch tracks
-    rows.forEach(row => {
-      row.addEventListener('click', () => {
-        rows.forEach(r => r.classList.remove('active'));
-        row.classList.add('active');
-
-        const src = row.dataset.src;
-        if (src) {
-          audioSource.src = src;
-          audioPlayer.load();
-          audioPlayer.play();
-        }
-      });
-    });
-
-    // Fill durations
-    rows.forEach(row => {
-      const src = row.dataset.src;
-      if (!src) return;
-
-      const tempAudio = new Audio(src);
-      tempAudio.addEventListener('loadedmetadata', () => {
-        const dur = tempAudio.duration;
-        if (isNaN(dur)) return;
-
-        const total = Math.floor(dur);
-        const min = String(Math.floor(total / 60)).padStart(2, '0');
-        const sec = String(total % 60).padStart(2, '0');
-        const durEl = row.querySelector('.playlist-duration');
-        if (durEl) durEl.textContent = `${min}:${sec}`;
-      });
     });
   }
 }
 
-// Auto-run on every reflections page
-document.addEventListener('DOMContentLoaded', loadReflectionsHeader);
+// -----------------------------------------
+// SIMPLE AUDIO PLAYLIST FOR READ PAGE
+// -----------------------------------------
+function initPlaylist() {
+  const audio = document.getElementById('reflectionAudio');
+  const srcEl = document.getElementById('audioSource');
+  const rows  = document.querySelectorAll('.playlist-row');
+
+  if (!audio || !srcEl || !rows.length) return;
+
+  // Initialize with first active row or first row
+  let currentRow = document.querySelector('.playlist-row.active') || rows[0];
+  if (currentRow) {
+    const firstSrc = currentRow.getAttribute('data-src');
+    if (firstSrc) {
+      srcEl.src = firstSrc;
+      audio.load();
+    }
+  }
+
+  rows.forEach(row => {
+    row.addEventListener('click', () => {
+      rows.forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+
+      const src = row.getAttribute('data-src');
+      if (src) {
+        srcEl.src = src;
+        audio.load();
+        audio.play().catch(() => {
+          // autoplay might be blocked; ignore
+        });
+      }
+    });
+  });
+}
