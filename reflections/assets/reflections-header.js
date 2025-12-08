@@ -21,40 +21,49 @@ function initReflectionsHeader() {
   const header = document.querySelector('.ref-header');
   const toggle = document.querySelector('.nav-toggle');
   const nav = document.querySelector('.ref-nav');
-  const overlay = document.querySelector('.nav-overlay');  // NEW
   const navLinks = nav ? nav.querySelectorAll('a') : [];
   const currentPath = window.location.pathname;
 
-  // -----------------------------
+  // -----------------------------------------
   // HAMBURGER OPEN / CLOSE
-  // -----------------------------
+  // -----------------------------------------
   if (header && toggle && nav) {
-    toggle.addEventListener('click', () => {
+
+    // Toggle menu open/close
+    toggle.addEventListener('click', (event) => {
+      event.stopPropagation(); // Prevent immediate closing from document listener
+
       const isOpen = header.classList.toggle('nav-open');
       toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
 
-    // Close menu when a link is clicked (mobile)
+    // When clicking a menu item — close menu
     nav.addEventListener('click', (e) => {
       if (e.target.tagName.toLowerCase() === 'a') {
         header.classList.remove('nav-open');
         toggle.setAttribute('aria-expanded', 'false');
       }
     });
-  }
 
-  // -----------------------------------------
-  // CLOSE MENU WHEN CLICKING OUTSIDE (OVERLAY)
-  // -----------------------------------------
-  if (overlay) {
-    overlay.addEventListener('click', () => {
+    // -----------------------------------------
+    // CLOSE MENU WHEN CLICKING ANYWHERE OUTSIDE
+    // -----------------------------------------
+    document.addEventListener('click', (e) => {
+
+      // Only act if menu is open
+      if (!header.classList.contains('nav-open')) return;
+
+      // If click is inside header, ignore
+      if (header.contains(e.target)) return;
+
+      // Else close
       header.classList.remove('nav-open');
       toggle.setAttribute('aria-expanded', 'false');
     });
   }
 
   // -----------------------------------------
-  // AUTO-SET ACTIVE LINK + CURRENT PAGE BADGE
+  // AUTO-HIGHLIGHT ACTIVE LINK + SET BADGE
   // -----------------------------------------
   let matchedLink = null;
 
@@ -62,12 +71,10 @@ function initReflectionsHeader() {
     const href = link.getAttribute('href');
     if (!href) return;
 
-    // Normal match
-    if (currentPath === href) {
-      matchedLink = link;
-    }
+    // Direct match
+    if (currentPath === href) matchedLink = link;
 
-    // Handle index page
+    // Special case for /reflections (no index.html)
     if (!matchedLink &&
         (currentPath === '/reflections/' || currentPath === '/reflections') &&
         href === '/reflections/index.html') {
@@ -75,7 +82,7 @@ function initReflectionsHeader() {
     }
   });
 
-  // Update label + icon in badge
+  // Update header badge with page title + icon
   if (matchedLink) {
     matchedLink.classList.add('active');
 
