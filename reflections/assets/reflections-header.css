@@ -1,230 +1,145 @@
-/* =========================================
-   SOLITUDE REFLECTIONS — READ PAGE UNIFIED CSS
-   (Header + Page Layout + Audio + Playlist)
-   ========================================= */
+/* ============================================================
+   SOLITUDE REFLECTIONS — UNIFIED READ PAGE THEME
+   File: /reflections/assets/reflections-header.css
+   ============================================================ */
 
 /* ---------- THEME COLORS ---------- */
 :root {
-  --bg: #1f1815;
-  --paper: #241b19;
-  --ink: #f3e6dd;
-  --muted: #c9b0a4;
+  --bg-deep: #1f1815;
+  --bg-header: rgba(23, 16, 13, 0.97);
+  --bg-card-dark: #1e1614;
+  --bg-card-paper: #f7f3ef;
+  --border-dark: #3a2f2b;
+  --border-soft: #e3d7cf;
+  --ink-main: #2a1d1a;
+  --ink-light: #f3e6dd;
+  --ink-muted: #cbb8af;
   --accent: #ff6a3e;
-  --accent-soft: #ffb380;
-  --line: #3a2f2b;
 }
 
-/* ---------- RESET / BASE ---------- */
+/* ---------- BASE ---------- */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
 }
 
 body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-deep);
+  color: var(--ink-light);
+  font-family: Georgia, ui-serif, serif;
 }
 
-/* =========================================
-   PAGE LAYOUT
-   ========================================= */
+/* Links inside the article */
+a {
+  color: #b85430;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- PAGE WRAPPER ---------- */
 
 .page-content {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 80px 16px 40px; /* space for sticky header */
+  padding: 80px 16px 40px; /* leave space for sticky header */
 }
 
-/* =========================================
-   PAGE HEADER / TITLE
-   ========================================= */
+/* ---------- PAGE HEADER (TITLE AREA) ---------- */
+
+.page-header {
+  max-width: 800px;
+  margin: 0 auto 1.2rem auto;
+  color: var(--ink-light);
+}
 
 .page-header h1 {
-  margin: 0 0 4px;
-  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  margin: 0 0 0.3rem;
+  font-size: clamp(1.8rem, 3.1vw, 2.4rem);
 }
 
 .page-subtitle {
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: 0.95rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.92rem;
+  opacity: 0.85;
 }
 
-/* Scrolling subtitle strip */
+/* scrolling subtitle line */
 .scrolling-subtitle {
-  position: relative;
   overflow: hidden;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  padding: 4px 10px;
-  margin-top: 6px;
-  background: #201613;
-  color: var(--accent-soft);
-  font-size: 0.85rem;
   white-space: nowrap;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-top: 0.1rem;
 }
 
 .scrolling-subtitle span {
   display: inline-block;
   padding-left: 100%;
-  animation: scroll-subtitle 18s linear infinite;
+  animation: subtitleScroll 18s linear infinite;
 }
 
-@keyframes scroll-subtitle {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-100%); }
+@keyframes subtitleScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
-/* =========================================
-   AUDIO PLAYER + PLAYLIST
-   ========================================= */
+/* ============================================================
+   HEADER BAR (STICKY) + HAMBURGER + BUTTONS
+   ============================================================ */
 
-.audio-wrap {
-  max-width: 800px;
-  margin: 1.5rem auto 2rem auto;
-}
-
-.audio-wrapper {
-  background: var(--paper);
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  padding: 12px 12px 10px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.45);
-}
-
-/* main audio element */
-.audio-wrapper audio {
-  width: 100%;
-  border-radius: 999px;
-  background: #f5f2ee;
-  margin-bottom: 10px;
-}
-
-/* Playlist under audio */
-.playlist {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.playlist-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.08s ease;
-}
-
-.playlist-row:hover {
-  background: #302320;
-}
-
-.playlist-row.active {
-  background: #392824;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
-
-.playlist-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.playlist-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.playlist-sub {
-  font-size: 0.8rem;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.playlist-duration {
-  font-size: 0.8rem;
-  color: var(--muted);
-  flex-shrink: 0;
-}
-
-/* =========================================
-   MAIN TEXT CONTENT
-   ========================================= */
-
-.content {
-  max-width: 800px;
-  margin: 0 auto 2rem auto;
-  line-height: 1.7;
-  font-size: 1rem;
-}
-
-.content p {
-  margin: 0 0 0.95rem;
-}
-
-/* =========================================
-   FOOTER
-   ========================================= */
-
-footer {
-  max-width: 800px;
-  margin: 0 auto;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--line);
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-/* =========================================
-   UNIFIED REFLECTIONS HEADER + HAMBURGER
-   Based on /reflections/reflections-header.html
-   ========================================= */
-
-/* Top bar */
 .ref-header {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: rgba(23, 16, 13, 0.96); /* slightly transparent */
-  color: var(--ink);
-  backdrop-filter: blur(8px);          /* soft glass effect if supported */
-  border-bottom: 1px solid var(--line);
+  background: var(--bg-header);
+  color: var(--ink-light);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-dark);
 }
 
+/* inner wrapper */
 .ref-header-inner {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 6px 10px;
+  padding: 8px 12px 10px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-/* Brand left side */
+/* LEFT: brand + actions stacked */
 .ref-header-left {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
-.brand-link {
+/* RIGHT: current-page badge */
+.ref-header-right {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Brand link */
+.brand-link {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   text-decoration: none;
@@ -232,10 +147,11 @@ footer {
 }
 
 .brand-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
   object-fit: cover;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
 .brand-text {
@@ -247,6 +163,8 @@ footer {
 .brand-title {
   font-size: 0.9rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .brand-subtitle {
@@ -254,156 +172,331 @@ footer {
   opacity: 0.8;
 }
 
-/* Buttons on the left (hamburger + tools) */
+/* Current page badge */
+.current-page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #241b19;
+  font-size: 0.8rem;
+  border: 1px solid #3a2f2b;
+}
+
+.page-icon {
+  font-size: 0.9rem;
+}
+
+/* LINE WITH HAMBURGER + BUTTONS */
 .header-actions {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
+/* Hamburger */
 .nav-toggle {
-  background: none;
-  border: 1px solid var(--ink);
-  color: var(--ink);
-  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--ink-light);
+  color: var(--ink-light);
+  border-radius: 9px;
   font-size: 1.15rem;
-  padding: 3px 8px;
+  padding: 4px 9px 6px;
   cursor: pointer;
 }
 
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+/* Back / Share / Audio buttons */
+.nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .nav-buttons button {
-  background: var(--accent);
-  color: #1f1815;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
+  background: #3a2f2b;
+  color: var(--ink-light);
+  border: 1px solid #4a352e;
+  border-radius: 999px;
+  padding: 5px 12px 6px;
   font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .nav-buttons button:hover {
-  filter: brightness(0.95);
+  background: #4a352e;
 }
 
-/* Right badge */
-.ref-header-right {
-  display: flex;
-  align-items: center;
+.nav-buttons button:focus-visible {
+  outline: 2px solid var(--accent);
 }
 
-.current-page-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #2a211e;
-  font-size: 0.8rem;
+/* small viewport adjustments */
+@media (max-width: 600px) {
+  .ref-header-inner {
+    padding: 6px 10px 8px;
+  }
+
+  .brand-title {
+    font-size: 0.82rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.7rem;
+  }
+
+  .current-page-badge {
+    margin-top: 2px;
+  }
 }
 
-.page-icon {
-  font-size: 0.85rem;
-}
+/* ============================================================
+   HAMBURGER MENU PANEL + OVERLAY (Style A)
+   ============================================================ */
 
-/* Dropdown menu panel */
-.ref-menu-panel {
-  position: fixed;
-  top: 50px;          /* just under header */
-  left: 0;
-  width: 80%;
-  max-width: 320px;
-  background: rgba(21, 14, 12, 0.98);
-  border-bottom-right-radius: 18px;
-  box-shadow: 0 18px 45px rgba(0,0,0,0.7);
-  padding: 10px 12px 12px;
-  z-index: 1010;
-
-  opacity: 0;
-  transform: translateY(-12px);
-  pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-}
-
-.ref-menu-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ref-menu-title {
-  font-size: 0.78rem;
-  letter-spacing: 0.15em;
-  color: var(--accent-soft);
-}
-
-.ref-menu-list {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: 0;
-}
-
-.ref-menu-list li + li {
-  margin-top: 4px;
-}
-
-.ref-menu-link {
-  display: block;
-  padding: 6px 6px;
-  border-radius: 6px;
-  color: var(--ink);
-  font-size: 0.9rem;
-  text-decoration: none;
-}
-
-.ref-menu-link::before {
-  content: attr(data-icon);
-  margin-right: 4px;
-  font-size: 0.85rem;
-  opacity: 0.85;
-}
-
-.ref-menu-link:hover {
-  background: #2a211e;
-}
-
-/* Dim transparent overlay (outside header but same scope) */
+/* Overlay: covers entire viewport */
 .ref-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
-  z-index: 1005;
-
+  background: rgba(0, 0, 0, 0.45);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.22s ease;
+  z-index: 998;
 }
 
-/* When header is "open" */
-.ref-header.is-open .ref-menu-panel {
+/* Panel container */
+.ref-menu-panel {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 70px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+  z-index: 999;
+}
+
+/* Floating card */
+.ref-menu-card {
+  width: 100%;
+  max-width: 430px;
+  margin: 0 16px;
+  background: rgba(66, 45, 34, 0.95);
+  border-radius: 18px;
+  padding: 18px 16px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.ref-menu-title {
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffb17b;
+  margin-bottom: 10px;
+}
+
+/* list of links */
+.ref-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ref-menu-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  color: var(--ink-light);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ref-menu-link::after {
+  content: "›";
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+.ref-menu-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ref-menu-link.active {
+  border: 1px solid var(--accent);
+  background: rgba(255, 106, 62, 0.25);
+}
+
+/* when JS toggles .menu-open on the header */
+.ref-header.menu-open + .ref-menu-panel,
+.ref-header.menu-open ~ .ref-menu-panel {
   opacity: 1;
+  pointer-events: auto;
   transform: translateY(0);
-  pointer-events: auto;
 }
 
-.ref-header.is-open ~ .ref-menu-overlay {
+.ref-header.menu-open + .ref-menu-panel + .ref-menu-overlay,
+.ref-header.menu-open ~ .ref-menu-overlay {
   opacity: 1;
   pointer-events: auto;
 }
 
-/* =========================================
-   RESPONSIVE TWEAKS
-   ========================================= */
+/* (the exact sibling selectors will still work because the panel
+   and overlay are placed right after the header in the HTML) */
 
-@media (max-width: 600px) {
-  .ref-header-inner {
-    padding: 6px 8px;
-  }
 
-  .nav-buttons {
-    display: none; /* hamburger only on very small screens if you like */
-  }
+/* ============================================================
+   AUDIO BLOCK + PLAYLIST
+   ============================================================ */
 
-  .page-content {
-    padding: 70px 12px 32px;
+.audio-wrap {
+  max-width: 800px;
+  margin: 1.5rem auto 2rem auto;
+}
+
+.audio-wrapper {
+  background: var(--bg-card-dark);
+  border: 1px solid var(--border-dark);
+  border-radius: 16px;
+  padding: 14px 14px 10px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* native audio element */
+#reflectionAudio {
+  width: 100%;
+  height: 38px;
+  border-radius: 10px;
+  background: #2b201d;
+  margin-bottom: 10px;
+}
+
+audio::-webkit-media-controls-panel {
+  background: #2b201d !important;
+  height: 38px !important;
+}
+
+/* make icons light */
+audio::-webkit-media-controls-play-button,
+audio::-webkit-media-controls-pause-button,
+audio::-webkit-media-controls-mute-button {
+  filter: invert(1) brightness(1.6);
+}
+
+/* playlist container */
+.playlist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* one row */
+.playlist-row {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border 0.2s ease;
+}
+
+/* active row */
+.playlist-row.active {
+  border-color: var(--accent);
+  background: rgba(255, 106, 62, 0.18);
+}
+
+/* title + subtitle wrapper */
+.playlist-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* title */
+.playlist-title {
+  font-size: 0.97rem;
+  font-weight: 600;
+  color: var(--ink-light);
+  line-height: 1.1;
+}
+
+/* subtitle (tight) */
+.playlist-sub {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  line-height: 1.1;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* duration on right */
+.playlist-duration {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  padding-left: 12px;
+  text-align: right;
+  min-width: 40px;
+}
+
+.playlist-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================
+   READING CONTENT AREA (LIGHT PAPER)
+   ============================================================ */
+
+.content {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem 1.75rem;
+  background: var(--bg-card-paper); /* light warm paper */
+  color: var(--ink-main);
+  border-radius: 18px;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+.content p {
+  margin: 0 0 1.2rem;
+}
+
+/* footer text at bottom of page content */
+footer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1.75rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+/* small screens */
+@media (max-width: 480px) {
+  .content {
+    padding: 1.5rem 1.25rem;
+    margin: 1.5rem auto;
   }
 }
