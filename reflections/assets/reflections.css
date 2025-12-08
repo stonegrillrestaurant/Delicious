@@ -24,6 +24,11 @@ a:hover{text-decoration:underline}
   background: linear-gradient(to right, var(--accent2), var(--accent));
   padding: 16px 10px;
   text-align:center;
+
+  /* keep header from being too stretched on big screens */
+  max-width:1100px;
+  margin:0 auto;
+  border-radius:0 0 16px 16px;
 }
 .site-header img{max-height:56px}
 .site-header h1{margin:8px 0 4px; font-size:clamp(24px,4.5vw,40px)}
@@ -40,12 +45,41 @@ a:hover{text-decoration:underline}
   margin:0 auto;
   padding:12px 16px 42px;
 }
-.grid{display:grid; gap:14px}
+
+/* GRID OF CARDS (desktop) */
+.grid{
+  display:grid;
+  gap:16px;
+}
+
+/* On wide screens, show cards in a true grid (2–3 columns) */
+@media (min-width:900px){
+  .grid{
+    grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
+    align-items:stretch;
+  }
+
+  article.card{
+    grid-template-columns:1fr;   /* inside the card: stack cover + text */
+    max-width:420px;
+    margin:0 auto;
+  }
+
+  article.card .left{
+    margin-bottom:8px;
+    justify-content:center;
+  }
+
+  article.card .right{
+    align-items:flex-start;
+    text-align:left;
+  }
+}
 
 /* Card */
 article.card{
   display:grid;
-  grid-template-columns:180px minmax(0,1fr);
+  grid-template-columns:180px minmax(0,1fr); /* mobile/tablet default */
   column-gap:14px;
   align-items:start;
   background:var(--paper);
@@ -76,6 +110,16 @@ img.book-cover{
   border-radius:10px;
   box-shadow:0 8px 20px rgba(0,0,0,.35);
   background:#111;
+}
+
+/* When used in grid mode, let the cover adapt */
+@media (min-width:900px){
+  img.book-cover{
+    width:100%;
+    max-width:260px;
+    height:auto;
+    aspect-ratio:3 / 4;
+  }
 }
 
 /* Text */
@@ -121,7 +165,6 @@ article.card h3{
 .audio-section{ text-align:center; margin:6px 0 0; width:100%; }
 .audio-label{ font-size:.95rem; color:#ffb380; margin:0 0 6px; }
 
-/* New universal wrapper used on most cards */
 .audio-wrap{
   width:100%;
   margin:4px 0 0;
