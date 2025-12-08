@@ -21,10 +21,13 @@ function initReflectionsHeader() {
   const header = document.querySelector('.ref-header');
   const toggle = document.querySelector('.nav-toggle');
   const nav = document.querySelector('.ref-nav');
+  const overlay = document.querySelector('.nav-overlay');  // NEW
   const navLinks = nav ? nav.querySelectorAll('a') : [];
   const currentPath = window.location.pathname;
 
-  // Hamburger open/close
+  // -----------------------------
+  // HAMBURGER OPEN / CLOSE
+  // -----------------------------
   if (header && toggle && nav) {
     toggle.addEventListener('click', () => {
       const isOpen = header.classList.toggle('nav-open');
@@ -40,21 +43,31 @@ function initReflectionsHeader() {
     });
   }
 
-  // Auto-set active link + current page badge
+  // -----------------------------------------
+  // CLOSE MENU WHEN CLICKING OUTSIDE (OVERLAY)
+  // -----------------------------------------
+  if (overlay) {
+    overlay.addEventListener('click', () => {
+      header.classList.remove('nav-open');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  // -----------------------------------------
+  // AUTO-SET ACTIVE LINK + CURRENT PAGE BADGE
+  // -----------------------------------------
   let matchedLink = null;
 
   navLinks.forEach(link => {
     const href = link.getAttribute('href');
-
-    // Normalize simple comparison
     if (!href) return;
 
-    // Exact match for most pages
+    // Normal match
     if (currentPath === href) {
       matchedLink = link;
     }
 
-    // Also handle "/reflections/" vs "/reflections/index.html"
+    // Handle index page
     if (!matchedLink &&
         (currentPath === '/reflections/' || currentPath === '/reflections') &&
         href === '/reflections/index.html') {
@@ -62,6 +75,7 @@ function initReflectionsHeader() {
     }
   });
 
+  // Update label + icon in badge
   if (matchedLink) {
     matchedLink.classList.add('active');
 
@@ -79,5 +93,5 @@ function initReflectionsHeader() {
   }
 }
 
-// Auto-run if desired
+// Auto-run
 document.addEventListener('DOMContentLoaded', loadReflectionsHeader);
