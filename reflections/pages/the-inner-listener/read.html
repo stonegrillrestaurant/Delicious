@@ -13,21 +13,20 @@
   <meta property="og:type" content="article">
   <meta property="og:title" content="The Inner Listener — How Prayer Shapes Your Identity">
   <meta property="og:description" content="Prayer is more than words sent upward; it is a conversation with the subconscious mind, the inner listener that quietly reshapes who you become.">
-  <!-- TODO: update this image path once your cover is ready -->
   <meta property="og:image" content="https://stonegrillresto.net/reflections/pages/the-inner-listener/theinnerlistener.jpg">
   <meta property="og:url" content="https://stonegrillresto.net/reflections/pages/the-inner-listener/read.html">
 
   <!-- Canonical -->
   <link rel="canonical" href="https://stonegrillresto.net/reflections/pages/the-inner-listener/read.html">
 
-  <!-- Favicon / Icons (reuse what you already use for other reflections) -->
+  <!-- Favicon / Icons -->
   <link rel="icon" href="/reflections/assets/reflections-icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/reflections/icon-180.png">
 
-  <!-- PWA Manifest (same as other reflections pages) -->
+  <!-- PWA Manifest -->
   <link rel="manifest" href="/reflections/manifest.json">
 
-  <!-- Styles (keep versions consistent with your other pages) -->
+  <!-- Styles -->
   <link rel="stylesheet" href="/reflections/assets/ref-header.css?v=2">
   <link rel="stylesheet" href="/reflections/assets/reflections.css?v=12">
 </head>
@@ -40,7 +39,7 @@
   <main class="reflection-page">
     <article class="reflection-article">
 
-      <!-- Page icon / breadcrumb (optional, same style as other pages) -->
+      <!-- Page icon / breadcrumb -->
       <div class="reflection-meta">
         <span class="reflection-tag">Solitude Reflections</span>
         <span class="reflection-divider">— ❖ —</span>
@@ -50,30 +49,23 @@
       <h1 class="reflection-title">The Inner Listener</h1>
       <h2 class="reflection-subtitle">How Prayer Shapes Your Identity</h2>
 
-      <!-- Cover image (optional if you already use it in header cards only) -->
-      <!-- You can remove this block if you prefer text-only. -->
+      <!-- Cover image -->
       <figure class="reflection-cover">
-        <!-- TODO: update the src when your cover is ready -->
         <img src="/reflections/pages/the-inner-listener/theinnerlistener.jpg" alt="The Inner Listener — How Prayer Shapes Your Identity">
       </figure>
 
-      <!-- Audio Player Block (same pattern as your other reflections) -->
+      <!-- Audio Player Block -->
       <section class="reflection-audio-block">
         <h3 class="section-title">Listen to this reflection</h3>
 
         <div class="audio-wrapper">
           <audio id="reflectionAudio" controls preload="metadata">
-            <!-- TODO: update the src to your actual audio file -->
             <source src="/reflections/pages/the-inner-listener/theinnerlistener.mp3?v=1" type="audio/mpeg">
             Your browser does not support the audio element.
           </audio>
-
-          <!-- If later you want multiple tracks, your audio-system.js can extend this.
-               For now this is a single-track simple player. -->
         </div>
 
         <div class="share-row">
-          <!-- Share button (same ID / class used in your other pages) -->
           <button id="shareButton" class="share-button"
                   data-share-title="The Inner Listener — How Prayer Shapes Your Identity"
                   data-share-url="https://stonegrillresto.net/reflections/pages/the-inner-listener/read.html">
@@ -118,7 +110,7 @@
 
       <hr class="section-divider">
 
-      <!-- Back link (same styling as other reflections) -->
+      <!-- Back link -->
       <nav class="reflection-footer-nav">
         <a href="/reflections/index.html" class="back-link">← Back to all reflections</a>
       </nav>
@@ -128,10 +120,28 @@
   <!-- Header / nav script (loads header.html into #reflections-header) -->
   <script src="/reflections/assets/ref-header.js?v=2" defer></script>
 
-  <!-- Audio & share behavior (reuse your existing script) -->
+  <!-- Audio & share behavior -->
   <script src="/reflections/assets/audio-system.js?v=2" defer></script>
 
-  <!-- Service Worker registration (same as other reflections pages) -->
+  <!-- Fallback header loader to make sure the header always appears -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var headerEl = document.getElementById('reflections-header');
+      if (!headerEl) return;
+
+      // If ref-header.js hasn’t filled the header yet, load it directly.
+      if (!headerEl.hasChildNodes()) {
+        fetch('/reflections/header.html')
+          .then(function (resp) { return resp.text(); })
+          .then(function (html) { headerEl.innerHTML = html; })
+          .catch(function (err) {
+            console.warn('Fallback header load failed:', err);
+          });
+      }
+    });
+  </script>
+
+  <!-- Service Worker registration -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/reflections/sw.js').catch(function (err) {
