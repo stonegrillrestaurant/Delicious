@@ -1,6 +1,7 @@
 /* reflections-header.css */
 /* Fixed header used on all reflection pages */
 
+/* ===== Color Theme ===== */
 :root{
   --ref-bg: #201612;
   --ref-bg-nav: #1a110e;
@@ -9,7 +10,7 @@
   --ref-accent: #ffb873;
 }
 
-/* whole bar */
+/* ===== Header Shell ===== */
 .ref-header-shell{
   position:fixed;
   top:0;
@@ -22,139 +23,119 @@
   font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
-/* top row (title + buttons + small cover on the RIGHT) */
+/* ===== Top Row (Cover + Title + Hamburger) ===== */
 .ref-header-inner{
   max-width:1000px;
   margin:0 auto;
-  padding:0.55rem 1rem 0.25rem;
+
+  /* Taller so cover + title have breathing room */
+  padding:0.9rem 1rem;
+
   display:flex;
-  align-items:flex-start;
+  align-items:center;
   justify-content:space-between;
-  gap:1rem;
+  gap:0.8rem;
 }
 
-.ref-header-main{
-  display:flex;
-  flex-direction:column;
-  gap:0.25rem;
-}
-
-/* left texts */
-.ref-header-brand{
-  display:flex;
-  flex-direction:column;
-  line-height:1.2;
-}
-
-.ref-header-series{
-  font-family:"Georgia","Times New Roman",serif;
-  font-size:1.05rem;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-}
-
-.ref-header-sub{
-  font-size:.80rem;
-  color:var(--ref-muted);
-}
-
-/* buttons row */
-.ref-header-actions{
-  display:flex;
-  flex-wrap:wrap;
-  gap:.5rem;
-  margin-top:.25rem;
-}
-
-/* Back / Share / Audio: small rounded rectangles */
-.ref-header-btn{
-  padding:.28rem .85rem;
-  font-size:.84rem;
-  border-radius:8px;      
-  border:1px solid #55362a;
-  background:transparent;
-  color:var(--ref-ink);
-  cursor:pointer;
-}
-.ref-header-btn:hover{
-  background:#38211a;
-}
-
-/* Right-side cover image (current reflection cover) */
-.ref-header-cover-wrap{
-  flex:0 0 auto;
-  padding-bottom:.3rem;
-}
+/* Cover image (small version inside the header) */
 .ref-header-cover{
   width:52px;
   height:52px;
-  border-radius:12px;
+  border-radius:6px;
   object-fit:cover;
-  box-shadow:0 4px 12px rgba(0,0,0,.8);
+  flex-shrink:0;
 }
 
-/* ===== NAVIGATION AREA ===== */
-.ref-header-nav{
-  background:var(--ref-bg-nav);
-  border-top:1px solid #3a2520;
-  overflow-x:auto;             /* horizontal scroll for 2-row block */
-}
-
-/* 2-row scrollable titles */
-.ref-header-nav-inner{
-  margin:0;
-  padding:.45rem 1rem .6rem;
-
+/* Wrap for title + subtitle */
+.ref-header-title-wrap{
+  flex:1;
   display:flex;
-  flex-wrap:wrap;              /* allow 2 rows */
-  gap:.35rem .75rem;           /* vertical + horizontal spacing */
-
-  width:max-content;           /* expands wider than screen to enable scrolling */
+  flex-direction:column;
+  justify-content:center;
 }
 
-/* scrollbar styling */
-.ref-header-nav-inner::-webkit-scrollbar{
-  height:5px;
-}
-.ref-header-nav-inner::-webkit-scrollbar-thumb{
-  background:#4a3024;
-  border-radius:999px;
+/* Main title */
+.ref-header-title{
+  font-size:1.24rem;
+  font-weight:600;
+  line-height:1.25;
+  letter-spacing:.01em;
 }
 
-/* each link pill */
-.ref-header-link{
-  display:inline-flex;
+/* Subtitle under the title (optional) */
+.ref-header-sub{
+  font-size:0.78rem;
+  color:var(--ref-muted);
+  margin-top:0.15rem;
+}
+
+/* ===== Hamburger Button ===== */
+.ref-header-ham{
+  width:32px;
+  height:32px;
+  display:flex;
   align-items:center;
   justify-content:center;
-
-  flex:0 0 170px;              /* forces tiles → promotes 2 rows */
-  padding:.25rem .9rem;
-  border-radius:999px;
-  font-size:.86rem;
-  white-space:nowrap;
-  text-decoration:none;
+  background:none;
+  border:none;
   color:var(--ref-ink);
-  opacity:.75;
-}
-.ref-header-link:hover{
-  opacity:1;
+  cursor:pointer;
+  padding:0;
+  margin:0;
+  font-size:1.5rem;
 }
 
-.ref-header-link--active{
-  background:var(--ref-accent);
-  color:#2b1811;
-  opacity:1;
+/* ===== Dropdown Navigation Panel ===== */
+.ref-nav-panel{
+  background:var(--ref-bg-nav);
+  color:var(--ref-ink);
+  padding:1rem 1.2rem 1.4rem;
+  border-top:1px solid rgba(255,255,255,.06);
+  display:none;
+}
+
+/* When visible */
+.ref-nav-panel.show{
+  display:block;
+}
+
+/* Small label at top of menu (e.g. “Other Reflections”) */
+.ref-nav-title{
+  font-size:0.9rem;
+  color:var(--ref-muted);
+  margin-bottom:0.6rem;
+}
+
+/* Nav list – balanced grid so rows don’t look unbalanced */
+.ref-nav-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:0.4rem 1.2rem;
+}
+
+.ref-nav-list li{
+  margin:0;
+}
+
+/* Individual links */
+.ref-nav-list a{
+  color:var(--ref-ink);
+  text-decoration:none;
+  font-size:0.95rem;
+  font-weight:500;
+  display:inline-block;
+  padding:0.1rem 0;
+}
+
+.ref-nav-list a:hover{
+  color:var(--ref-accent);
+}
+
+/* Optional “current page” highlight */
+.ref-nav-list a.is-current{
+  color:var(--ref-accent);
   font-weight:600;
-}
-
-/* Mobile adjustments */
-@media (max-width:600px){
-  .ref-header-cover{
-    width:44px;
-    height:44px;
-    border-radius:10px;
-  }
-  .ref-header-series{
-    font-size:.95rem;
-  }
 }
