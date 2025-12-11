@@ -37,12 +37,12 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/reflections/icon-180.png">
 
   <!-- ================= SHARED HEADER CSS ================= -->
-  <link rel="stylesheet" href="/reflections/assets/reflections-header.css" />
+  <link rel="stylesheet" href="/reflections/assets/reflections-header.css?v=3" />
 
   <style>
-    /* ===== Global Page Settings ===== */
+    /* ===== Global Page Settings (ONLY for body + reading card) ===== */
     :root{
-      --bg:#f6f2ed;        /* NEW — light page background */
+      --bg:#f6f2ed;        /* light page background */
       --paper:#2a211e;     /* reading card stays dark */
       --ink:#1a120f;
       --muted:#8c6f62;
@@ -54,12 +54,12 @@
     html,body{
       margin:0;
       padding:0;
-      background:var(--bg);   /* light warm background */
+      background:var(--bg);
       color:var(--ink);
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
 
-    /* Offset under FIXED header */
+    /* Space under the FIXED header (matches header height, NOT the dropdown menu) */
     .page-spacer{
       height:0;
       margin-top:8.4rem;
@@ -71,76 +71,86 @@
     }
 
     /* ===== AUDIO PLAYER (SUPER SLIM VERSION) ===== */
+    .audio-shell{
+      max-width:900px;
+      margin:0 auto 1.2rem auto;
+      padding:0 1.2rem;
+      box-sizing:border-box;
+    }
+    @media (min-width:768px){
+      .audio-shell{ padding:0; }
+    }
 
-.audio-shell{
-  max-width:900px;
-  margin:0 auto 1.2rem auto; /* tighter bottom spacing */
-  padding:0 1.2rem;
-  box-sizing:border-box;
-}
-@media (min-width:768px){
-  .audio-shell{ padding:0; }
-}
+    .audio-player{
+      background:#151010;
+      border-radius:10px 10px 0 0;
+      padding:.4rem .7rem;
+      box-shadow:0 6px 16px rgba(0,0,0,.4);
+      border:1px solid #000;
+      border-bottom:none;
+    }
+    .audio-player audio{
+      width:100%;
+      display:block;
+    }
 
-.audio-player{
-  background:#151010;
-  border-radius:10px 10px 0 0;
-  padding:.4rem .7rem;        /* VERY SLIM */
-  box-shadow:0 6px 16px rgba(0,0,0,.4);
-  border:1px solid #000;
-  border-bottom:none;
-}
-.audio-player audio{
-  width:100%;
-  display:block;
-}
+    .track-list{
+      background:#1d1411;
+      border-radius:0 0 10px 10px;
+      border:1px solid #000;
+      border-top:1px solid #2a1a13;
+      box-shadow:0 8px 18px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
 
-/* Track List Slim */
-.track-list{
-  background:#1d1411;
-  border-radius:0 0 10px 10px;
-  border:1px solid #000;
-  border-top:1px solid #2a1a13;
-  box-shadow:0 8px 18px rgba(0,0,0,.55);
-  overflow:hidden;
-}
+    /* RESET button look + SUPER SLIM track rows */
+    .track-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:.32rem .65rem;
+      gap:.5rem;
 
-/* SUPER SLIM track rows */
-.track-row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:.32rem .65rem;      /* WAS .45 and .9 — now very slim */
-  gap:.5rem;
-  background:transparent;
-  border-bottom:1px solid rgba(255,255,255,.05);
-  font-size:.82rem;           /* smaller font */
-}
-.track-row:last-child{
-  border-bottom:none;
-}
+      width:100%;
+      margin:0;
+      border:none;
+      background:transparent;
+      text-align:left;
+      cursor:pointer;
 
-.track-main{
-  font-size:.84rem;           /* smaller */
-  font-weight:600;
-}
-.track-meta{
-  font-size:.7rem;            /* much slimmer */
-  color:#c9b0a4;
-  margin-top:.1rem;
-}
-.track-duration{
-  font-size:.75rem;           /* slimmer */
-  padding-top:.05rem;
-  white-space:nowrap;
-  color:#c9b0a4;
-}
+      font-size:.82rem;
+      color:#f3e6dd;
+      border-bottom:1px solid rgba(255,255,255,.05);
+    }
+    .track-row:last-child{
+      border-bottom:none;
+    }
 
-/* Active track highlight */
-.track-row.is-active{
-  background:#3b241e;
-  box-shadow:inset 0 0 0 1px rgba(255,184,115,.45);
-}
+    .track-row:focus-visible{
+      outline:1px solid #ffb873;
+      outline-offset:2px;
+    }
+
+    .track-main{
+      font-size:.84rem;
+      font-weight:600;
+    }
+    .track-meta{
+      font-size:.7rem;
+      color:#c9b0a4;
+      margin-top:.1rem;
+    }
+    .track-duration{
+      font-size:.75rem;
+      padding-top:.05rem;
+      white-space:nowrap;
+      color:#c9b0a4;
+    }
+
+    .track-row.is-active{
+      background:#3b241e;
+      box-shadow:inset 0 0 0 1px rgba(255,184,115,.45);
+    }
 
     /* ===== READING CARD ===== */
     .page-shell{
@@ -219,6 +229,7 @@
     <div class="track-list" id="trackList">
       <!-- TRACK 1 -->
       <button class="track-row is-active"
+              type="button"
               data-src="/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3?v=1">
         <div>
           <div class="track-main">The Paradox of God</div>
@@ -229,6 +240,7 @@
 
       <!-- TRACK 2 -->
       <button class="track-row"
+              type="button"
               data-src="/reflections/pages/the-paradox-of-god/paradoxofgod.mp3?v=1">
         <div>
           <div class="track-main">The Paradox of God (Alternate Voice)</div>
@@ -298,7 +310,7 @@
   </main>
 
   <!-- ============ SHARED HEADER / NAV SCRIPT ============ -->
-  <script src="/reflections/assets/reflections-header.js"></script>
+  <script src="/reflections/assets/reflections-header.js?v=3"></script>
 
   <!-- ============ TRACK SWITCHING LOGIC ============ -->
   <script>
