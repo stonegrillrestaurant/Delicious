@@ -37,7 +37,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/reflections/icon-180.png">
 
   <!-- ================= SHARED HEADER CSS ================= -->
-  <link rel="stylesheet" href="/reflections/assets/reflections-header.css?v=4" />
+  <link rel="stylesheet" href="/reflections/assets/reflections-header.css?v=5" />
 
   <style>
     /* ===== Global Page Settings (ONLY for body + reading card) ===== */
@@ -77,9 +77,10 @@
       padding:0;
       box-sizing:border-box;
 
-      background:#1b1310;
+      background:#120d0b;
       border-radius:16px;
       box-shadow:0 12px 28px rgba(0,0,0,.55);
+      border:1px solid #000;
     }
     @media (min-width:768px){
       .audio-shell{
@@ -91,7 +92,6 @@
       background:#151010;
       border-radius:16px 16px 0 0;
       padding:.4rem .7rem;
-      box-shadow:0 0 0 rgba(0,0,0,0); /* shadow handled by outer shell */
       border-bottom:1px solid #000;
     }
     .audio-player audio{
@@ -103,17 +103,26 @@
       background:#1d1411;
       border-radius:0 0 16px 16px;
       border-top:1px solid #2a1a13;
-      box-shadow:0 0 0 rgba(0,0,0,0);
       overflow:hidden;
     }
 
-    /* RESET button look + SUPER SLIM track rows */
+    .track-header{
+      padding:.4rem .8rem .2rem;
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#c9b0a4;
+      opacity:.9;
+    }
+
+    /* RESET button look + SLIM playlist-style rows */
     .track-row{
+      position:relative;
       display:flex;
-      align-items:center;
+      align-items:flex-start;
       justify-content:space-between;
-      padding:.32rem .65rem;
-      gap:.5rem;
+      padding:.38rem .85rem;
+      gap:.6rem;
 
       width:100%;
       margin:0;
@@ -122,12 +131,12 @@
       text-align:left;
       cursor:pointer;
 
-      font-size:.82rem;
+      font-size:.85rem;
       color:#f3e6dd;
-      border-bottom:1px solid rgba(255,255,255,.05);
+      border-top:1px solid rgba(255,255,255,.04);
     }
-    .track-row:last-child{
-      border-bottom:none;
+    .track-row:first-of-type{
+      border-top:1px solid rgba(255,255,255,.08);
     }
 
     .track-row:focus-visible{
@@ -135,25 +144,42 @@
       outline-offset:2px;
     }
 
+    /* Little dot marker, like a playlist bullet */
+    .track-row::before{
+      content:"";
+      flex-shrink:0;
+      width:6px;
+      height:6px;
+      border-radius:50%;
+      background:#7b5d4b;
+      margin-top:.45rem;
+      margin-right:.5rem;
+    }
+
     .track-main{
-      font-size:.84rem;
+      font-size:.9rem;
       font-weight:600;
     }
     .track-meta{
-      font-size:.7rem;
+      font-size:.75rem;
       color:#c9b0a4;
       margin-top:.1rem;
     }
     .track-duration{
-      font-size:.75rem;
-      padding-top:.05rem;
+      font-size:.8rem;
+      padding-top:.25rem;
       white-space:nowrap;
       color:#c9b0a4;
+      flex-shrink:0;
+      margin-left:.5rem;
     }
 
     .track-row.is-active{
       background:#3b241e;
       box-shadow:inset 0 0 0 1px rgba(255,184,115,.45);
+    }
+    .track-row.is-active::before{
+      background:#ffb873;
     }
 
     /* ===== READING CARD ===== */
@@ -261,6 +287,8 @@
     </div>
 
     <div class="track-list" id="trackList">
+      <div class="track-header">Playlist</div>
+
       <!-- TRACK 1 -->
       <button class="track-row is-active"
               type="button"
@@ -352,18 +380,16 @@
 
       if (ham && panel) {
         ham.addEventListener('click', (e) => {
-          e.stopPropagation();     // don't trigger document click
+          e.stopPropagation();
           panel.classList.toggle('show');
         });
 
-        // Close when clicking anywhere outside menu or hamburger
         document.addEventListener('click', (e) => {
           if (!panel.classList.contains('show')) return;
           if (panel.contains(e.target) || ham.contains(e.target)) return;
           panel.classList.remove('show');
         });
 
-        // Close with ESC key (optional but nice)
         document.addEventListener('keydown', (e) => {
           if (e.key === 'Escape' && panel.classList.contains('show')) {
             panel.classList.remove('show');
