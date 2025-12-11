@@ -59,7 +59,7 @@
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
 
-    /* Space under the FIXED header (matches header height, NOT the dropdown menu) */
+    /* Space under the FIXED header (height of header only) */
     .page-spacer{
       height:0;
       margin-top:8.4rem;
@@ -211,13 +211,45 @@
 </head>
 <body>
 
-  <!-- ============ TOP HEADER BAR HOOK ============ -->
-  <div id="reflectionsHeader" data-current="the-paradox-of-god"></div>
+  <!-- ============ FIXED HEADER (HARD-CODED FOR THIS PAGE) ============ -->
+  <header class="ref-header-shell">
+    <div class="ref-header-inner">
+      <img class="ref-header-cover"
+           src="/reflections/pages/the-paradox-of-god/paradoxofgod-cover.jpg"
+           alt="The Paradox of God cover">
+
+      <div class="ref-header-title-wrap">
+        <div class="ref-header-title">Moments of Solitude</div>
+        <div class="ref-header-sub">Stone Grill Reflections</div>
+      </div>
+
+      <button class="ref-header-ham" id="refHam">☰</button>
+    </div>
+
+    <div class="ref-nav-panel" id="refNavPanel">
+      <div class="ref-nav-title">All Reflections</div>
+      <ul class="ref-nav-list">
+        <!-- Mark this page as current with class="is-current" -->
+        <li><a href="/reflections/pages/the-paradox-of-god/read.html" class="is-current">The Paradox of God</a></li>
+        <li><a href="/reflections/pages/the-lost-language-of-metaphor/read.html">The Lost Language of Metaphor</a></li>
+        <li><a href="/reflections/pages/the-divine-premise/read.html">The Divine Premise</a></li>
+        <li><a href="/reflections/pages/the-subconscious-mind/read.html">The Subconscious Mind</a></li>
+        <li><a href="/reflections/pages/the-god-we-created/read.html">The God We Created</a></li>
+        <li><a href="/reflections/pages/the-prayer/read.html">The Prayer — The Inner Listener</a></li>
+        <li><a href="/reflections/pages/transcendence/read.html">Transcendence</a></li>
+        <li><a href="/reflections/pages/the-madness-of-faith/read.html">The Madness of Faith</a></li>
+        <li><a href="/reflections/pages/belief-and-goodness/read.html">Belief and Goodness</a></li>
+        <li><a href="/reflections/pages/seeking-assurance/read.html">Seeking Assurance is Labeled a Sinner</a></li>
+        <li><a href="/reflections/pages/the-initial-premise-of-a-perfect-loving-god/read.html">The Initial Premise of a Perfect Loving God</a></li>
+        <!-- Add any other pages you like -->
+      </ul>
+    </div>
+  </header>
 
   <div class="page-spacer"></div>
 
   <!-- ============ AUDIO + PLAYLIST ============ -->
-  <section class="audio-shell">
+  <section class="audio-shell" id="audioSection">
     <div class="audio-player">
       <audio id="reflectionAudio" controls preload="metadata">
         <source id="audioSource"
@@ -309,12 +341,19 @@
     </article>
   </main>
 
-  <!-- ============ SHARED HEADER / NAV SCRIPT ============ -->
-  <script src="/reflections/assets/reflections-header.js?v=3"></script>
-
-  <!-- ============ TRACK SWITCHING LOGIC ============ -->
+  <!-- ============ SIMPLE HEADER SCRIPT (HAMBURGER + TRACK SWITCH) ============ -->
   <script>
     (function () {
+      // Hamburger toggle
+      const ham = document.getElementById('refHam');
+      const panel = document.getElementById('refNavPanel');
+      if (ham && panel) {
+        ham.addEventListener('click', () => {
+          panel.classList.toggle('show');
+        });
+      }
+
+      // Track switching
       const audio = document.getElementById('reflectionAudio');
       const source = document.getElementById('audioSource');
       const rows  = document.querySelectorAll('.track-row');
