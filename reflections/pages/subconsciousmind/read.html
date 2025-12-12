@@ -365,7 +365,7 @@
     </div>
   </div>
 
-
+<main>
   <!-- REFLECTION TEXT -->
   <article class="reflection-text">
     <h1>The Subconscious Mind: The Silent Architect of Your Identity</h1>
@@ -410,32 +410,63 @@
     </p>
   </article>
 
-  <!-- SHARE BUTTON -->
-  <div class="share-wrapper">
-    <button onclick="shareReflection()">Share</button>
-  </div>
+</main>
 
-</div>
+  <!-- ============ SIMPLE HEADER + TRACK SCRIPT ============ -->
+  <script>
+    (function () {
+      // Hamburger toggle + click outside to close
+      const ham   = document.getElementById('refHam');
+      const panel = document.getElementById('refNavPanel');
 
-<!-- Unified JS -->
-<script src="/reflections/assets/reflections.js?v=2"></script>
-<script src="/reflections/assets/audio-system.js?v=2"></script>
+      if (ham && panel) {
+        ham.addEventListener('click', (e) => {
+          e.stopPropagation();
+          panel.classList.toggle('show');
+        });
 
-<script>
-function switchTrack(num) {
-  const audio = document.getElementById('reflectionAudio');
-  const src = document.getElementById('audioSource');
+        document.addEventListener('click', (e) => {
+          if (!panel.classList.contains('show')) return;
+          if (panel.contains(e.target) || ham.contains(e.target)) return;
+          panel.classList.remove('show');
+        });
 
-  if (num === 1) {
-    src.src = "subconsciousmind.mp3";        // main version
-  } else {
-    src.src = "subconsciousmind-alt.mp3";    // second version (change name if needed)
-  }
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && panel.classList.contains('show')) {
+            panel.classList.remove('show');
+          }
+        });
+      }
 
-  audio.load();
-  audio.play();
-}
-</script>
+      // Track switching
+      const audio = document.getElementById('reflectionAudio');
+      const source = document.getElementById('audioSource');
+      const rows  = document.querySelectorAll('.track-row');
+
+      rows.forEach(row => {
+        row.addEventListener('click', () => {
+          const newSrc = row.getAttribute('data-src');
+          if (!newSrc) return;
+
+          rows.forEach(r => r.classList.remove('is-active'));
+          row.classList.add('is-active');
+
+          source.src = newSrc;
+          audio.load();
+          audio.play().catch(() => {});
+        });
+      });
+    })();
+  </script>
+
+  <!-- ============ SERVICE WORKER ============ -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/reflections/sw.js');
+      });
+    }
+  </script>
 
 </body>
 </html>
