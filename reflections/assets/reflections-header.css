@@ -1,143 +1,261 @@
 /* reflections-header.css */
-/* Fixed header used on all reflection pages */
+/* Screenshot-style unified header + sliding drawer + iOS scroll */
 
-/* ===== Color Theme ===== */
 :root{
-  --ref-bg: #201612;        /* Header background */
-  --ref-bg-nav: #1a110e;    /* Nav panel background (distinct) */
+  --ref-bg: rgba(30, 21, 18, .92);
   --ref-ink: #f3e6dd;
   --ref-muted: #c9b0a4;
   --ref-accent: #ffb873;
+
+  --ref-pill-bg: rgba(255,255,255,.06);
+  --ref-pill-brd: rgba(255,255,255,.18);
+
+  --ref-panel: rgba(24, 16, 13, .96);
+  --ref-panel-brd: rgba(255,255,255,.10);
+
+  --ref-shadow: 0 10px 26px rgba(0,0,0,.55);
 }
 
-/* ===== Header Shell ===== */
+/* Lock background scroll when menu is open */
+body.ref-menu-lock{ overflow:hidden; }
+
+/* ===== Header bar ===== */
 .ref-header-shell{
   position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  z-index:1000;
-  background:var(--ref-bg);
-  color:var(--ref-ink);
-  box-shadow:0 8px 24px rgba(0,0,0,.7);
-  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  top:0; left:0; right:0;
+  z-index:9999;
+  background: var(--ref-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  box-shadow: var(--ref-shadow);
+  color: var(--ref-ink);
+  font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
-/* ===== Top Row (Cover + Title + Hamburger) ===== */
 .ref-header-inner{
-  max-width:1000px;
+  max-width:1100px;
   margin:0 auto;
-  padding:0.9rem 1rem;
-
+  padding:.65rem .9rem;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:0.8rem;
+  gap:.85rem;
 }
 
-/* Cover image (small version inside the header) */
-.ref-header-cover{
-  width:52px;
-  height:52px;
-  border-radius:6px;
-  object-fit:cover;
-  flex-shrink:0;
-}
-
-/* Wrap for title + subtitle */
-.ref-header-title-wrap{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-}
-
-/* Main title */
-.ref-header-title{
-  font-size:1.24rem;
-  font-weight:600;
-  line-height:1.25;
-  letter-spacing:.01em;
-}
-
-/* Subtitle under the title (optional) */
-.ref-header-sub{
-  font-size:0.78rem;
-  color:var(--ref-muted);
-  margin-top:0.15rem;
-}
-
-/* ===== Hamburger Button ===== */
-.ref-header-ham{
-  width:32px;
-  height:32px;
+/* Left group */
+.ref-left{
   display:flex;
   align-items:center;
-  justify-content:center;
-  background:none;
-  border:none;
-  color:var(--ref-ink);
-  cursor:pointer;
-  padding:0;
-  margin:0;
-  font-size:1.5rem;
+  gap:.75rem;
+  min-width:0;
 }
 
-/* ===== Dropdown Navigation Panel ===== */
-.ref-nav-panel{
-  background:var(--ref-bg-nav);
-  color:var(--ref-ink);
-  padding:0.8rem 1.1rem 1.1rem;
-  border-top:1px solid rgba(255,255,255,.12);
-  display:none;
-  box-shadow:inset 0 4px 8px rgba(0,0,0,.35);
-}
-
-/* When visible */
-.ref-nav-panel.show{
-  display:block;
-}
-
-/* Small label at top of menu */
-.ref-nav-title{
-  font-size:0.86rem;
-  color:var(--ref-muted);
-  margin-bottom:0.4rem;
-}
-
-/* ===== SIMPLE DROPDOWN LIST (CLEAR BUTTON ROWS) ===== */
-.ref-nav-list{
-  list-style:none;
-  padding:0;
-  margin:0;
-}
-
-.ref-nav-list li{
-  margin:0 0 .3rem;
-}
-
-.ref-nav-list a{
-  display:block;
-  font-size:0.9rem;
-  font-weight:500;
+.ref-brand{
+  display:flex;
+  align-items:center;
+  gap:.65rem;
+  min-width:0;
   text-decoration:none;
-  color:var(--ref-ink);
-
-  padding:0.35rem 0.7rem;
-  border-radius:6px;
-
-  background:rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.04);
+  color:inherit;
 }
 
-.ref-nav-list a:hover{
-  background:rgba(0,0,0,.4);
-  color:var(--ref-accent);
+.ref-brand-logo{
+  width:44px;
+  height:44px;
+  border-radius:999px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.10);
+  background:#000;
 }
 
-/* Highlight current page clearly */
-.ref-nav-list a.is-current{
-  background:rgba(255,184,115,.22);
-  border-color:rgba(255,184,115,.75);
-  color:var(--ref-accent);
+.ref-titlewrap{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+
+/* BIG uppercase title like screenshot */
+.ref-pagetitle{
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 1.07rem;
+  line-height: 1.1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.ref-subtitle{
+  font-size: .82rem;
+  color: var(--ref-muted);
+  margin-top: .10rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Right group */
+.ref-actions{
+  display:flex;
+  align-items:center;
+  gap:.55rem;
+  flex:0 0 auto;
+}
+
+.ref-ham{
+  width:46px;
+  height:46px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.18);
+  color: var(--ref-ink);
+  display:grid;
+  place-items:center;
+  font-size: 1.1rem;
+  line-height:1;
+  cursor:pointer;
+}
+
+/* Pills like screenshot */
+.ref-pill{
+  appearance:none;
+  border:1px solid var(--ref-pill-brd);
+  background: var(--ref-pill-bg);
+  color: var(--ref-ink);
+  border-radius:999px;
+  padding:.50rem .88rem;
+  font-weight: 800;
+  font-size: .92rem;
+  line-height: 1;
+  cursor:pointer;
+}
+
+.ref-pill:active{ transform: translateY(1px); }
+
+/* ===== Sliding drawer ===== */
+.ref-drawer{
+  position:fixed;
+  top:0; left:0;
+  height:100vh;
+  width:min(420px, 88vw);
+  z-index:10001;
+  transform: translateX(-110%);
+  transition: transform .22s ease;
+  padding: 1rem;
+}
+
+.ref-drawer-card{
+  height:100%;
+  border-radius:18px;
+  background: var(--ref-panel);
+  border:1px solid var(--ref-panel-brd);
+  box-shadow: 0 20px 70px rgba(0,0,0,.65);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column; /* needed for scroll list */
+}
+
+.ref-drawer-head{
+  flex:0 0 auto;
+  padding:.95rem 1rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.8rem;
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+
+.ref-drawer-title{
+  font-weight:900;
+  letter-spacing:.14em;
+  font-size:.78rem;
+  color: var(--ref-muted);
+}
+
+.ref-drawer-close{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.18);
+  color: var(--ref-ink);
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor:pointer;
+}
+
+/* IMPORTANT: Scrollable list (fixes your issue) */
+.ref-drawer-list{
+  flex:1 1 auto;
+  min-height:0; /* iOS flex scroll fix */
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+
+  list-style:none;
+  margin:0;
+  padding:.75rem .55rem 1.1rem;
+}
+
+.ref-drawer-link{
+  display:block;
+  margin:.45rem .4rem;
+  padding:.78rem .85rem;
+  border-radius:16px;
+  text-decoration:none;
+  color: var(--ref-ink);
+  background: rgba(255,255,255,.04);
+  border:1px solid transparent;
+}
+
+.ref-drawer-link:hover{
+  border-color: rgba(255,184,115,.35);
+  background: rgba(255,184,115,.10);
+}
+
+.ref-drawer-link.is-active{
+  border-color: rgba(255,184,115,.85);
+  background: rgba(255,184,115,.18);
+}
+
+.ref-drawer-link .t{
+  font-weight: 850;
+  font-size: 1.00rem;
+  line-height: 1.15;
+}
+
+.ref-drawer-link .s{
+  color: var(--ref-muted);
+  font-size: .84rem;
+  margin-top: .18rem;
+}
+
+/* Overlay */
+.ref-overlay{
+  position:fixed;
+  inset:0;
+  z-index:10000;
+  background: rgba(0,0,0,.58);
+  opacity:0;
+  pointer-events:none;
+  transition: opacity .18s ease;
+}
+
+/* Open state */
+.ref-header-shell.menu-open + .ref-drawer{
+  transform: translateX(0);
+}
+.ref-header-shell.menu-open ~ .ref-overlay{
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* Mobile tweaks */
+@media (max-width:520px){
+  .ref-brand-logo{ width:40px; height:40px; }
+  .ref-ham{ width:44px; height:44px; }
+  .ref-pill{ font-size:.90rem; padding:.48rem .82rem; }
+  .ref-pagetitle{ font-size:1.02rem; }
 }
