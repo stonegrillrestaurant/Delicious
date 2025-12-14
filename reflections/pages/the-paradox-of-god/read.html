@@ -16,11 +16,17 @@
   <meta name="twitter:card" content="summary_large_image" />
 
   <link rel="icon" href="/reflections/assets/favicon.ico" />
-  <link rel="stylesheet" href="/reflections/assets/reflections-header.css?v=22" />
-  <link rel="stylesheet" href="/reflections/assets/reflections.css?v=2" />
+  <link rel="stylesheet" href="/reflections/assets/reflections-header.css?v=21" />
+  <link rel="stylesheet" href="/reflections/assets/reflections.css?v=1" />
 
   <style>
-    :root{--bg:#1f1815;--paper:#2a211e;--ink:#f3e6dd;--muted:#c9b0a4;--accent:#ffb873;}
+    :root{
+      --bg:#1f1815;
+      --paper:#2a211e;
+      --ink:#f3e6dd;
+      --muted:#c9b0a4;
+      --accent:#ffb873;
+    }
 
     body{
       margin:0;
@@ -33,7 +39,7 @@
     main{
       max-width:900px;
       margin:0 auto;
-      padding:7.2rem 1rem 3.2rem;
+      padding:7.2rem 1rem 3.2rem; /* space for fixed header */
     }
 
     .paper{
@@ -44,7 +50,7 @@
       box-shadow:0 18px 60px rgba(0,0,0,.45);
     }
 
-    /* Smaller cover (still visible) */
+    /* ✅ smaller cover but visible */
     .cover{
       width:100%;
       display:block;
@@ -58,10 +64,28 @@
       object-position:center;
     }
 
-    h1{margin:.2rem 0 .4rem;line-height:1.15;letter-spacing:.2px;font-size:1.8rem;}
-    .subtitle{margin:0 0 1rem;color:var(--muted);font-size:1.02rem;}
+    h1{
+      margin:.2rem 0 .4rem;
+      line-height:1.15;
+      letter-spacing:.2px;
+      font-size:1.8rem;
+    }
 
-    /* Audio wrapper (unified JS injects player + playlist here) */
+    .subtitle{
+      margin:0 0 1rem;
+      color:var(--muted);
+      font-size:1.02rem;
+    }
+
+    hr{
+      border:0;
+      border-top:1px solid rgba(255,255,255,.10);
+      margin:1.25rem 0;
+    }
+
+    /* ============================================================
+       ✅ AUDIO (BUILT-IN, RELIABLE)
+    ============================================================ */
     .audio-wrap{
       margin: .8rem 0 1.2rem;
       padding: .9rem;
@@ -70,66 +94,129 @@
       background: rgba(0,0,0,.15);
     }
 
-    hr{border:0;border-top:1px solid rgba(255,255,255,.10);margin:1.25rem 0;}
+    #reflectionAudio{
+      width:100%;
+      display:block;
+    }
+
+    .playlist{
+      margin-top:.9rem;
+      display:flex;
+      flex-direction:column;
+      gap:.4rem;
+    }
+
+    .playlist-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:.55rem .55rem;
+      background:#261a15;
+      border-radius:10px;
+      cursor:pointer;
+      border:1.5px solid #120d09;
+      transition: background .15s ease, border-color .15s ease;
+    }
+
+    .playlist-row:hover{ border-color:#42251c; }
+
+    .playlist-row.active{
+      background:#170d09;
+      border-color:#997060;
+      box-shadow:0 0 2px rgba(255,0,0,.35);
+    }
+
+    .playlist-main{
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      overflow:hidden;
+      min-width:0;
+    }
+
+    .playlist-title{
+      font-size:.96rem;
+      font-weight:700;
+      color:#f3e6dd;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .playlist-sub{
+      font-size:.78rem;
+      color:#b29587;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      margin-top:.05rem;
+    }
+
+    .playlist-duration{
+      font-size:.82rem;
+      color:#c9b0a4;
+      margin-left:.75rem;
+      flex-shrink:0;
+    }
 
     /* ============================================================
-       UNIFIED HEADER OVERRIDES (NO REDESIGN)
-       - Hamburger + nav buttons on LEFT
-       - Logo/title/subtitle on RIGHT side of header
+       ✅ HEADER LAYOUT OVERRIDES (NO REDESIGN)
+       - actions left
+       - brand (logo/title/subtitle) right
     ============================================================ */
     .ref-header-inner{
-      justify-content: flex-start;
-      gap: .75rem;
+      justify-content:flex-start;
+      gap:.75rem;
     }
 
     .ref-actions{
-      order: 0;
-      margin-right: .35rem;
+      order:0;
+      margin-right:.35rem;
     }
 
     .ref-left{
-      order: 2;
-      margin-left: auto;
-      justify-content: flex-end;
+      order:2;
+      margin-left:auto;
+      justify-content:flex-end;
     }
 
     .ref-titlewrap{
-      align-items: flex-end;
-      text-align: right;
+      align-items:flex-end;
+      text-align:right;
     }
 
     .ref-brand-logo{
-      width: 40px;
-      height: 40px;
+      width:40px;
+      height:40px;
     }
 
     @media (max-width:640px){
       .ref-header-inner{
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction:column;
+        align-items:stretch;
       }
 
       .ref-actions{
-        width: 100%;
-        justify-content: space-between;
-        order: 0;
+        width:100%;
+        justify-content:space-between;
+        order:0;
       }
 
       .ref-left{
-        width: 100%;
-        margin-left: 0;
-        justify-content: flex-end;
-        order: 1;
+        width:100%;
+        margin-left:0;
+        justify-content:flex-end;
+        order:1;
       }
 
       .ref-titlewrap{
-        align-items: flex-end;
-        text-align: right;
+        align-items:flex-end;
+        text-align:right;
       }
     }
   </style>
 
-  <!-- PAGE IDENTITY (must be defined BEFORE unified JS runs) -->
+  <!-- Page identity (still useful for unified header/share fallback) -->
   <script>
     window.REFLECTION_PAGE = {
       slug: "the-paradox-of-god",
@@ -137,15 +224,10 @@
       cover: "/reflections/pages/the-paradox-of-god/paradoxofgod.jpg",
       url: "https://stonegrillresto.net/reflections/pages/the-paradox-of-god/read.html"
     };
-
-    window.REFLECTION_AUDIO = [
-      { title: "The Paradox of God", src: "/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3" },
-      { title: "Paradox of God (Short)", src: "/reflections/pages/the-paradox-of-god/paradoxofgod.mp3" }
-    ];
   </script>
 
-  <!-- ✅ FIX: defer makes sure the DOM (including #audio) exists before the script runs -->
-  <script defer src="/reflections/assets/reflections-header.js?v=21"></script>
+  <!-- Unified header engine (HEADER only). Cache-bust to v=22 -->
+  <script defer src="/reflections/assets/reflections-header.js?v=22"></script>
 </head>
 
 <body>
@@ -154,10 +236,37 @@
 
   <main>
     <article class="paper">
-      <img class="cover" src="/reflections/pages/the-paradox-of-god/paradoxofgod.jpg" alt="The Paradox of God cover">
+      <img class="cover"
+           src="/reflections/pages/the-paradox-of-god/paradoxofgod.jpg"
+           alt="The Paradox of God cover">
 
-      <!-- ✅ Audio BELOW cover image -->
-      <section class="audio-wrap" id="audio"></section>
+      <!-- ✅ AUDIO BELOW COVER (BUILT-IN) -->
+      <section class="audio-wrap" id="audio">
+        <audio id="reflectionAudio" controls preload="metadata">
+          <source id="audioSource" src="" type="audio/mpeg">
+          Your browser does not support the audio element.
+        </audio>
+
+        <div class="playlist" id="playlist">
+          <div class="playlist-row active"
+               data-src="/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3">
+            <div class="playlist-main">
+              <div class="playlist-title">The Paradox of God</div>
+              <div class="playlist-sub">Full</div>
+            </div>
+            <div class="playlist-duration">--:--</div>
+          </div>
+
+          <div class="playlist-row"
+               data-src="/reflections/pages/the-paradox-of-god/paradoxofgod.mp3">
+            <div class="playlist-main">
+              <div class="playlist-title">Paradox of God (Short)</div>
+              <div class="playlist-sub">Short</div>
+            </div>
+            <div class="playlist-duration">--:--</div>
+          </div>
+        </div>
+      </section>
 
       <h1>The Paradox of God</h1>
       <div class="subtitle">
@@ -206,5 +315,48 @@
       </p>
     </article>
   </main>
+
+  <script>
+    // ✅ Playlist logic (reliable, independent from unified JS)
+    document.addEventListener('DOMContentLoaded', () => {
+      const audio = document.getElementById('reflectionAudio');
+      const source = document.getElementById('audioSource');
+      const rows = Array.from(document.querySelectorAll('.playlist-row'));
+
+      if (!audio || !source || rows.length === 0) return;
+
+      // Default track = active row, else first
+      const active = rows.find(r => r.classList.contains('active')) || rows[0];
+      source.src = active.dataset.src;
+      audio.load();
+
+      // Switch track on click
+      rows.forEach(row => {
+        row.addEventListener('click', () => {
+          rows.forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+
+          source.src = row.dataset.src;
+          audio.load();
+          audio.play().catch(() => {});
+        });
+      });
+
+      // Duration fill
+      rows.forEach(row => {
+        const temp = new Audio(row.dataset.src);
+        temp.addEventListener('loadedmetadata', () => {
+          const d = temp.duration;
+          if (!isNaN(d)) {
+            const t = Math.floor(d);
+            const m = String(Math.floor(t / 60)).padStart(2,'0');
+            const s = String(t % 60).padStart(2,'0');
+            const el = row.querySelector('.playlist-duration');
+            if (el) el.textContent = `${m}:${s}`;
+          }
+        });
+      });
+    });
+  </script>
 </body>
 </html>
