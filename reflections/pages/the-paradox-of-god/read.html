@@ -20,13 +20,7 @@
   <link rel="stylesheet" href="/reflections/assets/reflections.css?v=1" />
 
   <style>
-    :root{
-      --bg:#1f1815;
-      --paper:#2a211e;
-      --ink:#f3e6dd;
-      --muted:#c9b0a4;
-      --accent:#ffb873;
-    }
+    :root{--bg:#1f1815;--paper:#2a211e;--ink:#f3e6dd;--muted:#c9b0a4;--accent:#ffb873;}
 
     body{
       margin:0;
@@ -36,7 +30,6 @@
       line-height:1.75;
     }
 
-    /* Give space for fixed unified header */
     main{
       max-width:900px;
       margin:0 auto;
@@ -51,85 +44,95 @@
       box-shadow:0 18px 60px rgba(0,0,0,.45);
     }
 
-    /* ✅ Cover image: fit + consistent size (not too huge) */
+    /* ✅ Smaller cover (still visible) */
     .cover{
       width:100%;
-      border-radius:14px;
       display:block;
+      border-radius:14px;
       border:1px solid rgba(255,255,255,.07);
-      margin-bottom:1rem;
       background:#000;
+      margin-bottom:.9rem;
 
-      /* added */
-      max-height:420px;
+      /* key changes */
+      height:260px;            /* small but visible */
       object-fit:cover;
       object-position:center;
     }
 
-    h1{
-      margin:.2rem 0 .4rem;
-      line-height:1.15;
-      letter-spacing:.2px;
-      font-size:1.8rem;
-    }
+    h1{margin:.2rem 0 .4rem;line-height:1.15;letter-spacing:.2px;font-size:1.8rem;}
+    .subtitle{margin:0 0 1rem;color:var(--muted);font-size:1.02rem;}
 
-    .subtitle{
-      margin:0 0 1rem;
-      color:var(--muted);
-      font-size:1.02rem;
-    }
-
-    /* ✅ Audio area: keep visible + consistent */
+    /* Audio wrapper (unified JS injects player + playlist here) */
     .audio-wrap{
-      margin:0 0 1rem;
-      padding:.9rem;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.15);
+      margin: .8rem 0 1.2rem;
+      padding: .9rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.15);
     }
 
-    hr{
-      border:0;
-      border-top:1px solid rgba(255,255,255,.10);
-      margin:1.25rem 0;
-    }
+    hr{border:0;border-top:1px solid rgba(255,255,255,.10);margin:1.25rem 0;}
 
     /* ============================================================
        ✅ UNIFIED HEADER OVERRIDES (NO REDESIGN)
-       Goal: hamburger + pills on LEFT side in desktop + mobile
-       Classes come from /reflections/assets/reflections-header.css
+       - Hamburger + nav buttons on LEFT
+       - Logo/title/subtitle on RIGHT side of header
     ============================================================ */
 
-    /* Keep header layout but move actions group to the left */
+    /* Keep header as a single row, with left actions and right brand */
     .ref-header-inner{
-      justify-content:flex-start; /* instead of space-between */
-      gap:.75rem;
+      justify-content: flex-start;
+      gap: .75rem;
     }
 
-    /* Put actions (hamburger + pills) FIRST on the left */
+    /* Actions stay left */
     .ref-actions{
-      order:-1;
-      margin-right:.35rem;
+      order: 0;
+      margin-right: .35rem;
     }
 
-    /* Keep the brand/title group next */
+    /* Move the brand group to the RIGHT side */
     .ref-left{
-      order:0;
+      order: 2;
+      margin-left: auto;      /* pushes to far right */
+      justify-content: flex-end;
     }
 
-    /* If the drawer title area gets tight, allow header to wrap a bit nicer */
-    .ref-left, .ref-actions{
-      min-width:0;
+    /* Right-align the title/subtitle block */
+    .ref-titlewrap{
+      align-items: flex-end;
+      text-align: right;
     }
 
-    /* Mobile: keep it tidy */
+    /* Slightly reduce logo size so it matches the header better */
+    .ref-brand-logo{
+      width: 40px;
+      height: 40px;
+    }
+
+    /* On small screens keep it readable */
     @media (max-width:640px){
       .ref-header-inner{
-        justify-content:flex-start; /* ensure left-first stays */
+        flex-direction: column;
+        align-items: stretch;
       }
+
       .ref-actions{
-        width:100%;
-        justify-content:space-between;
+        width: 100%;
+        justify-content: space-between;
+        order: 0;
+      }
+
+      .ref-left{
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-end;
+        order: 1;
+      }
+
+      .ref-titlewrap{
+        align-items: flex-end;
+        text-align: right;
       }
     }
   </style>
@@ -148,7 +151,6 @@
       url: "https://stonegrillresto.net/reflections/pages/the-paradox-of-god/read.html"
     };
 
-    // Two tracks (your known filenames)
     window.REFLECTION_AUDIO = [
       { title: "The Paradox of God", src: "/reflections/pages/the-paradox-of-god/theparadoxofgod.mp3" },
       { title: "Paradox of God (Short)", src: "/reflections/pages/the-paradox-of-god/paradoxofgod.mp3" }
@@ -159,11 +161,11 @@
   <script src="/reflections/assets/reflections-header.js?v=21"></script>
 
   <main>
-    <!-- ✅ UNIFIED AUDIO MOUNT (MOVED INSIDE MAIN so it shows on desktop) -->
-    <section class="audio-wrap" id="audio"></section>
-
     <article class="paper">
       <img class="cover" src="/reflections/pages/the-paradox-of-god/paradoxofgod.jpg" alt="The Paradox of God cover">
+
+      <!-- ✅ Audio goes back BELOW cover image -->
+      <section class="audio-wrap" id="audio"></section>
 
       <h1>The Paradox of God</h1>
       <div class="subtitle">
