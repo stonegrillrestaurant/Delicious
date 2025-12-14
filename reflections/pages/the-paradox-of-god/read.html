@@ -44,7 +44,7 @@
       box-shadow:0 18px 60px rgba(0,0,0,.45);
     }
 
-    /* ✅ Smaller cover (still visible) */
+    /* Smaller cover (still visible) */
     .cover{
       width:100%;
       display:block;
@@ -53,8 +53,7 @@
       background:#000;
       margin-bottom:.9rem;
 
-      /* key changes */
-      height:260px;            /* small but visible */
+      height:260px;
       object-fit:cover;
       object-position:center;
     }
@@ -74,43 +73,36 @@
     hr{border:0;border-top:1px solid rgba(255,255,255,.10);margin:1.25rem 0;}
 
     /* ============================================================
-       ✅ UNIFIED HEADER OVERRIDES (NO REDESIGN)
+       UNIFIED HEADER OVERRIDES (NO REDESIGN)
        - Hamburger + nav buttons on LEFT
        - Logo/title/subtitle on RIGHT side of header
     ============================================================ */
-
-    /* Keep header as a single row, with left actions and right brand */
     .ref-header-inner{
       justify-content: flex-start;
       gap: .75rem;
     }
 
-    /* Actions stay left */
     .ref-actions{
       order: 0;
       margin-right: .35rem;
     }
 
-    /* Move the brand group to the RIGHT side */
     .ref-left{
       order: 2;
-      margin-left: auto;      /* pushes to far right */
+      margin-left: auto;
       justify-content: flex-end;
     }
 
-    /* Right-align the title/subtitle block */
     .ref-titlewrap{
       align-items: flex-end;
       text-align: right;
     }
 
-    /* Slightly reduce logo size so it matches the header better */
     .ref-brand-logo{
       width: 40px;
       height: 40px;
     }
 
-    /* On small screens keep it readable */
     @media (max-width:640px){
       .ref-header-inner{
         flex-direction: column;
@@ -136,13 +128,8 @@
       }
     }
   </style>
-</head>
 
-<body>
-  <!-- UNIFIED HEADER MOUNT -->
-  <div id="reflectionsHeader" data-current="the-paradox-of-god"></div>
-
-  <!-- PAGE IDENTITY (for title/share fallback in unified JS) -->
+  <!-- PAGE IDENTITY (must be defined BEFORE unified JS runs) -->
   <script>
     window.REFLECTION_PAGE = {
       slug: "the-paradox-of-god",
@@ -157,14 +144,19 @@
     ];
   </script>
 
-  <!-- LOAD UNIFIED ENGINE ONCE -->
-  <script src="/reflections/assets/reflections-header.js?v=21"></script>
+  <!-- ✅ FIX: defer makes sure the DOM (including #audio) exists before the script runs -->
+  <script defer src="/reflections/assets/reflections-header.js?v=21"></script>
+</head>
+
+<body>
+  <!-- UNIFIED HEADER MOUNT -->
+  <div id="reflectionsHeader" data-current="the-paradox-of-god"></div>
 
   <main>
     <article class="paper">
       <img class="cover" src="/reflections/pages/the-paradox-of-god/paradoxofgod.jpg" alt="The Paradox of God cover">
 
-      <!-- ✅ Audio goes back BELOW cover image -->
+      <!-- ✅ Audio BELOW cover image -->
       <section class="audio-wrap" id="audio"></section>
 
       <h1>The Paradox of God</h1>
