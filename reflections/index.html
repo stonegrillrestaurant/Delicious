@@ -869,5 +869,44 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(err => console.log("SW failed:", err));
   }
 </script>
+<script>
+(() => {
+  const audio = document.getElementById('globalAudio');
+  const source = document.getElementById('globalSource');
+  const nowPlaying = document.getElementById('nowPlaying');
+  const playerWrap = document.getElementById('globalPlayer');
+
+  if (!audio || !source) {
+    console.error('Global audio player not found');
+    return;
+  }
+
+  function play(src, title, btn){
+    if (!src) return;
+
+    document.querySelectorAll('.track-link.active')
+      .forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    source.src = src;
+    audio.load();
+    audio.play().catch(()=>{});
+
+    if (nowPlaying) {
+      nowPlaying.textContent = 'Now playing: ' + (title || 'Audio');
+    }
+
+    playerWrap?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.track-link');
+    if (!btn) return;
+    e.preventDefault();
+    play(btn.dataset.src, btn.dataset.title, btn);
+  });
+})();
+</script>
+</body>
 </body>
 </html>
