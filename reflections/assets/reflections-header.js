@@ -169,21 +169,35 @@
     }catch(_){}
   });
 
-  // Audio (scroll to first audio)
-  btnAudio.addEventListener("click", () => {
-    const a = document.querySelector("audio");
-    if(!a) return;
-    a.scrollIntoView({behavior:"smooth", block:"center"});
-    try{ a.play(); }catch(_){}
-  });
+<script>
+(() => {
+  const audio = document.getElementById('globalAudio');
+  const source = document.getElementById('globalSource');
+  const nowPlaying = document.getElementById('nowPlaying');
 
-  function esc(str){
-    return String(str ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+  if (!audio || !source) return;
+
+  function play(src, title, btn){
+    if (!src) return;
+
+    document.querySelectorAll('.track-link.active')
+      .forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    if (source.getAttribute('src') !== src) {
+      source.setAttribute('src', src);
+      audio.load();
+    }
+
+    if (nowPlaying) nowPlaying.textContent = 'Now playing: ' + (title || 'Audio');
+    audio.play().catch(()=>{});
   }
 
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.track-link');
+    if (!btn) return;
+    e.preventDefault();
+    play(btn.dataset.src, btn.dataset.title, btn);
+  });
 })();
+</script>
