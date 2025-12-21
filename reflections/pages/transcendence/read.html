@@ -38,7 +38,7 @@
     .ref-header-inner {
       max-width: 1100px;
       margin: 1 auto;
-      padding: 0.8rem 1rem; /* slightly taller header */
+      padding: 1rem 1rem; /* slightly taller header */
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -72,24 +72,24 @@
     /* kept in case brand-mark used elsewhere */
     .brand-mark {
       width: 32px;
-      height: 32px;
+      height: 52px;
       border-radius: 50%;
       border: 1px solid #ff6b3d;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.9rem;
+      font-size: 1.9rem;
       color: #ff6b3d;
     }
 
     .brand-text {
       display: flex;
       flex-direction: column;
-      line-height: 1.1;
+      line-height: 2.1;
     }
 
     .brand-title {
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -494,19 +494,15 @@
 
 
 <!-- ===== MAIN ===== -->
-<main class="ref-main">
-<article class="ref-article">
+<main class="page-content">
+    <!-- Local subtitle -->
+    <section style="max-width:800px;margin:0 auto 0.8rem auto;">
+      <div class="scrolling-subtitle">
+        <span>A reflection on will, love, and divine design.</span>
+      </div>
+    </section>
 
-
-    <h1 class="ref-title">TRANSCENDENCE</h1>
-    <p class="ref-subtitle">From Transcendence to Absolute Reality</p>
-
-    <div class="ref-meta">
-      <span>Stone Grill Press</span>
-      <span>First Edition — 2025</span>
-    </div>
-  </section>
-
+     <div class="content"></div>
  <!-- AUDIO PLAYER + PLAYLIST -->
       <section class="audio-wrap">
         <div class="audio-wrapper">
@@ -539,8 +535,7 @@
   <div class="ref-divider">— ❖ —</div>
 
   <!-- ===== INTRODUCTION ===== -->
-  <section class="ref-section">
-    <h2>Introduction</h2>
+     <h2>Introduction</h2>
     <p>
       The human mind, bound by the limits of space, time, and perception, inevitably asks whether anything exists beyond its immediate experience.
       This fundamental inquiry forms the philosophical journey from transcendence to Absolute Reality.
@@ -631,6 +626,98 @@
 
 </article>
 </main>
+<script>
+    // Header / hamburger behavior
+    (function () {
+      const header = document.querySelector('.ref-header');
+      const toggle = document.querySelector('.nav-toggle');
+      const nav = document.querySelector('.ref-nav');
+      const overlay = document.querySelector('.nav-overlay');
 
+      if (!header || !toggle || !nav) return;
+
+      // Open / close when tapping hamburger
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = header.classList.toggle('nav-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      // Close when a nav link is tapped
+      nav.addEventListener('click', (e) => {
+        if (e.target.tagName.toLowerCase() === 'a') {
+          header.classList.remove('nav-open');
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Optional: close if user taps anywhere outside header
+      document.addEventListener('click', (e) => {
+        if (!header.classList.contains('nav-open')) return;
+        if (header.contains(e.target)) return;
+        header.classList.remove('nav-open');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+
+      // overlay currently visual only (pointer-events:none) but kept for future use
+      if (overlay) {
+        // no-op; you can attach a click handler later if you enable pointer-events
+      }
+    })();
+
+    // Audio playlist logic
+    document.addEventListener('DOMContentLoaded', () => {
+      const audioPlayer = document.getElementById('reflectionAudio');
+      const audioSource = document.getElementById('audioSource');
+      const rows = document.querySelectorAll('.playlist-row');
+
+      // Default track: first row
+      if (rows.length > 0) {
+        const firstSrc = rows[0].dataset.src;
+        audioSource.src = firstSrc;
+        audioPlayer.load();
+      }
+
+      // Clicking a row switches track
+      rows.forEach(row => {
+        row.addEventListener('click', () => {
+          rows.forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+
+          const src = row.dataset.src;
+          audioSource.src = src;
+          audioPlayer.load();
+          audioPlayer.play();
+        });
+      });
+
+      // Auto-fill durations
+      rows.forEach(row => {
+        const src = row.dataset.src;
+        const tempAudio = new Audio(src);
+        tempAudio.addEventListener('loadedmetadata', () => {
+          const dur = tempAudio.duration;
+          if (!isNaN(dur)) {
+            const total = Math.floor(dur);
+            const min = String(Math.floor(total / 60)).padStart(2, '0');
+            const sec = String(total % 60).padStart(2, '0');
+            const durEl = row.querySelector('.playlist-duration');
+            if (durEl) durEl.textContent = `${min}:${sec}`;
+          }
+        });
+      });
+    });
+
+    function sharePage() {
+      if (navigator.share) {
+        navigator.share({
+          title: "The Primacy of Moral Accountability -- Ninox Antolihao",
+          url: window.location.href
+        });
+      } else {
+        alert("Sharing not supported on this device.");
+      }
+    }
+  </script>
 </body>
 </html>
