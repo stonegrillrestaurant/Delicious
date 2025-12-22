@@ -12,18 +12,21 @@
 
   <!-- Open Graph -->
   <meta property="og:type" content="article">
-  <meta property="og:title" content="PRAYER - The inner listener">
-  <meta property="og:image" content="prayer.jpg">
-  <meta property="og:url" content="https://stonegrillresto.net/reflections/pages/the-inner-listener/read.html">
+  <meta property="og:title" content="TRANSCENDENCE - The inner listener">
+  <meta property="og:image" content="transcendence.jpg">
+  <meta property="og:url" content="https://stonegrillresto.net/reflections/pages/transcendence/read.html">
 
   <!-- Main reflections styles -->
   <link rel="stylesheet" href="/reflections/assets/styles/reflections.css?v=15">
 
+  <!-- ✅ PUT BACK AUDIO: audio system loader (required to render .audio-player) -->
+  <script src="/reflections/assets/audio-system.js?v=14" defer></script>
+
   <style>
     /* ✅ NEW: single source of truth for header height */
     :root{
-      --ref-header-h: 78px; /* desktop header height */
-      --ref-header-h-m: 104px; /* mobile header height */
+      --header-h: 104px;      /* desktop taller header */
+      --header-h-mobile: 84px;/* mobile taller header */
     }
 
     /* =========================
@@ -39,20 +42,28 @@
       border-bottom: 2px solid rgba(255, 255, 255, 0.06);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 
-      /* ✅ NEW: enforce header height */
-      height: var(--ref-header-h);
+      /* ✅ taller header */
+      height: var(--header-h);
     }
 
     .ref-header-inner {
       max-width: 1100px;
       margin: 0 auto;
-      padding: 0.8rem 1rem;
+
+      /* ✅ give more breathing room (taller feel) */
+      padding: 1.05rem 1rem;
+
       display: flex;
       align-items: center;
       gap: 1rem;
 
-      /* ✅ NEW: make inner row match header height */
+      /* ✅ match header height for cover fill */
       height: 100%;
+    }
+
+    /* ✅ FIX OVERLAP: push main content below the fixed header */
+    .ref-main{
+      padding-top: calc(var(--header-h) + 18px);
     }
 
     /* top-left cluster */
@@ -60,7 +71,7 @@
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      gap: 0.35rem;
+      gap: 0.45rem; /* ✅ slightly more spacing */
     }
 
     /* Brand / logo */
@@ -72,8 +83,8 @@
     }
 
     .brand-logo {
-      width: 40px;
-      height: 40px;
+      width: 44px;      /* ✅ slightly bigger to match taller header */
+      height: 44px;
       border-radius: 50%;
       object-fit: cover;
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
@@ -83,11 +94,11 @@
     .brand-text {
       display: flex;
       flex-direction: column;
-      line-height: 1.1;
+      line-height: 1.12;
     }
 
     .brand-title {
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -95,7 +106,7 @@
     }
 
     .brand-subtitle {
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       color: #f0e0d0;
       opacity: 0.8;
     }
@@ -151,6 +162,7 @@
       display: flex;
       align-items: center;
       gap: 0.75rem;
+      height: 100%;
     }
 
     .current-page-badge {
@@ -199,7 +211,7 @@
       background: #26201c;
       color: #fff;
       border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 4px 10px;
+      padding: 5px 12px; /* ✅ a bit bigger */
       border-radius: 999px;
       font-size: 0.75rem;
       cursor: pointer;
@@ -212,15 +224,21 @@
       color: #1f1815;
     }
 
-    /* Overlay (clickable to close) */
+    /* ✅ OVERLAP/BACKGROUND FIX:
+       overlay now starts BELOW header so header stays clean and clickable */
     .nav-overlay {
       position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.25);
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: var(--header-h);
+      background: rgba(0, 0, 0, 0.35);
       z-index: 900;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.25s ease;
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
     }
 
     .ref-header.nav-open .nav-overlay {
@@ -228,50 +246,49 @@
       pointer-events: auto;
     }
 
-   /* =========================
-   ADAPTIVE HEADER COVER (FILL HEADER HEIGHT)
-   (✅ cover-only change; header not modified)
-========================== */
+    /* =========================
+       HEADER COVER (fills header height)
+    ========================== */
+    .header-cover-slot{
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+    .header-cover-slot img{
+      height: calc(100% - 12px); /* ✅ fills header height with small breathing room */
+      width: auto;
+      max-width: 140px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+      flex-shrink: 0;
+      display: block;
+    }
 
-/* make the slot match whatever height the header row has */
-.header-cover-slot{
-  height: 100%;
-  display: flex;
-  align-items: stretch;   /* allow full height */
-}
+    @media (max-width: 900px) {
+      .brand-subtitle { display: none; }
+      .ref-nav ul { gap: 0.4rem; }
+      .ref-nav a { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
+      .current-page-badge { display: none; }
+      .header-cover-slot img{ max-width: 110px; }
+    }
 
-/* make the image fill the slot height */
-.header-cover-slot img{
-  height: 100%;           /* ✅ occupies header height */
-  width: auto;            /* keep correct aspect ratio */
-  max-width: 120px;       /* prevents it from becoming too wide */
-  border-radius: 10px;
-  object-fit: cover;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
-  flex-shrink: 0;
-  display: block;
-}
-
-/* ✅ IMPORTANT: remove/override the old fixed sizes */
-@media (max-width: 900px){
-  .header-cover-slot img{ height: 100%; max-width: 96px; }
-}
-@media (max-width: 768px){
-  .header-cover-slot img{ height: 100%; max-width: 84px; }
-}
+    @media (max-width: 768px) {
+      /* ✅ mobile taller header */
+      .ref-header{ height: var(--header-h-mobile); }
+      .ref-main{ padding-top: calc(var(--header-h-mobile) + 16px); }
 
       .ref-header-inner {
         flex-wrap: nowrap;
         align-items: flex-start;
+        padding: 0.95rem 1rem;
       }
 
+      /* ✅ dropdown starts below header height */
       .ref-nav {
         position: fixed;
-
-        /* ✅ FIX: match nav dropdown top to header height */
-        top: var(--ref-header-h-m);
-
+        top: var(--header-h-mobile);
         left: 0;
         right: 0;
         background: rgba(31, 24, 21, 0.96);
@@ -283,12 +300,12 @@
         z-index: 950;
       }
 
-      /* make long list scrollable */
+      /* scrollable list */
       .ref-nav ul {
         flex-direction: column;
         padding: 0.5rem 1rem 0.8rem;
         gap: 0.25rem;
-        max-height: calc(100vh - 96px);
+        max-height: calc(100vh - (var(--header-h-mobile) + 24px));
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
       }
@@ -299,7 +316,7 @@
       }
 
       .ref-header.nav-open .ref-nav {
-        max-height: calc(100vh - var(--ref-header-h-m));
+        max-height: calc(100vh - var(--header-h-mobile));
       }
 
       .nav-toggle {
@@ -308,9 +325,14 @@
         justify-content: center;
       }
 
-      /* ✅ cover also fills mobile header */
+      /* ✅ overlay starts below mobile header */
+      .nav-overlay{
+        top: var(--header-h-mobile);
+      }
+
       .header-cover-slot img{
-        height: calc(var(--ref-header-h-m) - 14px);
+        max-width: 92px;
+        height: calc(100% - 12px);
       }
     }
 
@@ -345,7 +367,7 @@
         <a href="/reflections/index.html" class="brand-link">
           <img src="/reflections/assets/logo1.PNG" alt="Moments of Solitude" class="brand-logo">
           <span class="brand-text">
-            <span class="brand-title">The Inner Listener</span>
+            <span class="brand-title">TRANSCENDENCE</span>
             <span class="brand-subtitle">Stone Grill Reflections</span>
           </span>
         </a>
@@ -390,7 +412,7 @@
 
         <div class="current-page-badge">
           <span class="page-icon">△</span>
-          <span class="page-label">The Prayer</span>
+          <span class="page-label">TRANSCENDENCE</span>
         </div>
       </div>
 
@@ -577,8 +599,9 @@
     slot.innerHTML = '';
     slot.appendChild(img);
 
-    // hide big hero cover (so only header shows)
-    heroImg.style.display = 'none';
+    /* ✅ IMPORTANT:
+       I did NOT hide the hero cover anymore.
+       If you want it hidden again, tell me and I’ll add it back safely. */
   });
 
   function sharePage() {
@@ -591,4 +614,4 @@
 </script>
 
 </body>
-</html>
+</html> 
