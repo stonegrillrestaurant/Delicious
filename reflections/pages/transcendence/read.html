@@ -36,8 +36,8 @@
 
     .ref-header-inner {
       max-width: 1100px;
-      margin: 0 auto; /* FIXED: was '1 auto' */
-      padding: 0.8rem 1rem; /* slightly taller header */
+      margin: 0 auto;
+      padding: 0.8rem 1rem;
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -66,19 +66,6 @@
       object-fit: cover;
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
       flex-shrink: 0;
-    }
-
-    /* kept in case brand-mark used elsewhere */
-    .brand-mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 1px solid #ff6b3d;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-      color: #ff6b3d;
     }
 
     .brand-text {
@@ -173,7 +160,7 @@
 
     /* Hamburger button */
     .nav-toggle {
-      display: none; /* hidden on desktop, shown in mobile via media query */
+      display: none;
       border: 1px solid rgba(255, 255, 255, 0.18);
       background: rgba(255, 255, 255, 0.06);
       border-radius: 999px;
@@ -213,19 +200,12 @@
       color: #1f1815;
     }
 
-    /* Main layout */
-    .page-content {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 5rem 1rem 2rem; /* header space */
-    }
-
-    /* Overlay (now clickable to close) */
+    /* Overlay (clickable to close) */
     .nav-overlay {
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.25);
-      z-index: 900; /* below header(1000), above content */
+      z-index: 900;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.25s ease;
@@ -233,17 +213,27 @@
 
     .ref-header.nav-open .nav-overlay {
       opacity: 1;
-      pointer-events: auto; /* FIXED: allow tap to close */
+      pointer-events: auto;
     }
 
     /* =========================
-       RESPONSIVE
+       ADAPTIVE HEADER COVER (RECTANGULAR + RESPONSIVE)
     ========================== */
+    .header-cover-slot img {
+      width: 72px;
+      height: 46px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+      flex-shrink: 0;
+    }
 
     @media (max-width: 900px) {
       .brand-subtitle { display: none; }
       .ref-nav ul { gap: 0.4rem; }
       .ref-nav a { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
+      .header-cover-slot img { width: 64px; height: 42px; }
       .current-page-badge { display: none; }
     }
 
@@ -255,7 +245,7 @@
 
       .ref-nav {
         position: fixed;
-        top: 64px; /* below header */
+        top: 64px;
         left: 0;
         right: 0;
         background: rgba(31, 24, 21, 0.96);
@@ -264,16 +254,15 @@
         overflow: hidden;
         transition: max-height 0.25s ease;
         margin-left: 0;
-        z-index: 950; /* above overlay, below header */
+        z-index: 950;
       }
 
-      /* FIX: make long list scrollable */
+      /* make long list scrollable */
       .ref-nav ul {
         flex-direction: column;
         padding: 0.5rem 1rem 0.8rem;
         gap: 0.25rem;
-
-        max-height: calc(100vh - 96px); /* screen-based */
+        max-height: calc(100vh - 96px);
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
       }
@@ -283,7 +272,6 @@
         justify-content: flex-start;
       }
 
-      /* FIX: allow menu to expand big enough */
       .ref-header.nav-open .ref-nav {
         max-height: calc(100vh - 64px);
       }
@@ -294,48 +282,11 @@
         justify-content: center;
       }
 
-      .page-content {
-        padding-top: 7rem;
-      }
+      .header-cover-slot img { width: 56px; height: 38px; }
     }
 
     /* =========================
-       PAGE-SPECIFIC STYLES
-    ========================== */
-
-    .content {
-      padding: 0 0 2rem 0;
-      max-width: 800px;
-      margin-left: auto;
-      margin-right: auto;
-      line-height: 1.65;
-      font-size: 17px;
-    }
-
-    /* Scrolling subtitle under local title */
-    .scrolling-subtitle {
-      width: 100%;
-      overflow: hidden;
-      white-space: nowrap;
-      position: relative;
-      margin-top: 6px;
-      color: #444;
-      font-size: 14px;
-    }
-
-    .scrolling-subtitle span {
-      display: inline-block;
-      animation: smoothScroll 18s linear infinite;
-    }
-
-    @keyframes smoothScroll {
-      0% { transform: translateX(100%); }
-      30% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-
-    /* =========================
-       AUDIO PLAYLIST (tighter)
+       AUDIO WRAP
     ========================== */
     .audio-wrap {
       max-width: 800px;
@@ -344,71 +295,6 @@
       border-radius: 16px;
       background:#261a15;
       border: 3px solid rgba(101, 55, 14, 1);
-    }
-
-    #reflectionAudio {
-      width: 100%;
-      display: block;
-    }
-
-    .playlist {
-      margin-top: 0.9rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .playlist-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.55rem 0.55rem;
-      background: #261a15;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 1.5px solid #120d09;
-      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-    }
-
-    .playlist-row:hover {
-      border-color: #42251c;
-    }
-
-    .playlist-row.active {
-      background: #170d09;
-      border-color: #997060;
-      box-shadow: 0 0 2px rgba(255, 0, 0, 0.4);
-    }
-
-    .playlist-main {
-      display: flex;
-      flex-direction: column;
-      gap: 0rem;
-      overflow: hidden;
-    }
-
-    .playlist-title {
-      font-size: 0.96rem;
-      font-weight: 600;
-      color: #f3e6dd;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .playlist-sub {
-      font-size: 0.78rem;
-      color: #b29587;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .playlist-duration {
-      font-size: 0.82rem;
-      color: #c9b0a4;
-      margin-left: 0.75rem;
-      flex-shrink: 0;
     }
   </style>
 
@@ -428,9 +314,7 @@
       <!-- Left brand + hamburger + local buttons -->
       <div class="ref-header-left">
         <a href="/reflections/index.html" class="brand-link">
-          <img src="/reflections/assets/logo1.PNG"
-               alt="Moments of Solitude"
-               class="brand-logo">
+          <img src="/reflections/assets/logo1.PNG" alt="Moments of Solitude" class="brand-logo">
           <span class="brand-text">
             <span class="brand-title">The Inner Listener</span>
             <span class="brand-subtitle">Stone Grill Reflections</span>
@@ -438,9 +322,7 @@
         </a>
 
         <div class="header-actions">
-          <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
-            ☰
-          </button>
+          <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
 
           <div class="nav-buttons">
             <button type="button" onclick="history.back()">HOME</button>
@@ -473,18 +355,19 @@
         </ul>
       </nav>
 
-      <!-- Right: page badge -->
-   <div class="ref-header-right">
-  <!-- Adaptive reflection cover (auto-filled by JS) -->
-  <div class="header-cover-slot"></div>
+      <!-- Right side -->
+      <div class="ref-header-right">
+        <div class="header-cover-slot"></div>
 
-  <div class="current-page-badge">
-    <span class="page-icon">△</span>
-    <span class="page-label">The Prayer</span>
-  </div>
-</div>
+        <div class="current-page-badge">
+          <span class="page-icon">△</span>
+          <span class="page-label">The Prayer</span>
+        </div>
+      </div>
 
-    <!-- Overlay (clickable to close) -->
+    </div> <!-- ✅ FIX: closes .ref-header-inner properly -->
+
+    <!-- Overlay -->
     <div class="nav-overlay" aria-hidden="true"></div>
   </header>
 
@@ -510,7 +393,6 @@
 
   <!-- ===== AUDIO ===== -->
   <section class="audio-wrap" id="audio">
-    <!-- audio-system.js reads this data attribute -->
     <div
       class="audio-player"
       data-title="Unraveling the Enigma of Absolute Truth"
@@ -580,16 +462,10 @@
       the mind can infer the Absolute's existence but cannot directly experience or fully understand its essence.
     </p>
 
-    <p>
-      This leads to two responses:
-    </p>
+    <p>This leads to two responses:</p>
     <ul>
-      <li>
-        <strong>Mysticism:</strong> accepting the paradox and seeking the Absolute through non-rational, ineffable experience.
-      </li>
-      <li>
-        <strong>Skepticism:</strong> rejecting the Absolute as a conceptual construct designed to ease existential anxiety.
-      </li>
+      <li><strong>Mysticism:</strong> accepting the paradox and seeking the Absolute through non-rational, ineffable experience.</li>
+      <li><strong>Skepticism:</strong> rejecting the Absolute as a conceptual construct designed to ease existential anxiety.</li>
     </ul>
   </section>
 
@@ -614,68 +490,76 @@
 </article>
 </main>
 
-  <script>
-    // Header / hamburger behavior (FIXED dropdown + overlay close)
-    (function () {
-      const header = document.querySelector('.ref-header');
-      const toggle = document.querySelector('.nav-toggle');
-      const nav = document.querySelector('.ref-nav');
-      const overlay = document.querySelector('.nav-overlay');
+<script>
+  // Header / hamburger behavior
+  (function () {
+    const header = document.querySelector('.ref-header');
+    const toggle = document.querySelector('.nav-toggle');
+    const nav = document.querySelector('.ref-nav');
+    const overlay = document.querySelector('.nav-overlay');
 
-      if (!header || !toggle || !nav) return;
+    if (!header || !toggle || !nav) return;
 
-      function closeNav() {
-        header.classList.remove('nav-open');
-        toggle.setAttribute('aria-expanded', 'false');
-      }
-
-      function openNav() {
-        header.classList.add('nav-open');
-        toggle.setAttribute('aria-expanded', 'true');
-      }
-
-      // Toggle open/close
-      toggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isOpen = header.classList.contains('nav-open');
-        if (isOpen) closeNav();
-        else openNav();
-      });
-
-      // Close when a nav link is tapped
-      nav.addEventListener('click', (e) => {
-        const a = e.target.closest('a');
-        if (a) closeNav();
-      });
-
-      // Close when tapping overlay
-      if (overlay) {
-        overlay.addEventListener('click', () => closeNav());
-      }
-
-      // Close on Escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeNav();
-      });
-
-      // Close if user taps outside header/nav area
-      document.addEventListener('click', (e) => {
-        if (!header.classList.contains('nav-open')) return;
-        if (header.contains(e.target)) return;
-        closeNav();
-      });
-    })();
-
-    function sharePage() {
-      if (navigator.share) {
-        navigator.share({
-          title: "The Primacy of Moral Accountability -- Ninox Antolihao",
-          url: window.location.href
-        });
-      } else {
-        alert("Sharing not supported on this device.");
-      }
+    function closeNav() {
+      header.classList.remove('nav-open');
+      toggle.setAttribute('aria-expanded', 'false');
     }
-  </script>
+
+    function openNav() {
+      header.classList.add('nav-open');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      header.classList.contains('nav-open') ? closeNav() : openNav();
+    });
+
+    nav.addEventListener('click', (e) => {
+      if (e.target.closest('a')) closeNav();
+    });
+
+    if (overlay) {
+      overlay.addEventListener('click', closeNav);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeNav();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!header.classList.contains('nav-open')) return;
+      if (header.contains(e.target)) return;
+      closeNav();
+    });
+  })();
+
+  // Adaptive header cover: copy hero cover into header-right
+  document.addEventListener('DOMContentLoaded', () => {
+    const heroImg = document.querySelector('.ref-hero-cover');
+    const slot = document.querySelector('.header-cover-slot');
+    if (!heroImg || !slot) return;
+
+    const img = document.createElement('img');
+    img.src = heroImg.currentSrc || heroImg.src;
+    img.alt = heroImg.alt || 'Reflection cover';
+    img.onerror = () => { img.src = '/reflections/assets/placeholder.jpg'; };
+
+    slot.innerHTML = '';
+    slot.appendChild(img);
+
+    // hide big hero cover (so only header shows)
+    heroImg.style.display = 'none';
+  });
+
+  function sharePage() {
+    if (navigator.share) {
+      navigator.share({ title: document.title, url: window.location.href });
+    } else {
+      alert("Sharing not supported on this device.");
+    }
+  }
+</script>
+
 </body>
 </html>
