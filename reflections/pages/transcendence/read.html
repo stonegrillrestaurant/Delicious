@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>PRAYER -- The Inner Listener</title>
+  <title>TRANSCENDENCE -- The Inner Listener</title>
 
   <!-- Disclaimer -->
   <meta name="description" content="The ideas expressed here are personal opinions and interpretations. They are not official references, factual sources, or professional advice.">
@@ -20,6 +20,12 @@
   <link rel="stylesheet" href="/reflections/assets/styles/reflections.css?v=15">
 
   <style>
+    /* ✅ NEW: single source of truth for header height */
+    :root{
+      --ref-header-h: 78px; /* desktop header height */
+      --ref-header-h-m: 64px; /* mobile header height */
+    }
+
     /* =========================
        GLOBAL FIXED HEADER
     ========================== */
@@ -32,6 +38,9 @@
       background: #1f1815;
       border-bottom: 2px solid rgba(255, 255, 255, 0.06);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+
+      /* ✅ NEW: enforce header height */
+      height: var(--ref-header-h);
     }
 
     .ref-header-inner {
@@ -41,6 +50,9 @@
       display: flex;
       align-items: center;
       gap: 1rem;
+
+      /* ✅ NEW: make inner row match header height */
+      height: 100%;
     }
 
     /* top-left cluster */
@@ -217,27 +229,38 @@
     }
 
     /* =========================
-       ADAPTIVE HEADER COVER (RECTANGULAR + RESPONSIVE)
+       ✅ UPDATED: HEADER COVER FILLS HEADER HEIGHT
     ========================== */
+    .header-cover-slot{
+      display: flex;
+      align-items: center;
+      height: 100%;
+    }
+
     .header-cover-slot img {
-      width: 72px;
-      height: 46px;
-      border-radius: 8px;
+      /* ✅ key change: image fills header */
+      height: calc(var(--ref-header-h) - 14px); /* leave a little breathing room */
+      width: auto;
+
+      border-radius: 10px;
       object-fit: cover;
       border: 1.5px solid rgba(255,255,255,0.25);
       box-shadow: 0 2px 6px rgba(0,0,0,0.45);
       flex-shrink: 0;
+      display: block;
     }
 
     @media (max-width: 900px) {
       .brand-subtitle { display: none; }
       .ref-nav ul { gap: 0.4rem; }
       .ref-nav a { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
-      .header-cover-slot img { width: 64px; height: 42px; }
       .current-page-badge { display: none; }
     }
 
     @media (max-width: 768px) {
+      /* ✅ NEW: shorter header on mobile */
+      .ref-header{ height: var(--ref-header-h-m); }
+
       .ref-header-inner {
         flex-wrap: nowrap;
         align-items: flex-start;
@@ -245,7 +268,10 @@
 
       .ref-nav {
         position: fixed;
-        top: 64px;
+
+        /* ✅ FIX: match nav dropdown top to header height */
+        top: var(--ref-header-h-m);
+
         left: 0;
         right: 0;
         background: rgba(31, 24, 21, 0.96);
@@ -273,7 +299,7 @@
       }
 
       .ref-header.nav-open .ref-nav {
-        max-height: calc(100vh - 64px);
+        max-height: calc(100vh - var(--ref-header-h-m));
       }
 
       .nav-toggle {
@@ -282,7 +308,10 @@
         justify-content: center;
       }
 
-      .header-cover-slot img { width: 56px; height: 38px; }
+      /* ✅ cover also fills mobile header */
+      .header-cover-slot img{
+        height: calc(var(--ref-header-h-m) - 14px);
+      }
     }
 
     /* =========================
@@ -365,7 +394,7 @@
         </div>
       </div>
 
-    </div> <!-- ✅ FIX: closes .ref-header-inner properly -->
+    </div>
 
     <!-- Overlay -->
     <div class="nav-overlay" aria-hidden="true"></div>
