@@ -228,38 +228,38 @@
       pointer-events: auto;
     }
 
-    /* =========================
-       ✅ UPDATED: HEADER COVER FILLS HEADER HEIGHT
-    ========================== */
-    .header-cover-slot{
-      display: flex;
-      align-items: center;
-      height: 100%;
-    }
+   /* =========================
+   ADAPTIVE HEADER COVER (FILL HEADER HEIGHT)
+   (✅ cover-only change; header not modified)
+========================== */
 
-    .header-cover-slot img {
-      /* ✅ key change: image fills header */
-      height: calc(var(--ref-header-h) - 14px); /* leave a little breathing room */
-      width: auto;
+/* make the slot match whatever height the header row has */
+.header-cover-slot{
+  height: 100%;
+  display: flex;
+  align-items: stretch;   /* allow full height */
+}
 
-      border-radius: 10px;
-      object-fit: cover;
-      border: 1.5px solid rgba(255,255,255,0.25);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.45);
-      flex-shrink: 0;
-      display: block;
-    }
+/* make the image fill the slot height */
+.header-cover-slot img{
+  height: 100%;           /* ✅ occupies header height */
+  width: auto;            /* keep correct aspect ratio */
+  max-width: 120px;       /* prevents it from becoming too wide */
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+  flex-shrink: 0;
+  display: block;
+}
 
-    @media (max-width: 900px) {
-      .brand-subtitle { display: none; }
-      .ref-nav ul { gap: 0.4rem; }
-      .ref-nav a { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
-      .current-page-badge { display: none; }
-    }
-
-    @media (max-width: 768px) {
-      /* ✅ NEW: shorter header on mobile */
-      .ref-header{ height: var(--ref-header-h-m); }
+/* ✅ IMPORTANT: remove/override the old fixed sizes */
+@media (max-width: 900px){
+  .header-cover-slot img{ height: 100%; max-width: 96px; }
+}
+@media (max-width: 768px){
+  .header-cover-slot img{ height: 100%; max-width: 84px; }
+}
 
       .ref-header-inner {
         flex-wrap: nowrap;
