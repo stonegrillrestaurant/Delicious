@@ -1,25 +1,24 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- ===== META ===== -->
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Unraveling the Enigma of Absolute Truth — Solitude Reflections</title>
-  <meta name="description" content="A philosophical journey from transcendence to Absolute Reality." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
- <!-- Disclaimer -->
+  <title>PRAYER -- The Inner Listener</title>
+
+  <!-- Disclaimer -->
   <meta name="description" content="The ideas expressed here are personal opinions and interpretations. They are not official references, factual sources, or professional advice.">
   <meta property="og:description" content="The ideas expressed here are personal opinions and interpretations. They are not official references, factual sources, or professional advice.">
 
   <!-- Open Graph -->
   <meta property="og:type" content="article">
-  <meta property="og:title" content="TRANSCENDENCE -Unwraveling the enigma of transcendence">
-  <meta property="og:image" content="transcendence.jpg">
-  <meta property="og:url" content="https://stonegrillresto.net/reflections/pages/transcendence/read.html">
+  <meta property="og:title" content="PRAYER - The inner listener">
+  <meta property="og:image" content="prayer.jpg">
+  <meta property="og:url" content="https://stonegrillresto.net/reflections/pages/the-inner-listener/read.html">
 
   <!-- Main reflections styles -->
   <link rel="stylesheet" href="/reflections/assets/styles/reflections.css?v=15">
-  <link rel="icon" href="/reflections/assets/favicon.ico">
+
   <style>
     /* =========================
        GLOBAL FIXED HEADER
@@ -37,8 +36,8 @@
 
     .ref-header-inner {
       max-width: 1100px;
-      margin: 1 auto;
-      padding: 1rem 1rem; /* slightly taller header */
+      margin: 0 auto; /* FIXED: was '1 auto' */
+      padding: 0.8rem 1rem; /* slightly taller header */
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -72,24 +71,24 @@
     /* kept in case brand-mark used elsewhere */
     .brand-mark {
       width: 32px;
-      height: 52px;
+      height: 32px;
       border-radius: 50%;
       border: 1px solid #ff6b3d;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.9rem;
+      font-size: 0.9rem;
       color: #ff6b3d;
     }
 
     .brand-text {
       display: flex;
       flex-direction: column;
-      line-height: 2.1;
+      line-height: 1.1;
     }
 
     .brand-title {
-      font-size: 1.1rem;
+      font-size: 0.9rem;
       font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -221,20 +220,20 @@
       padding: 5rem 1rem 2rem; /* header space */
     }
 
-    /* Softer overlay (visual only, never blocks) */
+    /* Overlay (now clickable to close) */
     .nav-overlay {
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.25);
-      z-index: 500; /* below header(1000), above content */
+      z-index: 900; /* below header(1000), above content */
       opacity: 0;
-      pointer-events: none; /* key: never blocks */
+      pointer-events: none;
       transition: opacity 0.25s ease;
     }
 
     .ref-header.nav-open .nav-overlay {
       opacity: 1;
-      /* pointer-events stays none */
+      pointer-events: auto; /* FIXED: allow tap to close */
     }
 
     /* =========================
@@ -242,22 +241,10 @@
     ========================== */
 
     @media (max-width: 900px) {
-      .brand-subtitle {
-        display: none;
-      }
-
-      .ref-nav ul {
-        gap: 0.4rem;
-      }
-
-      .ref-nav a {
-        padding: 0.25rem 0.55rem;
-        font-size: 0.75rem;
-      }
-
-      .current-page-badge {
-        display: none;
-      }
+      .brand-subtitle { display: none; }
+      .ref-nav ul { gap: 0.4rem; }
+      .ref-nav a { padding: 0.25rem 0.55rem; font-size: 0.75rem; }
+      .current-page-badge { display: none; }
     }
 
     @media (max-width: 768px) {
@@ -277,12 +264,18 @@
         overflow: hidden;
         transition: max-height 0.25s ease;
         margin-left: 0;
+        z-index: 950; /* above overlay, below header */
       }
 
+      /* FIX: make long list scrollable */
       .ref-nav ul {
         flex-direction: column;
         padding: 0.5rem 1rem 0.8rem;
         gap: 0.25rem;
+
+        max-height: calc(100vh - 96px); /* screen-based */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .ref-nav a {
@@ -290,8 +283,9 @@
         justify-content: flex-start;
       }
 
+      /* FIX: allow menu to expand big enough */
       .ref-header.nav-open .ref-nav {
-        max-height: 260px;
+        max-height: calc(100vh - 64px);
       }
 
       .nav-toggle {
@@ -438,7 +432,7 @@
                alt="Moments of Solitude"
                class="brand-logo">
           <span class="brand-text">
-            <span class="brand-title">The ENIGMA OF ABSOLUTE TRUTH</span>
+            <span class="brand-title">The Inner Listener</span>
             <span class="brand-subtitle">Stone Grill Reflections</span>
           </span>
         </a>
@@ -451,7 +445,7 @@
           <div class="nav-buttons">
             <button type="button" onclick="history.back()">HOME</button>
             <button type="button" onclick="sharePage()">Share</button>
-            <button type="button" onclick="document.getElementById('reflectionAudio').scrollIntoView()">Audio</button>
+            <button type="button" onclick="document.getElementById('audio').scrollIntoView({behavior:'smooth'})">Audio</button>
           </div>
         </div>
       </div>
@@ -459,13 +453,13 @@
       <!-- Center nav -->
       <nav class="ref-nav" aria-label="Reflections navigation">
         <ul>
-           <li><a href="/reflections/index.html">HOME</a></li>
+          <li><a href="/reflections/index.html">HOME</a></li>
           <li><a href="/reflections/pages/divine-hiddeness/read.html">Divine Premise</a></li>
           <li><a href="/reflections/pages/subconsciousmind/read.html">The Subconscious Mind</a></li>
           <li><a href="/reflections/pages/the-god-we-created/read.html">The God We Created</a></li>
           <li><a href="/reflections/pages/the-paradox-of-god/read.html">The Paradox of God</a></li>
-          <li><a href="/reflections/pages/the-inner-listener/read.html">The Prayer</a></li>
-          <li><a href="/reflections/pages/transcendence/read.html" class="active">Transcendence</a></li>
+          <li><a href="/reflections/pages/the-inner-listener/read.html" class="active">The Prayer</a></li>
+          <li><a href="/reflections/pages/transcendence/read.html">Transcendence</a></li>
           <li><a href="/reflections/pages/the-madness-of-fath/read.html">The Madness of Faith</a></li>
           <li><a href="/reflections/pages/the-lost-language-of-metaphor/read.html">The Lost Language of Metaphor</a></li>
           <li><a href="/reflections/pages/belief/read.html">BELIEF AND GOODNESS</a></li>
@@ -483,64 +477,54 @@
       <div class="ref-header-right">
         <div class="current-page-badge">
           <span class="page-icon">△</span>
-          <span class="page-label">TRANSCENDENCE</span>
+          <span class="page-label">The Prayer</span>
         </div>
       </div>
     </div>
 
-    <!-- Overlay (visual only) -->
-    <div class="nav-overlay"></div>
+    <!-- Overlay (clickable to close) -->
+    <div class="nav-overlay" aria-hidden="true"></div>
   </header>
 
+<main class="ref-main">
+<article class="ref-article">
 
-<!-- ===== MAIN ===== -->
-<main class="page-content">
-    <!-- Local subtitle -->
-    <section style="max-width:800px;margin:0 auto 0.8rem auto;">
-      <div class="scrolling-subtitle">
-        <span>A reflection on will, love, and divine design.</span>
-      </div>
-    </section>
+  <!-- ===== COVER ===== -->
+  <section class="ref-hero">
+    <img
+      class="ref-hero-cover"
+      src="/reflections/pages/transcendence/transcendence.png"
+      alt="Unraveling the Enigma of Absolute Truth"
+      onerror="this.src='/reflections/assets/placeholder.jpg'">
 
-     <div class="content"></div>
- <!-- AUDIO PLAYER + PLAYLIST -->
-      <section class="audio-wrap">
-        <div class="audio-wrapper">
-          <audio id="reflectionAudio" controls preload="metadata">
-            <source id="audioSource" src="" type="audio/mpeg">
-            Your browser does not support the audio element.
-          </audio>
+    <h1 class="ref-title">Unraveling the Enigma of Absolute Truth</h1>
+    <p class="ref-subtitle">From Transcendence to Absolute Reality</p>
 
-          <div class="playlist">
-            <div class="playlist-row active"
-                 data-src="/reflections/pages/transcendence/transcendence.mp3">
-              <div class="playlist-main">
-                <div class="playlist-title">TRANSCNDENCE</div>
-                <div class="playlist-sub">Unwraveling the enigma of transcendence.</div>
-              </div>
-              <div class="playlist-duration">--:--</div>
-            </div>
+    <div class="ref-meta">
+      <span>Stone Grill Press</span>
+      <span>First Edition -- 2025</span>
+    </div>
+  </section>
 
-            <div class="playlist-row"
-                 data-src="/reflections/pages/initial-premise/initial-premise.mp3">
-              <div class="playlist-main">
-                <div class="playlist-title">The Divine Premise</div>
-                <div class="playlist-sub">The Primacy of Moral Accountability. A Reflection on Will, Love, and Design.</div>
-              </div>
-              <div class="playlist-duration">--:--</div>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-  <div class="ref-divider">— ❖ —</div>
+  <!-- ===== AUDIO ===== -->
+  <section class="audio-wrap" id="audio">
+    <!-- audio-system.js reads this data attribute -->
+    <div
+      class="audio-player"
+      data-title="Unraveling the Enigma of Absolute Truth"
+      data-audio="/reflections/pages/transcendence/transcendence.mp3">
+    </div>
+  </section>
+
+  <div class="ref-divider">-- ❖ --</div>
 
   <!-- ===== INTRODUCTION ===== -->
-     <h2>Introduction</h2>
+  <section class="ref-section">
+    <h2>Introduction</h2>
     <p>
       The human mind, bound by the limits of space, time, and perception, inevitably asks whether anything exists beyond its immediate experience.
       This fundamental inquiry forms the philosophical journey from transcendence to Absolute Reality.
-      <em>Transcendence</em>, meaning “to go beyond,” describes the act of searching for something that exceeds the material world,
+      <em>Transcendence</em>, meaning "to go beyond," describes the act of searching for something that exceeds the material world,
       while <em>Absolute Reality</em> is the ultimate, non-dependent, perfect, and unified goal of that search.
     </p>
     <p>
@@ -549,7 +533,7 @@
     </p>
   </section>
 
-  <div class="ref-divider">— ❖ —</div>
+  <div class="ref-divider">-- ❖ --</div>
 
   <!-- ===== BODY ===== -->
   <section class="ref-section">
@@ -570,28 +554,28 @@
     <h3>2. The Problem of Causation</h3>
     <p>
       In the material world, everything is dependent; every effect has a prior cause, leading to infinite regress.
-      To halt this chain, thinkers proposed a First Cause or Unmoved Mover—an Absolute that exists independently
+      To halt this chain, thinkers proposed a First Cause or Unmoved Mover--an Absolute that exists independently
       and requires no external explanation.
     </p>
 
     <h3>3. The Problem of Subjectivity</h3>
     <p>
-      Human perception is inherently relative, as illustrated by the “6 vs. 9” analogy.
+      Human perception is inherently relative, as illustrated by the "6 vs. 9" analogy.
       If all truth is subjective, moral and intellectual chaos follows.
       The Absolute functions as a necessary objective standard against which relative claims can be measured.
     </p>
   </section>
 
-  <div class="ref-divider">— ❖ —</div>
+  <div class="ref-divider">-- ❖ --</div>
 
   <!-- ===== PARADOX ===== -->
   <section class="ref-section">
     <h2>The Paradox of the Absolute</h2>
     <p>
       Although the Absolute is logically necessary, its transcendent nature creates a paradox.
-      The mind—bound by time, space, and language—attempts to comprehend that which exists beyond those categories.
-      This creates the “software/hardware dilemma”:
-      the mind can infer the Absolute’s existence but cannot directly experience or fully understand its essence.
+      The mind--bound by time, space, and language--attempts to comprehend that which exists beyond those categories.
+      This creates the "software/hardware dilemma":
+      the mind can infer the Absolute's existence but cannot directly experience or fully understand its essence.
     </p>
 
     <p>
@@ -607,13 +591,13 @@
     </ul>
   </section>
 
-  <div class="ref-divider">— ❖ —</div>
+  <div class="ref-divider">-- ❖ --</div>
 
   <!-- ===== CONCLUSION ===== -->
   <section class="ref-section">
     <h2>Conclusion</h2>
     <p>
-      The journey from transcendence to Absolute Reality reflects humanity’s deepest longing for unity and certainty.
+      The journey from transcendence to Absolute Reality reflects humanity's deepest longing for unity and certainty.
       Yet modern thought recognizes that logical necessity does not guarantee existence.
       Existential philosophy urges a shift away from searching for an external Absolute
       and toward the courageous creation of meaning within our finite, subjective lives.
@@ -621,14 +605,15 @@
   </section>
 
   <footer class="ref-footer">
-    <p>Stone Grill Press · First Edition — 2025</p>
+    <p>Stone Grill Press · First Edition -- 2025</p>
     <p>Ninox Antolihao</p>
   </footer>
 
 </article>
 </main>
-<script>
-    // Header / hamburger behavior
+
+  <script>
+    // Header / hamburger behavior (FIXED dropdown + overlay close)
     (function () {
       const header = document.querySelector('.ref-header');
       const toggle = document.querySelector('.nav-toggle');
@@ -637,77 +622,47 @@
 
       if (!header || !toggle || !nav) return;
 
-      // Open / close when tapping hamburger
+      function closeNav() {
+        header.classList.remove('nav-open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+
+      function openNav() {
+        header.classList.add('nav-open');
+        toggle.setAttribute('aria-expanded', 'true');
+      }
+
+      // Toggle open/close
       toggle.addEventListener('click', (e) => {
         e.stopPropagation();
-        const isOpen = header.classList.toggle('nav-open');
-        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        const isOpen = header.classList.contains('nav-open');
+        if (isOpen) closeNav();
+        else openNav();
       });
 
       // Close when a nav link is tapped
       nav.addEventListener('click', (e) => {
-        if (e.target.tagName.toLowerCase() === 'a') {
-          header.classList.remove('nav-open');
-          toggle.setAttribute('aria-expanded', 'false');
-        }
+        const a = e.target.closest('a');
+        if (a) closeNav();
       });
 
-      // Optional: close if user taps anywhere outside header
+      // Close when tapping overlay
+      if (overlay) {
+        overlay.addEventListener('click', () => closeNav());
+      }
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeNav();
+      });
+
+      // Close if user taps outside header/nav area
       document.addEventListener('click', (e) => {
         if (!header.classList.contains('nav-open')) return;
         if (header.contains(e.target)) return;
-        header.classList.remove('nav-open');
-        toggle.setAttribute('aria-expanded', 'false');
+        closeNav();
       });
-
-      // overlay currently visual only (pointer-events:none) but kept for future use
-      if (overlay) {
-        // no-op; you can attach a click handler later if you enable pointer-events
-      }
     })();
-
-    // Audio playlist logic
-    document.addEventListener('DOMContentLoaded', () => {
-      const audioPlayer = document.getElementById('reflectionAudio');
-      const audioSource = document.getElementById('audioSource');
-      const rows = document.querySelectorAll('.playlist-row');
-
-      // Default track: first row
-      if (rows.length > 0) {
-        const firstSrc = rows[0].dataset.src;
-        audioSource.src = firstSrc;
-        audioPlayer.load();
-      }
-
-      // Clicking a row switches track
-      rows.forEach(row => {
-        row.addEventListener('click', () => {
-          rows.forEach(r => r.classList.remove('active'));
-          row.classList.add('active');
-
-          const src = row.dataset.src;
-          audioSource.src = src;
-          audioPlayer.load();
-          audioPlayer.play();
-        });
-      });
-
-      // Auto-fill durations
-      rows.forEach(row => {
-        const src = row.dataset.src;
-        const tempAudio = new Audio(src);
-        tempAudio.addEventListener('loadedmetadata', () => {
-          const dur = tempAudio.duration;
-          if (!isNaN(dur)) {
-            const total = Math.floor(dur);
-            const min = String(Math.floor(total / 60)).padStart(2, '0');
-            const sec = String(total % 60).padStart(2, '0');
-            const durEl = row.querySelector('.playlist-duration');
-            if (durEl) durEl.textContent = `${min}:${sec}`;
-          }
-        });
-      });
-    });
 
     function sharePage() {
       if (navigator.share) {
