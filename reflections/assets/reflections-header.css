@@ -340,42 +340,26 @@ body{
     height: 38px;
   }
 }
-/* ==================================================
-   GLOBAL AUDIO BAR – FIXED BOTTOM WIDTH SAFETY
-   ================================================== */
-#globalPlayerBar{
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: auto;
-  max-width: 100%;
+/* ================================
+   ✅ GLOBAL PLAYER WIDTH CLAMP (fix side-scroll / “infinite width”)
+   ================================ */
+.global-player{
   box-sizing: border-box;
-  overflow: hidden;
-  z-index: 9999;
+  max-width: calc(100vw - 24px);   /* matches left/right 12px */
+  overflow: hidden;               /* prevents shadow/children overflow */
+  transform: translateZ(0);        /* reduces odd fixed rendering */
 }
 
-/* Make sure audio fits the bar */
-#globalPlayerBar audio,
-#globalAudio{
-  width: 100%;
-  max-width: 100%;
-  display: block;
-  box-sizing: border-box;
+.global-player *{
+  min-width: 0;                   /* prevents flex/text pushing width */
 }
 
-/* Prevent flex children from forcing width */
-#globalPlayerBar *{
-  min-width: 0;
+/* iPhone safe-area */
+.global-player{
+  padding-bottom: calc(.75rem + env(safe-area-inset-bottom));
 }
 
-/* Kill horizontal scroll if any tiny overflow remains */
+/* Kill tiny horizontal overflow globally */
 html, body{
   overflow-x: hidden;
-}
-#globalPlayerBar,
-.globalPlayerBar,
-.global-player-bar,
-.audio-reflection-bar {
-  outline: 3px solid lime !important;
 }
