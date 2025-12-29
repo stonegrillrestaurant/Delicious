@@ -244,7 +244,6 @@ h3 + p{
   display:inline-block;
 }
 
-
 /* ===== Mobile ===== */
 @media (max-width:640px){
   .ref-header-inner{
@@ -298,8 +297,21 @@ h3 + p{
   font-size: inherit !important;
 }
 
-/* ✅ Floating global player at bottom */
-.global-player{
+/* ================================
+   ✅ FLOATING GLOBAL PLAYER (HIDDEN BY DEFAULT)
+   - Shows ONLY when JS adds .is-visible to #globalPlayer
+   - Keeps your original floating bar design + iPhone safe-area
+   ================================ */
+
+/* Kill tiny horizontal overflow globally */
+html, body{
+  overflow-x: hidden;
+}
+
+/* Base player shell (hidden on load) */
+#globalPlayer.global-player{
+  display: none !important;     /* 🔒 hidden until activated */
+
   position: fixed;
   left: 12px;
   right: 12px;
@@ -307,26 +319,37 @@ h3 + p{
   z-index: 9999;
 
   padding: .75rem .85rem;
-  border-radius: 16px;
+  padding-bottom: calc(.75rem + env(safe-area-inset-bottom)); /* iPhone safe-area */
 
+  border-radius: 16px;
   background: rgba(25,18,16,.92);
   border: 2px solid rgba(255,120,70,.55);
   backdrop-filter: blur(10px);
   box-shadow: 0 12px 30px rgba(0,0,0,.45);
+
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);   /* matches left/right 12px */
+  overflow: hidden;               /* prevents children overflow */
+  transform: translateZ(0);        /* reduces odd fixed rendering */
 }
 
-.global-player audio{
+/* Visible state — JS toggles this */
+#globalPlayer.global-player.is-visible{
+  display: block !important;
+}
+
+#globalPlayer.global-player *{
+  min-width: 0;
+}
+
+#globalPlayer.global-player audio{
   width: 90%;
   display: block;
 }
 
-/* prevent page content hiding under it */
-body{
-  padding-bottom: 160px;
-}
 /* =========================
    ADAPTIVE HEADER COVER
-========================= */
+   ========================= */
 .header-cover-slot img {
   width: 72px;
   height: 46px;
@@ -350,27 +373,4 @@ body{
     width: 56px;
     height: 38px;
   }
-}
-/* ================================
-   ✅ GLOBAL PLAYER WIDTH CLAMP (fix side-scroll / “infinite width”)
-   ================================ */
-.global-player{
-  box-sizing: border-box;
-  max-width: calc(100vw - 24px);   /* matches left/right 12px */
-  overflow: hidden;               /* prevents shadow/children overflow */
-  transform: translateZ(0);        /* reduces odd fixed rendering */
-}
-
-.global-player *{
-  min-width: 0;                   /* prevents flex/text pushing width */
-}
-
-/* iPhone safe-area */
-.global-player{
-  padding-bottom: calc(.75rem + env(safe-area-inset-bottom));
-}
-
-/* Kill tiny horizontal overflow globally */
-html, body{
-  overflow-x: hidden;
 }
