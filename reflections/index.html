@@ -42,19 +42,34 @@
   </div>
 
   <!-- ==============================
-     GLOBAL AUDIO PLAYER (ONE ONLY)
+     GLOBAL AUDIO BAR (ONE ONLY)
+     Pops up only when playing
      ============================== -->
-  <section class="audio-wrap global-player" id="globalPlayer">
-    <p class="label">
-      🎧 <strong></strong>
-      <span id="nowPlaying" style="opacity:.75">— select a track below</span>
-    </p>
+<section class="audio-bar" id="globalPlayer" aria-label="Global audio player">
+  <div class="audio-bar__row">
+    <div class="audio-bar__title">
+      <span class="audio-bar__icon">🎧</span>
+      <span id="nowPlaying" class="audio-bar__now">— select a track below</span>
+    </div>
 
-    <audio id="globalAudio" controls preload="metadata" style="width:100%">
-      <source id="globalSource" src="" type="audio/mpeg">
-      Your browser does not support the audio element.
-    </audio>
-  </section>
+    <div class="audio-bar__buttons">
+      <button type="button" class="audio-btn" id="btnPrev" aria-label="Previous track">⏮</button>
+      <button type="button" class="audio-btn audio-btn--main" id="btnPlay" aria-label="Play/Pause">▶</button>
+      <button type="button" class="audio-btn" id="btnNext" aria-label="Next track">⏭</button>
+    </div>
+  </div>
+
+  <div class="audio-bar__row audio-bar__progress">
+    <span class="audio-time" id="timeNow">0:00</span>
+    <input type="range" id="seekBar" min="0" max="1000" value="0" step="1" aria-label="Seek">
+    <span class="audio-time" id="timeDur">0:00</span>
+  </div>
+
+  <!-- Keep the real audio element (hidden), used by your system -->
+  <audio id="globalAudio" preload="metadata">
+    <source id="globalSource" src="" type="audio/mpeg">
+  </audio>
+</section>
 
   <!-- MAIN CONTENT -->
   <main class="wrap">
