@@ -1027,46 +1027,122 @@
   })();
   </script>
 
-  <!-- ✅ GLOBAL PLAYER CONTROLLER (NO SCROLL-UP, NO JUMP) -->
-  <script>
-  (() => {
-    const audio = document.getElementById('globalAudio');
-    const source = document.getElementById('globalSource');
-    const nowPlaying = document.getElementById('nowPlaying');
+  <!-- ✅ GLOBAL PLAYER CONTROLLER (NO SCROLL-UP, NO JUMP)
+     ✅ UPDATED: Player pops up ONLY after an audio is clicked
+     ✅ UPDATED: Auto-play next track across all cards
+-->
+<script>
+(() => {
+  const audio = document.getElementById('globalAudio');
+  const source = document.getElementById('globalSource');
+  const nowPlaying = document.getElementById('nowPlaying');
 
-    if (!audio || !source) return;
+  // ✅ CHANGE THIS if your player wrapper uses a different id
+  const playerWrap = document.getElementById('globalPlayer');
 
-    function play(src, title, btn){
-      if (!src) return;
+  if (!audio || !source) return;
 
-      document.querySelectorAll('.track-link.active').forEach(b => b.classList.remove('active'));
-      btn?.classList.add('active');
+  /* ================================
+     ✅ ADDED: GLOBAL PLAYLIST (ALL CARDS)
+  ================================ */
+  let playlist = [];
+  let currentIndex = -1;
 
-      // Only reload if track changed (faster)
-      if (source.getAttribute('src') !== src) {
-        source.setAttribute('src', src);
-        audio.load();
-      }
+  function rebuildPlaylist(){
+    // DOM order (top-to-bottom). Works across cards automatically.
+    playlist = Array.from(document.querySelectorAll('.track-link'));
+  }
 
-      if (nowPlaying) nowPlaying.textContent = 'Now playing: ' + (title || 'Audio');
+  function setActive(btn){
+    document.querySelectorAll('.track-link.active').forEach(b => b.classList.remove('active'));
+    btn?.classList.add('active');
+  }
 
-      audio.play().catch(()=>{});
+  function showPlayer(){
+    // ✅ Player pops up only when a track is played
+    // Preferred: toggle a class (so CSS controls the layout cleanly)
+    if (playerWrap) playerWrap.classList.add('is-visible');
+    // Fallback if you didn't add the CSS class:
+    // if (playerWrap) playerWrap.style.display = 'block';
+  }
+
+  function play(src, title, btn){
+    if (!src) return;
+
+    // ✅ ADDED: Show player only on play
+    showPlayer();
+
+    // ✅ ADDED: refresh playlist and store index of the clicked button
+    rebuildPlaylist();
+    if (btn) currentIndex = playlist.indexOf(btn);
+
+    setActive(btn);
+
+    // Only reload if track changed (faster)
+    if (source.getAttribute('src') !== src) {
+      source.setAttribute('src', src);
+      audio.load();
     }
 
-    // Capture phase + stopImmediatePropagation prevents other handlers from scrolling the page
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.track-link');
-      if (!btn) return;
+    if (nowPlaying) nowPlaying.textContent = 'Now playing: ' + (title || 'Audio');
 
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    audio.play().catch(()=>{});
+  }
 
-      btn.blur?.();
-      play(btn.dataset.src, btn.dataset.title, btn);
-    }, true);
-  })();
-  </script>
+  // Capture phase + stopImmediatePropagation prevents other handlers from scrolling the page
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.track-link');
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+    btn.blur?.();
+    play(btn.dataset.src, btn.dataset.title, btn);
+  }, true);
+
+  /* ================================
+     ✅ ADDED: AUTO-PLAY NEXT TRACK
+     - When current audio finishes, play the next .track-link
+     - Continues across other cards
+  ================================ */
+  audio.addEventListener('ended', () => {
+    rebuildPlaylist();
+
+    const nextIndex = currentIndex + 1;
+    const nextBtn = playlist[nextIndex];
+
+    if (!nextBtn) {
+      // End of playlist: clear highlight (optional)
+      currentIndex = -1;
+      document.querySelectorAll('.track-link.active').forEach(b => b.classList.remove('active'));
+
+      // OPTIONAL: hide player at end (uncomment if you want it to disappear)
+      // if (playerWrap) playerWrap.classList.remove('is-visible');
+
+      return;
+    }
+
+    // Play next track using the same function (keeps UI + nowPlaying consistent)
+    play(nextBtn.dataset.src, nextBtn.dataset.title, nextBtn);
+
+    // Optional: keep the next button visible (uncomment if you want)
+    // nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  /* ================================
+     ✅ OPTIONAL: IF A TRACK FAILS, SKIP TO NEXT
+  ================================ */
+  audio.addEventListener('error', () => {
+    rebuildPlaylist();
+    const nextIndex = currentIndex + 1;
+    const nextBtn = playlist[nextIndex];
+    if (nextBtn) play(nextBtn.dataset.src, nextBtn.dataset.title, nextBtn);
+  });
+
+})();
+</script>
 
 </body>
 </html>
