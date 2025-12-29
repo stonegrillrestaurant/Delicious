@@ -1083,14 +1083,16 @@
   const audio = document.getElementById('globalAudio');
   const source = document.getElementById('globalSource');
   const nowPlaying = document.getElementById('nowPlaying');
-
-  // ✅ CHANGE THIS if your player wrapper uses a different id
   const playerWrap = document.getElementById('globalPlayer');
 
-  if (!audio || !source) return;
+  // ✅ include playerWrap in the guard
+  if (!audio || !source || !playerWrap) return;
+
+  // ✅ FORCE HIDE ON LOAD (prevents showing at page open)
+  playerWrap.classList.remove('is-visible');
 
   /* ================================
-     ✅ ADDED: GLOBAL PLAYLIST (ALL CARDS)
+     ✅ GLOBAL PLAYLIST (ALL CARDS)
   ================================ */
   let playlist = [];
   let currentIndex = -1;
@@ -1106,20 +1108,17 @@
   }
 
   function showPlayer(){
-    // ✅ Player pops up only when a track is played
-    // Preferred: toggle a class (so CSS controls the layout cleanly)
-    if (playerWrap) playerWrap.classList.add('is-visible');
-    // Fallback if you didn't add the CSS class:
-    // if (playerWrap) playerWrap.style.display = 'block';
+    // ✅ Pops up only when a track is played
+    playerWrap.classList.add('is-visible');
   }
 
   function play(src, title, btn){
     if (!src) return;
 
-    // ✅ ADDED: Show player only on play
+    // ✅ Show player only on play
     showPlayer();
 
-    // ✅ ADDED: refresh playlist and store index of the clicked button
+    // Refresh playlist and store index of clicked button
     rebuildPlaylist();
     if (btn) currentIndex = playlist.indexOf(btn);
 
@@ -1150,7 +1149,7 @@
   }, true);
 
   /* ================================
-     ✅ ADDED: AUTO-PLAY NEXT TRACK
+     ✅ AUTO-PLAY NEXT TRACK
      - When current audio finishes, play the next .track-link
      - Continues across other cards
   ================================ */
@@ -1161,21 +1160,17 @@
     const nextBtn = playlist[nextIndex];
 
     if (!nextBtn) {
-      // End of playlist: clear highlight (optional)
+      // End of playlist: clear highlight
       currentIndex = -1;
       document.querySelectorAll('.track-link.active').forEach(b => b.classList.remove('active'));
 
       // OPTIONAL: hide player at end (uncomment if you want it to disappear)
-      // if (playerWrap) playerWrap.classList.remove('is-visible');
+      // playerWrap.classList.remove('is-visible');
 
       return;
     }
 
-    // Play next track using the same function (keeps UI + nowPlaying consistent)
     play(nextBtn.dataset.src, nextBtn.dataset.title, nextBtn);
-
-    // Optional: keep the next button visible (uncomment if you want)
-    // nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
   /* ================================
@@ -1183,8 +1178,7 @@
   ================================ */
   audio.addEventListener('error', () => {
     rebuildPlaylist();
-    const nextIndex = currentIndex + 1;
-    const nextBtn = playlist[nextIndex];
+    const nextBtn = playlist[currentIndex + 1];
     if (nextBtn) play(nextBtn.dataset.src, nextBtn.dataset.title, nextBtn);
   });
 
