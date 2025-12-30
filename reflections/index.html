@@ -947,136 +947,140 @@
     </section>
   </main>
 
-  <!-- FOOTER -->
-  <footer class="site-footer">
-    © 2025 Stone Grill Restaurant ·
-    <a href="tel:0535680539">Call 053 568 0539</a>
-  </footer>
+ <!-- FOOTER -->
+<footer class="site-footer">
+  © 2025 Stone Grill Restaurant ·
+  <a href="tel:0535680539">Call 053 568 0539</a>
+</footer>
 
-  <!-- ===== PWA SW (keep ONE) ===== -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/reflections/sw.js')
-        .then(reg => console.log('Reflections service worker registered.', reg))
-        .catch(err => console.warn('SW registration failed:', err));
-    }
-  </script>
+<!-- ===== PWA SW (keep ONE) ===== -->
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/reflections/sw.js')
+      .then(reg => console.log('Reflections service worker registered.', reg))
+      .catch(err => console.warn('SW registration failed:', err));
+  }
+</script>
 
-  <!-- ===== Omnibus Share + Autoplay Bridge (kept; cleaned duplicates) ===== -->
-  <style>
-    .share-group { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
-    .share-group .btn { font:inherit; padding:.45rem .75rem; border:1px solid #ff6b3d; background:transparent; color:#ff6b3d; border-radius:6px; text-decoration:none; cursor:pointer; }
-    .share-group .btn.primary { background:#ff6b3d; color:#1f1815; border-color:#ff6b3d; }
-    .share-group .btn.ghost { background:transparent; }
-    .share-fallback { display:flex; gap:.5rem; flex-wrap:wrap; }
-  </style>
+<!-- ===== Omnibus Share + Autoplay Bridge (kept) ===== -->
+<style>
+  .share-group { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+  .share-group .btn { font:inherit; padding:.45rem .75rem; border:1px solid #ff6b3d; background:transparent; color:#ff6b3d; border-radius:6px; text-decoration:none; cursor:pointer; }
+  .share-group .btn.primary { background:#ff6b3d; color:#1f1815; border-color:#ff6b3d; }
+  .share-group .btn.ghost { background:transparent; }
+  .share-fallback { display:flex; gap:.5rem; flex-wrap:wrap; }
 
-  <script>
-  (function () {
-    // ---------- 1) AUTOPLAY BRIDGE ----------
-    function addAutoplayAndBackToHref(href) {
+  /* ✅ IMPORTANT: your global player is class="audio-bar" */
+  #globalPlayer.audio-bar{ display:none !important; }
+  #globalPlayer.audio-bar.is-visible{ display:block !important; }
+</style>
+
+<script>
+(function () {
+  // ---------- 1) AUTOPLAY BRIDGE ----------
+  function addAutoplayAndBackToHref(href) {
+    try {
+      const u = new URL(href, location.origin);
+      if (!u.searchParams.has('autoplay')) u.searchParams.set('autoplay', '1');
+      if (!u.searchParams.has('back'))     u.searchParams.set('back', '1');
+      return u.pathname + (u.search ? u.search : '') + (u.hash || '');
+    } catch (e) { return href; }
+  }
+
+  function interceptReadClicks() {
+    document.querySelectorAll('a.book-link, a.title-link').forEach(a => {
+      // force internal links open same tab (no tab explosion)
       try {
-        const u = new URL(href, location.origin);
-        if (!u.searchParams.has('autoplay')) u.searchParams.set('autoplay', '1');
-        if (!u.searchParams.has('back'))     u.searchParams.set('back', '1');
-        return u.pathname + (u.search ? u.search : '') + (u.hash || '');
-      } catch (e) { return href; }
-    }
+        const isInternal = a.href.startsWith(location.origin + '/reflections/');
+        if (isInternal) a.removeAttribute('target');
+      } catch (e) {}
 
-    function interceptReadClicks() {
-      document.querySelectorAll('a.book-link, a.title-link').forEach(a => {
-        // force internal links open same tab (no tab explosion)
+      a.addEventListener('click', () => {
         try {
-          const isInternal = a.href.startsWith(location.origin + '/reflections/');
-          if (isInternal) a.removeAttribute('target');
+          sessionStorage.setItem('autoplayAudio', 'true');
+          sessionStorage.setItem('showBack', 'true');
         } catch (e) {}
+        try { localStorage.setItem('autoplayOnce', '1'); } catch (e) {}
 
-        a.addEventListener('click', () => {
-          try {
-            sessionStorage.setItem('autoplayAudio', 'true');
-            sessionStorage.setItem('showBack', 'true');
-          } catch (e) {}
-          try { localStorage.setItem('autoplayOnce', '1'); } catch (e) {}
-
-          a.href = addAutoplayAndBackToHref(a.getAttribute('href') || a.href);
-        }, { once:false });
-      });
-    }
-
-    // ---------- 2) OMNIBUS SHARE ----------
-    const enc = encodeURIComponent;
-
-    function buildFallbackLinks(url, title) {
-      const fb = `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`;
-      const messengerDeep = `fb-messenger://share?link=${enc(url)}&app_id=0`;
-      const messengerWeb  = `https://www.facebook.com/dialog/send?link=${enc(url)}&app_id=0&redirect_uri=${enc(url)}`;
-      const whatsapp = `https://api.whatsapp.com/send?text=${enc(title + " " + url)}`;
-      const xshare   = `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`;
-      return `
-        <a class="btn" href="${fb}" target="_blank" rel="noopener">Facebook</a>
-        <a class="btn" href="${messengerDeep}" target="_blank" rel="noopener">Messenger</a>
-        <a class="btn" href="${messengerWeb}" target="_blank" rel="noopener" style="display:none">Messenger (web)</a>
-        <a class="btn" href="${whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
-        <a class="btn" href="${xshare}" target="_blank" rel="noopener">X</a>
-        <button class="btn ghost copy-link" type="button" data-url="${url}">Copy Link</button>
-      `;
-    }
-
-    function attachCopyHandlers(root) {
-      root.querySelectorAll('.copy-link').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(btn.getAttribute('data-url'));
-            const old = btn.textContent;
-            btn.textContent = '✓ Copied';
-            setTimeout(() => (btn.textContent = old), 1500);
-          } catch {
-            alert('Copy failed. Long-press the link to copy.');
-          }
-        });
-      });
-    }
-
-    function renderOmniShare(container) {
-      const shareUrl   = container.getAttribute('data-share-url');
-      const shareTitle = container.getAttribute('data-share-title') || 'Share';
-
-      const mainBtn = document.createElement('button');
-      mainBtn.className = 'btn primary';
-      mainBtn.type = 'button';
-      mainBtn.textContent = 'Share';
-      container.appendChild(mainBtn);
-
-      const fallbackWrap = document.createElement('div');
-      fallbackWrap.className = 'share-fallback';
-      fallbackWrap.innerHTML = buildFallbackLinks(shareUrl, shareTitle);
-      fallbackWrap.style.display = 'none';
-      container.appendChild(fallbackWrap);
-
-      const canNativeShare = !!navigator.share && (typeof window.ontouchstart !== 'undefined');
-
-      mainBtn.addEventListener('click', async () => {
-        if (canNativeShare) {
-          try {
-            await navigator.share({ title: shareTitle, text: shareTitle, url: shareUrl });
-            return;
-          } catch (err) {}
-        }
-        fallbackWrap.style.display = '';
-        attachCopyHandlers(fallbackWrap);
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      interceptReadClicks();
-      document.querySelectorAll('.share-group').forEach(renderOmniShare);
+        a.href = addAutoplayAndBackToHref(a.getAttribute('href') || a.href);
+      }, { once:false });
     });
-  })();
-  </script>
+  }
 
-  <!-- ✅ GLOBAL PLAYER CONTROLLER (NO SCROLL-UP, NO JUMP)
-     ✅ UPDATED: Player pops up ONLY after an audio is clicked
-     ✅ UPDATED: Auto-play next track across all cards
+  // ---------- 2) OMNIBUS SHARE ----------
+  const enc = encodeURIComponent;
+
+  function buildFallbackLinks(url, title) {
+    const fb = `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`;
+    const messengerDeep = `fb-messenger://share?link=${enc(url)}&app_id=0`;
+    const messengerWeb  = `https://www.facebook.com/dialog/send?link=${enc(url)}&app_id=0&redirect_uri=${enc(url)}`;
+    const whatsapp = `https://api.whatsapp.com/send?text=${enc(title + " " + url)}`;
+    const xshare   = `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`;
+    return `
+      <a class="btn" href="${fb}" target="_blank" rel="noopener">Facebook</a>
+      <a class="btn" href="${messengerDeep}" target="_blank" rel="noopener">Messenger</a>
+      <a class="btn" href="${messengerWeb}" target="_blank" rel="noopener" style="display:none">Messenger (web)</a>
+      <a class="btn" href="${whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn" href="${xshare}" target="_blank" rel="noopener">X</a>
+      <button class="btn ghost copy-link" type="button" data-url="${url}">Copy Link</button>
+    `;
+  }
+
+  function attachCopyHandlers(root) {
+    root.querySelectorAll('.copy-link').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(btn.getAttribute('data-url'));
+          const old = btn.textContent;
+          btn.textContent = '✓ Copied';
+          setTimeout(() => (btn.textContent = old), 1500);
+        } catch {
+          alert('Copy failed. Long-press the link to copy.');
+        }
+      });
+    });
+  }
+
+  function renderOmniShare(container) {
+    const shareUrl   = container.getAttribute('data-share-url');
+    const shareTitle = container.getAttribute('data-share-title') || 'Share';
+
+    const mainBtn = document.createElement('button');
+    mainBtn.className = 'btn primary';
+    mainBtn.type = 'button';
+    mainBtn.textContent = 'Share';
+    container.appendChild(mainBtn);
+
+    const fallbackWrap = document.createElement('div');
+    fallbackWrap.className = 'share-fallback';
+    fallbackWrap.innerHTML = buildFallbackLinks(shareUrl, shareTitle);
+    fallbackWrap.style.display = 'none';
+    container.appendChild(fallbackWrap);
+
+    const canNativeShare = !!navigator.share && (typeof window.ontouchstart !== 'undefined');
+
+    mainBtn.addEventListener('click', async () => {
+      if (canNativeShare) {
+        try {
+          await navigator.share({ title: shareTitle, text: shareTitle, url: shareUrl });
+          return;
+        } catch (err) {}
+      }
+      fallbackWrap.style.display = '';
+      attachCopyHandlers(fallbackWrap);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    interceptReadClicks();
+    document.querySelectorAll('.share-group').forEach(renderOmniShare);
+  });
+})();
+</script>
+
+<!-- ✅ GLOBAL PLAYER CONTROLLER (ONE ONLY)
+   ✅ Player pops up ONLY after an audio is clicked
+   ✅ Auto-play next track across all cards
 -->
 <script>
 (() => {
@@ -1085,74 +1089,59 @@
   const nowPlaying = document.getElementById('nowPlaying');
   const playerWrap = document.getElementById('globalPlayer');
 
-  // ✅ include playerWrap in the guard
   if (!audio || !source || !playerWrap) return;
 
-  // ✅ FORCE HIDE ON LOAD (prevents showing at page open)
+  // Force hide on load
   playerWrap.classList.remove('is-visible');
 
-  /* ================================
-     ✅ GLOBAL PLAYLIST (ALL CARDS)
-  ================================ */
   let playlist = [];
   let currentIndex = -1;
 
   function rebuildPlaylist(){
-    // DOM order (top-to-bottom). Works across cards automatically.
-    playlist = Array.from(document.querySelectorAll('.track-link'));
+    playlist = Array.from(document.querySelectorAll('.track-link[data-src]'));
   }
 
   function setActive(btn){
     document.querySelectorAll('.track-link.active').forEach(b => b.classList.remove('active'));
-    btn?.classList.add('active');
+    btn && btn.classList.add('active');
   }
 
   function showPlayer(){
-    // ✅ Pops up only when a track is played
     playerWrap.classList.add('is-visible');
   }
 
   function play(src, title, btn){
     if (!src) return;
 
-    // ✅ Show player only on play
     showPlayer();
 
-    // Refresh playlist and store index of clicked button
     rebuildPlaylist();
     if (btn) currentIndex = playlist.indexOf(btn);
 
     setActive(btn);
 
-    // Only reload if track changed (faster)
     if (source.getAttribute('src') !== src) {
       source.setAttribute('src', src);
       audio.load();
     }
 
     if (nowPlaying) nowPlaying.textContent = 'Now playing: ' + (title || 'Audio');
-
     audio.play().catch(()=>{});
   }
 
-  // Capture phase + stopImmediatePropagation prevents other handlers from scrolling the page
+  // capture phase, but only blocks clicks on track buttons
   document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.track-link');
+    const btn = e.target.closest('.track-link[data-src]');
     if (!btn) return;
 
     e.preventDefault();
     e.stopPropagation();
     if (e.stopImmediatePropagation) e.stopImmediatePropagation();
 
-    btn.blur?.();
+    btn.blur && btn.blur();
     play(btn.dataset.src, btn.dataset.title, btn);
   }, true);
 
-  /* ================================
-     ✅ AUTO-PLAY NEXT TRACK
-     - When current audio finishes, play the next .track-link
-     - Continues across other cards
-  ================================ */
   audio.addEventListener('ended', () => {
     rebuildPlaylist();
 
@@ -1160,22 +1149,14 @@
     const nextBtn = playlist[nextIndex];
 
     if (!nextBtn) {
-      // End of playlist: clear highlight
       currentIndex = -1;
       document.querySelectorAll('.track-link.active').forEach(b => b.classList.remove('active'));
-
-      // OPTIONAL: hide player at end (uncomment if you want it to disappear)
-      // playerWrap.classList.remove('is-visible');
-
       return;
     }
 
     play(nextBtn.dataset.src, nextBtn.dataset.title, nextBtn);
   });
 
-  /* ================================
-     ✅ OPTIONAL: IF A TRACK FAILS, SKIP TO NEXT
-  ================================ */
   audio.addEventListener('error', () => {
     rebuildPlaylist();
     const nextBtn = playlist[currentIndex + 1];
