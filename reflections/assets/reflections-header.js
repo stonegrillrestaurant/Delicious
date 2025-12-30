@@ -1,41 +1,40 @@
 /* reflections-header.js */
 /* Screenshot-style unified header + sliding drawer + iOS scroll friendly */
 
-(function(){
+(function () {
   const mount =
     document.getElementById("reflectionsHeader") ||
     document.getElementById("refHeaderMount");
 
-  if(!mount) return;
+  if (!mount) return;
 
   // Current slug: prefer data-current, fallback to URL
   const fromData = (mount.dataset && mount.dataset.current) ? mount.dataset.current.trim() : "";
-  const fromUrl  = (location.pathname.match(/\/reflections\/pages\/([^/]+)\/read\.html/i) || [])[1] || "";
-  const current  = fromData || fromUrl || "";
+  const fromUrl = (location.pathname.match(/\/reflections\/pages\/([^/]+)\/read\.html/i) || [])[1] || "";
+  const current = fromData || fromUrl || "";
 
-  // Your list (kept as-is, including the “fath” slug)
+  // Your list (kept as-is)
   const pages = [
-    { slug:"divine-hiddeness", title:"Divine Premise", sub:"Stone Grill Reflections" },
-    { slug:"subconsciousmind", title:"The Subconscious Mind", sub:"Solitude Reflections" },
-    { slug:"the-god-we-created", title:"The God We Created", sub:"Solitude Reflections" },
-    { slug:"the-paradox-of-god", title:"The Paradox of God", sub:"Solitude Reflections" },
-    { slug:"the-inner-listener", title:"The Prayer", sub:"Solitude Reflections" },
-    { slug:"transcendence", title:"Transcendence", sub:"Solitude Reflections" },
-    { slug:"the-madness-of-fath", title:"The Madness of Faith", sub:"Solitude Reflections" },
-    { slug:"the-lost-language-of-metaphor", title:"The Lost Language of Metaphor", sub:"Solitude Reflections" },
-    { slug:"belief", title:"BELIEF AND GOODNESS", sub:"Solitude Reflections" },
-    { slug:"question-label-sinner", title:"Seeking Asurance is Labeled A Sinner", sub:"Solitude Reflections" },
-    { slug:"initial-premise", title:"The initial Premise of a Perfect Loving God", sub:"Solitude Reflections" },
-    { slug:"diety", title:"THE DEITY", sub:"Solitude Reflections" },
-    { slug:"silent-influence", title:"Silent Influence", sub:"Solitude Reflections" },
-    { slug:"oneness-duality", title:"Oneness Duality", sub:"Solitude Reflections" },
-    { slug:"mirror-of-worship", title:"The Mirror of Worship", sub:"Solitude Reflections" },
-    { slug:"moral-choice", title:"The Moral Choice of Duality", sub:"Solitude Reflections" },
+    { slug: "divine-hiddeness", title: "Divine Premise", sub: "Stone Grill Reflections" },
+    { slug: "subconsciousmind", title: "The Subconscious Mind", sub: "Solitude Reflections" },
+    { slug: "the-god-we-created", title: "The God We Created", sub: "Solitude Reflections" },
+    { slug: "the-paradox-of-god", title: "The Paradox of God", sub: "Solitude Reflections" },
+    { slug: "the-inner-listener", title: "The Prayer", sub: "Solitude Reflections" },
+    { slug: "transcendence", title: "Transcendence", sub: "Solitude Reflections" },
+    { slug: "the-madness-of-fath", title: "The Madness of Faith", sub: "Solitude Reflections" },
+    { slug: "the-lost-language-of-metaphor", title: "The Lost Language of Metaphor", sub: "Solitude Reflections" },
+    { slug: "belief", title: "BELIEF AND GOODNESS", sub: "Solitude Reflections" },
+    { slug: "question-label-sinner", title: "Seeking Asurance is Labeled A Sinner", sub: "Solitude Reflections" },
+    { slug: "initial-premise", title: "The initial Premise of a Perfect Loving God", sub: "Solitude Reflections" },
+    { slug: "diety", title: "THE DEITY", sub: "Solitude Reflections" },
+    { slug: "silent-influence", title: "Silent Influence", sub: "Solitude Reflections" },
+    { slug: "oneness-duality", title: "Oneness Duality", sub: "Solitude Reflections" },
+    { slug: "mirror-of-worship", title: "The Mirror of Worship", sub: "Solitude Reflections" },
+    { slug: "moral-choice", title: "The Moral Choice of Duality", sub: "Solitude Reflections" },
   ];
 
   const me = pages.find(p => p.slug === current) || null;
 
-  // Title shown in header (use page list > window.REFLECTION_PAGE > fallback)
   const pageTitle =
     (me && me.title) ||
     (window.REFLECTION_PAGE && window.REFLECTION_PAGE.title) ||
@@ -45,11 +44,9 @@
     (me && me.sub) ||
     "Stone Grill Reflections";
 
-  // Your logo (same as your screenshot setup)
   const brandLogo = "/reflections/assets/logo1.PNG";
 
   const listHTML = [
-    // HOME always on top
     `<li>
       <a class="ref-drawer-link" href="/reflections/index.html">
         <div class="t">HOME</div>
@@ -70,7 +67,6 @@
     })
   ).join("");
 
-  // Build header markup to match screenshot (hamburger + pills on right)
   mount.innerHTML = `
     <header class="ref-header-shell">
       <div class="ref-header-inner">
@@ -109,29 +105,29 @@
     <div class="ref-overlay" aria-hidden="true"></div>
   `.trim();
 
-  const header  = mount.querySelector(".ref-header-shell");
-  const ham     = mount.querySelector(".ref-ham");
-  const drawer  = mount.querySelector(".ref-drawer");
+  const header = mount.querySelector(".ref-header-shell");
+  const ham = mount.querySelector(".ref-ham");
+  const drawer = mount.querySelector(".ref-drawer");
   const overlay = mount.querySelector(".ref-overlay");
   const closeBt = mount.querySelector(".ref-drawer-close");
 
-  const btnBack  = mount.querySelector("#refBack");
+  const btnBack = mount.querySelector("#refBack");
   const btnShare = mount.querySelector("#refShare");
   const btnAudio = mount.querySelector("#refAudio");
 
-  function openMenu(){
+  function openMenu() {
     header.classList.add("menu-open");
-    ham.setAttribute("aria-expanded","true");
-    drawer.setAttribute("aria-hidden","false");
-    overlay.setAttribute("aria-hidden","false");
+    ham.setAttribute("aria-expanded", "true");
+    drawer.setAttribute("aria-hidden", "false");
+    overlay.setAttribute("aria-hidden", "false");
     document.body.classList.add("ref-menu-lock");
   }
 
-  function closeMenu(){
+  function closeMenu() {
     header.classList.remove("menu-open");
-    ham.setAttribute("aria-expanded","false");
-    drawer.setAttribute("aria-hidden","true");
-    overlay.setAttribute("aria-hidden","true");
+    ham.setAttribute("aria-expanded", "false");
+    drawer.setAttribute("aria-hidden", "true");
+    overlay.setAttribute("aria-hidden", "true");
     document.body.classList.remove("ref-menu-lock");
   }
 
@@ -142,62 +138,41 @@
   overlay.addEventListener("click", closeMenu);
   closeBt.addEventListener("click", closeMenu);
 
-  // ESC closes drawer
   document.addEventListener("keydown", (e) => {
-    if(e.key === "Escape" && header.classList.contains("menu-open")) closeMenu();
+    if (e.key === "Escape" && header.classList.contains("menu-open")) closeMenu();
   });
 
-  // Back
   btnBack.addEventListener("click", () => {
-    if(history.length > 1) history.back();
+    if (history.length > 1) history.back();
     else location.href = "/reflections/index.html";
   });
 
-  // Share
   btnShare.addEventListener("click", async () => {
     const shareData = {
       title: document.title || pageTitle,
       text: pageTitle,
       url: location.href
     };
-    try{
-      if(navigator.share) await navigator.share(shareData);
+    try {
+      if (navigator.share) await navigator.share(shareData);
       else {
         await navigator.clipboard.writeText(shareData.url);
         alert("Link copied!");
       }
-    }catch(_){}
+    } catch (_) {}
   });
 
-<script>
-(() => {
-  const audio = document.getElementById('globalAudio');
-  const source = document.getElementById('globalSource');
-  const nowPlaying = document.getElementById('nowPlaying');
+  // Audio button: keep (doesn't break anything). Closes menu if open.
+  btnAudio.addEventListener("click", () => {
+    if (header.classList.contains("menu-open")) closeMenu();
+  });
 
-  if (!audio || !source) return;
-
-  function play(src, title, btn){
-    if (!src) return;
-
-    document.querySelectorAll('.track-link.active')
-      .forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-
-    if (source.getAttribute('src') !== src) {
-      source.setAttribute('src', src);
-      audio.load();
-    }
-
-    if (nowPlaying) nowPlaying.textContent = 'Now playing: ' + (title || 'Audio');
-    audio.play().catch(()=>{});
+  function esc(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
-
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.track-link');
-    if (!btn) return;
-    e.preventDefault();
-    play(btn.dataset.src, btn.dataset.title, btn);
-  });
 })();
-</script>
