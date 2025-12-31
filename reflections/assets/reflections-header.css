@@ -10,7 +10,7 @@
   --ref-pill-bg: rgba(255,255,255,.06);
   --ref-pill-brd: rgba(255,255,255,.18);
 
-  --ref-panel: rgba(36, 26, 22, .94);   /* drawer background (lifted) */
+  --ref-panel: rgba(36, 26, 22, .94);
   --ref-panel-brd: rgba(255,255,255,.12);
 
   --ref-shadow: 0 10px 26px rgba(0,0,0,.55);
@@ -135,19 +135,16 @@ body.ref-menu-lock{ overflow:hidden; }
   width:min(420px, 88vw);
   z-index:10001;
   padding:1rem;
-
   transform:translateX(-110%);
   opacity:0;
   transition: transform .22s ease, opacity .18s ease;
 }
 
-/* OPEN STATE */
 .ref-header-shell.menu-open + .ref-drawer{
   transform:translateX(0);
   opacity:1;
 }
 
-/* Drawer card */
 .ref-drawer-card{
   height:100%;
   border-radius:18px;
@@ -159,7 +156,6 @@ body.ref-menu-lock{ overflow:hidden; }
   flex-direction:column;
 }
 
-/* Drawer head */
 .ref-drawer-head{
   padding:.95rem 1rem;
   display:flex;
@@ -185,7 +181,6 @@ body.ref-menu-lock{ overflow:hidden; }
   cursor:pointer;
 }
 
-/* Scrollable list */
 .ref-drawer-list{
   flex:1;
   overflow-y:auto;
@@ -230,11 +225,12 @@ body.ref-menu-lock{ overflow:hidden; }
   pointer-events:auto;
 }
 
-.card {
-  scroll-margin-top: 200px; /* match header height */
+/* Card spacing under fixed header */
+.card{
+  scroll-margin-top:200px;
 }
 
-/* Center reflection card title + subtitle */
+/* Center card titles */
 h3,
 h3 + p{
   text-align:center;
@@ -256,10 +252,7 @@ h3 + p{
   }
 }
 
-/* ================================
-   ✅ Global playlist buttons (card)
-   Fix: text not showing / only ▶ shows
-   ================================ */
+/* ===== Playlist buttons ===== */
 .playlist{
   display:flex;
   flex-direction:column;
@@ -271,132 +264,28 @@ h3 + p{
   display:block !important;
   width:100% !important;
   text-align:left !important;
-
   padding:.55rem .7rem !important;
   border-radius:12px !important;
-
   background: rgba(0,0,0,.18) !important;
-  border: 1px solid rgba(255,255,255,.14) !important;
-
-  color: var(--ref-ink, #f3e6dd) !important;
-  font-size: 1rem !important;
-  line-height: 1.25 !important;
-
-  white-space: normal !important; /* allow wrapping */
-  overflow: visible !important;
-  text-indent: 0 !important;
+  border:1px solid rgba(255,255,255,.14) !important;
+  color: var(--ref-ink) !important;
+  font-size:1rem !important;
+  line-height:1.25 !important;
 }
 
 .playlist .track-link.active{
   outline:2px solid rgba(255,184,115,.75) !important;
 }
 
-/* If any global CSS hid button text */
-.playlist .track-link *{
-  color: inherit !important;
-  font-size: inherit !important;
-}
-
-/* =========================================================
-   ✅ AUDIO BAR VISIBILITY FIX (YOUR REAL PLAYER)
-   Your HTML is: <section id="globalPlayer" class="audio-bar">
-   So hide/show must target .audio-bar (not .global-player)
-   ========================================================= */
-#globalPlayer.audio-bar{
-  display: none !important;   /* hidden until JS adds .is-visible */
-}
-
-#globalPlayer.audio-bar.is-visible{
-  display: block !important;
-}
-
 /* ================================
-   ✅ FLOATING GLOBAL PLAYER (OLDER CLASS - KEPT)
-   - These rules apply ONLY if you ever use class="global-player"
+   ✅ FLOATING GLOBAL AUDIO BAR
    ================================ */
 
-/* Kill tiny horizontal overflow globally */
-html, body{
-  overflow-x: hidden;
-}
+html, body{ overflow-x:hidden; }
 
-/* Base player shell (hidden on load) */
-#globalPlayer.global-player{
-  display: none !important;     /* 🔒 hidden until activated */
-
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  z-index: 9999;
-
-  padding: .75rem .85rem;
-  padding-bottom: calc(.75rem + env(safe-area-inset-bottom)); /* iPhone safe-area */
-
-  border-radius: 16px;
-  background: rgba(25,18,16,.92);
-  border: 2px solid rgba(255,120,70,.55);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 12px 30px rgba(0,0,0,.45);
-
-  box-sizing: border-box;
-  max-width: calc(100vw - 24px);   /* matches left/right 12px */
-  overflow: hidden;               /* prevents children overflow */
-  transform: translateZ(0);        /* reduces odd fixed rendering */
-}
-
-/* Visible state — JS toggles this */
-#globalPlayer.global-player.is-visible{
-  display: block !important;
-}
-
-#globalPlayer.global-player *{
-  min-width: 0;
-}
-
-#globalPlayer.global-player audio{
-  width: 90%;
-  display: block;
-}
-
-/* =========================
-   ADAPTIVE HEADER COVER
-   ========================= */
-.header-cover-slot img {
-  width: 72px;
-  height: 46px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
-  flex-shrink: 0;
-}
-
-/* Responsive scaling */
-@media (max-width: 900px) {
-  .header-cover-slot img {
-    width: 64px;
-    height: 42px;
-  }
-}
-
-@media (max-width: 768px) {
-  .header-cover-slot img {
-    width: 56px;
-    height: 38px;
-  }
-}
-/* =========================================================
-   ✅ FLOATING / STICKY GLOBAL AUDIO BAR (YOUR REAL PLAYER)
-   Targets: <section id="globalPlayer" class="audio-bar">
-   ========================================================= */
-
-/* hidden until JS adds .is-visible (you already have this) */
 #globalPlayer.audio-bar{
-  /* keep your show/hide behavior */
   display:none !important;
 
-  /* floating sticky bar */
   position:fixed;
   left:12px;
   right:12px;
@@ -408,62 +297,19 @@ html, body{
 
   border-radius:16px;
   background: rgba(25,18,16,.92);
-  border: 2px solid rgba(255,120,70,.55);
+  border:2px solid rgba(255,120,70,.55);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 12px 30px rgba(0,0,0,.45);
 
   box-sizing:border-box;
   max-width: calc(100vw - 24px);
-  overflow:hidden;
-  transform: translateZ(0);
 }
 
 #globalPlayer.audio-bar.is-visible{
   display:block !important;
 }
 
-/* give page space when player is visible (JS toggles this class) */
 body.has-audio-bar{
-  padding-bottom: 110px; /* enough room for player on most phones */
-}
-@supports (padding-bottom: env(safe-area-inset-bottom)){
-  body.has-audio-bar{
-    padding-bottom: calc(110px + env(safe-area-inset-bottom));
-  }
-}
-
-/* Optional: small layout safety so text doesn't overflow */
-#globalPlayer .audio-bar__row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:.75rem;
-  min-width:0;
-}
-#globalPlayer .audio-bar__title{
-  min-width:0;
-  display:flex;
-  align-items:center;
-  gap:.5rem;
-}
-#globalPlayer .audio-bar__now{
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-#globalPlayer .audio-bar__buttons{
-  display:flex;
-  gap:.4rem;
-  flex-shrink:0;
-}
-#globalPlayer .audio-bar__progress{
-  margin-top:.55rem;
-  display:flex;
-  align-items:center;
-  gap:.55rem;
-}
-#globalPlayer #seekBar{
-  width:100%;
+  padding-bottom:110px;
 }
