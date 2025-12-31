@@ -1,5 +1,5 @@
 /* reflections-header.css */
-/* Screenshot-style unified header + sliding drawer + iOS scroll */
+/* Unified header + drawer + playlist + FLOATING GLOBAL AUDIO BAR */
 
 :root{
   --ref-bg: rgba(30, 21, 18, .92);
@@ -115,7 +115,6 @@ body.ref-menu-lock{ overflow:hidden; }
   cursor:pointer;
 }
 
-/* Pills */
 .ref-pill{
   border:1px solid var(--ref-pill-brd);
   background: var(--ref-pill-bg);
@@ -200,13 +199,8 @@ body.ref-menu-lock{ overflow:hidden; }
   background: rgba(255,255,255,.04);
 }
 
-.ref-drawer-link:hover{
-  background: rgba(255,184,115,.10);
-}
-
-.ref-drawer-link.is-active{
-  background: rgba(255,184,115,.18);
-}
+.ref-drawer-link:hover{ background: rgba(255,184,115,.10); }
+.ref-drawer-link.is-active{ background: rgba(255,184,115,.18); }
 
 /* Overlay */
 .ref-overlay{
@@ -219,37 +213,22 @@ body.ref-menu-lock{ overflow:hidden; }
   pointer-events:none;
   transition: opacity .18s ease;
 }
-
 .ref-header-shell.menu-open ~ .ref-overlay{
   opacity:1;
   pointer-events:auto;
 }
 
-/* Card spacing under fixed header */
-.card{
-  scroll-margin-top:200px;
-}
+/* Scroll offset */
+.card { scroll-margin-top: 200px; }
 
-/* Center card titles */
-h3,
-h3 + p{
-  text-align:center;
-}
+/* Center reflection card title + subtitle */
+h3, h3 + p{ text-align:center; }
+.title-link{ display:inline-block; }
 
-.title-link{
-  display:inline-block;
-}
-
-/* ===== Mobile ===== */
+/* Mobile header wrap */
 @media (max-width:640px){
-  .ref-header-inner{
-    flex-direction:column;
-    gap:.5rem;
-  }
-  .ref-actions{
-    width:100%;
-    justify-content:space-between;
-  }
+  .ref-header-inner{ flex-direction:column; gap:.5rem; }
+  .ref-actions{ width:100%; justify-content:space-between; }
 }
 
 /* ===== Playlist buttons ===== */
@@ -259,7 +238,6 @@ h3 + p{
   gap:.35rem;
   margin-top:.5rem;
 }
-
 .playlist .track-link{
   display:block !important;
   width:100% !important;
@@ -267,20 +245,19 @@ h3 + p{
   padding:.55rem .7rem !important;
   border-radius:12px !important;
   background: rgba(0,0,0,.18) !important;
-  border:1px solid rgba(255,255,255,.14) !important;
-  color: var(--ref-ink) !important;
-  font-size:1rem !important;
-  line-height:1.25 !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  color: var(--ref-ink, #f3e6dd) !important;
+  font-size: 1rem !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-indent: 0 !important;
 }
-
 .playlist .track-link.active{
   outline:2px solid rgba(255,184,115,.75) !important;
 }
 
-/* ================================
-   ✅ FLOATING GLOBAL AUDIO BAR
-   ================================ */
-
+/* ===== Floating Global Audio Bar (REAL PLAYER) ===== */
 html, body{ overflow-x:hidden; }
 
 #globalPlayer.audio-bar{
@@ -297,19 +274,53 @@ html, body{ overflow-x:hidden; }
 
   border-radius:16px;
   background: rgba(25,18,16,.92);
-  border:2px solid rgba(255,120,70,.55);
+  border: 2px solid rgba(255,120,70,.55);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 12px 30px rgba(0,0,0,.45);
 
   box-sizing:border-box;
   max-width: calc(100vw - 24px);
+  overflow:hidden;
+  transform: translateZ(0);
 }
 
-#globalPlayer.audio-bar.is-visible{
-  display:block !important;
+#globalPlayer.audio-bar.is-visible{ display:block !important; }
+
+body.has-audio-bar{ padding-bottom:110px; }
+@supports (padding-bottom: env(safe-area-inset-bottom)){
+  body.has-audio-bar{ padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
 }
 
-body.has-audio-bar{
-  padding-bottom:110px;
+/* optional layout safety */
+#globalPlayer .audio-bar__row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  min-width:0;
 }
+#globalPlayer .audio-bar__title{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+}
+#globalPlayer .audio-bar__now{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#globalPlayer .audio-bar__buttons{
+  display:flex;
+  gap:.4rem;
+  flex-shrink:0;
+}
+#globalPlayer .audio-bar__progress{
+  margin-top:.55rem;
+  display:flex;
+  align-items:center;
+  gap:.55rem;
+}
+#globalPlayer #seekBar{ width:100%; }
