@@ -4,8 +4,8 @@ window.APP_CONFIG = {
   TELEGRAM_CHAT_ID: "-1002531095369",
 
   // GCash number-only
-  GCASH_MOBILE: "+63 9276031476",
-  GCASH_ACCOUNT_NAME: "ST******E F.",
+  GCASH_MOBILE: "+63 9178366126",
+  GCASH_ACCOUNT_NAME: "NI*****O A.",
 
   // Meta Conversions API (Dataset + Token)
   META_DATASET_ID: "643206718690040", // Stone Grill Restaurant Event
