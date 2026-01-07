@@ -71,7 +71,7 @@ function sendInfobipSMS(toNumber, custName, orderId) {
     // Fix odd case: +6309XXXXXXXXX -> +639XXXXXXXXX
     if (cleanNum.startsWith('+6309')) cleanNum = '+63' + cleanNum.slice(4);
 
-    var gcashName = "STONEGRILL";        // <-- edit if needed
+    var gcashName = "NI****** A.";        // <-- edit if needed
     var gcashNumber = "+639178366126";   // <-- ✅ EDIT THIS to your NEW payment number (no spaces)
 
     var smsText =
