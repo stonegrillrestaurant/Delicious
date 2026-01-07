@@ -59,7 +59,7 @@ function sendInfobipSMS(toNumber, custName, orderId) {
     var cleanNum = String(toNumber).replace(/\s+/g, '');
 
     var gcashName = "STONEGRILL";           // <-- edit if needed
-    var gcashNumber = "+63 927 603 1476";   // <-- edit if needed
+    var gcashNumber = "+63 917 836 6126";   // <-- edit if needed
 
     var smsText =
       `Hi ${custName || 'Customer'}! ✅ We received your order #${orderId}.\n` +
