@@ -55,11 +55,24 @@ function generateOrderId(){
 function sendInfobipSMS(toNumber, custName, orderId) {
   try {
     if (!toNumber) return;
-    // Ensure E.164 format (e.g., +639XXXXXXXXX) and strip spaces
-    var cleanNum = String(toNumber).replace(/\s+/g, '');
 
-    var gcashName = "STONEGRILL";           // <-- edit if needed
-    var gcashNumber = "+63 917 836 6126";   // <-- edit if needed
+    // ✅ Ensure E.164 format (e.g., +639XXXXXXXXX)
+    // Accepts: 09XXXXXXXXX, +63 9xx xxx xxxx, 63xxxxxxxxxx, with spaces/dashes
+    var cleanNum = String(toNumber)
+      .trim()
+      .replace(/[^\d+]/g, ''); // keep digits and +
+
+    // Convert 09XXXXXXXXX -> +639XXXXXXXXX
+    if (cleanNum.startsWith('09')) cleanNum = '+63' + cleanNum.slice(1);
+
+    // Convert 63XXXXXXXXXX -> +63XXXXXXXXXX
+    if (cleanNum.startsWith('63')) cleanNum = '+' + cleanNum;
+
+    // Fix odd case: +6309XXXXXXXXX -> +639XXXXXXXXX
+    if (cleanNum.startsWith('+6309')) cleanNum = '+63' + cleanNum.slice(4);
+
+    var gcashName = "STONEGRILL";        // <-- edit if needed
+    var gcashNumber = "+639178366126";   // <-- ✅ EDIT THIS to your NEW payment number (no spaces)
 
     var smsText =
       `Hi ${custName || 'Customer'}! ✅ We received your order #${orderId}.\n` +
@@ -457,7 +470,7 @@ document.addEventListener('DOMContentLoaded', async function(){
     buildCategoryBar(MENU_META.categories);
     renderMenu(); renderCart();
     var radios = document.querySelectorAll('input[name="orderType"]');
-    for (var i=0;i<radios.length;i++){ radios[i].addEventListener('change', updatePersonsVisibility); }
+    for (var i = 0; i < radios.length; i++){ radios[i].addEventListener('change', updatePersonsVisibility); }
     updatePersonsVisibility();
     var m = $('#mobileNumber');
     if(m){ m.addEventListener('blur', ()=>normalizeMobile(m)); m.addEventListener('input', ()=>{ if(m.value.indexOf('+63')!==0) m.value = '+63 '; }); }
