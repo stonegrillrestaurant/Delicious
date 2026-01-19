@@ -541,5 +541,28 @@
     // Set year (safe, no dependencies)
     document.getElementById("year").textContent = new Date().getFullYear();
   </script>
+  <script>
+  (function () {
+    const audio = document.getElementById("reflectionAudio");
+    const source = document.getElementById("audioSource");
+    if (!audio || !source) return;
+
+    document.querySelectorAll(".track-link[data-src]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const src = btn.getAttribute("data-src");
+        if (!src) return;
+
+        // set source + play
+        source.src = src;
+        audio.load();
+        audio.play().catch(() => { /* iOS may require another tap */ });
+
+        // optional: mark active button
+        document.querySelectorAll(".track-link").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+  })();
+</script>
 </body>
 </html>
