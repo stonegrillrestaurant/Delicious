@@ -578,61 +578,49 @@
     }
   }
 
-  // =========================================================
-  // 🎧 AUDIO SWITCHER — 5 FILES (FIXED FOR iPHONE)
-  // =========================================================
-  document.addEventListener("DOMContentLoaded", () => {
-    const player = document.getElementById("audioPlayer");
-    const tabs = document.querySelectorAll(".audio-tab");
+<script>
+// =========================================================
+// 🎧 AUDIO SWITCHER — UPDATED FOR data-src
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const player = document.getElementById("audioPlayer");
+  const tabs = document.querySelectorAll(".audio-tab");
 
-    // If audio section not found, do nothing (prevents errors)
-    if (!player || tabs.length === 0) return;
+  if (!player || tabs.length === 0) return;
 
-    const audioMap = {
-      audio1: "The_Soul_Pod.mp3",
-      audio2: "soul_junkfood.mp3",
-      audio3: "Soul_PC.mp3",
-      audio4: "Soul_PCMale.mp3",
-      audio5: "Soul_Food.m4a"
-    };
+  const sourceEl = player.querySelector("source");
 
-    // If you have <source> inside <audio>, use it (more reliable)
-    const sourceEl = player.querySelector("source");
+  function mimeType(filename){
+    const f = (filename || "").toLowerCase();
+    if (f.endsWith(".m4a")) return "audio/mp4";
+    return "audio/mpeg";
+  }
 
-    function mimeType(filename){
-      const f = (filename || "").toLowerCase();
-      if (f.endsWith(".m4a")) return "audio/mp4";
-      return "audio/mpeg"; // mp3
-    }
+  tabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      // active state
+      tabs.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
 
-    tabs.forEach(btn => {
-      btn.addEventListener("click", () => {
-        // active tab style
-        tabs.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
+      // ✅ get file directly from button
+      const file = btn.dataset.src;
+      if (!file) return;
 
-        // switch audio file
-        const key = btn.dataset.audio;         // audio1..audio5
-        const file = audioMap[key];            // filename
+      // switch audio
+      if (sourceEl) {
+        sourceEl.src = file;
+        sourceEl.type = mimeType(file);
+        player.load();
+      } else {
+        player.src = file;
+        player.load();
+      }
 
-        if (!file) return;
-
-        if (sourceEl) {
-          // ✅ Best method (works better on iOS)
-          sourceEl.src = file;
-          sourceEl.type = mimeType(file);
-          player.load();
-        } else {
-          // fallback if no <source> exists
-          player.src = file;
-          player.load();
-        }
-
-        // play after click (user gesture)
-        player.play().catch(()=>{});
-      });
+      // play after user click
+      player.play().catch(()=>{});
     });
   });
+});
 </script>
 </body>
 </html>
