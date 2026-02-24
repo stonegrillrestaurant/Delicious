@@ -381,28 +381,35 @@
         <span class="chip">Stone Grill Press — First Edition</span>
       </div>
 
-      <!-- =========================================================
-           🎧 AUDIO PLAYER — PRIMARY (ADDED)
-           Audio files are in the SAME folder as this read.html:
-           /reflections/pages/soul/The_Soul_Pod.mp3
-           /reflections/pages/soul/soul_junkfood.mp3
-      ========================================================== -->
-      <section class="audio-box" aria-label="Reflection audio">
-        <div class="audio-header">
-          <strong>🎧 Listen to this Podcast</strong>
-          <span class="audio-sub">Choose version</span>
-        </div>
+<!-- =========================================================
+     🎧 AUDIO PLAYER — MULTI VERSION (UPDATED)
+     Files must be in the SAME folder as read.html
+========================================================== -->
+<section class="audio-box" aria-label="Reflection audio">
+  <div class="audio-header">
+    <strong>🎧 Listen to this Podcast</strong>
+    <span class="audio-sub">Choose version</span>
+  </div>
 
-        <div class="audio-controls">
-          <button class="audio-tab active" type="button" data-audio="audio1">Podcast 1</button>
-          <button class="audio-tab" type="button" data-audio="audio2">Soul Junk Food</button>
-        </div>
+  <div class="audio-controls">
+    <button class="audio-tab active" type="button" data-audio="audio1">
+      🎙️ PC Voice
+    </button>
 
-        <audio id="audioPlayer" controls preload="none">
-          <source src="The_Soul_Pod.mp3" type="audio/mpeg">
-          Your browser does not support audio.
-        </audio>
-      </section>
+    <button class="audio-tab" type="button" data-audio="audio2">
+      🎙️ Male Voice
+    </button>
+
+    <button class="audio-tab" type="button" data-audio="audio3">
+      🍽️ Soul Food Version
+    </button>
+  </div>
+
+  <audio id="audioPlayer" controls preload="none">
+    <source src="Soul_PC.mp3" type="audio/mpeg">
+    Your browser does not support audio.
+  </audio>
+</section>
 
       <div class="divider">— ❖ —</div>
 
@@ -580,28 +587,31 @@
       }
     }
 
-    // =========================================================
-    // 🎧 AUDIO SWITCHER (ADDED)
-    // =========================================================
-    const audioMap = {
-      audio1: "The_Soul_Pod.mp3",
-      audio2: "soul_junkfood.mp3"
-    };
+   <script>
+// =========================================================
+// 🎧 AUDIO SWITCHER — UPDATED (3 FILES)
+// =========================================================
+const audioMap = {
+  audio1: "Soul_PC.mp3",
+  audio2: "Soul_PCMale.mp3",
+  audio3: "Soul_Food.m4a"
+};
 
-    document.querySelectorAll(".audio-tab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        // active tab style
-        document.querySelectorAll(".audio-tab").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
+document.querySelectorAll(".audio-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    // remove active state
+    document.querySelectorAll(".audio-tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
 
-        // switch audio
-        const player = document.getElementById("audioPlayer");
-        player.src = audioMap[btn.dataset.audio];
+    // switch audio source
+    const player = document.getElementById("audioPlayer");
+    player.src = audioMap[btn.dataset.audio];
+    player.load();
 
-        // play immediately (some phones may block autoplay without user gesture)
-        player.play().catch(()=>{});
-      });
-    });
-  </script>
+    // attempt autoplay after user click
+    player.play().catch(()=>{});
+  });
+});
+</script>
 </body>
 </html>
