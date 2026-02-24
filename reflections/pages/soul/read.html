@@ -382,35 +382,31 @@
       </div>
 
 <!-- =========================================================
-     🎧 AUDIO PLAYER — MULTI VERSION (UPDATED)
-     Files must be in the SAME folder as read.html
+     🎧 AUDIO PLAYER — MULTI VERSION (5 FILES) (UPDATED)
+     Place this INSIDE <article class="card"> right after the title + meta
+     Files must be in the SAME folder as read.html:
+     /reflections/pages/soul/
 ========================================================== -->
 <section class="audio-box" aria-label="Reflection audio">
   <div class="audio-header">
-    <strong>🎧 Listen to this Podcast</strong>
+    <strong>🎧 Listen to this Reflection</strong>
     <span class="audio-sub">Choose version</span>
   </div>
 
   <div class="audio-controls">
-    <button class="audio-tab active" type="button" data-audio="audio1">
-      🎙️ PC Voice
-    </button>
-
-    <button class="audio-tab" type="button" data-audio="audio2">
-      🎙️ Male Voice
-    </button>
-
-    <button class="audio-tab" type="button" data-audio="audio3">
-      🍽️ Soul Food Version
-    </button>
+    <button class="audio-tab active" type="button" data-audio="audio1">🎧 Full Reflection</button>
+    <button class="audio-tab" type="button" data-audio="audio2">🧠 Soul Junk Food</button>
+    <button class="audio-tab" type="button" data-audio="audio3">🎙️ PC Voice</button>
+    <button class="audio-tab" type="button" data-audio="audio4">🎙️ Male Voice</button>
+    <button class="audio-tab" type="button" data-audio="audio5">🍽️ Soul Food Version</button>
   </div>
 
   <audio id="audioPlayer" controls preload="none">
-    <source src="Soul_PC.mp3" type="audio/mpeg">
+    <!-- default audio (same as active tab) -->
+    <source src="The_Soul_Pod.mp3" type="audio/mpeg">
     Your browser does not support audio.
   </audio>
 </section>
-
       <div class="divider">— ❖ —</div>
 
       <h2>Introduction</h2>
@@ -588,27 +584,31 @@
     }
 
    <script>
+<script>
 // =========================================================
-// 🎧 AUDIO SWITCHER — UPDATED (3 FILES)
+// 🎧 AUDIO SWITCHER — 5 FILES (UPDATED)
+// Put this inside your existing <script> block (near the bottom)
 // =========================================================
 const audioMap = {
-  audio1: "Soul_PC.mp3",
-  audio2: "Soul_PCMale.mp3",
-  audio3: "Soul_Food.m4a"
+  audio1: "The_Soul_Pod.mp3",
+  audio2: "soul_junkfood.mp3",
+  audio3: "Soul_PC.mp3",
+  audio4: "Soul_PCMale.mp3",
+  audio5: "Soul_Food.m4a"
 };
 
 document.querySelectorAll(".audio-tab").forEach(btn => {
   btn.addEventListener("click", () => {
-    // remove active state
+    // active tab style
     document.querySelectorAll(".audio-tab").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
 
-    // switch audio source
+    // switch audio
     const player = document.getElementById("audioPlayer");
     player.src = audioMap[btn.dataset.audio];
     player.load();
 
-    // attempt autoplay after user click
+    // play after click (allowed because user tapped)
     player.play().catch(()=>{});
   });
 });
