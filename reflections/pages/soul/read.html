@@ -380,13 +380,8 @@
         <span class="chip">By <strong>Ninox Antolihao</strong></span>
         <span class="chip">Stone Grill Press — First Edition</span>
       </div>
-
-<!-- =========================================================
-     🎧 AUDIO PLAYER — MULTI VERSION (5 FILES) (UPDATED)
-     Place this INSIDE <article class="card"> right after the title + meta
-     Files must be in the SAME folder as read.html:
-     /reflections/pages/soul/
-========================================================== -->
+      
+      <!-- ✅ AUDIO PLAYER (5 FILES) -->
 <section class="audio-box" aria-label="Reflection audio">
   <div class="audio-header">
     <strong>🎧 Listen to this Reflection</strong>
@@ -394,16 +389,15 @@
   </div>
 
   <div class="audio-controls">
-    <button class="audio-tab active" type="button" data-audio="audio1">🎧 Full Reflection</button>
-    <button class="audio-tab" type="button" data-audio="audio2">🧠 Soul Junk Food</button>
-    <button class="audio-tab" type="button" data-audio="audio3">🎙️ PC Voice</button>
-    <button class="audio-tab" type="button" data-audio="audio4">🎙️ Male Voice</button>
-    <button class="audio-tab" type="button" data-audio="audio5">🍽️ Soul Food Version</button>
+    <button class="audio-tab active" type="button" data-src="The_Soul_Pod.mp3">🎧 Full Reflection</button>
+    <button class="audio-tab" type="button" data-src="soul_junkfood.mp3">🧠 Soul Junk Food</button>
+    <button class="audio-tab" type="button" data-src="Soul_PC.mp3">🎙️ PC Voice</button>
+    <button class="audio-tab" type="button" data-src="Soul_PCMale.mp3">🎙️ Male Voice</button>
+    <button class="audio-tab" type="button" data-src="Soul_Food.m4a">🍽️ Soul Food Version</button>
   </div>
 
   <audio id="audioPlayer" controls preload="none">
-    <!-- default audio (same as active tab) -->
-    <source src="The_Soul_Pod.mp3" type="audio/mpeg">
+    <source id="audioSource" src="The_Soul_Pod.mp3" type="audio/mpeg">
     Your browser does not support audio.
   </audio>
 </section>
@@ -567,51 +561,78 @@
     </div>
   </footer>
 
-  <!-- =========================================================
-       SCRIPT (page behavior)
-  ========================================================== -->
-  <script>
-    // Keep year current
-    document.getElementById("year").textContent = new Date().getFullYear();
+ <!-- =========================================================
+     SCRIPT (page behavior) — FIXED + WORKING
+     ✅ IMPORTANT: Only ONE <script> ... </script> block
+========================================================== -->
+<script>
+  // Keep year current
+  document.getElementById("year").textContent = new Date().getFullYear();
 
-    // Back behavior: use history if available, otherwise go to reflections home
-    function goBack(){
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = "/reflections/";
-      }
+  // Back behavior: use history if available, otherwise go to reflections home
+  function goBack(){
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = "/reflections/";
+    }
+  }
+
+  // =========================================================
+  // 🎧 AUDIO SWITCHER — 5 FILES (FIXED FOR iPHONE)
+  // =========================================================
+  document.addEventListener("DOMContentLoaded", () => {
+    const player = document.getElementById("audioPlayer");
+    const tabs = document.querySelectorAll(".audio-tab");
+
+    // If audio section not found, do nothing (prevents errors)
+    if (!player || tabs.length === 0) return;
+
+    const audioMap = {
+      audio1: "The_Soul_Pod.mp3",
+      audio2: "soul_junkfood.mp3",
+      audio3: "Soul_PC.mp3",
+      audio4: "Soul_PCMale.mp3",
+      audio5: "Soul_Food.m4a"
+    };
+
+    // If you have <source> inside <audio>, use it (more reliable)
+    const sourceEl = player.querySelector("source");
+
+    function mimeType(filename){
+      const f = (filename || "").toLowerCase();
+      if (f.endsWith(".m4a")) return "audio/mp4";
+      return "audio/mpeg"; // mp3
     }
 
-   <script>
-<script>
-// =========================================================
-// 🎧 AUDIO SWITCHER — 5 FILES (UPDATED)
-// Put this inside your existing <script> block (near the bottom)
-// =========================================================
-const audioMap = {
-  audio1: "The_Soul_Pod.mp3",
-  audio2: "soul_junkfood.mp3",
-  audio3: "Soul_PC.mp3",
-  audio4: "Soul_PCMale.mp3",
-  audio5: "Soul_Food.m4a"
-};
+    tabs.forEach(btn => {
+      btn.addEventListener("click", () => {
+        // active tab style
+        tabs.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
 
-document.querySelectorAll(".audio-tab").forEach(btn => {
-  btn.addEventListener("click", () => {
-    // active tab style
-    document.querySelectorAll(".audio-tab").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
+        // switch audio file
+        const key = btn.dataset.audio;         // audio1..audio5
+        const file = audioMap[key];            // filename
 
-    // switch audio
-    const player = document.getElementById("audioPlayer");
-    player.src = audioMap[btn.dataset.audio];
-    player.load();
+        if (!file) return;
 
-    // play after click (allowed because user tapped)
-    player.play().catch(()=>{});
+        if (sourceEl) {
+          // ✅ Best method (works better on iOS)
+          sourceEl.src = file;
+          sourceEl.type = mimeType(file);
+          player.load();
+        } else {
+          // fallback if no <source> exists
+          player.src = file;
+          player.load();
+        }
+
+        // play after click (user gesture)
+        player.play().catch(()=>{});
+      });
+    });
   });
-});
 </script>
 </body>
 </html>
