@@ -176,3 +176,21 @@
       .replace(/'/g, "&#39;");
   }
 })();
+const nav = document.querySelector(".ref-nav ul");
+
+if(nav && window.REFLECTION_LINKS){
+
+  window.REFLECTION_LINKS.forEach(r => {
+
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+
+    a.href = r.url;
+    a.textContent = r.title;
+
+    li.appendChild(a);
+    nav.appendChild(li);
+
+  });
+
+}
