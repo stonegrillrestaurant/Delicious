@@ -1,0 +1,21 @@
+const reflections = [
+  {title:"Divine Hiddenness", url:"/reflections/pages/divine-hiddeness/read.html"},
+  {title:"The Subconscious Mind", url:"/reflections/pages/subconsciousmind/read.html"},
+  {title:"The God We Created", url:"/reflections/pages/the-god-we-created/read.html"},
+  {title:"The Paradox of God", url:"/reflections/pages/the-paradox-of-god/read.html"},
+  {title:"The Prayer", url:"/reflections/pages/the-inner-listener/read.html"},
+  {title:"Transcendence", url:"/reflections/pages/transcendence/read.html"},
+  {title:"The Madness of Faith", url:"/reflections/pages/the-madness-of-faith/read.html"},
+  {title:"The Lost Language of Metaphor", url:"/reflections/pages/the-lost-language-of-metaphor/read.html"},
+  {title:"Moral Choice", url:"/reflections/pages/moral-choice/read.html"},
+  {title:"Belief and Goodness", url:"/reflections/pages/belief/read.html"},
+  {title:"Seeking Assurance is Labeled a Sinner", url:"/reflections/pages/question-label-sinner/read.html"},
+  {title:"The Initial Premise", url:"/reflections/pages/initial-premise/read.html"},
+  {title:"The Deity", url:"/reflections/pages/diety/read.html"},
+  {title:"Silent Influence", url:"/reflections/pages/silent-influence/read.html"},
+  {title:"Oneness & Duality", url:"/reflections/pages/oneness-duality/read.html"},
+  {title:"The Mirror of Worship", url:"/reflections/pages/mirror-of-worship/read.html"},
+  {title:"Good and Evil", url:"/reflections/pages/godevil/read.html"},
+  {title:"The Kingdom Within", url:"/reflections/pages/kingdom-within/read.html"},
+  {title:"Feeding the Soul", url:"/reflections/pages/feeding-the-soul/read.html"}
+];
