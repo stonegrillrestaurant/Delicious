@@ -20,7 +20,7 @@
     { slug: "the-paradox-of-god", title: "The Paradox of God", sub: "Solitude Reflections" },
     { slug: "the-inner-listener", title: "The Prayer", sub: "Solitude Reflections" },
     { slug: "transcendence", title: "Transcendence", sub: "Solitude Reflections" },
-    { slug: "the-madness-of-faith", title: "The Madness of Faith", sub: "Solitude Reflections" },
+    { slug: "the-madness-of-fath", title: "The Madness of Faith", sub: "Solitude Reflections" },
     { slug: "the-lost-language-of-metaphor", title: "The Lost Language of Metaphor", sub: "Solitude Reflections" },
     { slug: "belief", title: "Belief and Goodness", sub: "Solitude Reflections" },
     { slug: "question-label-sinner", title: "Seeking Assurance is Labeled A Sinner", sub: "Solitude Reflections" },
