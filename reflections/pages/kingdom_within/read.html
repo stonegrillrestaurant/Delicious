@@ -60,6 +60,7 @@
 
     *{box-sizing:border-box}
     html,body{height:100%}
+    html{scroll-behavior:smooth}
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
@@ -76,33 +77,58 @@
     .wrap{max-width:var(--max); margin:0 auto; padding:22px 18px 60px}
 
     /* Top bar */
-  .topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 14px;
-  background:rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:14px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 14px;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 99999;
+    }
 
-  /* ✅ ADD THESE — do NOT remove the styles above */
-  position: relative;
-  z-index: 99999;
-}
-    .brand{display:flex; align-items:center; gap:10px; text-decoration:none;}
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      text-decoration:none;
+      min-width:0;
+    }
+
     .dot{
-      width:10px; height:10px; border-radius:50%;
+      width:10px;
+      height:10px;
+      border-radius:50%;
       background: radial-gradient(circle at 30% 30%, var(--accent), rgba(242,198,122,.2));
       box-shadow: 0 0 18px rgba(242,198,122,.35);
+      flex:0 0 auto;
     }
-    .brand span{font-weight:700; letter-spacing:.3px}
 
-    .navlinks{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .brand span{
+      font-weight:700;
+      letter-spacing:.3px;
+      white-space:nowrap;
+    }
+
+    .navlinks{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
     .pill{
-      padding:8px 10px; border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px 10px;
+      border-radius:999px;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.04);
       text-decoration:none;
@@ -111,11 +137,33 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       cursor:pointer;
+      transition: .2s ease;
     }
-    .pill:hover{border-color:rgba(242,198,122,.35); color:var(--text)}
+
+    .pill:hover,
+    .pill:focus-visible{
+      border-color:rgba(242,198,122,.35);
+      color:var(--text);
+      outline:none;
+      background:rgba(255,255,255,.06);
+    }
+
+    /* UPDATED: button reset so dropdown looks exactly like links */
+    .dropdown-toggle{
+      appearance:none;
+      -webkit-appearance:none;
+      font:inherit;
+      line-height:1;
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      border:1px solid rgba(255,255,255,.10);
+    }
 
     /* Dropdown */
-    .dropdown{position:relative}
+    .dropdown{
+      position:relative;
+    }
+
     .dropdown-menu{
       position:absolute;
       top:120%;
@@ -131,8 +179,10 @@
       border:1px solid rgba(255,255,255,.10);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
       z-index:100000;
     }
+
     .dropdown-menu a{
       padding:8px 10px;
       border-radius:10px;
@@ -141,10 +191,14 @@
       font-size:13px;
       white-space:nowrap;
     }
-    .dropdown-menu a:hover{
+
+    .dropdown-menu a:hover,
+    .dropdown-menu a:focus-visible{
       background:rgba(255,255,255,.08);
       color:#fff;
+      outline:none;
     }
+
     .dropdown.open .dropdown-menu{display:flex}
 
     /* Hero */
@@ -155,6 +209,7 @@
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
     }
+
     .cover{
       width:100%;
       aspect-ratio: 16/9;
@@ -162,33 +217,60 @@
       display:block;
       filter: saturate(1.05) contrast(1.05);
     }
+
     .heroInner{
       padding:18px 18px 16px;
       background: linear-gradient(to bottom, rgba(0,0,0,.0), rgba(0,0,0,.35));
     }
+
     h1{
       margin:0;
       font-size: clamp(28px, 4.2vw, 44px);
       letter-spacing: .2px;
       line-height:1.15;
     }
+
     .subtitle{
       margin:10px 0 0;
       color:var(--muted);
-      font-size: 15px;
-      max-width: 75ch;
+      font-size:15px;
+      max-width:75ch;
     }
+
     .metaRow{
       margin-top:14px;
-      display:flex; flex-wrap:wrap; gap:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
       color:rgba(233,237,246,.70);
       font-size:13px;
     }
+
     .chip{
       padding:6px 10px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.04);
+    }
+
+    /* Audio card */
+    .audioWrap{
+      margin-top:16px;
+    }
+
+    .audioCard{
+      margin-top:0;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      padding: 14px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .audioCard audio{
+      width:100%;
+      display:block;
     }
 
     /* Cards */
@@ -201,11 +283,26 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
-    .card h2{margin:0 0 10px; font-size:18px; letter-spacing:.2px;}
-    .divider{margin:18px 0; text-align:center; color: rgba(233,237,246,.55); letter-spacing:.6px;}
+
+    .card h2{
+      margin:0 0 10px;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+
+    .divider{
+      margin:18px 0;
+      text-align:center;
+      color: rgba(233,237,246,.55);
+      letter-spacing:.6px;
+    }
 
     /* Main content with page numbers */
-    .content{counter-reset: page; padding-bottom: 6px;}
+    .content{
+      counter-reset: page;
+      padding-bottom: 6px;
+    }
+
     .page{
       position: relative;
       padding: 6px 0 18px;
@@ -213,15 +310,28 @@
       margin-bottom: 18px;
       counter-increment: page;
     }
-    .page:last-child{border-bottom:none; margin-bottom:0; padding-bottom:0;}
+
+    .page:last-child{
+      border-bottom:none;
+      margin-bottom:0;
+      padding-bottom:0;
+    }
+
     .pageNum{
-      position:absolute; top:0; right:0;
-      font-size:12px; color: rgba(233,237,246,.55);
-      padding:6px 10px; border-radius:999px;
+      position:absolute;
+      top:0;
+      right:0;
+      font-size:12px;
+      color: rgba(233,237,246,.55);
+      padding:6px 10px;
+      border-radius:999px;
       border: 1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.20);
     }
-    .pageNum::before{content: "Page " counter(page);}
+
+    .pageNum::before{
+      content: "Page " counter(page);
+    }
 
     blockquote{
       margin: 14px 0;
@@ -232,26 +342,63 @@
       color: rgba(233,237,246,.92);
     }
 
-    .footer{margin-top:22px; color: rgba(233,237,246,.55); font-size:12px; text-align:center;}
+    /* Bottom nav */
+    .bottomNav{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:16px;
+    }
 
-    /* ✅ Mobile: show navlinks + make them wrap */
-    @media (max-width:520px){
-      .topbar{flex-wrap:wrap; gap:10px}
+    .footer{
+      margin-top:22px;
+      color: rgba(233,237,246,.55);
+      font-size:12px;
+      text-align:center;
+    }
+
+    /* Mobile */
+    @media (max-width:700px){
+      .topbar{
+        flex-wrap:wrap;
+        align-items:flex-start;
+      }
+
+      .brand{
+        width:100%;
+      }
+
       .navlinks{
-        display:flex;
         width:100%;
         justify-content:flex-start;
         gap:8px;
       }
-      .pill{padding:10px 12px}
-      .heroInner{padding:16px 14px}
-      .card{padding:16px 14px}
+    }
 
-      /* dropdown width on mobile */
+    @media (max-width:520px){
+      .pill{
+        padding:10px 12px;
+      }
+
+      .heroInner{
+        padding:16px 14px;
+      }
+
+      .card,
+      .audioCard{
+        padding:16px 14px;
+      }
+
       .dropdown-menu{
         right:auto;
         left:0;
         width:min(330px, 92vw);
+      }
+
+      .pageNum{
+        position:static;
+        display:inline-flex;
+        margin-bottom:10px;
       }
     }
   </style>
@@ -261,7 +408,7 @@
   <div class="wrap">
 
     <div class="topbar">
-      <!-- ✅ Back to reflections HOME (never 404) -->
+      <!-- UPDATED: brand link -->
       <a class="brand" href="/reflections/" aria-label="Back to Solitude Reflections">
         <div class="dot"></div>
         <span>Solitude Reflections</span>
@@ -271,11 +418,17 @@
         <a class="pill" href="/reflections/">Home</a>
 
         <div class="dropdown">
-          <button class="pill dropdown-toggle" type="button" aria-label="Open reflections list">
+          <button
+            class="pill dropdown-toggle"
+            type="button"
+            aria-label="Open reflections list"
+            aria-expanded="false"
+            aria-haspopup="true"
+          >
             Reflections ▾
           </button>
 
-          <div class="dropdown-menu">
+          <div class="dropdown-menu" role="menu">
             <a href="/reflections/pages/kingdom_within/read.html">The Kingdom Within</a>
             <a href="/reflections/pages/soul/read.html">Food for the Soul</a>
             <a href="/reflections/pages/godevil/read.html">God and Evil</a>
@@ -299,7 +452,6 @@
     </div>
 
     <section class="hero">
-      <!-- ✅ Cover image in the SAME folder -->
       <img class="cover" src="kingdomwithin.png" alt="Cover art for The Kingdom Within" loading="eager" />
 
       <div class="heroInner">
@@ -314,9 +466,14 @@
       </div>
     </section>
 
-     <audio controls preload="metadata" style="width:100%;">
-  <source src="/reflections/pages/kingdom_within/kingdomwithin.mp3" type="audio/mpeg">
-</audio>
+    <!-- UPDATED: wrapped audio in its own styled card -->
+    <section class="audioWrap">
+      <div class="audioCard">
+        <audio controls preload="metadata">
+          <source src="/reflections/pages/kingdom_within/kingdomwithin.mp3" type="audio/mpeg" />
+        </audio>
+      </div>
+    </section>
 
     <!-- INTRODUCTION -->
     <section class="card">
@@ -343,8 +500,8 @@
         <p>There is a quiet narrative that has echoed through centuries:</p>
 
         <p>
-          That we are nothing.<br/>
-          That we are incomplete.<br/>
+          That we are nothing.<br />
+          That we are incomplete.<br />
           That we must depend on something outside ourselves in order to survive spiritually.
         </p>
 
@@ -384,7 +541,7 @@
           a person who discovers inner stillness and clarity…
         </p>
 
-        <p>—that person becomes much harder to control.</p>
+        <p>— that person becomes much harder to control.</p>
       </section>
 
       <section class="page">
@@ -398,8 +555,8 @@
         <blockquote>“The Kingdom of God is within you.”</blockquote>
 
         <p>
-          Not in a building.<br/>
-          Not in a hierarchy.<br/>
+          Not in a building.<br />
+          Not in a hierarchy.<br />
           Not locked behind a gatekeeper.
         </p>
 
@@ -463,6 +620,15 @@
 
     </main>
 
+    <!-- UPDATED: direct previous/next navigation -->
+    <section class="card">
+      <h2>Continue Reading</h2>
+      <div class="bottomNav">
+        <a class="pill" href="/reflections/">← Back to Home</a>
+        <a class="pill" href="/reflections/pages/soul/read.html">Next: Food for the Soul →</a>
+      </div>
+    </section>
+
     <!-- ABOUT THE AUTHOR -->
     <section class="card">
       <h2>About the Author</h2>
@@ -480,29 +646,63 @@
   </div>
 
   <script>
-    // Dropdown open/close (works on mobile)
-    document.addEventListener('click', function(e){
+    // UPDATED: safer dropdown behavior
+    (function(){
       const dropdown = document.querySelector('.dropdown');
       const toggle = document.querySelector('.dropdown-toggle');
-      if (!dropdown || !toggle) return;
+      const menu = document.querySelector('.dropdown-menu');
 
-      if (toggle.contains(e.target)) {
-        e.stopPropagation();
-        dropdown.classList.toggle('open');
-      } else {
-        dropdown.classList.remove('open');
+      if (!dropdown || !toggle || !menu) return;
+
+      function openMenu(){
+        dropdown.classList.add('open');
+        toggle.setAttribute('aria-expanded', 'true');
       }
-    });
+
+      function closeMenu(){
+        dropdown.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+
+      function toggleMenu(){
+        const isOpen = dropdown.classList.contains('open');
+        if (isOpen) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      }
+
+      toggle.addEventListener('click', function(e){
+        e.stopPropagation();
+        toggleMenu();
+      });
+
+      document.addEventListener('click', function(e){
+        if (!dropdown.contains(e.target)) {
+          closeMenu();
+        }
+      });
+
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape') {
+          closeMenu();
+        }
+      });
+    })();
 
     // Footer year
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // Reading time (simple estimate)
+    // Reading time
     (function(){
-      const text = document.getElementById("content").innerText || "";
+      const text = document.getElementById("content")?.innerText || "";
       const words = text.trim().split(/\s+/).filter(Boolean).length;
       const mins = Math.max(1, Math.round(words / 200));
-      document.getElementById("readingTime").textContent = "Reading time: " + mins + " min";
+      const target = document.getElementById("readingTime");
+      if (target) {
+        target.textContent = "Reading time: " + mins + " min";
+      }
     })();
   </script>
 </body>
