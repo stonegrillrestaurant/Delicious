@@ -24,413 +24,538 @@
   <link rel="stylesheet" href="/reflections/assets/ref-header.css">
 
   <style>
+    :root{
+      --bg:#f7f2ec;
+      --text:#2c231e;
+      --muted:#6c5b51;
+      --line:rgba(0,0,0,.08);
+      --card:#ffffff;
+      --accent:#ff6b3d;
+      --header:#1f1815;
+      --headerText:#f3e4d5;
+      --darkCard:#261a15;
+    }
+
+    *{ box-sizing:border-box; }
+
+    html{ scroll-behavior:smooth; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Georgia, "Times New Roman", serif;
+    }
+
+    a{
+      color:inherit;
+    }
+
     /* =========================
        GLOBAL FIXED HEADER
     ========================== */
-    .ref-header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-      background: #1f1815;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.06);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    .ref-header{
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      z-index:1000;
+      background:#1f1815;
+      border-bottom:2px solid rgba(255,255,255,.06);
+      box-shadow:0 4px 12px rgba(0,0,0,.35);
     }
 
-    .ref-header-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0.8rem 1rem; /* slightly taller header */
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+    .ref-header-inner{
+      max-width:1100px;
+      margin:0 auto;
+      padding:.8rem 1rem;
+      display:flex;
+      align-items:center;
+      gap:1rem;
     }
 
-    /* top-left cluster */
-    .ref-header-left {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.35rem;
+    .ref-header-left{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      gap:.35rem;
+      min-width:fit-content;
     }
 
-    /* Brand / logo */
-    .brand-link {
-      display: flex;
-      align-items: center;
-      gap: 0.55rem;
-      text-decoration: none;
+    .brand-link{
+      display:flex;
+      align-items:center;
+      gap:.55rem;
+      text-decoration:none;
     }
 
-    .brand-logo {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
-      flex-shrink: 0;
+    .brand-logo{
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      object-fit:cover;
+      box-shadow:0 0 8px rgba(0,0,0,.6);
+      flex-shrink:0;
     }
 
-    /* kept in case brand-mark used elsewhere */
-    .brand-mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 1px solid #ff6b3d;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-      color: #ff6b3d;
+    .brand-text{
+      display:flex;
+      flex-direction:column;
+      line-height:1.1;
     }
 
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.1;
+    .brand-title{
+      font-size:.9rem;
+      font-weight:600;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:#ffffff;
     }
 
-    .brand-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #ffffff;
+    .brand-subtitle{
+      font-size:.7rem;
+      color:#f0e0d0;
+      opacity:.8;
     }
 
-    .brand-subtitle {
-      font-size: 0.7rem;
-      color: #f0e0d0;
-      opacity: 0.8;
+    .header-actions{
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      flex-wrap:wrap;
     }
 
-    /* Under-logo actions: hamburger + local nav buttons */
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    .nav-toggle{
+      display:none;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      border-radius:999px;
+      padding:.25rem .6rem;
+      font-size:1rem;
+      color:#e8d9c5;
+      cursor:pointer;
+      transition:background .2s ease,border-color .2s ease,transform .15s ease;
     }
 
-    /* Nav */
-    .ref-nav {
-      margin-left: 1rem;
-      flex: 1;
+    .ref-header.nav-open .nav-toggle{
+      background:rgba(255,107,61,.12);
+      border-color:rgba(255,107,61,.45);
+      transform:translateY(.2px);
     }
 
-    .ref-nav ul {
-      display: flex;
-      gap: 0.75rem;
-      list-style: none;
-      padding: 0;
-      margin: 0;
+    .nav-buttons{
+      display:flex;
+      gap:.4rem;
+      flex-wrap:wrap;
     }
 
-    .ref-nav a {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
-      font-size: 0.8rem;
-      text-decoration: none;
-      color: #f3e4d5;
-      border: 1px solid transparent;
-      white-space: nowrap;
-      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    .nav-buttons button,
+    .nav-buttons a{
+      background:#26201c;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.2);
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:.75rem;
+      cursor:pointer;
+      white-space:nowrap;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-family:inherit;
     }
 
-    .ref-nav a:hover {
-      background: rgba(255, 107, 61, 0.14);
-      border-color: rgba(255, 107, 61, 0.4);
+    .nav-buttons button:hover,
+    .nav-buttons a:hover{
+      background:#ff6b3d;
+      border-color:#ff6b3d;
+      color:#1f1815;
     }
 
-    .ref-nav a.active {
-      background: #ff6b3d;
-      color: #1f1815;
-      border-color: #ff6b3d;
-      font-weight: 600;
+    .ref-nav{
+      margin-left:1rem;
+      flex:1;
+      min-width:0;
     }
 
-    /* Right side of header */
-    .ref-header-right {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+    .ref-nav ul{
+      display:flex;
+      gap:.75rem;
+      list-style:none;
+      padding:0;
+      margin:0;
+      overflow-x:auto;
+      scrollbar-width:thin;
     }
 
-    .current-page-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.3rem 0.7rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      font-size: 0.75rem;
-      color: #f7e9dd;
+    .ref-nav a{
+      display:inline-flex;
+      align-items:center;
+      padding:.35rem .7rem;
+      border-radius:999px;
+      font-size:.8rem;
+      text-decoration:none;
+      color:#f3e4d5;
+      border:1px solid transparent;
+      white-space:nowrap;
+      transition:background .2s ease,color .2s ease,border-color .2s ease;
     }
 
-    .page-icon {
-      font-size: 0.85rem;
-      color: #ffb347;
+    .ref-nav a:hover{
+      background:rgba(255,107,61,.14);
+      border-color:rgba(255,107,61,.4);
     }
 
-    /* Hamburger button */
-    .nav-toggle {
-      display: none; /* hidden on desktop, shown in mobile via media query */
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 999px;
-      padding: 0.25rem 0.6rem;
-      font-size: 1rem;
-      color: #e8d9c5;
-      cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    .ref-nav a.active{
+      background:#ff6b3d;
+      color:#1f1815;
+      border-color:#ff6b3d;
+      font-weight:600;
     }
 
-    .ref-header.nav-open .nav-toggle {
-      background: rgba(255, 107, 61, 0.12);
-      border-color: rgba(255, 107, 61, 0.45);
-      transform: translateY(0.2px);
+    .ref-header-right{
+      display:flex;
+      align-items:center;
+      gap:.75rem;
     }
 
-    /* Local nav buttons (Back / Share / Audio) */
-    .nav-buttons {
-      display: flex;
-      gap: 0.4rem;
+    .current-page-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:.4rem;
+      padding:.3rem .7rem;
+      border-radius:999px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.15);
+      font-size:.75rem;
+      color:#f7e9dd;
+      white-space:nowrap;
     }
 
-    .nav-buttons button {
-      background: #26201c;
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      cursor: pointer;
-      white-space: nowrap;
+    .page-icon{
+      font-size:.85rem;
+      color:#ffb347;
     }
 
-    .nav-buttons button:hover {
-      background: #ff6b3d;
-      border-color: #ff6b3d;
-      color: #1f1815;
+    .nav-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.25);
+      z-index:500;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .25s ease;
     }
 
-    /* Main layout */
-    .page-content {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 5rem 1rem 2rem; /* header space */
+    .ref-header.nav-open .nav-overlay{
+      opacity:1;
     }
 
-    /* Softer overlay (visual only, never blocks) */
-    .nav-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.25);
-      z-index: 500; /* below header(1000), above content */
-      opacity: 0;
-      pointer-events: none; /* key: never blocks */
-      transition: opacity 0.25s ease;
+    /* =========================
+       MAIN PAGE LAYOUT
+    ========================== */
+    .page-content{
+      max-width:1100px;
+      margin:0 auto;
+      padding:5.3rem 1rem 2rem;
     }
 
-    .ref-header.nav-open .nav-overlay {
-      opacity: 1;
-      /* pointer-events stays none */
+    .page-top-meta{
+      max-width:800px;
+      margin:0 auto .8rem auto;
+    }
+
+    .scrolling-subtitle{
+      width:100%;
+      overflow:hidden;
+      white-space:nowrap;
+      position:relative;
+      margin-top:6px;
+      color:#5a4d45;
+      font-size:14px;
+    }
+
+    .scrolling-subtitle span{
+      display:inline-block;
+      animation:smoothScroll 18s linear infinite;
+    }
+
+    @keyframes smoothScroll{
+      0%{ transform:translateX(100%); }
+      30%{ transform:translateX(0); }
+      100%{ transform:translateX(-100%); }
+    }
+
+    .content{
+      padding:0 0 2rem 0;
+      max-width:800px;
+      margin-left:auto;
+      margin-right:auto;
+      line-height:1.75;
+      font-size:17px;
+    }
+
+    .content h1{
+      font-size:clamp(2rem,4vw,2.8rem);
+      line-height:1.12;
+      margin:1.2rem 0 .7rem;
+      color:#2b1e17;
+    }
+
+    .subtitle{
+      color:var(--muted);
+      margin-bottom:1.4rem;
+      font-size:1rem;
+    }
+
+    .content p{
+      margin:0 0 1.15rem 0;
+    }
+
+    .content hr{
+      border:0;
+      border-top:1px solid var(--line);
+      margin:1.8rem 0;
+    }
+
+    .content .note{
+      font-size:.95rem;
+      color:var(--muted);
+    }
+
+    /* =========================
+       AUDIO PLAYLIST
+    ========================== */
+    .audio-wrap{
+      max-width:800px;
+      margin:1.2rem auto 1.2rem auto;
+      padding:.85rem .75rem;
+      border-radius:16px;
+      background:#261a15;
+      border:3px solid rgba(101,55,14,1);
+    }
+
+    #reflectionAudio{
+      width:100%;
+      display:block;
+    }
+
+    .playlist{
+      margin-top:.9rem;
+      display:flex;
+      flex-direction:column;
+      gap:.4rem;
+    }
+
+    .playlist-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:.55rem .55rem;
+      background:#261a15;
+      border-radius:8px;
+      cursor:pointer;
+      border:1.5px solid #120d09;
+      transition:background .15s ease,border-color .15s ease,color .15s ease;
+    }
+
+    .playlist-row:hover{
+      border-color:#42251c;
+    }
+
+    .playlist-row.active{
+      background:#170d09;
+      border-color:#997060;
+      box-shadow:0 0 2px rgba(255,0,0,.4);
+    }
+
+    .playlist-main{
+      display:flex;
+      flex-direction:column;
+      gap:0rem;
+      overflow:hidden;
+    }
+
+    .playlist-title{
+      font-size:.96rem;
+      font-weight:600;
+      color:#f3e6dd;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .playlist-sub{
+      font-size:.78rem;
+      color:#b29587;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .playlist-duration{
+      font-size:.82rem;
+      color:#c9b0a4;
+      margin-left:.75rem;
+      flex-shrink:0;
+    }
+
+    /* =========================
+       DIVIDER / FOOTER / COMMENTS
+    ========================== */
+    .ref-divider{
+      max-width:800px;
+      margin:2rem auto 1.2rem auto;
+      text-align:center;
+      color:#8d7768;
+      letter-spacing:.08em;
+    }
+
+    .page-footer{
+      max-width:800px;
+      margin:0 auto 1.5rem auto;
+      padding-top:1rem;
+      border-top:1px solid var(--line);
+      text-align:center;
+    }
+
+    .page-footer p{
+      margin:.45rem 0;
+      color:var(--muted);
+      font-size:.92rem;
+    }
+
+    .footer-links{
+      display:flex;
+      justify-content:center;
+      gap:.55rem;
+      flex-wrap:wrap;
+      margin-top:.8rem;
+    }
+
+    .footer-links a{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:.45rem .8rem;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid rgba(0,0,0,.1);
+      text-decoration:none;
+      color:#3d2d25;
+      font-size:.84rem;
+      transition:all .2s ease;
+    }
+
+    .footer-links a:hover{
+      background:#ff6b3d;
+      border-color:#ff6b3d;
+      color:#1f1815;
+    }
+
+    .comments-wrap{
+      max-width:800px;
+      margin:0 auto 2rem auto;
+      background:#fff;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:16px;
+      padding:1rem;
+      box-shadow:0 10px 30px rgba(0,0,0,.04);
+    }
+
+    .comments-wrap h3{
+      margin:0 0 .85rem 0;
+      font-size:1.1rem;
+      color:#2c1d15;
     }
 
     /* =========================
        RESPONSIVE
     ========================== */
-
-    @media (max-width: 900px) {
-      .brand-subtitle {
-        display: none;
+    @media (max-width:900px){
+      .brand-subtitle{
+        display:none;
       }
 
-      .ref-nav ul {
-        gap: 0.4rem;
+      .ref-nav ul{
+        gap:.4rem;
       }
 
-      .ref-nav a {
-        padding: 0.25rem 0.55rem;
-        font-size: 0.75rem;
+      .ref-nav a{
+        padding:.25rem .55rem;
+        font-size:.75rem;
       }
 
-      .current-page-badge {
-        display: none;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .ref-header-inner {
-        flex-wrap: nowrap;
-        align-items: flex-start;
-      }
-
-      .ref-nav {
-        position: fixed;
-        top: 64px; /* below header */
-        left: 0;
-        right: 0;
-        background: rgba(31, 24, 21, 0.96);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height 0.25s ease;
-        margin-left: 0;
-      }
-
-      .ref-nav ul {
-        flex-direction: column;
-        padding: 0.5rem 1rem 0.8rem;
-        gap: 0.25rem;
-      }
-
-      .ref-nav a {
-        width: 100%;
-        justify-content: flex-start;
-      }
-
-      .ref-header.nav-open .ref-nav {
-        max-height: 260px;
-      }
-
-      .nav-toggle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .page-content {
-        padding-top: 7rem;
+      .current-page-badge{
+        display:none;
       }
     }
 
-    /* =========================
-       PAGE-SPECIFIC STYLES
-    ========================== */
+    @media (max-width:768px){
+      .ref-header-inner{
+        flex-wrap:nowrap;
+        align-items:flex-start;
+      }
 
-    .content {
-      padding: 0 0 2rem 0;
-      max-width: 800px;
-      margin-left: auto;
-      margin-right: auto;
-      line-height: 1.65;
-      font-size: 17px;
-    }
+      .ref-nav{
+        position:fixed;
+        top:72px;
+        left:0;
+        right:0;
+        background:rgba(31,24,21,.96);
+        border-bottom:1px solid rgba(255,255,255,.08);
+        max-height:0;
+        overflow:hidden;
+        transition:max-height .25s ease;
+        margin-left:0;
+      }
 
-    /* Scrolling subtitle under local title */
-    .scrolling-subtitle {
-      width: 100%;
-      overflow: hidden;
-      white-space: nowrap;
-      position: relative;
-      margin-top: 6px;
-      color: #444;
-      font-size: 14px;
-    }
+      .ref-nav ul{
+        flex-direction:column;
+        padding:.5rem 1rem .8rem;
+        gap:.25rem;
+        overflow-x:visible;
+      }
 
-    .scrolling-subtitle span {
-      display: inline-block;
-      animation: smoothScroll 18s linear infinite;
-    }
+      .ref-nav a{
+        width:100%;
+        justify-content:flex-start;
+      }
 
-    @keyframes smoothScroll {
-      0% { transform: translateX(100%); }
-      30% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
+      .ref-header.nav-open .ref-nav{
+        max-height:320px;
+      }
 
-    /* =========================
-       AUDIO PLAYLIST (tighter)
-    ========================== */
-    .audio-wrap {
-      max-width: 800px;
-      margin: 1.2rem auto 1.2rem auto;
-      padding: 0.85rem 0.75rem;
-      border-radius: 16px;
-      background:#261a15;
-      border: 3px solid rgba(101, 55, 14, 1);
-    }
+      .nav-toggle{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+      }
 
-    #reflectionAudio {
-      width: 100%;
-      display: block;
-    }
+      .page-content{
+        padding-top:7rem;
+      }
 
-    .playlist {
-      margin-top: 0.9rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
+      .footer-links{
+        gap:.45rem;
+      }
 
-    .playlist-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.55rem 0.55rem;
-      background: #261a15;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 1.5px solid #120d09;
-      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-    }
-
-    .playlist-row:hover {
-      border-color: #42251c;
-    }
-
-    .playlist-row.active {
-      background: #170d09;
-      border-color: #997060;
-      box-shadow: 0 0 2px rgba(255, 0, 0, 0.4);
-    }
-
-    .playlist-main {
-      display: flex;
-      flex-direction: column;
-      gap: 0rem;
-      overflow: hidden;
-    }
-
-    .playlist-title {
-      font-size: 0.96rem;
-      font-weight: 600;
-      color: #f3e6dd;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .playlist-sub {
-      font-size: 0.78rem;
-      color: #b29587;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .playlist-duration {
-      font-size: 0.82rem;
-      color: #c9b0a4;
-      margin-left: 0.75rem;
-      flex-shrink: 0;
+      .footer-links a{
+        font-size:.8rem;
+      }
     }
   </style>
 
   <!-- Service Worker (disable on read.html pages to avoid "SW failed") -->
   <script>
     if ('serviceWorker' in navigator && !location.pathname.startsWith('/reflections/pages/')) {
-      navigator.serviceWorker.register('/reflections/sw.js').catch(()=>{});
+      navigator.serviceWorker.register('/reflections/sw.js').catch(() => {});
     }
   </script>
 </head>
 
-
-<body>
+<body data-reflection-slug="the-paradox-of-god">
   <!-- FIXED GLOBAL HEADER -->
   <header class="ref-header">
     <div class="ref-header-inner">
@@ -442,7 +567,7 @@
                alt="Moments of Solitude"
                class="brand-logo">
           <span class="brand-text">
-            <span class="brand-title">The PARADOX OF GOD</span>
+            <span class="brand-title">THE PARADOX OF GOD</span>
             <span class="brand-subtitle">Stone Grill Reflections</span>
           </span>
         </a>
@@ -453,34 +578,18 @@
           </button>
 
           <div class="nav-buttons">
-            <button type="button" onclick="history.back()">HOME</button>
+            <a href="/">Main Home</a>
+            <a href="/reflections/index.html">Reflections</a>
+            <a href="/order/">Order Page</a>
             <button type="button" onclick="sharePage()">Share</button>
-            <button type="button" onclick="document.getElementById('reflectionAudio').scrollIntoView()">Audio</button>
+            <button type="button" onclick="scrollToAudio()">Audio</button>
           </div>
         </div>
       </div>
 
-      <!-- Center nav -->
+      <!-- Center nav: AUTO from reflections-list.js -->
       <nav class="ref-nav" aria-label="Reflections navigation">
-        <ul>
-           <li><a href="/reflections/index.html">HOME</a></li>
-          <li><a href="/reflections/pages/divine-hiddeness/read.html">Divine Premise</a></li>
-          <li><a href="/reflections/pages/subconsciousmind/read.html">The Subconscious Mind</a></li>
-          <li><a href="/reflections/pages/the-god-we-created/read.html">The God We Created</a></li>
-          <li><a href="/reflections/pages/the-paradox-of-god/read.html" class="active">The Paradox of God</a></li>
-          <li><a href="/reflections/pages/the-inner-listener/read.html">The Prayer</a></li>
-          <li><a href="/reflections/pages/transcendence/read.html">Transcendence</a></li>
-          <li><a href="/reflections/pages/the-madness-of-fath/read.html">The Madness of Faith</a></li>
-          <li><a href="/reflections/pages/the-lost-language-of-metaphor/read.html">The Lost Language of Metaphor</a></li>
-          <li><a href="/reflections/pages/belief/read.html">BELIEF AND GOODNESS</a></li>
-          <li><a href="/reflections/pages/question-label-sinner/read.html">Seeking Asurance is Labeled A Sinner</a></li>
-          <li><a href="/reflections/pages/initial-premise/read.html">The initial Premise of a Perfect Loving God</a></li>
-          <li><a href="/reflections/pages/diety/read.html">THE DEITY</a></li>
-          <li><a href="/reflections/pages/question-label-sinner/read.html">Labeled Sinner</a></li>
-          <li><a href="/reflections/pages/silent-influence/read.html">Silent Influence</a></li>
-          <li><a href="/reflections/pages/oneness-duality/read.html">Oneness Duality</a></li>
-          <li><a href="/reflections/pages/mirror-of-worship/read.html">The Mirror of Worship</a></li>
-        </ul>
+        <ul id="reflectionNavList"></ul>
       </nav>
 
       <!-- Right: page badge -->
@@ -492,21 +601,19 @@
       </div>
     </div>
 
-    <!-- Overlay (visual only) -->
     <div class="nav-overlay"></div>
   </header>
 
   <main class="page-content">
-    <!-- Local subtitle -->
-    <section style="max-width:800px;margin:0 auto 0.8rem auto;">
+    <section class="page-top-meta">
       <div class="scrolling-subtitle">
         <span>A reflection on will, love, and divine design.</span>
       </div>
     </section>
 
-    <div class="content">
+    <article class="content">
 
-      <!-- ✅ AUDIO BELOW COVER (BUILT-IN) -->
+      <!-- AUDIO BELOW TITLE AREA -->
       <section class="audio-wrap" id="audio">
         <audio id="reflectionAudio" controls preload="metadata">
           <source id="audioSource" src="" type="audio/mpeg">
@@ -535,6 +642,7 @@
       </section>
 
       <h1>The Paradox of God</h1>
+
       <div class="subtitle">
         A Solitude Reflection by Ninox Antolihao<br>
         On belief, truth, and the mystery that cannot be named.
@@ -574,62 +682,74 @@
 
       <hr>
 
-      <p style="font-size:.9rem;color:var(--muted);">
+      <p class="note">
         These thoughts are personal reflections -- not doctrine, not instruction, not authority.
         If there is one sacred sentence here, it is simply:
         <em>"I do not know -- but I am listening."</em>
       </p>
     </article>
-  
-    <footer>
-      <p>© 2025 Ninox Antolihao · First Edition -- Stone Grill Press · Leyte, Philippines</p>
-    </footer>
-  </main>
+
     <div class="ref-divider">------ ❖ ------</div>
-      <!-- COMMENTS (Cusdis) -->
-<section class="comments-wrap" aria-label="Comments">
-  <h3>Leave a message</h3>
 
-  <div id="cusdis_thread"
-    data-host="https://cusdis.com"
-    data-app-id="d14e9b16-d8b2-40ac-a7f6-e200b1ac61e8"
-    data-theme="light"
-    data-page-id=""
-    data-page-url=""
-    data-page-title=""
-  ></div>
-</section>
+    <footer class="page-footer">
+      <p>© 2025 Ninox Antolihao · First Edition -- Stone Grill Press · Leyte, Philippines</p>
 
-<script>
-  (function () {
-    const el = document.getElementById("cusdis_thread");
-    if (!el) return;
-    el.setAttribute("data-page-id", location.pathname);
-    el.setAttribute("data-page-url", location.href);
-    el.setAttribute("data-page-title", document.title);
-  })();
-</script>
+      <div class="footer-links">
+        <a href="/">Main Home</a>
+        <a href="/reflections/index.html">Reflections Home</a>
+        <a href="/order/">Order Page</a>
+      </div>
+    </footer>
 
-<script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
+    <!-- COMMENTS (Cusdis) -->
+    <section class="comments-wrap" aria-label="Comments">
+      <h3>Leave a message</h3>
 
-<script>
-  // Force LIGHT theme inside the comment box (more reliable)
-  (function setCusdisTheme(){
-    function apply() {
-      if (window.CUSDIS && typeof window.CUSDIS.setTheme === "function") {
-        window.CUSDIS.setTheme("light");
-        return true;
+      <div id="cusdis_thread"
+        data-host="https://cusdis.com"
+        data-app-id="d14e9b16-d8b2-40ac-a7f6-e200b1ac61e8"
+        data-theme="light"
+        data-page-id=""
+        data-page-url=""
+        data-page-title=""
+      ></div>
+    </section>
+  </main>
+
+  <!-- reflections list -->
+  <script src="/reflections/assets/reflections-list.js"></script>
+
+  <script>
+    // Set Cusdis page values
+    (function () {
+      const el = document.getElementById("cusdis_thread");
+      if (!el) return;
+      el.setAttribute("data-page-id", location.pathname);
+      el.setAttribute("data-page-url", location.href);
+      el.setAttribute("data-page-title", document.title);
+    })();
+  </script>
+
+  <script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
+
+  <script>
+    // Force light theme for Cusdis
+    (function setCusdisTheme(){
+      function apply() {
+        if (window.CUSDIS && typeof window.CUSDIS.setTheme === "function") {
+          window.CUSDIS.setTheme("light");
+          return true;
+        }
+        return false;
       }
-      return false;
-    }
-    if (apply()) return;
-    let tries = 0;
-    const t = setInterval(() => {
-      tries++;
-      if (apply() || tries > 40) clearInterval(t);
-    }, 150);
-  })();
-</script>
+      if (apply()) return;
+      let tries = 0;
+      const t = setInterval(() => {
+        tries++;
+        if (apply() || tries > 40) clearInterval(t);
+      }, 150);
+    })();
+  </script>
 
   <script>
     // Header / hamburger behavior
@@ -637,18 +757,15 @@
       const header = document.querySelector('.ref-header');
       const toggle = document.querySelector('.nav-toggle');
       const nav = document.querySelector('.ref-nav');
-      const overlay = document.querySelector('.nav-overlay');
 
       if (!header || !toggle || !nav) return;
 
-      // Open / close when tapping hamburger
       toggle.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = header.classList.toggle('nav-open');
         toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
 
-      // Close when a nav link is tapped
       nav.addEventListener('click', (e) => {
         if (e.target.tagName.toLowerCase() === 'a') {
           header.classList.remove('nav-open');
@@ -656,18 +773,51 @@
         }
       });
 
-      // Optional: close if user taps anywhere outside header
       document.addEventListener('click', (e) => {
         if (!header.classList.contains('nav-open')) return;
         if (header.contains(e.target)) return;
         header.classList.remove('nav-open');
         toggle.setAttribute('aria-expanded', 'false');
       });
+    })();
 
-      // overlay currently visual only (pointer-events:none) but kept for future use
-      if (overlay) {
-        // no-op; you can attach a click handler later if you enable pointer-events
+    // AUTO NAV from reflections-list.js
+    (function buildReflectionNav(){
+      const navList = document.getElementById('reflectionNavList');
+      const currentSlug = document.body.dataset.reflectionSlug || '';
+      if (!navList) return;
+
+      if (!Array.isArray(window.reflections) || !window.reflections.length) {
+        navList.innerHTML = '<li><a href="/reflections/index.html" class="active">Reflections Home</a></li>';
+        return;
       }
+
+      // Optional home link first
+      const homeLi = document.createElement('li');
+      const homeA = document.createElement('a');
+      homeA.href = '/reflections/index.html';
+      homeA.textContent = 'HOME';
+      if (location.pathname === '/reflections/index.html') {
+        homeA.classList.add('active');
+      }
+      homeLi.appendChild(homeA);
+      navList.appendChild(homeLi);
+
+      window.reflections.forEach(item => {
+        if (!item || !item.slug || !item.title) return;
+
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = `/reflections/pages/${item.slug}/read.html`;
+        a.textContent = item.title;
+
+        if (item.slug === currentSlug) {
+          a.classList.add('active');
+        }
+
+        li.appendChild(a);
+        navList.appendChild(li);
+      });
     })();
 
     // Audio playlist logic
@@ -676,14 +826,12 @@
       const audioSource = document.getElementById('audioSource');
       const rows = document.querySelectorAll('.playlist-row');
 
-      // Default track: first row
       if (rows.length > 0) {
         const firstSrc = rows[0].dataset.src;
         audioSource.src = firstSrc;
         audioPlayer.load();
       }
 
-      // Clicking a row switches track
       rows.forEach(row => {
         row.addEventListener('click', () => {
           rows.forEach(r => r.classList.remove('active'));
@@ -692,37 +840,5 @@
           const src = row.dataset.src;
           audioSource.src = src;
           audioPlayer.load();
-          audioPlayer.play();
+          audioPlayer.play().catch(() => {});
         });
-      });
-
-      // Auto-fill durations
-      rows.forEach(row => {
-        const src = row.dataset.src;
-        const tempAudio = new Audio(src);
-        tempAudio.addEventListener('loadedmetadata', () => {
-          const dur = tempAudio.duration;
-          if (!isNaN(dur)) {
-            const total = Math.floor(dur);
-            const min = String(Math.floor(total / 60)).padStart(2, '0');
-            const sec = String(total % 60).padStart(2, '0');
-            const durEl = row.querySelector('.playlist-duration');
-            if (durEl) durEl.textContent = `${min}:${sec}`;
-          }
-        });
-      });
-    });
-
-    function sharePage() {
-      if (navigator.share) {
-        navigator.share({
-          title: "The Primacy of Moral Accountability -- Ninox Antolihao",
-          url: window.location.href
-        });
-      } else {
-        alert("Sharing not supported on this device.");
-      }
-    }
-  </script>
-</body>
-</html>
