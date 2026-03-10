@@ -59,9 +59,6 @@
   }
   </script>
 
-  <!-- =========================================================
-       STYLES
-  ========================================================== -->
   <style>
     :root{
       --bg:#0f1116;
@@ -70,15 +67,15 @@
       --muted:#b8bdca;
       --line:rgba(255,255,255,.12);
       --accent:#c9b36a;
-      --btn:#1b2032;
-      --btnHover:#232a40;
       --shadow:0 10px 25px rgba(0,0,0,.35);
       --radius:16px;
       --footer-card:rgba(20,24,38,.86);
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
     html{scroll-behavior:smooth}
+
     body{
       margin:0;
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Apple Color Emoji","Segoe UI Emoji";
@@ -89,7 +86,6 @@
       color:var(--text);
       line-height:1.7;
       -webkit-font-smoothing:antialiased;
-      padding-bottom:92px;
     }
 
     a{color:inherit;text-decoration:none}
@@ -100,31 +96,35 @@
       top:0;
       z-index:1000;
       backdrop-filter:blur(10px);
-      background:rgba(15,17,22,.72);
+      background:rgba(15,17,22,.78);
       border-bottom:1px solid var(--line);
     }
+
     .topbar-inner{
       max-width:980px;
       margin:0 auto;
-      padding:12px 16px;
+      padding:14px 16px;
       display:flex;
       align-items:center;
-      gap:10px;
       justify-content:space-between;
+      gap:14px;
       flex-wrap:wrap;
     }
+
     .brand{
       display:flex;
       flex-direction:column;
       gap:2px;
       min-width:180px;
     }
+
     .brand .series{
       font-size:12px;
       letter-spacing:.18em;
       text-transform:uppercase;
       color:var(--muted);
     }
+
     .brand .title{
       font-size:14px;
       font-weight:700;
@@ -137,53 +137,57 @@
 
     .nav-actions{
       display:flex;
-      gap:8px;
+      gap:14px;
       flex-wrap:wrap;
       justify-content:flex-end;
       align-items:center;
     }
 
-    .btn,
-    .utility-chip,
-    .footer-link,
-    .audio-tab,
+    .nav-link,
     .dropbtn{
       appearance:none;
-      border:1px solid var(--line);
-      background:var(--btn);
+      background:none;
+      border:none;
+      padding:0;
       color:var(--text);
-      padding:9px 12px;
-      border-radius:12px;
-      font-size:13px;
-      font-weight:600;
+      font-size:14px;
+      font-weight:500;
       text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
       cursor:pointer;
-      user-select:none;
-      transition:transform .06s ease, background .2s ease, border-color .2s ease;
+      position:relative;
+      line-height:1.2;
     }
-    .btn:hover,
-    .utility-chip:hover,
-    .footer-link:hover,
-    .audio-tab:hover,
+
+    .nav-link::after,
+    .dropbtn::after{
+      content:"";
+      position:absolute;
+      left:0;
+      bottom:-5px;
+      width:100%;
+      height:1.5px;
+      background:var(--accent);
+      transform:scaleX(0);
+      transform-origin:left;
+      transition:transform .2s ease;
+    }
+
+    .nav-link:hover::after,
+    .nav-link.active::after,
+    .dropbtn:hover::after{
+      transform:scaleX(1);
+    }
+
+    .nav-link:hover,
     .dropbtn:hover{
-      background:var(--btnHover);
-      border-color:rgba(255,255,255,.20);
-    }
-    .btn:active,
-    .utility-chip:active,
-    .footer-link:active,
-    .audio-tab:active,
-    .dropbtn:active{
-      transform:translateY(1px);
+      color:#fff;
     }
 
     .dropdown{position:relative}
+
     .dropdown-menu{
       position:absolute;
-      top:120%;
+      top:130%;
       right:0;
       min-width:300px;
       max-height:65vh;
@@ -197,7 +201,9 @@
       box-shadow:0 12px 28px rgba(0,0,0,.35);
       z-index:1001;
     }
+
     .dropdown.open .dropdown-menu{display:flex}
+
     .dropdown-menu a{
       color:var(--text);
       text-decoration:none;
@@ -206,26 +212,19 @@
       font-size:.84rem;
       white-space:nowrap;
     }
+
     .dropdown-menu a:hover,
     .dropdown-menu a.current{
       background:rgba(255,255,255,.05);
       color:#fff;
     }
 
-    .utility-bar{
+    .wrap{
       max-width:980px;
       margin:14px auto 0;
       padding:0 16px;
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
     }
 
-    .wrap{
-      max-width:980px;
-      margin:12px auto 0;
-      padding:0 16px;
-    }
     .card{
       background:rgba(20,24,38,.86);
       border:1px solid var(--line);
@@ -240,11 +239,13 @@
       line-height:1.2;
       letter-spacing:.2px;
     }
+
     h2{
       margin:0 0 8px 0;
       font-size:18px;
       letter-spacing:.2px;
     }
+
     p{
       margin:0 0 14px 0;
       color:rgba(232,233,238,.95);
@@ -259,12 +260,14 @@
       font-size:13px;
       margin-bottom:14px;
     }
+
     .chip{
       border:1px solid var(--line);
       padding:4px 10px;
       border-radius:999px;
       background:rgba(255,255,255,.04);
     }
+
     .muted{color:var(--muted)}
 
     .divider{
@@ -278,6 +281,7 @@
       letter-spacing:.08em;
       justify-content:center;
     }
+
     .divider::before,
     .divider::after{
       content:"";
@@ -294,6 +298,7 @@
       border:1px solid var(--line);
       background:rgba(255,255,255,.03);
     }
+
     .audio-header{
       display:flex;
       justify-content:space-between;
@@ -302,26 +307,44 @@
       margin-bottom:10px;
       flex-wrap:wrap;
     }
+
     .audio-sub{
       font-size:12px;
       color:var(--muted);
     }
+
     .audio-controls{
       display:flex;
       gap:8px;
       flex-wrap:wrap;
       margin-bottom:10px;
     }
+
     .audio-tab{
+      appearance:none;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
       padding:6px 12px;
       border-radius:999px;
       font-size:12px;
+      cursor:pointer;
+      transition:background .2s ease, border-color .2s ease, transform .06s ease;
     }
+
+    .audio-tab:hover{
+      background:rgba(255,255,255,.08);
+      border-color:rgba(255,255,255,.20);
+    }
+
+    .audio-tab:active{transform:translateY(1px)}
+
     .audio-tab.active{
       background:var(--accent);
       color:#000;
       border-color:transparent;
     }
+
     .audio-box audio{
       width:100%;
       outline:none;
@@ -334,16 +357,21 @@
       overflow:hidden;
       background:rgba(255,255,255,.03);
     }
+
     .pair-row{
       display:grid;
       grid-template-columns:1fr 1fr;
     }
+
     .pair-cell{
       padding:14px 14px;
       border-top:1px solid var(--line);
     }
+
     .pair-row:first-child .pair-cell{border-top:none}
+
     .pair-cell strong{color:var(--accent)}
+
     .pair-cell small{
       display:block;
       color:var(--muted);
@@ -367,6 +395,7 @@
       margin:12px auto 0;
       padding:0 16px;
     }
+
     .comments-card{
       background:rgba(20,24,38,.86);
       border:1px solid var(--line);
@@ -374,6 +403,7 @@
       box-shadow:var(--shadow);
       padding:22px 18px;
     }
+
     .comments-card h3{
       margin:0 0 12px 0;
       color:var(--text);
@@ -383,8 +413,9 @@
     .site-footer{
       max-width:980px;
       margin:12px auto 0;
-      padding:0 16px 34px;
+      padding:0 16px 28px;
     }
+
     .footer-card{
       background:var(--footer-card);
       border:1px solid var(--line);
@@ -392,54 +423,59 @@
       box-shadow:var(--shadow);
       padding:22px 18px;
     }
+
     .footer-brand{
       text-align:center;
       margin-bottom:16px;
     }
+
     .footer-brand strong{
       display:block;
       font-size:1rem;
       color:var(--text);
     }
+
     .footer-brand span{
       display:block;
       margin-top:4px;
       color:var(--muted);
       font-size:.92rem;
     }
+
     .footer-links{
       display:flex;
       flex-wrap:wrap;
       justify-content:center;
-      gap:10px;
-      margin:14px 0 16px;
+      gap:6px;
+      margin:10px 0 16px;
     }
+
+    .footer-link{
+      appearance:none;
+      border:2px solid var(--line);
+      background:rgba(25, 0, 42, 0.924);
+      color:var(--text);
+      padding:2px 7px;
+      border-radius:9px;
+      font-size:13px;
+      font-weight:500;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      transition:transform .06s ease, background .2s ease, border-color .2s ease;
+    }
+
+    .footer-link:hover{
+      background:rgba(255,255,255,.08);
+      border-color:rgba(255,255,255,.20);
+    }
+
     .footer-note{
       text-align:center;
       font-size:.92rem;
       color:var(--muted);
       line-height:1.7;
-    }
-
-    .bottomnav{
-      position:fixed;
-      left:0;
-      right:0;
-      bottom:0;
-      z-index:60;
-      background:rgba(15,17,22,.80);
-      backdrop-filter:blur(10px);
-      border-top:1px solid var(--line);
-      padding:10px 12px;
-    }
-    .bottomnav-inner{
-      max-width:980px;
-      margin:0 auto;
-      display:flex;
-      gap:8px;
-      justify-content:space-between;
-      align-items:center;
-      flex-wrap:wrap;
     }
 
     @media (max-width:720px){
@@ -455,8 +491,8 @@
     }
 
     @media print{
-      body{background:#fff;color:#000;padding-bottom:0}
-      .topbar,.bottomnav,.utility-bar,.comments-wrap,.site-footer{display:none!important}
+      body{background:#fff;color:#000}
+      .topbar,.comments-wrap,.site-footer{display:none!important}
       .card{box-shadow:none;background:#fff;border:none;padding:0}
       .divider{color:#000}
       p,.muted{color:#000}
@@ -473,25 +509,16 @@
       </div>
 
       <nav class="nav-actions" aria-label="Top navigation">
-        <button class="btn" type="button" onclick="goBack()" aria-label="Go back">
-          <span class="icon">←</span> Back
-        </button>
-
-        <a class="btn" href="/reflections/" aria-label="Back to reflections home">
-          <span class="icon">⌂</span> Reflections Home
-        </a>
-
-        <button class="btn" type="button" id="shareBtn" aria-label="Share this reflection">
-          <span class="icon">↗</span> Share
-        </button>
-
-        <button class="btn" type="button" id="audioJumpBtn" aria-label="Jump to audio">
-          <span class="icon">🎧</span> Audio
-        </button>
+        <a class="nav-link" href="/">Main Home</a>
+        <a class="nav-link" href="/reflections/">Reflections Home</a>
+        <a class="nav-link" href="/order/">Order Page</a>
+        <a class="nav-link" href="/reflections/about.html">About</a>
+        <a class="nav-link" href="/reflections/contact.html">Contact</a>
+        <button class="nav-link" type="button" id="shareBtn">Share</button>
 
         <div class="dropdown">
           <button class="dropbtn" type="button" aria-label="Open reflections list" aria-expanded="false">
-            Reflections ▾
+            Reflections
           </button>
           <div class="dropdown-menu" id="reflectionsMenu">
             <a href="/reflections/pages/divine-hiddeness/read.html">Divine Hiddenness</a>
@@ -519,13 +546,6 @@
     </div>
   </header>
 
-  <div class="utility-bar">
-    <button class="utility-chip" type="button" onclick="goBack()">← Back</button>
-    <a class="utility-chip" href="/reflections/">Reflections Home</a>
-    <a class="utility-chip" href="#readContent">Read</a>
-    <a class="utility-chip" href="#cusdis_thread">Comments</a>
-  </div>
-
   <main class="wrap" role="main">
     <article class="card">
       <h1>FEEDING THE SOUL: BEYOND COMFORT TOWARD GROWTH</h1>
@@ -535,7 +555,7 @@
         <span class="chip">Stone Grill Press — First Edition</span>
       </div>
 
-      <section class="audio-box" id="audioSection" aria-label="Reflection audio">
+      <section class="audio-box" aria-label="Reflection audio">
         <div class="audio-header">
           <strong>🎧 Listen to this Reflection</strong>
           <span class="audio-sub">PODCAST Available</span>
@@ -721,18 +741,23 @@
   </section>
 
   <footer class="site-footer">
+    
     <div class="footer-card">
       <div class="footer-brand">
         <strong>Solitude Reflections</strong>
-        <span>Stone Grill Press · Reflections by Ninox Antolihao</span>
+        <span></span>
       </div>
 
       <nav class="footer-links" aria-label="Footer links">
-  <a class="footer-link" href="/reflections/">Home</a>
-  <a class="footer-link" href="/reflections/about.html">About</a>
-  <a class="footer-link" href="/reflections/contact.html">Contact</a>
-  <a class="footer-link" href="/reflections/disclaimer.html">Disclaimer</a>
-</nav>
+        <a class="footer-link" href="/">Main Home</a>
+        <a class="footer-link" href="/reflections/">Reflections Pages</a>
+        <a class="footer-link" href="/order/">Order Page</a>
+        <a class="footer-link" href="/about.html">About</a>
+        <a class="footer-link" href="/contact.html">Contact</a>
+        <a class="footer-link" href="/disclaimer.html">Disclaimer</a>
+        <a class="footer-link" href="/privacy-policy.html">Privacy</a>
+        <a class="footer-link" href="/reflections/rss.xml">RSS</a>
+      </nav>
 
       <div class="footer-note">
         <p>These writings are personal reflections intended for thoughtful reading, contemplation, and discussion.</p>
@@ -741,41 +766,9 @@
     </div>
   </footer>
 
-  <footer class="bottomnav" role="contentinfo">
-    <div class="bottomnav-inner" aria-label="Bottom navigation">
-      <button class="btn" type="button" onclick="goBack()" aria-label="Go back">
-        <span class="icon">←</span> Back
-      </button>
-
-      <a class="btn" href="/reflections/" aria-label="Back to reflections home">
-        <span class="icon">⌂</span> Home
-      </a>
-
-      <a class="btn" href="#top" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;" aria-label="Scroll to top">
-        <span class="icon">↑</span> Top
-      </a>
-
-      <a class="btn" href="/reflections/pages/kingdom-within/read.html" aria-label="Previous reflection">
-        <span class="icon">⟵</span> Prev
-      </a>
-
-      <a class="btn" href="/reflections/" aria-label="Next reflection">
-        Next <span class="icon">⟶</span>
-      </a>
-    </div>
-  </footer>
-
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
     document.getElementById("year2").textContent = new Date().getFullYear();
-
-    function goBack(){
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = "/reflections/";
-      }
-    }
 
     (function () {
       const dropdown = document.querySelector(".dropdown");
@@ -831,14 +824,13 @@
       alert(window.location.href);
     });
 
-    document.getElementById("audioJumpBtn")?.addEventListener("click", function () {
-      document.getElementById("audioSection")?.scrollIntoView({ behavior: "smooth" });
-    });
-
     document.addEventListener("DOMContentLoaded", () => {
       const player = document.getElementById("audioPlayer");
       const tabs = document.querySelectorAll(".audio-tab");
-      const sourceEl = player?.querySelector("source");
+
+      if (!player || tabs.length === 0) return;
+
+      const sourceEl = player.querySelector("source");
 
       function mimeType(filename){
         const f = (filename || "").toLowerCase();
@@ -846,28 +838,26 @@
         return "audio/mpeg";
       }
 
-      if (player && tabs.length) {
-        tabs.forEach(btn => {
-          btn.addEventListener("click", () => {
-            tabs.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
+      tabs.forEach(btn => {
+        btn.addEventListener("click", () => {
+          tabs.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
 
-            const file = btn.dataset.src;
-            if (!file) return;
+          const file = btn.dataset.src;
+          if (!file) return;
 
-            if (sourceEl) {
-              sourceEl.src = file;
-              sourceEl.type = mimeType(file);
-              player.load();
-            } else {
-              player.src = file;
-              player.load();
-            }
+          if (sourceEl) {
+            sourceEl.src = file;
+            sourceEl.type = mimeType(file);
+            player.load();
+          } else {
+            player.src = file;
+            player.load();
+          }
 
-            player.play().catch(()=>{});
-          });
+          player.play().catch(()=>{});
         });
-      }
+      });
 
       const cusdis = document.getElementById("cusdis_thread");
       if (cusdis) {
