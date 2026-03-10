@@ -1,6 +1,6 @@
 (function () {
+  const safeReflections = Array.isArray(window.REFLECTION_LINKS) ? window.REFLECTION_LINKS : [];
   const currentPath = window.location.pathname.replace(/\/+$/, "");
-  const safeReflections = Array.isArray(window.reflections || reflections) ? (window.reflections || reflections) : [];
 
   function normalize(path) {
     return (path || "").replace(/\/+$/, "");
@@ -23,7 +23,6 @@
   function wireDropdown() {
     const dropdown = document.querySelector(".dropdown");
     const btn = document.querySelector(".dropbtn");
-
     if (!dropdown || !btn) return;
 
     function closeMenu() {
@@ -38,9 +37,7 @@
 
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      const isOpen = dropdown.classList.contains("open");
-      if (isOpen) closeMenu();
-      else openMenu();
+      dropdown.classList.contains("open") ? closeMenu() : openMenu();
     });
 
     document.addEventListener("click", function (e) {
@@ -63,9 +60,7 @@
       };
 
       if (navigator.share) {
-        try {
-          await navigator.share(shareData);
-        } catch (_) {}
+        try { await navigator.share(shareData); } catch (_) {}
         return;
       }
 
@@ -94,11 +89,8 @@
   function wireBackButtons() {
     document.querySelectorAll("[data-go-back]").forEach(btn => {
       btn.addEventListener("click", function () {
-        if (window.history.length > 1) {
-          window.history.back();
-        } else {
-          window.location.href = "/reflections/";
-        }
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = "/reflections/";
       });
     });
   }
@@ -110,38 +102,18 @@
     const prev = safeReflections[idx - 1] || null;
     const next = safeReflections[idx + 1] || null;
 
-    const prevLinks = document.querySelectorAll("[data-prev-reflection]");
-    const nextLinks = document.querySelectorAll("[data-next-reflection]");
-
-    prevLinks.forEach(link => {
-      if (prev) {
-        link.href = prev.url;
-        link.removeAttribute("aria-disabled");
-        const label = link.querySelector(".label");
-        if (label) label.textContent = "Prev";
-      } else {
-        link.href = "/reflections/";
-        link.setAttribute("aria-disabled", "true");
-      }
+    document.querySelectorAll("[data-prev-reflection]").forEach(link => {
+      link.href = prev ? prev.url : "/reflections/";
     });
 
-    nextLinks.forEach(link => {
-      if (next) {
-        link.href = next.url;
-        link.removeAttribute("aria-disabled");
-        const label = link.querySelector(".label");
-        if (label) label.textContent = "Next";
-      } else {
-        link.href = "/reflections/";
-        link.setAttribute("aria-disabled", "true");
-      }
+    document.querySelectorAll("[data-next-reflection]").forEach(link => {
+      link.href = next ? next.url : "/reflections/";
     });
   }
 
   function setupCusdis() {
     const el = document.getElementById("cusdis_thread");
     if (!el) return;
-
     el.setAttribute("data-page-id", window.location.pathname);
     el.setAttribute("data-page-url", window.location.href);
     el.setAttribute("data-page-title", document.title);
@@ -154,11 +126,13 @@
 
     if (!audioPlayer || !audioSource || !rows.length) return;
 
-    const firstSrc = rows[0].dataset.src;
+    const firstRow = rows[0];
+    const firstSrc = firstRow.dataset.src;
     if (firstSrc) {
       audioSource.src = firstSrc;
+      audioSource.type = firstSrc.toLowerCase().endsWith(".m4a") ? "audio/mp4" : "audio/mpeg";
       audioPlayer.load();
-      rows[0].classList.add("active");
+      firstRow.classList.add("active");
     }
 
     rows.forEach(row => {
@@ -170,6 +144,7 @@
         if (!src) return;
 
         audioSource.src = src;
+        audioSource.type = src.toLowerCase().endsWith(".m4a") ? "audio/mp4" : "audio/mpeg";
         audioPlayer.load();
         audioPlayer.play().catch(() => {});
       });
