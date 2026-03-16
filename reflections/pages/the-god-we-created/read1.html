@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#ff6b3d" />
+
+  <title>The God We Created | Solitude Reflections</title>
+
+  <style>
+    :root {
+      --brand-orange: #ff6b3d;
+      --brand-dark: #1a0f0a;
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --text-main: #2d241f;
+      --text-muted: #5a4d46;
+      --max-width: 850px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      font-family: 'Sitka Text', 'Georgia', serif;
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #scrollProgress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 4px;
+      background: var(--brand-orange);
+      z-index: 2001;
+      transition: width 0.1s ease;
+    }
+
+    /* Floating Header */
+    .sitebar {
+      position: sticky;
+      top: 15px;
+      z-index: 1000;
+      max-width: 95%;
+      margin: 0 auto;
+      background: rgba(255, 107, 61, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 50px;
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .sitebar-inner {
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .site-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      text-decoration: none;
+    }
+
+    /* Dropdown Container */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .nav-pill {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .nav-pill:hover, .dropdown.active .nav-pill { background: white; color: var(--brand-orange); }
+
+    /* The actual dropdown menu */
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      min-width: 240px;
+      border-radius: 20px;
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      padding: 10px;
+      display: none; /* Hidden by default */
+      z-index: 1001;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .dropdown.active .dropdown-menu { display: block; animation: slideIn 0.3s ease; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dropdown-menu a {
+      color: var(--text-main);
+      padding: 10px 15px;
+      text-decoration: none;
+      display: block;
+      font-size: 0.9rem;
+      border-radius: 12px;
+      transition: 0.2s;
+      font-family: system-ui, sans-serif;
+    }
+
+    .dropdown-menu a:hover { background: rgba(255, 107, 61, 0.1); color: var(--brand-orange); }
+    .dropdown-menu a.current { background: var(--brand-orange); color: white; }
+
+    /* Main Page & Content */
+    .page { max-width: var(--max-width); margin: 40px auto; padding: 0 15px 60px; }
+    .paper { background: var(--glass-bg); backdrop-filter: blur(5px); border-radius: 30px; border: 1px solid var(--glass-border); box-shadow: 0 20px 40px rgba(0,0,0,0.05); overflow: hidden; }
+    .hero { padding: 60px 40px 40px; text-align: center; background: linear-gradient(to bottom, rgba(255, 107, 61, 0.05), transparent); }
+    .hero-cover { width: 140px; border-radius: 12px; margin-bottom: 20px; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); margin: 0; background: linear-gradient(45deg, #1a0f0a, #ff6b3d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .audio-wrapper { margin: 0 40px 30px; padding: 20px; background: white; border-radius: 20px; border: 1px solid #eee; }
+    audio { width: 100%; margin-bottom: 15px; }
+    .content { padding: 0 60px 60px; font-size: 1.15rem; }
+    .divider { text-align: center; font-size: 2rem; color: var(--brand-orange); margin: 40px 0; opacity: 0.3; }
+
+    #jumpToComments {
+      position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; background: var(--brand-orange); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; z-index: 999; opacity: 0; visibility: hidden; transform: translateY(20px); transition: 0.4s; border: none; font-size: 24px;
+    }
+    #jumpToComments.visible { opacity: 1; visibility: visible; transform: translateY(0); }
+
+    @media (max-width: 768px) {
+      .content { padding: 0 25px 40px; }
+      .audio-wrapper { margin: 0 15px 30px; }
+    }
+
+   /* --- PLAYLIST & AUDIO STYLES --- */
+
+.audio-wrapper {
+  margin: 0 40px 30px;
+  padding: 20px;
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #eee;
+}
+
+audio { width: 100%; margin-bottom: 5px; }
+
+/* The Playlist Container */
+.playlist-container {
+  margin: 15px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 400px; /* Limits the width */
+}
+
+/* The Individual Items */
+.playlist-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: system-ui, sans-serif;
+  border: 1px solid transparent;
+}
+
+.playlist-item:hover {
+  background: rgba(255, 107, 61, 0.08);
+}
+
+.playlist-item.active {
+  background: var(--brand-orange);
+  color: white;
+}
+
+/* Track Text */
+.track-name {
+  flex-grow: 1;
+  font-size: 0.85rem;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-time {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  margin-left: 10px;
+}
+
+.track-status {
+  font-size: 0.6rem;
+  margin-right: 8px;
+}
+  </style>
+</head>
+
+<body>
+  <div id="scrollProgress"></div>
+
+  <header class="sitebar">
+    <div class="sitebar-inner">
+      <a href="/reflections/" class="site-brand">
+        <span style="font-size: 1.5rem;">✦</span>
+        <div style="display:flex; flex-direction:column; line-height:1.2">
+          <span style="font-weight:bold; font-size:0.8rem; letter-spacing:1px">SOLITUDE</span>
+          <span style="font-size:0.65rem; opacity:0.8">Reflections</span>
+        </div>
+      </a>
+
+      <nav style="display:flex; gap:10px">
+        <div class="dropdown" id="refDropdown">
+          <button class="nav-pill">Reflections ▾</button>
+          <div class="dropdown-menu">
+            <a href="/reflections/pages/kingdom_within/read.html">The Kingdom Within</a>
+            <a href="/reflections/pages/soul/read.html">Food for the Soul</a>
+            <a href="/reflections/pages/godevil/read.html">God and Evil</a>
+            <a href="/reflections/pages/the-madness-of-fath/read.html">The Madness of Faith</a>
+            <a href="/reflections/pages/the-god-we-created/read.html" class="current">The God We Created</a>
+            <a href="/reflections/pages/the-paradox-of-god/read.html">The Paradox of God</a>
+            <a href="/reflections/pages/transcendence/read.html">Transcendence</a>
+            <a href="/reflections/pages/belief/read.html">Belief</a>
+          </div>
+        </div>
+        <button class="nav-pill" id="shareBtn">Share</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <article class="paper">
+      <section class="hero">
+        <img class="hero-cover" src="/reflections/pages/the-god-we-created/thegodwecreated.png" alt="Cover">
+        <h1>The God We Created</h1>
+        <p style="color:var(--text-muted); font-style:italic">A reflection on projection, divinity, and freedom.</p>
+      </section>
+
+      <section class="audio-wrapper">
+  <audio id="mainAudio" controls>
+    <source id="audioSource" src="/reflections/pages/the-god-we-created/the-gods-we-create.mp3" type="audio/mpeg">
+  </audio>
+
+  <div class="playlist-container">
+    <div class="playlist-item active" data-src="/reflections/pages/the-god-we-created/the-gods-we-create.mp3">
+      <span class="track-status">▶</span>
+      <span class="track-name">The God We Created</span>
+      <span class="track-time">4:12</span>
+    </div>
+
+    <div class="playlist-item" data-src="/reflections/pages/the-god-we-created/Unmasking_God.mp3">
+      <span class="track-status">▶</span>
+      <span class="track-name">Unmasking Podcast</span>
+      <span class="track-time">8:45</span>
+    </div>
+
+    <div class="playlist-item" data-src="/reflections/pages/the-god-we-created/thegodwecreate-podcast.mp3">
+      <span class="track-status">▶</span>
+      <span class="track-name">Deep Dive Discussion</span>
+      <span class="track-time">6:20</span>
+    </div>
+  </div>
+</section>
+
+      <div class="content">
+        <h2>The Reflection</h2>
+        <p>For centuries, we were told that we are the center of creation. But the stars tell a different story. If this universe is so vast, so unreachable—was it truly made for us?</p>
+        <p>Perhaps we created God in our image—before He ever created us in His. Maybe the God of fire and punishment was not the eternal source, but a reflection of our own fears.</p>
+        <div class="divider">✦ ✦ ✦</div>
+        <p>The true God waits. Within. In stillness. In wonder.</p>
+      </div>
+    </article>
+
+    <div class="comments-glass-card" id="commentSection">
+      <h3>Reflections & Dialogue</h3>
+      <div id="cusdis_thread" data-host="https://cusdis.com" data-app-id="d14e9b16-d8b2-40ac-a7f6-e200b1ac61e8" data-theme="light"></div>
+    </div>
+  </main>
+
+  <button id="jumpToComments" title="Go to comments">💬</button>
+
+  <script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
+  <script>
+    // 1. Dropdown Toggle
+    const dropdown = document.getElementById('refDropdown');
+    dropdown.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('active');
+    });
+
+    document.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+    });
+
+     // 2. audio playlist logic
+    document.addEventListener('DOMContentLoaded', () => {
+  const audioPlayer = document.getElementById('mainAudio');
+  const playlistItems = document.querySelectorAll('.playlist-item');
+
+  playlistItems.forEach(item => {
+    item.addEventListener('click', () => {
+      // 1. Remove active class from all items
+      playlistItems.forEach(i => i.classList.remove('active'));
+      
+      // 2. Add active class to clicked item
+      item.classList.add('active');
+      
+      // 3. Change audio source and play
+      const newSource = item.getAttribute('data-src');
+      audioPlayer.src = newSource;
+      audioPlayer.play();
+    });
+  });
+});
+   
+    // 3. Scroll Progress & Jump Button
+    window.addEventListener('scroll', () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById("scrollProgress").style.width = scrolled + "%";
+
+      const jumpBtn = document.getElementById('jumpToComments');
+      if (scrolled > 30) jumpBtn.classList.add('visible');
+      else jumpBtn.classList.remove('visible');
+    });
+
+    // 4. Smooth Scroll to Comments
+    document.getElementById('jumpToComments').addEventListener('click', () => {
+      document.getElementById('commentSection').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // 5. Share Function
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      if (navigator.share) {
+        navigator.share({ title: document.title, url: window.location.href });
+      } else {
+        alert("URL copied!");
+      }
+    });
+  </script>
+</body>
+</html>
