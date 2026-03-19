@@ -650,12 +650,6 @@
   "dateModified": "2026-03-14"
 }
 </script>
-
-  <script>
-    if ('serviceWorker' in navigator && !location.pathname.startsWith('/reflections/pages/')) {
-      navigator.serviceWorker.register('/reflections/sw.js').catch(()=>{});
-    }
-  </script>
 </head>
 
 <body>
@@ -1076,218 +1070,231 @@
     </div>
   </section>
 
-  <div class="site-footer">
-    <p>© 2026 Ninox Antolihao · Solitude Reflections · Stone Grill Press</p>
-  </div>
+ <div class="site-footer">
+  <p>© 2026 Ninox Antolihao · Solitude Reflections · Stone Grill Press</p>
+</div>
 
-  <script>
-    // Reflections dropdown
-    (function () {
-      const dropdown = document.querySelector(".dropdown");
-      const btn = document.querySelector(".dropbtn");
+<script>
+  // Reflections dropdown
+  (function () {
+    const dropdown = document.querySelector(".dropdown");
+    const btn = document.querySelector(".dropbtn");
 
-      if (!dropdown || !btn) return;
+    if (!dropdown || !btn) return;
 
-      function closeMenu() {
-        dropdown.classList.remove("open");
-        btn.setAttribute("aria-expanded", "false");
-      }
-
-      function openMenu() {
-        dropdown.classList.add("open");
-        btn.setAttribute("aria-expanded", "true");
-      }
-
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        const isOpen = dropdown.classList.contains("open");
-        if (isOpen) closeMenu();
-        else openMenu();
-      });
-
-      document.addEventListener("click", function (e) {
-        if (!dropdown.contains(e.target)) closeMenu();
-      });
-
-      document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") closeMenu();
-      });
-    })();
-
-    // Share
-    function sharePage() {
-      if (navigator.share) {
-        navigator.share({
-          title: "The Madness of Faith | Solitude Reflections",
-          url: window.location.href
-        });
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(window.location.href)
-          .then(() => alert("Link copied to clipboard."))
-          .catch(() => alert(window.location.href));
-      } else {
-        alert(window.location.href);
-      }
+    function closeMenu() {
+      dropdown.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
     }
 
-    document.getElementById("shareBtn")?.addEventListener("click", sharePage);
+    function openMenu() {
+      dropdown.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+    }
 
-    // Audio jump
-    document.getElementById("audioJumpBtn")?.addEventListener("click", function () {
-      document.getElementById("audioSection")?.scrollIntoView({ behavior: "smooth" });
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.contains("open");
+      if (isOpen) closeMenu();
+      else openMenu();
     });
 
-    // Audio playlist
-    document.addEventListener('DOMContentLoaded', () => {
-      const audioPlayer = document.getElementById('reflectionAudio');
-      const audioSource = document.getElementById('audioSource');
-      const rows = document.querySelectorAll('.playlist-row');
+    document.addEventListener("click", function (e) {
+      if (!dropdown.contains(e.target)) closeMenu();
+    });
 
-      if (rows.length > 0) {
-        audioSource.src = rows[0].dataset.src;
-        audioPlayer.load();
-      }
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeMenu();
+    });
+  })();
 
-      rows.forEach(row => {
-        row.addEventListener('click', () => {
-          rows.forEach(r => r.classList.remove('active'));
-          row.classList.add('active');
+  // Share
+  function sharePage() {
+    if (navigator.share) {
+      navigator.share({
+        title: "The Madness of Faith | Solitude Reflections",
+        url: window.location.href
+      });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => alert("Link copied to clipboard."))
+        .catch(() => alert(window.location.href));
+    } else {
+      alert(window.location.href);
+    }
+  }
 
+  document.getElementById("shareBtn")?.addEventListener("click", sharePage);
+
+  // Audio jump
+  document.getElementById("audioJumpBtn")?.addEventListener("click", function () {
+    document.getElementById("audioSection")?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  // Audio playlist
+  document.addEventListener('DOMContentLoaded', () => {
+    const audioPlayer = document.getElementById('reflectionAudio');
+    const audioSource = document.getElementById('audioSource');
+    const rows = document.querySelectorAll('.playlist-row');
+
+    if (rows.length > 0 && audioPlayer && audioSource) {
+      audioSource.src = rows[0].dataset.src;
+      audioPlayer.load();
+    }
+
+    rows.forEach(row => {
+      row.addEventListener('click', () => {
+        rows.forEach(r => r.classList.remove('active'));
+        row.classList.add('active');
+
+        if (audioPlayer && audioSource) {
           audioSource.src = row.dataset.src;
           audioPlayer.load();
           audioPlayer.play().catch(() => {});
-        });
-      });
-
-      rows.forEach(row => {
-        const tempAudio = new Audio(row.dataset.src);
-        tempAudio.addEventListener('loadedmetadata', () => {
-          const dur = tempAudio.duration;
-          if (!isNaN(dur)) {
-            const total = Math.floor(dur);
-            const min = String(Math.floor(total / 60)).padStart(2, '0');
-            const sec = String(total % 60).padStart(2, '0');
-            const durEl = row.querySelector('.playlist-duration');
-            if (durEl) durEl.textContent = `${min}:${sec}`;
-          }
-        });
+        }
       });
     });
-  </script>
 
-  <script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
+    rows.forEach(row => {
+      const tempAudio = new Audio(row.dataset.src);
+      tempAudio.addEventListener('loadedmetadata', () => {
+        const dur = tempAudio.duration;
+        if (!isNaN(dur)) {
+          const total = Math.floor(dur);
+          const min = String(Math.floor(total / 60)).padStart(2, '0');
+          const sec = String(total % 60).padStart(2, '0');
+          const durEl = row.querySelector('.playlist-duration');
+          if (durEl) durEl.textContent = `${min}:${sec}`;
+        }
+      });
+    });
+  });
+</script>
 
-  <script>
-    (function () {
-      const thread = document.getElementById("cusdis_thread");
-      if (!thread) return;
+<script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
 
-      let iframeRef = null;
-      let lastKnownHeight = 420;
-      let highlightTimer = null;
+<script>
+  (function () {
+    const thread = document.getElementById("cusdis_thread");
+    if (!thread) return;
 
-      function getIframe() {
-        iframeRef = thread.querySelector("iframe");
-        return iframeRef;
+    let iframeRef = null;
+    let lastKnownHeight = 420;
+    let highlightTimer = null;
+
+    function getIframe() {
+      iframeRef = thread.querySelector("iframe");
+      return iframeRef;
+    }
+
+    function setFrameHeight(height) {
+      const iframe = getIframe();
+      if (!iframe) return;
+      const safeHeight = Math.max(420, Number(height) || 420);
+      lastKnownHeight = safeHeight;
+      iframe.style.height = safeHeight + "px";
+      thread.style.minHeight = safeHeight + "px";
+    }
+
+    function highlightThread() {
+      thread.classList.add("cusdis-highlight");
+      clearTimeout(highlightTimer);
+      highlightTimer = setTimeout(() => {
+        thread.classList.remove("cusdis-highlight");
+      }, 2200);
+    }
+
+    function scrollToComments(smooth = true) {
+      thread.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+        block: "start"
+      });
+      highlightThread();
+    }
+
+    function applyCusdisTheme() {
+      if (window.CUSDIS && typeof window.CUSDIS.setTheme === "function") {
+        window.CUSDIS.setTheme("light");
+        return true;
+      }
+      return false;
+    }
+
+    window.addEventListener("message", function (e) {
+      if (!e || !e.data) return;
+      const data = e.data;
+
+      if (data.event === "resize" && data.offsetHeight) {
+        setFrameHeight(data.offsetHeight);
       }
 
-      function setFrameHeight(height) {
-        const iframe = getIframe();
-        if (!iframe) return;
-        const safeHeight = Math.max(420, Number(height) || 420);
-        lastKnownHeight = safeHeight;
-        iframe.style.height = safeHeight + "px";
-        thread.style.minHeight = safeHeight + "px";
+      if (data.type === "resize" && data.height) {
+        setFrameHeight(data.height);
+      }
+    });
+
+    const observer = new MutationObserver(function () {
+      const iframe = getIframe();
+      if (!iframe) return;
+
+      iframe.style.width = "100%";
+      iframe.style.minHeight = lastKnownHeight + "px";
+      thread.style.minHeight = lastKnownHeight + "px";
+
+      let tries = 0;
+      const themeTry = setInterval(() => {
+        tries++;
+        if (applyCusdisTheme() || tries > 30) clearInterval(themeTry);
+      }, 150);
+    });
+
+    observer.observe(thread, {
+      childList: true,
+      subtree: true
+    });
+
+    window.addEventListener("load", function () {
+      const iframe = getIframe();
+      if (iframe && !iframe.style.height) {
+        iframe.style.height = lastKnownHeight + "px";
       }
 
-      function highlightThread() {
-        thread.classList.add("cusdis-highlight");
-        clearTimeout(highlightTimer);
-        highlightTimer = setTimeout(() => {
-          thread.classList.remove("cusdis-highlight");
-        }, 2200);
+      let tries = 0;
+      const themeTry = setInterval(() => {
+        tries++;
+        if (applyCusdisTheme() || tries > 40) clearInterval(themeTry);
+      }, 150);
+
+      if (location.hash === "#cusdis_thread" || location.hash === "#comments") {
+        setTimeout(() => scrollToComments(false), 250);
       }
+    });
 
-      function scrollToComments(smooth = true) {
-        thread.scrollIntoView({
-          behavior: smooth ? "smooth" : "auto",
-          block: "start"
-        });
-        highlightThread();
+    window.addEventListener("pageshow", function () {
+      if (location.hash === "#cusdis_thread" || location.hash === "#comments") {
+        setTimeout(() => scrollToComments(false), 180);
       }
+    });
 
-      function applyCusdisTheme() {
-        if (window.CUSDIS && typeof window.CUSDIS.setTheme === "function") {
-          window.CUSDIS.setTheme("light");
-          return true;
-        }
-        return false;
-      }
+    document.addEventListener("click", function (ev) {
+      const target = ev.target.closest('a[href="#cusdis_thread"], a[href="#comments"], [data-scroll-comments]');
+      if (!target) return;
+      ev.preventDefault();
+      history.replaceState(null, "", "#cusdis_thread");
+      scrollToComments(true);
+    });
+  })();
+</script>
 
-      window.addEventListener("message", function (e) {
-        if (!e || !e.data) return;
-        const data = e.data;
-
-        if (data.event === "resize" && data.offsetHeight) {
-          setFrameHeight(data.offsetHeight);
-        }
-
-        if (data.type === "resize" && data.height) {
-          setFrameHeight(data.height);
-        }
+<!-- SERVICE WORKER -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/reflections/sw.js').catch(function (err) {
+        console.log('Service Worker registration failed:', err);
       });
-
-      const observer = new MutationObserver(function () {
-        const iframe = getIframe();
-        if (!iframe) return;
-
-        iframe.style.width = "100%";
-        iframe.style.minHeight = lastKnownHeight + "px";
-        thread.style.minHeight = lastKnownHeight + "px";
-
-        let tries = 0;
-        const themeTry = setInterval(() => {
-          tries++;
-          if (applyCusdisTheme() || tries > 30) clearInterval(themeTry);
-        }, 150);
-      });
-
-      observer.observe(thread, {
-        childList: true,
-        subtree: true
-      });
-
-      window.addEventListener("load", function () {
-        const iframe = getIframe();
-        if (iframe && !iframe.style.height) {
-          iframe.style.height = lastKnownHeight + "px";
-        }
-
-        let tries = 0;
-        const themeTry = setInterval(() => {
-          tries++;
-          if (applyCusdisTheme() || tries > 40) clearInterval(themeTry);
-        }, 150);
-
-        if (location.hash === "#cusdis_thread" || location.hash === "#comments") {
-          setTimeout(() => scrollToComments(false), 250);
-        }
-      });
-
-      window.addEventListener("pageshow", function () {
-        if (location.hash === "#cusdis_thread" || location.hash === "#comments") {
-          setTimeout(() => scrollToComments(false), 180);
-        }
-      });
-
-      document.addEventListener("click", function (ev) {
-        const target = ev.target.closest('a[href="#cusdis_thread"], a[href="#comments"], [data-scroll-comments]');
-        if (!target) return;
-        ev.preventDefault();
-        history.replaceState(null, "", "#cusdis_thread");
-        scrollToComments(true);
-      });
-    })();
-  </script>
+    });
+  }
+</script>
 </body>
 </html>
