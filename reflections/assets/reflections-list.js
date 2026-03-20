@@ -3,6 +3,7 @@ window.REFLECTION_LINKS = [
   {title:"The Subconscious Mind", url:"/reflections/pages/subconsciousmind/read.html"},
   {title:"The God We Created", url:"/reflections/pages/the-god-we-created/read.html"},
   {title:"The Paradox of God", url:"/reflections/pages/the-paradox-of-god/read.html"},
+  {title:"The Journey To Self", url:"/reflections/pages/the-journey-to-self/read.html"},
   {title:"The Prayer", url:"/reflections/pages/the-inner-listener/read.html"},
   {title:"Transcendence", url:"/reflections/pages/transcendence/read.html"},
   {title:"The Madness of Faith", url:"/reflections/pages/the-madness-of-fath/read.html"},
