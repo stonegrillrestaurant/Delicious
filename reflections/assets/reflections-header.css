@@ -1,48 +1,85 @@
 /* reflections-header.css */
 /* Unified header + drawer + playlist + FLOATING GLOBAL AUDIO BAR */
 
-:root{
+/* reflections-header.css - THE FINAL FIX */
+
+:root {
   --ref-bg: rgba(33, 13, 77, 0.908);
   --ref-ink: #f3e6dd;
   --ref-muted: #c9b0a4;
   --ref-accent: #ffb873;
-
-  --ref-pill-bg: rgba(255,255,255,.06);
-  --ref-pill-brd: rgba(255,255,255,.18);
-
+  --ref-pill-bg: rgba(0,0,0,.3);
+  --ref-pill-brd: rgba(255,255,255,.2);
   --ref-panel: rgba(25, 20, 50, 0.94);
   --ref-panel-brd: rgba(255,255,255,.12);
-
   --ref-shadow: 0 10px 26px rgba(0,0,0,.55);
 }
 
-/* Lock background scroll when menu is open */
-body.ref-menu-lock{ overflow:hidden; }
+/* 1. LAYOUT & PADDING (Prevents content being eaten) */
+html, body { 
+    margin: 0 !important; 
+    padding: 0 !important; 
+    padding-top: 50px !important; /* This creates the gap for your story */
+    overflow-x: hidden; 
+}
 
-/* ===== Header bar ===== */
+/* 2. THE SUNSET HEADER */
 .ref-header-shell {
-    /* Updated path for when the image is in the SAME folder as the CSS */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 130px !important;
+    z-index: 10000 !important;
     background: url('gemini.png') no-repeat center bottom !important;
     background-size: cover !important;
-    
-    /* Removes the old purple blur effect */
     background-color: transparent !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-
-    /* Ensures your page titles are white so they show up over the sunset */
     color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
 }
 
-.ref-header-inner{
-  max-width:1200px;
-  margin:0 auto;
-  padding:.65rem .9rem;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:.85rem;
+/* 3. RE-ENABLING YOUR MENU/BUTTONS LOGIC (Untouched) */
+.ref-header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: .65rem .9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .85rem;
+    height: 100%;
 }
+
+.ref-brand { display: flex; align-items: center; gap: .65rem; text-decoration: none; color: inherit; }
+.ref-brand-logo { width: 44px; height: 44px; border-radius: 999px; object-fit: cover; border: 1px solid rgba(255,255,255,.1); }
+.ref-pagetitle { font-weight: 900; letter-spacing: .08em; text-transform: uppercase; font-size: 1.07rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+.ref-actions { display: flex; align-items: center; gap: .55rem; }
+
+.ref-ham, .ref-pill {
+    border-radius: 999px;
+    border: 1px solid var(--ref-pill-brd);
+    background: var(--ref-pill-bg);
+    color: var(--ref-ink);
+    cursor: pointer;
+    padding: .5rem .88rem;
+    font-weight: 800;
+}
+
+/* 4. THE SLIDING DRAWER (Kept exactly the same) */
+.ref-drawer {
+    position: fixed; top: 0; left: 0; height: 100vh; width: min(420px, 88vw);
+    z-index: 10001; padding: 1rem; transform: translateX(-110%); opacity: 0;
+    transition: transform .22s ease, opacity .18s ease;
+}
+.ref-header-shell.menu-open + .ref-drawer { transform: translateX(0); opacity: 1; }
+.ref-drawer-card { height: 100%; border-radius: 18px; background: var(--ref-panel); border: 1px solid var(--ref-panel-brd); display: flex; flex-direction: column; overflow: hidden; }
+.ref-drawer-list { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: .75rem; }
+.ref-drawer-link { display: block; margin: .45rem; padding: .78rem; border-radius: 16px; text-decoration: none; color: var(--ref-ink); background: rgba(255,255,255,.04); }
+
+/* Global Audio Bar Logic */
+#globalPlayer.audio-bar.is-visible { display: block !important; position: fixed; bottom: 12px; left: 12px; right: 12px; z-index: 10002; background: rgba(25,18,16,.92); border-radius: 16px; padding: .75rem; color: white; border: 2px solid rgba(255,120,70,.55); }
 
 /* Left group */
 .ref-left{
@@ -326,25 +363,4 @@ body.has-audio-bar{ padding-bottom:110px; }
 }
 #globalPlayer #seekBar{ width:100%; }
 
-html, body { 
-    margin: 0 !important; 
-    padding: 0 !important; 
-}
 
-.ref-header-shell {
-    position: fixed !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: 140px !important;
-    background-image: url('gemini.png') !important;
-    background-size: cover !important;
-    background-position: center bottom !important;
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-
-.ref-titlewrap h1, .ref-titlewrap p, .ref-pill, .ref-ham {
-    color: #ffffff !important;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.6) !important;
-}
