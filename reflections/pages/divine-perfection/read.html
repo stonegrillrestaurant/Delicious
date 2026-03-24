@@ -57,18 +57,18 @@
     }
 
     .nav-content {
-      position: relative;
-      z-index: 2;
-      max-width: 820px;
-      margin: 0 auto;
-      width: 100%;
-      height: 100%;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      box-sizing: border-box;
-    }
+  position: relative;
+  z-index: 2;
+  max-width: 640px; /* Must match the .page exactly */
+  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  padding: 0 15px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
 
     .nav-links {
       display: flex;
@@ -85,25 +85,27 @@
     .nav-links a { color: var(--ink); text-decoration: none; transition: 0.3s; }
     .nav-links a:hover { color: var(--accent); }
 
-    .nav-title-box { padding-bottom: 20px; }
+    .nav-title-box { padding-bottom: 70px; }
     .nav-title-box .kicker { color: var(--accent); font-variant: small-caps; letter-spacing: 0.1em; }
-    .nav-title-box h1 { margin: 5px 0 0; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; color: #fff; }
+    .nav-title-box h1 { margin: 2px 0 0; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; color: #fff; }
 
     /* ===== Bookish Layout ===== */
     .page {
-      max-width: 820px;
-      margin: -60px auto 0; /* Pull paper over the hero */
-      padding: 0 20px 96px;
-      position: relative;
-      z-index: 10;
-    }
+  max-width: 640px; /* narrowed from 700/820 to 640px */
+  margin: 10px auto 0; 
+  padding: 0 5px 0p; /* slightly smaller side padding for the container */
+  position: relative;
+  z-index: 10;
+}
 
     .paper {
-      background: var(--paper);
-      border-radius: 4px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-      padding: 60px clamp(24px, 6vw, 64px);
-    }
+  position: relative;
+  background: var(--paper);
+  border-radius: 4px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  /* Reduce side padding slightly so text doesn't look like a tiny sliver */
+  padding: 60px clamp(20px, 5vw, 50px); 
+}
 
     /* Typography */
     .meta { color: var(--muted); font-size: 0.95rem; margin-top: 0; }
@@ -132,14 +134,74 @@
     h2 { font-size: 1.7rem; margin-top: 2.5rem; color: var(--accent); }
     .aside { color: var(--muted); font-style: italic; margin-bottom: 1.5rem; border-left: 1px solid var(--rule); padding-left: 1rem; }
 
-    .back-nav { margin-bottom: 20px; }
-    .back-nav a { color: var(--accent); text-decoration: none; font-size: 0.9rem; font-family: system-ui; }
+    /* The Container: Positioned inside the .paper card */
+    .back-nav { 
+      position: absolute; 
+      top: 30px; 
+      right: 30px; 
+      margin: 0; 
+      z-index: 20; 
+    }
 
+    /* The Button: Styled as a boxed element */
+    .back-nav a { 
+      display:flex;
+      align-items: center;
+      color: var(--muted); 
+      text-decoration: none; 
+      font-size: 0.72rem; 
+      font-family: system-ui, -apple-system, sans-serif; 
+      text-transform: uppercase; 
+      letter-spacing: 1.5px; 
+      font-weight: 600;
+      
+      /* The Box Structure */
+      border: 1px solid var(--rule); 
+      padding: 3px 6px; 
+      border-radius: 6px; 
+      background: rgb(218, 66, 0); /* Subtle dark fill for contrast */
+      
+      /* Smooth Interaction */
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Hover Interaction */
+    .back-nav a:hover { 
+      color: var(--accent); 
+      border-color: var(--accent); 
+      background: rgba(255, 184, 115, 0.08); /* Soft glow match */
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
     footer {
       margin-top: 4rem; padding-top: 2rem;
       border-top: 1px dashed var(--rule);
       color: var(--muted); font-size: 0.9rem; text-align: center;
     }
+    /* Custom Audio Player Styling */
+.audio-section {
+  margin: 0 0 40px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+}
+
+.audio-label {
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+audio {
+  width: 100%;
+  height: 36px;
+  filter: sepia(20%) brightness(90%) hue-rotate(330deg); /* Blends standard player with your warm theme */
+}
   </style>
 
   <script type="application/ld+json">
@@ -187,6 +249,13 @@
     </div>
 
     <article class="paper">
+      <div class="audio-section">
+    <span class="audio-label">Listen to Reflection</span>
+    <audio controls>
+      <source src="/reflections/pages/divine-perfection/divine-perfection.mp3" type="audio/mpeg">
+      Your browser does not support the audio element.
+    </audio>
+  </div>
       <p class="meta">By <strong>Ninox Antolihao</strong> • First Edition -- 2025</p>
 
       <blockquote>
