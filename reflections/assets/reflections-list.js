@@ -13,6 +13,7 @@ window.REFLECTION_LINKS = [
   {title:"Seeking Assurance is Labeled a Sinner", url:"/reflections/pages/question-label-sinner/read.html"},
   {title:"The Initial Premise", url:"/reflections/pages/initial-premise/read.html"},
   {title:"The Deity", url:"/reflections/pages/diety/read.html"},
+  {title:"Seeking the Divine", url:"/reflections/pages/seeking-divine/read.html"},
   {title:"Silent Influence", url:"/reflections/pages/silent-influence/read.html"},
   {title:"Oneness & Duality", url:"/reflections/pages/oneness-duality/read.html"},
   {title:"The Mirror of Worship", url:"/reflections/pages/mirror-of-worship/read.html"},
