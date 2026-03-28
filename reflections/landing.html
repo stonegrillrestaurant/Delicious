@@ -319,6 +319,7 @@
       linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,248,242,.92));
     box-shadow:0 14px 24px rgba(95,55,33,.10);
     min-height:430px;
+    height:430px;
     transform:scale(.975);
     opacity:.9;
     transition:transform .30s ease, opacity .30s ease, box-shadow .30s ease, border-color .30s ease;
@@ -334,17 +335,27 @@
   .slide-body{
     display:flex;
     flex-direction:column;
+    height:100%;
     min-height:430px;
     background:#fffaf6;
   }
 
   .slide-media{
     position:relative;
+    display:block;
     min-height:180px;
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
     overflow:hidden;
+    flex-shrink:0;
+    cursor:pointer;
+    transition:transform .25s ease, filter .25s ease;
+  }
+
+  .slide-media:hover{
+    transform:scale(1.02);
+    filter:brightness(1.03);
   }
 
   .slide-media::after{
@@ -378,18 +389,32 @@
     display:flex;
     flex-direction:column;
     flex:1;
+    min-height:0;
     padding:14px;
     background:
       linear-gradient(180deg, rgba(255,250,246,.72) 0%, rgba(255,248,242,.96) 18%, rgba(255,250,246,1) 100%);
     border-top:1px solid rgba(140,92,64,.08);
   }
 
-  .slide h3{
+  .slide-title-link{
+    display:inline-block;
+    width:fit-content;
     margin:0 0 8px;
+    color:#41261a;
+    transition:color .2s ease, transform .2s ease;
+  }
+
+  .slide-title-link:hover{
+    color:var(--accent);
+    transform:translateX(2px);
+  }
+
+  .slide h3{
+    margin:0;
     font-size:22px;
     line-height:1.05;
     letter-spacing:.01em;
-    color:#41261a;
+    color:inherit;
   }
 
   .slide p{
@@ -398,15 +423,21 @@
     font-size:13px;
     line-height:1.58;
     max-width:100%;
+    flex-shrink:0;
   }
 
   .card-dropdown{
-    margin:2px 0 12px;
+    margin:2px 0 0;
     border-radius:16px;
     overflow:hidden;
     background:rgba(255,255,255,.7);
-    border:1px solid rgba(140,92,64,.10);
+    border:1px solid rgba(248, 71, 17, 0.28);
     backdrop-filter:blur(4px);
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    min-height:0;
+    box-shadow:0 8px 18px rgba(248, 71, 17, 0.08);
   }
 
   .card-toggle{
@@ -416,17 +447,19 @@
     justify-content:space-between;
     gap:10px;
     padding:11px 12px;
-    background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,245,238,.82));
+    background:linear-gradient(135deg, rgba(248,71,17,.14), rgba(255,168,129,.24));
     border:0;
-    color:#4e2e20;
+    border-bottom:1px solid rgba(248,71,17,.12);
+    color:#8f2f0e;
     font-size:13px;
-    font-weight:700;
+    font-weight:800;
     cursor:pointer;
-    transition:background .22s ease, transform .16s ease;
+    transition:background .22s ease, transform .16s ease, box-shadow .2s ease;
+    box-shadow:inset 0 0 0 1px rgba(248,71,17,.10);
   }
 
   .card-toggle:hover{
-    background:linear-gradient(180deg, rgba(255,255,255,1), rgba(255,243,233,.9));
+    background:linear-gradient(135deg, rgba(248,71,17,.20), rgba(255,168,129,.30));
   }
 
   .card-toggle:active{
@@ -447,10 +480,11 @@
     height:22px;
     padding:0 7px;
     border-radius:999px;
-    background:rgba(255,107,61,.16);
-    color:#c9552c;
+    background:linear-gradient(135deg, rgba(248,71,17,.18), rgba(255,196,171,.85));
+    color:#b33c15;
     font-size:11px;
     font-weight:800;
+    border:1px solid rgba(248,71,17,.20);
   }
 
   .card-toggle-icon{
@@ -460,26 +494,44 @@
     width:26px;
     height:26px;
     border-radius:999px;
-    background:rgba(255,107,61,.08);
+    background:rgba(255,107,61,.14);
     color:var(--accent);
     font-size:16px;
     transition:transform .26s ease, background .22s ease;
   }
 
+  .card-dropdown.open .card-toggle{
+    background:linear-gradient(135deg, rgba(248,71,17,.24), rgba(255,168,129,.36));
+    box-shadow:0 10px 20px rgba(248,71,17,.10), inset 0 0 0 1px rgba(248,71,17,.16);
+  }
+
   .card-dropdown.open .card-toggle-icon{
     transform:rotate(180deg);
-    background:rgba(255,107,61,.14);
+    background:rgba(255,107,61,.22);
   }
 
   .card-panel{
+    flex:1;
+    min-height:0;
     max-height:0;
     overflow:hidden;
     opacity:.35;
-    transition:max-height .36s ease, opacity .24s ease;
+    transition:max-height .30s ease, opacity .24s ease;
   }
 
   .card-dropdown.open .card-panel{
     opacity:1;
+    max-height:100%;
+    overflow-y:auto;
+  }
+
+  .card-panel::-webkit-scrollbar{
+    width:6px;
+  }
+
+  .card-panel::-webkit-scrollbar-thumb{
+    background:rgba(248,71,17,.28);
+    border-radius:999px;
   }
 
   .slide-list{
@@ -539,10 +591,7 @@
   }
 
   .slide-actions{
-    margin-top:auto;
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
+    display:none;
   }
 
   .slider-dots{
@@ -706,6 +755,7 @@
 
     .slide{
       min-height:470px;
+      height:470px;
     }
 
     .slide-body{
@@ -777,7 +827,7 @@
           <a class="mobile-link" href="/">Home</a>
           <a class="mobile-link" href="/reflections/">Reflections</a>
           <a class="mobile-link" href="/reflections/about.html">About</a>
-                 <a class="mobile-link" href="/contact.html">Contact</a>
+          <a class="mobile-link" href="/contact.html">Contact</a>
         </nav>
       </div>
     </div>
@@ -815,7 +865,6 @@
       </div>
     </div>
 
-    <!-- ===================== START TOPIC CARD SLIDER ===================== -->
     <div class="slider-shell">
       <div class="slider-wrap" id="topicSliderWrap">
         <section class="slider" id="topicSlider">
@@ -823,9 +872,11 @@
           <!-- SPIRITUALITY -->
           <article class="slide topic-spirituality">
             <div class="slide-body">
-              <div class="slide-media"></div>
+              <a class="slide-media" href="/reflections/pages/the-god-we-created/read.html" aria-label="Open Spirituality featured reflection"></a>
               <div class="slide-content">
-                <h3>Spirituality</h3>
+                <a class="slide-title-link" href="/reflections/pages/the-god-we-created/read.html">
+                  <h3>Spirituality</h3>
+                </a>
                 <p>
                   Reflections about God, worship, transcendence, divine silence,
                   inner faith, and spiritual meaning.
@@ -852,10 +903,6 @@
                     </ul>
                   </div>
                 </div>
-
-                <div class="slide-actions">
-                  <a class="btn btn-primary" href="/reflections/pages/the-god-we-created/read.html">Start Reading</a>
-                </div>
               </div>
             </div>
           </article>
@@ -863,9 +910,11 @@
           <!-- MORALITY -->
           <article class="slide topic-morality">
             <div class="slide-body">
-              <div class="slide-media"></div>
+              <a class="slide-media" href="/reflections/pages/moral-choice/read.html" aria-label="Open Morality featured reflection"></a>
               <div class="slide-content">
-                <h3>Morality</h3>
+                <a class="slide-title-link" href="/reflections/pages/moral-choice/read.html">
+                  <h3>Morality</h3>
+                </a>
                 <p>
                   Reflections on good and evil, human choice, ethical struggle,
                   conscience, and moral responsibility.
@@ -890,10 +939,6 @@
                     </ul>
                   </div>
                 </div>
-
-                <div class="slide-actions">
-                  <a class="btn btn-primary" href="/reflections/pages/moral-choice/read.html">Start Reading</a>
-                </div>
               </div>
             </div>
           </article>
@@ -901,9 +946,11 @@
           <!-- CONSCIOUSNESS -->
           <article class="slide topic-consciousness">
             <div class="slide-body">
-              <div class="slide-media"></div>
+              <a class="slide-media" href="/reflections/pages/subconsciousmind/read.html" aria-label="Open Consciousness featured reflection"></a>
               <div class="slide-content">
-                <h3>Consciousness</h3>
+                <a class="slide-title-link" href="/reflections/pages/subconsciousmind/read.html">
+                  <h3>Consciousness</h3>
+                </a>
                 <p>
                   Reflections on awareness, the mind, duality, symbolism,
                   inward listening, and the deeper structure of self.
@@ -928,10 +975,6 @@
                     </ul>
                   </div>
                 </div>
-
-                <div class="slide-actions">
-                  <a class="btn btn-primary" href="/reflections/pages/subconsciousmind/read.html">Start Reading</a>
-                </div>
               </div>
             </div>
           </article>
@@ -945,7 +988,6 @@
         <button class="slider-dot" type="button" aria-label="Go to card 3"></button>
       </div>
     </div>
-    <!-- ====================== END TOPIC CARD SLIDER ====================== -->
 
     <section class="cta-banner">
       <h3>Begin with the reflection that meets you where you are.</h3>
