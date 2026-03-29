@@ -30,7 +30,8 @@
     { slug: "oneness-duality", title: "Oneness Duality", sub: "Solitude Reflections" },
     { slug: "mirror-of-worship", title: "The Mirror of Worship", sub: "Solitude Reflections" },
     { slug: "moral-choice", title: "The Moral Choice of Duality", sub: "Solitude Reflections" },
-
+    { slug: "seeking-divine", title: "SEEKING THE DIVINE", sub: "Solitude Reflections" },
+    { slug: "divine-perfection", title: "Divine Perfection", sub: "Solitude Reflections" },
     { slug: "godevil", title: "Good and Evil", sub: "Solitude Reflections" },
     { slug: "kingdom-within", title: "The Kingdom Within", sub: "Solitude Reflections" },
     { slug: "feeding-the-soul", title: "Feeding the Soul", sub: "Solitude Reflections" }
