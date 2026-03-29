@@ -3,7 +3,7 @@
 function createAudioPlayer(src, title) {
   return `
   <div class="audio-section">
-    <p class="audio-label">🎧 Audio Reflection: <strong>${title}</strong></p>
+    <p class="audio-label">🎧 Audio: <strong>${title}</strong></p>
     <audio controls preload="none" class="audio-player">
       <source src="${src}" type="audio/mpeg">
       Your browser does not support the audio element.
