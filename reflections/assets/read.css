@@ -192,110 +192,65 @@ h1{
   outline:none;
 }
 
-/* ===== AUDIO ===== */
+/* ===== AUDIO PLAYER ===== */
 
 .audio-section{
-  margin:0 0 30px;
-  padding:14px;
-  background:linear-gradient(180deg, var(--surface-2), var(--surface));
-  border:1px solid var(--rule);
-  border-radius:18px;
-  box-shadow:var(--shadow-soft);
+  position: relative;
+  margin: 0 0 30px;
+  padding: 16px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 24px;
+  overflow: visible;
+  isolation: isolate;
+  box-shadow: var(--shadow-soft);
 }
 
-.audio-label{
-  display:block;
-  margin:0 0 12px;
-  font-family:system-ui, sans-serif;
-  font-size:.72rem;
-  text-transform:uppercase;
-  letter-spacing:2.4px;
-  color:var(--accent);
-  font-weight:700;
-}
-
-audio{
-  width:100%;
-  min-height:40px;
-  border-radius:12px;
-}
-
-/* ===== AUDIO PLAYER ENHANCEMENT ===== */
-/* ===== AUDIO PLAYER BORDER GLOW EFFECT ===== */
-
-.audio-section{
-  position:relative;
-  margin:0 0 30px;
-  padding:14px;
-  background:linear-gradient(180deg, var(--surface-2), var(--surface));
-  border-radius:20px;
-  overflow:hidden;
-  isolation:isolate;
-  box-shadow:var(--shadow-soft);
-}
-
-/* static inner border */
+/* inner surface */
 .audio-section::before{
-  content:"";
-  position:absolute;
-  inset:1px;
-  border-radius:18px;
-  background:linear-gradient(180deg, var(--surface-2), var(--surface));
-  z-index:-1;
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  z-index: -1;
 }
 
-/* animated border light */
+/* ambient iphone-like glow */
 .audio-section::after{
-  content:"";
-  position:absolute;
-  inset:-2px;
-  border-radius:22px;
-  padding:2px;
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 30px;
   background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      rgba(255,255,255,0) 30deg,
-      rgba(255,183,127,0.18) 75deg,
-      rgba(243,154,98,0.9) 120deg,
-      rgba(255,210,175,0.28) 160deg,
-      rgba(255,255,255,0) 220deg,
-      transparent 360deg
-    );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;
-  mask-composite:exclude;
-  opacity:.38;
-  z-index:-2;
-  transition:opacity .35s ease, filter .35s ease;
-  filter:blur(0.4px);
+    radial-gradient(circle at 0% 50%, rgba(255,120,80,0.00) 0%, rgba(255,120,80,0.00) 18%, rgba(255,120,80,0.75) 35%, rgba(255,120,80,0.00) 52%),
+    radial-gradient(circle at 100% 50%, rgba(120,180,255,0.00) 0%, rgba(120,180,255,0.00) 18%, rgba(120,180,255,0.75) 35%, rgba(120,180,255,0.00) 52%),
+    radial-gradient(circle at 50% 0%, rgba(255,170,90,0.00) 0%, rgba(255,170,90,0.00) 18%, rgba(255,170,90,0.55) 34%, rgba(255,170,90,0.00) 52%),
+    radial-gradient(circle at 50% 100%, rgba(160,120,255,0.00) 0%, rgba(160,120,255,0.00) 18%, rgba(160,120,255,0.55) 34%, rgba(160,120,255,0.00) 52%);
+  filter: blur(18px);
+  opacity: .18;
+  transform: scale(1);
+  transition: opacity .35s ease, transform .35s ease;
+  z-index: -2;
+  pointer-events: none;
 }
 
-/* stronger only when playing */
+/* playing state stronger */
 .audio-section.is-playing::after{
-  opacity:1;
-  animation:borderSpin 3.8s linear infinite;
-  filter:blur(0.2px) drop-shadow(0 0 10px rgba(243,154,98,.22));
+  opacity: .95;
+  animation: ambientPulse 4s ease-in-out infinite, ambientDrift 6s ease-in-out infinite;
 }
 
+/* extra soft edge ring */
 .audio-section.is-playing{
   box-shadow:
-    var(--shadow-soft),
-    0 0 0 1px rgba(243,154,98,.12),
-    0 0 22px rgba(243,154,98,.10);
+    0 0 0 1px rgba(255,160,110,0.12),
+    0 0 30px rgba(255,120,80,0.12),
+    0 0 40px rgba(120,180,255,0.08),
+    var(--shadow-soft);
 }
 
-@keyframes borderSpin{
-  from{ transform:rotate(0deg); }
-  to{ transform:rotate(360deg); }
-}
-.audio-section{
-  position:relative;
-  overflow:hidden;
-}
-
+/* header row */
 .audio-top{
   display:flex;
   align-items:center;
@@ -304,71 +259,58 @@ audio{
   margin-bottom:12px;
 }
 
+.audio-label{
+  display:block;
+  margin:0;
+  font-family:system-ui, sans-serif;
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:2.4px;
+  color:var(--accent);
+  font-weight:700;
+}
+
 .audio-status{
   font-family:system-ui, -apple-system, sans-serif;
-  font-size:.75rem;
+  font-size:.74rem;
   font-weight:700;
   letter-spacing:.08em;
   text-transform:uppercase;
   color:var(--muted);
-  transition:color .25s ease, transform .25s ease;
+  transition: color .25s ease, transform .25s ease;
 }
 
+.audio-section.is-playing .audio-status{
+  color: var(--accent);
+}
+
+/* visualizer */
 .audio-visualizer{
-  height:42px;
+  height: 42px;
   display:flex;
   align-items:flex-end;
   justify-content:center;
   gap:5px;
-  margin:4px 0 14px;
-  opacity:.55;
-  transition:opacity .3s ease, transform .3s ease;
+  margin: 2px 0 14px;
+  opacity: .55;
+  transition: opacity .3s ease;
 }
 
 .audio-visualizer span{
-  width:5px;
-  height:10px;
-  border-radius:999px;
-  background:linear-gradient(180deg, var(--accent), var(--accent-strong));
-  box-shadow:0 0 10px rgba(197,125,76,.18);
-  transform-origin:bottom center;
-  transform:scaleY(.45);
-  transition:transform .2s ease, opacity .2s ease;
-  opacity:.82;
-}
-
-/* idle breathing */
-.audio-section::before{
-  content:"";
-  position:absolute;
-  inset:-20% -10%;
-  background:radial-gradient(circle, rgba(197,125,76,.10) 0%, transparent 55%);
-  opacity:.35;
-  pointer-events:none;
-  transform:scale(.96);
-  transition:opacity .35s ease, transform .35s ease;
-}
-
-/* playing mode */
-.audio-section.is-playing{
-  box-shadow:var(--shadow), 0 0 0 1px rgba(197,125,76,.14);
-}
-
-.audio-section.is-playing::before{
-  opacity:.75;
-  transform:scale(1.03);
-  animation:audioGlow 2.6s ease-in-out infinite;
-}
-
-.audio-section.is-playing .audio-status{
-  color:var(--accent);
+  width: 5px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 0 12px rgba(197,125,76,.18);
+  transform-origin: bottom center;
+  transform: scaleY(.45);
+  opacity: .82;
 }
 
 .audio-section.is-playing .audio-visualizer{
-  opacity:1;
+  opacity: 1;
 }
 
-/* animated bars while playing */
 .audio-section.is-playing .audio-visualizer span:nth-child(1){animation:barMove 1.00s ease-in-out infinite;}
 .audio-section.is-playing .audio-visualizer span:nth-child(2){animation:barMove 1.25s ease-in-out infinite .10s;}
 .audio-section.is-playing .audio-visualizer span:nth-child(3){animation:barMove 0.95s ease-in-out infinite .22s;}
@@ -382,6 +324,12 @@ audio{
 .audio-section.is-playing .audio-visualizer span:nth-child(11){animation:barMove 1.22s ease-in-out infinite .14s;}
 .audio-section.is-playing .audio-visualizer span:nth-child(12){animation:barMove 1.08s ease-in-out infinite .07s;}
 
+audio{
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+}
+
 @keyframes barMove{
   0%,100%{ transform:scaleY(.35); opacity:.68; }
   20%{ transform:scaleY(1.25); opacity:1; }
@@ -390,13 +338,34 @@ audio{
   80%{ transform:scaleY(.75); }
 }
 
-@keyframes audioGlow{
-  0%,100%{ opacity:.42; transform:scale(.98); }
-  50%{ opacity:.82; transform:scale(1.04); }
+@keyframes ambientPulse{
+  0%,100%{ transform: scale(1); }
+  50%{ transform: scale(1.03); }
 }
 
-/* mobile tuning */
-@media (max-width:720px){
+@keyframes ambientDrift{
+  0%,100%{ filter: blur(18px) hue-rotate(0deg); }
+  50%{ filter: blur(22px) hue-rotate(12deg); }
+}
+
+/* mobile boost */
+@media (max-width: 720px){
+  .audio-section{
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .audio-section::after{
+    inset: -14px;
+    border-radius: 28px;
+    filter: blur(22px);
+    opacity: .28;
+  }
+
+  .audio-section.is-playing::after{
+    opacity: 1;
+  }
+
   .audio-top{
     align-items:flex-start;
     flex-direction:column;
@@ -404,12 +373,12 @@ audio{
   }
 
   .audio-visualizer{
-    height:36px;
-    gap:4px;
+    height: 38px;
+    gap: 4px;
   }
 
   .audio-visualizer span{
-    width:4px;
+    width: 4px;
   }
 }
 /* ===== TEXT ===== */
