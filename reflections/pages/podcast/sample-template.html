@@ -76,12 +76,21 @@ gtag('config', 'G-J6LE469GW6');
 </button>
 </div>
 
-<!-- AUDIO -->
-<div class="audio-section">
-<span class="audio-label">Listen</span>
-<audio controls>
-<source src="{{AUDIO_FILE}}" type="audio/mpeg">
-</audio>
+<div class="audio-section" id="audioSection">
+  <div class="audio-top">
+    <span class="audio-label">Listen</span>
+    <div class="audio-status" id="audioStatus">Paused</div>
+  </div>
+
+  <div class="audio-visualizer" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <audio controls id="reflectionAudio">
+    <source src="/reflections/pages/seeking-divine/seeking-divine.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
 </div>
 
 <!-- AD -->
@@ -151,6 +160,31 @@ if ('serviceWorker' in navigator && !location.pathname.includes('/reflections/pa
 navigator.serviceWorker.register('/reflections/sw.js');
 }
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const audio = document.getElementById('reflectionAudio');
+  const section = document.getElementById('audioSection');
+  const status = document.getElementById('audioStatus');
 
+  if (!audio || !section || !status) return;
+
+  function setPlayingState(isPlaying) {
+    section.classList.toggle('is-playing', isPlaying);
+    status.textContent = isPlaying ? 'Playing' : 'Paused';
+  }
+
+  audio.addEventListener('play', () => setPlayingState(true));
+  audio.addEventListener('pause', () => setPlayingState(false));
+  audio.addEventListener('ended', () => setPlayingState(false));
+
+  audio.addEventListener('waiting', () => {
+    status.textContent = 'Loading';
+  });
+
+  audio.addEventListener('canplay', () => {
+    status.textContent = audio.paused ? 'Paused' : 'Playing';
+  });
+});
+</script>
 </body>
 </html>
