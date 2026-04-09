@@ -1,8 +1,10 @@
 window.REFLECTION_LINKS = [
   {title:"Divine Hiddenness", url:"/reflections/pages/divine-hiddeness/read.html"},
+  {title:"Creation of the Invisible", url:"/reflections/pages/creation-of-the-invisible/read.html"},
   {title:"The Subconscious Mind", url:"/reflections/pages/subconsciousmind/read.html"},
   {title:"The God We Created", url:"/reflections/pages/the-god-we-created/read.html"},
   {title:"The Paradox of God", url:"/reflections/pages/the-paradox-of-god/read.html"},
+  {title:"When Power Meets Belief", url:"/reflections/pages/power-meets-belief/read.html"},
   {title:"The Journey To Self", url:"/reflections/pages/the-journey-to-self/read.html"},
   {title:"The Prayer", url:"/reflections/pages/the-inner-listener/read.html"},
   {title:"Transcendence", url:"/reflections/pages/transcendence/read.html"},
