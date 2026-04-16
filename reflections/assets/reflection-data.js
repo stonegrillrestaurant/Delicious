@@ -140,7 +140,7 @@ const REFLECTION_DATA = {
     audio2Label: "Podcast",
     audio2: "/reflections/pages/godevil/godevil-podcast.mp3",
     description: "A reflection on inner moral conflict, the struggle between good and evil within us, and what that tension reveals about human nature.",
-    articleHtml: "<div class="container">
+    articleHtml: " <div class="container">
     <h1>The Linguistic Bridge</h1>
     
     <p>Most of us move through life speaking a language we believe is random. We use words like <strong>God</strong> and <strong>Devil</strong> as if they are names of distant, invisible beings. But if we look at the physical structure of these words, a "hidden in plain sight" architecture emerges--a shortcut designed to make the invisible visible.</p>
@@ -180,7 +180,7 @@ const REFLECTION_DATA = {
      <div class="comments-glass-card" id="commentSection">
       <h3>Reflections & Dialogue</h3>
       <div id="cusdis_thread" data-host="https://cusdis.com" data-app-id="d14e9b16-d8b2-40ac-a7f6-e200b1ac61e8" data-theme="light"></div>
-    </div>
+    </div>"
     
   },
 
