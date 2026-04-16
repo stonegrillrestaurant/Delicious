@@ -11,7 +11,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/power-meets-belief/powermeetsbelief.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/power-meets-belief/powermeetsbelief-podcast.mp3",
-    description: "",
+    description: "A reflection on what happens when power joins belief, how conviction shapes people, and why unquestioned authority can become dangerous.",
     articleHtml: ""
   },
 
@@ -43,7 +43,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/creation-of-the-invisible/creation-of-the-invisible.mp3",
     audio2Label: "Podcast",
     audio2: "",
-    description: "",
+    description: "A reflection on the unseen foundations of existence, the invisible forces behind creation, and how meaning can emerge beyond what the eyes can grasp.",
     articleHtml: ""
   },
 
@@ -59,7 +59,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/seeking-divine/architecture-of-longing.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/seeking-divine/seeking-divine.mp3",
-    description: "",
+    description: "A reflection on why people long for God, meaning, and the sacred, and how the search for the divine shapes the human inner life.",
     articleHtml: ""
   },
 
@@ -75,7 +75,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/divine-perfection/divine-perfection.mp3",
     audio2Label: "Podcast",
     audio2: "",
-    description: "",
+    description: "A reflection on what divine perfection could mean in creation, in human limitation, and in the way people understand existence and purpose.",
     articleHtml: ""
   },
 
@@ -91,7 +91,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/kingdom_within/kingdomwithin_reflection.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/kingdom_within/kingdomwithin.mp3",
-    description: "",
+    description: "A reflection on the meaning of inner spiritual authority, awakening, and the idea that the deepest kingdom may be discovered within the self.",
     articleHtml: ""
   },
 
@@ -107,7 +107,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/belief/beliefxgood.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/belief/Belief-goodness-podcast.mp3",
-    description: "",
+    description: "A reflection on the difference between faith, morality, and living goodness, and whether belief alone is enough to shape a good life.",
     articleHtml: ""
   },
 
@@ -123,7 +123,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/soul/the_soul.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/soul/soulpod.mp3",
-    description: "",
+    description: "A reflection on how the soul is formed, fed, wounded, and transformed through life, choice, and inner awareness.",
     articleHtml: ""
   },
 
@@ -139,7 +139,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/godevil/godevil.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/godevil/godevil-podcast.mp3",
-    description: "",
+    description: "A reflection on inner moral conflict, the struggle between good and evil within us, and what that tension reveals about human nature.",
     articleHtml: ""
   },
 
@@ -155,7 +155,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/the-madness-of-fath/the-madness-of-faith.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/the-madness-of-fath/faithmadness-podcast.mp3",
-    description: "",
+    description: "A reflection on when religious belief conflicts with reason, clarity, and honest thinking, and how faith can become destructive when left unquestioned.",
     articleHtml: ""
   },
 
@@ -171,7 +171,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/mirror-of-worship/themirrorofworship.mp3",
     audio2Label: "Podcast",
     audio2: "",
-    description: "",
+    description: "A reflection on how worship shapes identity, values, and character, and how what people bow to gradually forms the kind of person they become.",
     articleHtml: ""
   },
 
@@ -187,7 +187,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/moral-choice/moralchoice.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/moral-choice/power-of-duality-podcast.mp3",
-    description: "",
+    description: "A reflection on the spiritual meaning of opposites, tension, and choice, and how duality shapes growth, awareness, and moral direction.",
     articleHtml: ""
   },
 
@@ -203,7 +203,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/divine-hiddeness/premiseofgod.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/divine-hiddeness/the-quest-for-devine-transparency-podcast.mp3",
-    description: "",
+    description: "A reflection exploring the idea of a perfect loving God, and the difficult questions that arise when divine love seems hidden or unclear.",
     articleHtml: ""
   },
 
@@ -219,7 +219,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/oneness-duality/oneness-duality-reflection.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/oneness-duality/onenessduality.mp3",
-    description: "",
+    description: "A reflection on how unity, separation, and consciousness relate, and how duality emerges from the deeper question of oneness.",
     articleHtml: ""
   },
 
@@ -235,7 +235,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/the-god-we-created/Unmasking_God.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/the-god-we-created/Redefining-God-podcast.mp3",
-    description: "",
+    description: "A reflection on how human beings shape their concept of God, and how belief often reveals more about the believer than the divine.",
     articleHtml: ""
   },
 
@@ -251,7 +251,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/the-paradox-of-god/paradoxofgod.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/the-paradox-of-god/Paradox-podcast.mp3",
-    description: "",
+    description: "A reflection on why God, silence, contradiction, and unanswered questions create one of the deepest paradoxes in religious thought.",
     articleHtml: ""
   },
 
@@ -267,7 +267,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/transcendence/transcendence.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/transcendence/transcend-podcast.mp3",
-    description: "",
+    description: "A reflection exploring absolute truth beyond human thought, language, and limitation, and what it means to move beyond ordinary perception.",
     articleHtml: ""
   },
 
@@ -283,7 +283,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/the-lost-language-of-metaphor/lost-language-of-metaphor.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/the-lost-language-of-metaphor/Lost-Language-of-Metaphor-Podcast.mp3",
-    description: "",
+    description: "A reflection on how religious metaphors lose meaning over time, and how words once alive with depth can become flat, literal, and misunderstood.",
     articleHtml: ""
   },
 
@@ -299,7 +299,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/diety/diety.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/diety/deity-podcast.mp3",
-    description: "",
+    description: "A reflection questioning false images of God, power, and suffering, and how inherited ideas of deity can distort truth and compassion.",
     articleHtml: ""
   },
 
@@ -315,7 +315,7 @@ const REFLECTION_DATA = {
     audio1: "/reflections/pages/question-label-sinner/labeled-sinner.mp3",
     audio2Label: "Podcast",
     audio2: "/reflections/pages/question-label-sinner/the-shift-of-blame-podcast.mp3",
-    description: "",
+    description: "A reflection on why honest religious questions are often judged as sin, and how blame is shifted onto those who sincerely seek clarity.",
     articleHtml: ""
   }
 };
