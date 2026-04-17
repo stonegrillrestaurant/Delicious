@@ -3,750 +3,254 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Solitude Reflections</title>
-  <meta name="description" content="A reflection page from Solitude Reflections." />
-  <meta name="theme-color" content="#f6f1e8" />
-  <meta name="robots" content="index,follow,max-image-preview:large" />
-
-  <link rel="canonical" href="https://stonegrillresto.net/reflections/" />
-
-  <meta property="og:type" content="article" />
-  <meta property="og:title" content="Solitude Reflections" />
-  <meta property="og:description" content="A reflection page from Solitude Reflections." />
-  <meta property="og:url" content="https://stonegrillresto.net/reflections/" />
-  <meta property="og:image" content="https://stonegrillresto.net/reflections/og-default.jpg" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Solitude Reflections" />
-  <meta name="twitter:description" content="A reflection page from Solitude Reflections." />
-  <meta name="twitter:image" content="https://stonegrillresto.net/reflections/og-default.jpg" />
+  <title>Reflection | Solitude Reflections</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --radius: 20px;
-      --shadow: 0 18px 50px rgba(0,0,0,.08);
-
-      /* Light */
-      --bg: #f7f3ec;
-      --panel: #fffaf3;
-      --panel-2: #f2eadf;
-      --text: #221d18;
-      --muted: #6b6258;
-      --line: #ddd1c1;
-      --brand: #8c5e34;
-
-      --spirituality: #b28746;
-      --human: #6f8090;
-      --religion: #8f625c;
+      --radius-sm: 14px; --radius-md: 24px; --radius-lg: 32px;
+      --bg: #f4f2ee; --text: #1d1b1a; --text-muted: #736b63; --brand: #a67b51;
+      --glass-panel: rgba(255, 255, 255, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.5);
+      --glass-control: rgba(255, 255, 255, 0.4);
     }
 
     html[data-theme="dark"] {
-      --bg: #171514;
-      --panel: #211d1b;
-      --panel-2: #2a2522;
-      --text: #f4eee6;
-      --muted: #c1b5a6;
-      --line: #433a34;
-      --brand: #d2a36c;
-
-      --spirituality: #d0a461;
-      --human: #97aabd;
-      --religion: #c48b82;
+      --bg: #0f0e0d; --text: #f0ebe1; --text-muted: #a39b90;
+      --glass-panel: rgba(30, 28, 26, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-control: rgba(50, 48, 45, 0.5);
     }
 
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.7;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.4s ease; overflow-x: hidden; }
+    .shell { width: min(1000px, calc(100% - 32px)); margin: 0 auto; }
+    
+    .glass { 
+      background: var(--glass-panel); 
+      backdrop-filter: blur(25px); 
+      -webkit-backdrop-filter: blur(25px); 
+      border: 1px solid var(--glass-border); 
     }
+    
+    .topbar { position: sticky; top: 16px; z-index: 50; margin-bottom: 32px; }
+    .topbar-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; border-radius: 99px; padding: 0 10px 0 20px; }
+    
+    /* Content transition animation */
+    #content-container { transition: opacity 0.3s ease, transform 0.3s ease; }
+    .fade-out { opacity: 0; transform: translateY(10px); }
 
-    a { color: inherit; text-decoration: none; }
+    .hero-card { border-radius: var(--radius-lg); overflow: hidden; display: grid; grid-template-columns: 1.2fr 1fr; min-height: 420px; margin-bottom: 32px; }
+    .hero-copy { padding: 48px; display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+    .hero-img img { width: 100%; height: 100%; object-fit: cover; }
+    .category-tag { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--brand); }
 
-    .shell {
-      width: min(1180px, calc(100% - 24px));
-      margin: 0 auto;
-    }
+    .section-card { padding: 40px; border-radius: var(--radius-lg); margin-bottom: 32px; }
+    h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      backdrop-filter: blur(12px);
-      background: color-mix(in srgb, var(--bg) 86%, transparent);
-      border-bottom: 1px solid var(--line);
-    }
+    /* Explore Grid */
+    .explore-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .explore-group { background: var(--glass-control); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); }
+    .explore-group h3 { font-size: 0.85rem; text-transform: uppercase; margin-bottom: 16px; opacity: 0.6; }
+    .group-links { display: flex; flex-direction: column; gap: 10px; }
+    .group-links a { font-size: 0.95rem; color: var(--text-muted); transition: 0.2s; text-decoration: none; cursor: pointer; }
+    .group-links a:hover { color: var(--text); transform: translateX(4px); }
+    .group-links a.active { font-weight: 600; color: var(--brand); padding-left: 8px; border-left: 2px solid var(--brand); }
 
-    .topbar-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      min-height: 68px;
-      padding: 10px 0;
-    }
+    /* Audio List */
+    .audio-list { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+    .audio-btn { flex: 1; min-width: 200px; padding: 18px; border-radius: var(--radius-md); background: var(--glass-control); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.3s; }
+    .audio-btn.active { border-color: var(--brand); background: var(--glass-panel); }
+    audio { width: 100%; height: 45px; border-radius: 99px; }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
+    .icon-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--glass-control); border: 1px solid var(--glass-border); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); }
+    .pill-btn { padding: 12px 24px; border-radius: 99px; background: var(--glass-control); border: 1px solid var(--glass-border); cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 10px; color: var(--text); }
 
-    .brand img {
-      width: 42px;
-      height: 42px;
-      object-fit: contain;
-      border-radius: 50%;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      padding: 3px;
-    }
+    .article-content { font-size: 1.15rem; line-height: 1.9; max-width: 760px; margin: 0 auto; }
+    .article-content p { margin-bottom: 1.5rem; }
 
-    .brand-text {
-      min-width: 0;
-    }
-
-    .brand-text strong {
-      display: block;
-      font-size: 1rem;
-      line-height: 1.1;
-    }
-
-    .brand-text span {
-      display: block;
-      font-size: .83rem;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .btn, .chip, .menu-btn {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: var(--panel);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 10px 14px;
-      font: inherit;
-      cursor: pointer;
-      transition: .2s ease;
-    }
-
-    .btn:hover, .chip:hover, .menu-btn:hover {
-      transform: translateY(-1px);
-      border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
-    }
-
-    .hero {
-      padding: 28px 0 14px;
-    }
-
-    .hero-card {
-      background: linear-gradient(180deg, var(--panel), var(--panel-2));
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 0;
-    }
-
-    .cover-wrap {
-      background: var(--panel-2);
-      border-right: 1px solid var(--line);
-      min-height: 100%;
-    }
-
-    .cover-wrap img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      max-height: 560px;
-      object-fit: cover;
-    }
-
-    .hero-copy {
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      min-width: 0;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      width: fit-content;
-      max-width: 100%;
-      padding: 7px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--panel) 78%, transparent);
-      color: var(--muted);
-      font-size: .88rem;
-    }
-
-    .eyebrow-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--brand);
-      flex: 0 0 auto;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2rem, 4vw, 3.25rem);
-      line-height: 1.08;
-      letter-spacing: -.02em;
-    }
-
-    .subtitle {
-      margin: 0;
-      font-size: 1.03rem;
-      color: var(--muted);
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 6px;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 1.05fr .95fr;
-      gap: 20px;
-      padding: 20px 0 40px;
-    }
-
-    .stack {
-      display: grid;
-      gap: 18px;
-      min-width: 0;
-    }
-
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      padding: 22px;
-      min-width: 0;
-    }
-
-    .card h2 {
-      margin: 0 0 12px;
-      font-size: 1.12rem;
-    }
-
-    .meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 7px 11px;
-      font-size: .86rem;
-      color: var(--muted);
-      background: var(--panel-2);
-    }
-
-    .tag--spirituality { border-color: color-mix(in srgb, var(--spirituality) 45%, var(--line)); }
-    .tag--human-nature { border-color: color-mix(in srgb, var(--human) 45%, var(--line)); }
-    .tag--religion { border-color: color-mix(in srgb, var(--religion) 45%, var(--line)); }
-
-    .article {
-      font-size: 1.04rem;
-    }
-
-    .article p:first-child { margin-top: 0; }
-    .article p:last-child { margin-bottom: 0; }
-
-    .audio-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .audio-btn.active {
-      border-color: color-mix(in srgb, var(--brand) 50%, var(--line));
-      background: color-mix(in srgb, var(--brand) 10%, var(--panel));
-    }
-
-    audio {
-      width: 100%;
-      margin-top: 10px;
-    }
-
-    .grouped-nav {
-      display: grid;
-      gap: 14px;
-    }
-
-    .group {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      overflow: hidden;
-      background: var(--panel);
-    }
-
-    .group summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 14px 16px;
-      font-weight: 600;
-      border-bottom: 1px solid transparent;
-    }
-
-    .group[open] summary {
-      border-bottom-color: var(--line);
-      background: var(--panel-2);
-    }
-
-    .group[data-group="spirituality"] summary { color: var(--spirituality); }
-    .group[data-group="human-nature"] summary { color: var(--human); }
-    .group[data-group="religion"] summary { color: var(--religion); }
-
-    .group-links {
-      display: grid;
-      padding: 8px;
-    }
-
-    .group-links a {
-      padding: 10px 12px;
-      border-radius: 12px;
-      color: var(--text);
-    }
-
-    .group-links a:hover {
-      background: var(--panel-2);
-    }
-
-    .group-links a.current {
-      background: color-mix(in srgb, var(--brand) 10%, var(--panel-2));
-      border: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line));
-    }
-
-    .footer {
-      padding: 0 0 34px;
-    }
-
-    .footer-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      padding: 18px 20px;
-      color: var(--muted);
-      font-size: .95rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    @media (max-width: 980px) {
-      .hero-grid,
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .cover-wrap {
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .cover-wrap img {
-        max-height: 430px;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .shell {
-        width: min(100% - 16px, 100%);
-      }
-
-      .topbar-inner {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .controls {
-        justify-content: flex-start;
-      }
-
-      .hero-copy,
-      .card {
-        padding: 18px;
-      }
-
-      h1 {
-        font-size: 1.85rem;
-      }
+    @media (max-width: 860px) { 
+      .hero-card { grid-template-columns: 1fr; } 
+      .hero-img { height: 300px; order: -1; }
     }
   </style>
-
-  <script>
-    const PAGE_KEY = "godevil";
-  </script>
-  <script src="/reflections/assets/reflection-data.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="shell topbar-inner">
-      <a class="brand" href="/reflections/">
-        <img src="/reflections/assets/icon-512.png" alt="Solitude Reflections logo">
-        <div class="brand-text">
-          <strong>Solitude Reflections</strong>
-          <span>Stone Grill Press</span>
-        </div>
-      </a>
 
-      <div class="controls">
-        <button class="btn" type="button" onclick="history.back()">Back</button>
-        <a class="btn" href="/reflections/">Home</a>
-        <button class="btn" type="button" id="themeToggle">Dark Mode</button>
+  <header class="topbar shell">
+    <div class="topbar-inner glass">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:32px; height:32px; background:var(--brand); border-radius:8px;"></div>
+        <strong style="letter-spacing:-0.02em;">Solitude Reflections</strong>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="icon-btn" id="themeBtn"><svg id="themeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
       </div>
     </div>
   </header>
 
-  <main class="shell">
-    <section class="hero">
-      <div class="hero-card">
-        <div class="hero-grid">
-          <div class="cover-wrap">
-            <img id="pageCover" src="" alt="">
-          </div>
-                  <aside class="stack">
-        <section class="card" id="audioSection">
-          <h2>Listen</h2>
-          <div class="audio-list" id="audioButtons"></div>
-          <div id="audioCaption" class="subtitle"></div>
-          <audio id="audioPlayer" controls preload="metadata"></audio>
-        </section>
-
-        <section class="card">
-          <h2>Explore More Reflections</h2>
-          <div class="grouped-nav" id="groupedNav"></div>
-        </section>
-      </aside>
-    </section>
-          <div class="hero-copy">
-            <div class="eyebrow">
-              <span class="eyebrow-dot"></span>
-              <span id="pageCategory">Reflection</span>
-            </div>
-
-            <h1 id="pageTitle">Reflection Title</h1>
-            <p class="subtitle" id="pageSubtitle"></p>
-
-            <div class="meta">
-              <span class="tag" id="pageSlugTag">slug</span>
-              <span class="tag" id="pageCategoryTag">category</span>
-            </div>
-
-            <div class="hero-actions">
-              <a class="chip" href="#audioSection">Jump to Audio</a>
-   
-              <button class="chip" type="button" id="shareBtn">Share</button>
-            </div>
+  <div id="content-container">
+    <main class="shell">
+      <!-- Hero -->
+      <section class="hero-card glass">
+        <div class="hero-copy">
+          <span class="category-tag" id="catTag">...</span>
+          <h1 id="title" style="font-family:'Playfair Display'; font-size: clamp(2rem, 5vw, 3rem); line-height:1.2;"></h1>
+          <p id="subtitle" style="opacity:0.8; font-size: 1.1rem;"></p>
+          <div style="margin-top: 10px;">
+            <button class="pill-btn" id="shareBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg> Share</button>
           </div>
         </div>
-      </div>
-    </section>
+        <div class="hero-img"><img id="cover" src="" alt=""></div>
+      </section>
 
-    <section class="layout">
-      <div class="stack">
-        <article class="card" id="articleSection">
-          <h2>Reflection</h2>
-          <div class="article" id="articleBody"></div>
-        </article>
+      <!-- Navigation/Explore -->
+      <section class="section-card glass">
+        <h2>Explore Topics</h2>
+        <div class="explore-grid" id="navGrid"></div>
+      </section>
 
-        <section class="card" id="cusdisSection">
-          <h2>Comments</h2>
-          <div
-            id="cusdis_thread"
-            data-host="https://cusdis.com"
-            data-app-id="c1f29f24-6d93-4d71-9b92-6df2d3514f2f"
-            data-page-id=""
-            data-page-url=""
-            data-page-title="">
-          </div>
-        </section>
-      </div>
+      <!-- Audio -->
+      <section class="section-card glass" id="listenSect">
+        <h2>Listen</h2>
+        <div class="audio-list" id="audioBtns"></div>
+        <audio id="player" controls></audio>
+      </section>
 
-  </main>
+      <!-- Read -->
+      <section class="section-card glass">
+        <h2>Read Article</h2>
+        <div id="content" class="article-content"></div>
+      </section>
+    </main>
+  </div>
 
-  <footer class="footer shell">
-    <div class="footer-card">
-      <div>Stone Grill Press -- ❖ -- Solitude Reflections</div>
-      <div class="footer-links">
-        <a href="/">Main Home</a>
-        <a href="/reflections/">Reflections Home</a>
-        <a href="/order/">Order Page</a>
-      </div>
-    </div>
-  </footer>
+  <script src="/reflections/assets/reflection-data.js"></script>
 
   <script>
-    const PAGE = REFLECTION_DATA[PAGE_KEY];
+    const DATA = window.REFLECTION_DATA || {};
+    const container = document.getElementById('content-container');
 
-    function categoryLabel(key) {
-      if (key === "spirituality") return "Spirituality";
-      if (key === "human-nature") return "Human Nature";
-      if (key === "religion") return "Religion";
-      return "Reflection";
-    }
+    // Extracts key from URL or fallback
+    const getKeyFromURL = () => {
+      const parts = window.location.pathname.split('/');
+      const pagesIdx = parts.indexOf('pages');
+      if (pagesIdx !== -1 && parts[pagesIdx + 1]) return parts[pagesIdx + 1];
+      return Object.keys(DATA)[0] || "godevil";
+    };
 
-    function escapeHtml(str) {
-      return String(str || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-    }
+    // Main render function
+    function loadReflection(key, isInitial = false) {
+      const ref = DATA[key];
+      if (!ref) return;
 
-    function setMeta(name, content, attr = "name") {
-      let el = document.head.querySelector(`meta[${attr}="${name}"]`);
-      if (!el) {
-        el = document.createElement("meta");
-        el.setAttribute(attr, name);
-        document.head.appendChild(el);
-      }
-      el.setAttribute("content", content || "");
-    }
+      if (!isInitial) container.classList.add('fade-out');
 
-    function setCanonical(url) {
-      let el = document.head.querySelector('link[rel="canonical"]');
-      if (!el) {
-        el = document.createElement("link");
-        el.rel = "canonical";
-        document.head.appendChild(el);
-      }
-      el.href = url || "";
-    }
+      setTimeout(() => {
+        // Update Metadata
+        document.title = `${ref.title} | Solitude Reflections`;
+        
+        // Update Static Elements
+        document.getElementById('title').textContent = ref.title;
+        document.getElementById('subtitle').textContent = ref.subtitle || "";
+        document.getElementById('catTag').textContent = ref.category?.replace('-', ' ') || "Reflection";
+        document.getElementById('cover').src = ref.cover || "";
+        document.getElementById('content').innerHTML = ref.articleHtml || `<p>${ref.description || ""}</p>`;
 
-    function renderHead() {
-      const title = PAGE.title || "Solitude Reflections";
-      const description = PAGE.description || `A reflection page from Solitude Reflections: ${title}.`;
-      const canonical = PAGE.canonical || location.href;
-      const ogImage = PAGE.cover
-        ? `https://stonegrillresto.net${PAGE.cover}`
-        : "https://stonegrillresto.net/reflections/og-default.jpg";
+        // Render Audio
+        const aBtnBox = document.getElementById('audioBtns');
+        const player = document.getElementById('player');
+        aBtnBox.innerHTML = "";
+        const tracks = [];
+        if (ref.audio1) tracks.push({ label: ref.audio1Label || "Track 1", src: ref.audio1 });
+        if (ref.audio2) tracks.push({ label: ref.audio2Label || "Track 2", src: ref.audio2 });
 
-      document.title = `${title} -- Solitude Reflections · Ninox Antolihao`;
-      setMeta("description", description);
-      setCanonical(canonical);
-
-      setMeta("og:title", title, "property");
-      setMeta("og:description", description, "property");
-      setMeta("og:url", canonical, "property");
-      setMeta("og:image", ogImage, "property");
-
-      setMeta("twitter:title", title);
-      setMeta("twitter:description", description);
-      setMeta("twitter:image", ogImage);
-    }
-
-    function renderPage() {
-      if (!PAGE) {
-        document.getElementById("pageTitle").textContent = "Reflection not found";
-        return;
-      }
-
-      const title = PAGE.title || "Untitled Reflection";
-      const subtitle = PAGE.subtitle || "";
-      const category = PAGE.category || "religion";
-
-      document.getElementById("pageTitle").textContent = title;
-      document.getElementById("pageSubtitle").textContent = subtitle;
-      document.getElementById("pageCategory").textContent = categoryLabel(category);
-      document.getElementById("pageSlugTag").textContent = PAGE_KEY;
-      document.getElementById("pageCategoryTag").textContent = categoryLabel(category);
-
-      const cover = document.getElementById("pageCover");
-      cover.src = PAGE.cover || "";
-      cover.alt = title;
-
-      const article = document.getElementById("articleBody");
-      article.innerHTML = PAGE.articleHtml || `<p>${escapeHtml(PAGE.description || "Reflection content will appear here.")}</p>`;
-      document.getElementById("audioCaption").textContent = title;
-      document.getElementById("pageCategoryTag").classList.add(`tag--${category}`);
-    }
-
-    function renderAudio() {
-      const tracks = [
-        PAGE.audio1 ? { label: PAGE.audio1Label || "Reflection", src: PAGE.audio1 } : null,
-        PAGE.audio2 ? { label: PAGE.audio2Label || "Podcast", src: PAGE.audio2 } : null
-      ].filter(Boolean);
-
-      const container = document.getElementById("audioButtons");
-      const player = document.getElementById("audioPlayer");
-
-      if (!tracks.length) {
-        container.innerHTML = `<span class="subtitle">No audio available yet.</span>`;
-        player.remove();
-        return;
-      }
-
-      function loadTrack(track, btn) {
-        player.src = track.src;
-        document.getElementById("audioCaption").textContent = `${PAGE.title} -- ${track.label}`;
-        [...container.querySelectorAll(".audio-btn")].forEach(b => b.classList.remove("active"));
-        if (btn) btn.classList.add("active");
-      }
-
-      tracks.forEach((track, index) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "menu-btn audio-btn";
-        btn.textContent = track.label;
-        btn.addEventListener("click", () => loadTrack(track, btn));
-        container.appendChild(btn);
-
-        if (index === 0) {
-          loadTrack(track, btn);
+        if (tracks.length === 0) {
+          document.getElementById('listenSect').style.display = 'none';
+        } else {
+          document.getElementById('listenSect').style.display = 'block';
+          tracks.forEach((t, i) => {
+            const b = document.createElement('button');
+            b.className = 'audio-btn';
+            b.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> <span>${t.label}</span>`;
+            b.onclick = () => {
+              player.src = t.src;
+              [...aBtnBox.children].forEach(btn => btn.classList.remove('active'));
+              b.classList.add('active');
+              player.play();
+            };
+            aBtnBox.appendChild(b);
+            if(i === 0) { player.src = t.src; b.classList.add('active'); }
+          });
         }
-      });
+
+        // Render Navigation (Topic Grid)
+        renderNav(key);
+
+        if (!isInitial) {
+          container.classList.remove('fade-out');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, isInitial ? 0 : 300);
     }
 
-    function renderGroupedNav() {
-      const groups = {
-        "spirituality": [],
-        "human-nature": [],
-        "religion": []
-      };
+    function renderNav(currentKey) {
+      const nGrid = document.getElementById('navGrid');
+      nGrid.innerHTML = "";
+      const categories = { "spirituality": "Spirituality", "human-nature": "Human Nature", "religion": "Religion" };
+      
+      Object.entries(categories).forEach(([catKey, catName]) => {
+        const items = Object.entries(DATA).filter(([k, v]) => v.category === catKey);
+        if (items.length === 0) return;
 
-      Object.entries(REFLECTION_DATA).forEach(([key, item]) => {
-        const group = item.category || "religion";
-        if (!groups[group]) groups[group] = [];
-        groups[group].push({ key, item });
-      });
+        const group = document.createElement('div');
+        group.className = 'explore-group';
+        group.innerHTML = `<h3>${catName}</h3><div class="group-links"></div>`;
+        const linksContainer = group.querySelector('.group-links');
 
-      const container = document.getElementById("groupedNav");
-      container.innerHTML = "";
-
-      ["spirituality", "human-nature", "religion"].forEach(groupKey => {
-        const details = document.createElement("details");
-        details.className = "group";
-        details.dataset.group = groupKey;
-        if (groupKey === (PAGE.category || "religion")) details.open = true;
-
-        const summary = document.createElement("summary");
-        summary.textContent = categoryLabel(groupKey);
-        details.appendChild(summary);
-
-        const links = document.createElement("div");
-        links.className = "group-links";
-
-        groups[groupKey].forEach(({ key, item }) => {
-          const a = document.createElement("a");
-          a.href = item.read || "#";
-          a.textContent = item.title || key;
-          if (key === PAGE_KEY) a.classList.add("current");
-          links.appendChild(a);
+        items.forEach(([k, v]) => {
+          const a = document.createElement('a');
+          const targetUrl = `/reflections/pages/${k}/read.html`;
+          a.textContent = v.title;
+          if (k === currentKey) a.className = 'active';
+          
+          // THE SPA MAGIC: INTERCEPT CLICK
+          a.onclick = (e) => {
+            e.preventDefault();
+            if (k === currentKey) return;
+            // Update the browser URL without reloading
+            history.pushState({ key: k }, "", targetUrl);
+            loadReflection(k);
+          };
+          linksContainer.appendChild(a);
         });
-
-        details.appendChild(links);
-        container.appendChild(details);
+        nGrid.appendChild(group);
       });
     }
 
-    function setupTheme() {
+    // Handle browser Back/Forward buttons
+    window.onpopstate = (event) => {
+      const key = (event.state && event.state.key) ? event.state.key : getKeyFromURL();
+      loadReflection(key);
+    };
+
+    // Initial Load
+    window.onload = () => {
+      const initialKey = getKeyFromURL();
+      loadReflection(initialKey, true);
+    };
+
+    // Simple Theme Toggle
+    document.getElementById('themeBtn').onclick = () => {
       const root = document.documentElement;
-      const saved = localStorage.getItem("reflections-theme");
-      if (saved === "dark" || saved === "light") {
-        root.setAttribute("data-theme", saved);
-      }
-
-      const toggle = document.getElementById("themeToggle");
-
-      function refreshLabel() {
-        toggle.textContent = root.getAttribute("data-theme") === "dark" ? "Light Mode" : "Dark Mode";
-      }
-
-      toggle.addEventListener("click", () => {
-        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-        root.setAttribute("data-theme", next);
-        localStorage.setItem("reflections-theme", next);
-        refreshLabel();
-      });
-
-      refreshLabel();
-    }
-
-    function setupShare() {
-      const btn = document.getElementById("shareBtn");
-      btn.addEventListener("click", async () => {
-        const shareData = {
-          title: PAGE.title,
-          text: PAGE.title,
-          url: PAGE.canonical || location.href
-        };
-
-        try {
-          if (navigator.share) {
-            await navigator.share(shareData);
-          } else {
-            await navigator.clipboard.writeText(shareData.url);
-            btn.textContent = "Link Copied";
-            setTimeout(() => btn.textContent = "Share", 1400);
-          }
-        } catch (_) {}
-      });
-    }
-
-    function setupCusdis() {
-      const thread = document.getElementById("cusdis_thread");
-      thread.setAttribute("data-page-id", PAGE_KEY);
-      thread.setAttribute("data-page-url", PAGE.canonical || location.href);
-      thread.setAttribute("data-page-title", PAGE.title || "Solitude Reflections");
-    }
-
-    renderHead();
-    renderPage();
-    renderAudio();
-    renderGroupedNav();
-    setupTheme();
-    setupShare();
-    setupCusdis();
+      const isDark = root.getAttribute('data-theme') === 'dark';
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    };
   </script>
-
-  <script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
 </body>
 </html>
+
+```
