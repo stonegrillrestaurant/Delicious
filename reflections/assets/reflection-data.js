@@ -128,61 +128,38 @@ const REFLECTION_DATA = {
   },
 
   "godevil": {
-    title: "The Good and Evil Within Us",
-    subtitle: "Understanding Inner Moral Conflict and Human Nature",
-    category: "human-nature",
-    read: "/reflections/pages/godevil/read.html",
-    canonical: "https://stonegrillresto.net/reflections/pages/godevil/read.html",
-    cover: "/reflections/pages/godevil/goodevil.PNG",
-    coverLandscape: "/reflections/pages/godevil/godevil.jpg",
-    audio1Label: "Reflection",
-    audio1: "/reflections/pages/godevil/godevil.mp3",
-    audio2Label: "Podcast",
-    audio2: "/reflections/pages/godevil/godevil-podcast.mp3",
-    description: "A reflection on inner moral conflict, the struggle between good and evil within us, and what that tension reveals about human nature.",
-    articleHtml: " <div class="container">
-    <h1>The Linguistic Bridge</h1>
-    
-    <p>Most of us move through life speaking a language we believe is random. We use words like <strong>God</strong> and <strong>Devil</strong> as if they are names of distant, invisible beings. But if we look at the physical structure of these words, a "hidden in plain sight" architecture emerges--a shortcut designed to make the invisible visible.</p>
+  title: "The Good and Evil Within Us",
+  subtitle: "A Reflection on the Moral Struggle Within Human Nature",
+  category: "morality",
+  read: "/reflections/pages/godevil/read.html",
+  canonical: "https://stonegrillresto.net/reflections/pages/godevil/read.html",
+  cover: "/reflections/pages/godevil/godevil.PNG",
+  coverLandscape: "/reflections/pages/godevil/godevil-landscape.jpg",
+  audio1Label: "Reflection",
+  audio1: "/reflections/pages/godevil/godevil.mp3",
+  audio2Label: "Podcast",
+  audio2: "/reflections/pages/godevil/godevil-podcast.mp3",
+  description: "A reflection on the conflict between good and evil within the human person, and how moral struggle reveals the deeper condition of the self.",
+  articleHtml: `
+    <div class="container">
+      <h1>The Good and Evil Within Us</h1>
 
-    <h2>The Architecture of the Word</h2>
-    <p>Consider the transition of the letters. It is not a coincidence; it is a blueprint of human potential:</p>
-    <ul>
-        <li><strong>EVIL + D = DEVIL</strong> (The Addition of a Mask/Identity)</li>
-        <li><strong>GOOD - O = GOD</strong> (The Reduction to Essence/Source)</li>
-    </ul>
+      <p>Good and evil are not only found in systems, histories, or institutions. They are also found within us. Human beings are capable of compassion and cruelty, honesty and deceit, restraint and excess. The same person who can comfort another can also wound. The same mind that seeks truth can also justify selfishness. This tension is part of the inner moral condition of being human.</p>
 
-    
+      <p>We often speak as if evil belongs somewhere else—as if it belongs only to criminals, tyrants, or corrupt societies. But the more honest view is harder. Evil does not begin only in public acts. It often begins in tolerated desires, hidden motives, wounded pride, envy, fear, or indifference. In the same way, good does not appear only in grand heroic moments. It appears in restraint, fairness, patience, humility, sacrifice, and the quiet decision to do what is right when no one is watching.</p>
 
-    <h2>The Personification Trap</h2>
-    <p>The addition of the "D" to "Evil" creates a <i>personification</i>. It takes a "bad way" of being and turns it into a "He"--a mythical character we can blame or fear. This is the first level of the illusion. By turning internal choices into external characters, we are misled into believing that the battle is outside of us.</p>
-    
-    <div class="highlight-box">
-        When we are stuck in this dogma, we live on <strong>Auto-Pilot</strong>. We become reactive to our surroundings, easily manipulated by those who use the "fear of the Devil" to keep us from looking inward.
+      <p>This is why moral life is not merely about judging others. It is also about examining oneself. The real struggle is not simply between one group and another, but within the heart, the mind, the conscience, and the will. We carry impulses that can build or destroy. What grows in us depends on what we feed, what we excuse, and what we repeatedly choose.</p>
+
+      <p>The danger is that people often identify themselves only with their good side and project all corruption outward. But self-righteousness can become its own blindness. When a person stops questioning their own motives, even harmful acts can begin to appear justified. History has shown many times that evil is not sustained only by hatred. It is also sustained by certainty without self-examination, conviction without humility, and power without conscience.</p>
+
+      <p>To recognize both good and evil within ourselves is not a sign of weakness. It is the beginning of maturity. A person becomes more responsible, not less, when they admit their inner conflict honestly. Denial weakens moral judgment; awareness sharpens it. The one who knows their own capacity to fall is often more careful, more compassionate, and less arrogant in dealing with others.</p>
+
+      <p>The goal, then, is not to pretend that darkness does not exist, nor to surrender to it as if it were inevitable. The goal is to become conscious of it, resist what degrades the self, and strengthen what leads to clarity, responsibility, and goodness. Moral life is shaped by repeated choices. Character is not formed in a single moment, but by what one repeatedly permits, rejects, loves, and practices.</p>
+
+      <p>The good and evil within us reveal that human nature is not simple. We are unfinished creatures, capable of rising and falling. That is why discipline, reflection, conscience, and humility matter. The person who understands the battle within is less likely to be ruled by impulse and more likely to become intentional in how they live. What we become is not only a result of what exists in us, but of what we choose to strengthen.</p>
     </div>
-
-    <h2>The Realization of the One Body</h2>
-    <p>The wisdom of the 1-letter difference is that it proves how close these two poles actually are. They are not enemies; they are the left and right character of the <strong>same body</strong>. If the words were totally different, we might believe they were unrelated. But because they are 90% identical, the truth is revealed: <strong>They have the same power because they are the same source.</strong></p>
-
-    
-
-    <h2>Waking Up: From Dogma to Sovereignty</h2>
-    <p>Waking up means realizing that you are the <strong>Author</strong> of this narrative. You are not a victim of a "Devil" or a servant of a "God"--you are the one who decides which potential to personify in every moment. When you understand that "it is on us exactly all the time," the fear vanishes.</p>
-
-    
-
-    <p>The 1-letter difference is a safety switch. It ensures that no matter how far we drift into a "bad way," we are always just one shift of focus away from the "Good."</p>
-
-    <div class="highlight-box">
-        <strong>The Takeaway:</strong> Stop looking for them in the sky and start looking for them in your own choices. You are the steering wheel.
-    </div>
-
-     <div class="comments-glass-card" id="commentSection">
-      <h3>Reflections & Dialogue</h3>
-      <div id="cusdis_thread" data-host="https://cusdis.com" data-app-id="d14e9b16-d8b2-40ac-a7f6-e200b1ac61e8" data-theme="light"></div>
-    </div>"
-    
-  },
+  `
+},
 
   "the-madness-of-fath": {
     title: "The Madness of Faith",
