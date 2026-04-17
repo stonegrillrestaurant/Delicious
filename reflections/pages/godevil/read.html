@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -14,14 +13,14 @@
     :root {
       --radius-sm: 14px; --radius-md: 24px; --radius-lg: 32px;
       --bg: #f4f2ee; --text: #1d1b1a; --text-muted: #736b63; --brand: #a67b51;
-      --glass-panel: rgba(255, 255, 255, 0.65);
+      --glass-panel: rgba(255, 255, 255, 0.7);
       --glass-border: rgba(255, 255, 255, 0.5);
       --glass-control: rgba(255, 255, 255, 0.4);
     }
 
     html[data-theme="dark"] {
       --bg: #0f0e0d; --text: #f0ebe1; --text-muted: #a39b90;
-      --glass-panel: rgba(30, 28, 26, 0.65);
+      --glass-panel: rgba(30, 28, 26, 0.7);
       --glass-border: rgba(255, 255, 255, 0.08);
       --glass-control: rgba(50, 48, 45, 0.5);
     }
@@ -30,58 +29,55 @@
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.4s ease; overflow-x: hidden; }
     .shell { width: min(1000px, calc(100% - 32px)); margin: 0 auto; }
     
-    .glass { 
-      background: var(--glass-panel); 
-      backdrop-filter: blur(25px); 
-      -webkit-backdrop-filter: blur(25px); 
-      border: 1px solid var(--glass-border); 
-    }
-    
+    .glass { background: var(--glass-panel); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); }
     .topbar { position: sticky; top: 16px; z-index: 100; margin-bottom: 32px; }
     .topbar-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; border-radius: 99px; padding: 0 10px 0 20px; }
     
-    #app-content { transition: opacity 0.4s ease, transform 0.4s ease; }
-    .switching { opacity: 0; transform: translateY(15px); }
+    #app-content { transition: opacity 0.5s ease; min-height: 80vh; }
+    .hidden { display: none !important; }
 
-    /* Hero Layout */
-    .hero-card { border-radius: var(--radius-lg); overflow: hidden; display: grid; grid-template-columns: 1.2fr 1fr; min-height: 420px; margin-bottom: 32px; }
-    .hero-copy { padding: 48px; display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+    /* Hero */
+    .hero-card { border-radius: var(--radius-lg); overflow: hidden; display: grid; grid-template-columns: 1.2fr 1fr; min-height: 440px; margin-bottom: 32px; }
+    .hero-copy { padding: 48px; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
     .hero-img { background: #e5e0d8; position: relative; }
     .hero-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
     
-    .category-tag { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--brand); }
+    .category-tag { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; color: var(--brand); }
 
+    /* Layout Sections */
     .section-card { padding: 40px; border-radius: var(--radius-lg); margin-bottom: 32px; }
-    h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+    h2 { font-family: 'Playfair Display', serif; font-size: 1.8rem; margin-bottom: 24px; color: var(--text); }
 
-    /* Explore Grid */
+    /* Explore Nav */
     .explore-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
     .explore-group { background: var(--glass-control); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); }
-    .explore-group h3 { font-size: 0.85rem; text-transform: uppercase; margin-bottom: 16px; opacity: 0.6; color: var(--brand); font-weight: 800; }
-    .group-links { display: flex; flex-direction: column; gap: 10px; }
-    .group-links a { font-size: 0.95rem; color: var(--text-muted); transition: 0.2s; text-decoration: none; cursor: pointer; display: block; }
-    .group-links a:hover { color: var(--text); transform: translateX(5px); }
-    .group-links a.active { font-weight: 600; color: var(--text); pointer-events: none; padding-left: 8px; border-left: 3px solid var(--brand); }
+    .explore-group h3 { font-size: 0.8rem; text-transform: uppercase; margin-bottom: 16px; letter-spacing: 0.1em; color: var(--brand); opacity: 0.8; }
+    .group-links { display: flex; flex-direction: column; gap: 8px; }
+    .group-links a { font-size: 0.95rem; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: 0.2s; }
+    .group-links a:hover { color: var(--text); padding-left: 5px; }
+    .group-links a.active { font-weight: 700; color: var(--text); border-left: 3px solid var(--brand); padding-left: 10px; pointer-events: none; }
 
-    /* Audio Player */
-    .audio-list { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
-    .audio-btn { flex: 1; min-width: 200px; padding: 18px; border-radius: var(--radius-md); background: var(--glass-control); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.3s; font-family: inherit; }
-    .audio-btn.active { border-color: var(--brand); background: var(--glass-panel); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    audio { width: 100%; height: 45px; border-radius: 99px; }
+    /* Audio UI */
+    .audio-flex { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    .audio-btn { flex: 1; min-width: 180px; padding: 16px; border-radius: 16px; background: var(--glass-control); border: 1px solid var(--glass-border); color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.3s; font-family: inherit; }
+    .audio-btn.active { border-color: var(--brand); background: var(--glass-panel); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 
-    /* Article Styles */
-    .article-content { font-size: 1.15rem; line-height: 1.9; max-width: 760px; margin: 0 auto; }
-    .article-content p { margin-bottom: 1.5rem; }
-    .article-content blockquote { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.4rem; padding: 20px 40px; border-left: 4px solid var(--brand); margin: 40px 0; background: var(--glass-control); }
+    /* Article Styling (Supports your JSON structure) */
+    .article-content { font-size: 1.15rem; line-height: 1.85; max-width: 760px; margin: 0 auto; color: var(--text); }
+    .article-content h1, .article-content h2 { font-family: 'Playfair Display', serif; margin: 2rem 0 1rem; }
+    .article-content p { margin-bottom: 1.5rem; opacity: 0.9; }
+    .article-content .lead { font-size: 1.3rem; line-height: 1.6; color: var(--text); font-weight: 500; }
+    .article-content blockquote { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.5rem; padding: 30px; border-left: 4px solid var(--brand); margin: 40px 0; background: var(--glass-control); border-radius: 0 16px 16px 0; }
     .article-content .rule { text-align: center; position: relative; margin: 60px 0; border-bottom: 1px solid var(--glass-border); }
-    .article-content .rule span { background: var(--bg); padding: 0 20px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.5; transition: background 0.4s; }
-    .article-content .aside { font-size: 0.9rem; opacity: 0.7; border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+    .article-content .rule span { background: var(--bg); padding: 0 15px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.6; }
+    .article-content .aside { font-size: 0.9rem; padding: 12px 20px; background: var(--glass-control); border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--glass-border); display: block; width: fit-content; }
 
     .icon-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--glass-control); border: 1px solid var(--glass-border); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); }
 
     @media (max-width: 860px) { 
       .hero-card { grid-template-columns: 1fr; } 
-      .hero-img { height: 300px; order: -1; }
+      .hero-img { height: 260px; order: -1; }
+      .hero-copy { padding: 32px; }
       .section-card { padding: 24px; }
     }
   </style>
@@ -91,186 +87,146 @@
   <header class="topbar shell">
     <div class="topbar-inner glass">
       <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:28px; height:28px; background:var(--brand); border-radius:6px; box-shadow: 0 2px 6px rgba(166,123,81,0.3);"></div>
-        <strong style="letter-spacing:-0.02em;">Solitude Reflections</strong>
+        <div style="width:28px; height:28px; background:var(--brand); border-radius:7px;"></div>
+        <strong style="font-weight:600;">Solitude Reflections</strong>
       </div>
       <button class="icon-btn" id="themeBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
     </div>
   </header>
 
-  <div id="app-content">
+  <div id="loading" class="shell" style="text-align:center; padding-top:100px; opacity:0.5;">
+    Gathering reflections...
+  </div>
+
+  <div id="app-content" class="hidden">
     <main class="shell">
-      <!-- Hero Display -->
       <section class="hero-card glass">
         <div class="hero-copy">
-          <span class="category-tag" id="ui-category">...</span>
-          <h1 id="ui-title" style="font-family:'Playfair Display'; font-size: clamp(2.2rem, 5vw, 3rem); line-height:1.1;"></h1>
-          <p id="ui-subtitle" style="opacity:0.8; font-size: 1.1rem;"></p>
+          <span class="category-tag" id="ui-category"></span>
+          <h1 id="ui-title" style="font-family:'Playfair Display'; font-size: clamp(2rem, 5vw, 2.8rem); line-height:1.15;"></h1>
+          <p id="ui-subtitle" style="opacity:0.7; font-size: 1.1rem;"></p>
         </div>
         <div class="hero-img"><img id="ui-cover" src="" alt=""></div>
       </section>
 
-      <!-- Navigation Grid -->
-      <section class="section-card glass">
-        <h2>Explore Reflections</h2>
-        <div class="explore-grid" id="ui-nav"></div>
-      </section>
-
-      <!-- Audio Section -->
       <section class="section-card glass" id="sect-audio">
         <h2>Listen</h2>
-        <div class="audio-list" id="ui-audio-btns"></div>
-        <audio id="audio-player" controls></audio>
+        <div class="audio-flex" id="ui-audio-btns"></div>
+        <audio id="audio-player" controls style="width:100%; height:45px; border-radius:30px;"></audio>
       </section>
 
-      <!-- Full Article -->
       <section class="section-card glass">
         <div id="ui-body" class="article-content"></div>
+      </section>
+
+      <section class="section-card glass">
+        <h2>Explore Topics</h2>
+        <div class="explore-grid" id="ui-nav"></div>
       </section>
     </main>
   </div>
 
-  <!-- Your provided data structure -->
+  <!-- This file must exist at /reflections/assets/reflection-data.js -->
   <script src="/reflections/assets/reflection-data.js"></script>
 
   <script>
-    const contentEl = document.getElementById('app-content');
-    
-    /**
-     * Identifies which reflection to show based on the URL.
-     * Pattern: /reflections/pages/{KEY}/read.html
-     */
-    function getReflectionKey() {
-      const path = window.location.pathname;
-      const segments = path.split('/').filter(Boolean);
-      const pagesIdx = segments.indexOf('pages');
-      
-      let key = (pagesIdx !== -1 && segments[pagesIdx + 1]) ? segments[pagesIdx + 1] : null;
+    const app = document.getElementById('app-content');
+    const load = document.getElementById('loading');
 
-      // Fallback to first entry if URL is root or key is missing
+    // Helper to find the key from the URL
+    function getUrlKey() {
+      const path = window.location.pathname;
+      const parts = path.split('/').filter(Boolean);
+      const idx = parts.indexOf('pages');
+      const key = (idx !== -1 && parts[idx+1]) ? parts[idx+1] : null;
+      
       const data = window.REFLECTION_DATA || {};
-      if (!key || !data[key]) {
-        return Object.keys(data)[0] || "power-meets-belief";
-      }
-      return key;
+      if (key && data[key]) return key;
+      return Object.keys(data)[0]; // Default to first item
     }
 
-    /**
-     * Swaps the page content with a new key from REFLECTION_DATA
-     */
-    function renderReflection(key, isInitial = false) {
+    function render(key, isFirst = false) {
       const data = window.REFLECTION_DATA || {};
       const ref = data[key];
+      if (!ref) {
+        load.innerHTML = "Reflections not found. Please check data file path.";
+        return;
+      }
 
-      if (!ref) return;
+      load.classList.add('hidden');
+      app.classList.remove('hidden');
 
-      if (!isInitial) contentEl.classList.add('switching');
+      // 1. Meta Updates
+      document.title = `${ref.title} | Solitude Reflections`;
+      document.getElementById('ui-title').textContent = ref.title;
+      document.getElementById('ui-subtitle').textContent = ref.subtitle || "";
+      document.getElementById('ui-category').textContent = ref.category || "General";
+      document.getElementById('ui-cover').src = ref.cover || "";
+      document.getElementById('ui-body').innerHTML = ref.articleHtml || "";
 
-      setTimeout(() => {
-        // Update browser tab and text
-        document.title = `${ref.title} | Solitude Reflections`;
-        document.getElementById('ui-title').textContent = ref.title;
-        document.getElementById('ui-subtitle').textContent = ref.subtitle || "";
-        document.getElementById('ui-category').textContent = ref.category || "Reflection";
-        document.getElementById('ui-cover').src = ref.cover || "";
-        document.getElementById('ui-body').innerHTML = ref.articleHtml || "";
-
-        // Handle Audio
-        const audioSect = document.getElementById('sect-audio');
-        const audioBox = document.getElementById('ui-audio-btns');
-        const player = document.getElementById('audio-player');
-        audioBox.innerHTML = "";
-        
-        const tracks = [];
-        if (ref.audio1) tracks.push({ label: ref.audio1Label || "Track 1", src: ref.audio1 });
-        if (ref.audio2) tracks.push({ label: ref.audio2Label || "Track 2", src: ref.audio2 });
-
-        if (tracks.length === 0) {
-          audioSect.style.display = 'none';
-        } else {
-          audioSect.style.display = 'block';
-          tracks.forEach((t, i) => {
-            const btn = document.createElement('button');
-            btn.className = 'audio-btn';
-            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> <span>${t.label}</span>`;
-            btn.onclick = () => {
-              player.src = t.src;
-              [...audioBox.children].forEach(b => b.classList.remove('active'));
-              btn.classList.add('active');
-              player.play();
-            };
-            audioBox.appendChild(btn);
-            if(i === 0) { player.src = t.src; btn.classList.add('active'); }
-          });
-        }
-
-        // Re-draw Nav highlight
-        renderGlobalNav(key);
-
-        if (!isInitial) {
-          contentEl.classList.remove('switching');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }, isInitial ? 0 : 400);
-    }
-
-    /**
-     * Builds the "Explore" categories dynamically from REFLECTION_DATA
-     */
-    function renderGlobalNav(activeKey) {
-      const nav = document.getElementById('ui-nav');
-      const data = window.REFLECTION_DATA || {};
-      nav.innerHTML = "";
+      // 2. Audio Logic
+      const audioBox = document.getElementById('ui-audio-btns');
+      const player = document.getElementById('audio-player');
+      audioBox.innerHTML = "";
       
-      // Get unique categories present in your data
+      const tracks = [];
+      if (ref.audio1) tracks.push({ label: ref.audio1Label || "Primary", src: ref.audio1 });
+      if (ref.audio2) tracks.push({ label: ref.audio2Label || "Podcast", src: ref.audio2 });
+
+      document.getElementById('sect-audio').style.display = tracks.length ? 'block' : 'none';
+      tracks.forEach((t, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'audio-btn';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> <span>${t.label}</span>`;
+        btn.onclick = () => {
+          player.src = t.src;
+          [...audioBox.children].forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          player.play();
+        };
+        audioBox.appendChild(btn);
+        if (i === 0) { player.src = t.src; btn.classList.add('active'); }
+      });
+
+      // 3. Navigation Grid
+      const nav = document.getElementById('ui-nav');
+      nav.innerHTML = "";
       const categories = [...new Set(Object.values(data).map(v => v.category))];
       
       categories.forEach(cat => {
-        const items = Object.entries(data).filter(([k, v]) => v.category === cat);
-        if (items.length === 0) return;
-
         const group = document.createElement('div');
         group.className = 'explore-group';
-        group.innerHTML = `<h3>${cat.replace('-', ' ')}</h3><div class="group-links"></div>`;
-        const linksBox = group.querySelector('.group-links');
-
-        items.forEach(([itemKey, itemVal]) => {
+        group.innerHTML = `<h3>${cat}</h3><div class="group-links"></div>`;
+        const lb = group.querySelector('.group-links');
+        
+        Object.entries(data).filter(([k, v]) => v.category === cat).forEach(([k, v]) => {
           const a = document.createElement('a');
-          a.textContent = itemVal.title;
-          if (itemKey === activeKey) a.className = 'active';
-          
-          a.onclick = (e) => {
-            e.preventDefault();
-            if (itemKey === activeKey) return;
-            
-            // Build the virtual URL
-            const newPath = `/reflections/pages/${itemKey}/read.html`;
-            history.pushState({ key: itemKey }, "", newPath);
-            renderReflection(itemKey);
+          a.textContent = v.title;
+          if (k === key) a.className = 'active';
+          a.onclick = () => {
+            const newUrl = `/reflections/pages/${k}/read.html`;
+            history.pushState({key: k}, "", newUrl);
+            render(k);
+            window.scrollTo({top: 0, behavior: 'smooth'});
           };
-          linksBox.appendChild(a);
+          lb.appendChild(a);
         });
         nav.appendChild(group);
       });
     }
 
-    // Handle back button
-    window.onpopstate = (e) => {
-      const key = (e.state && e.state.key) ? e.state.key : getReflectionKey();
-      renderReflection(key);
+    // Initialize
+    window.onload = () => {
+      // Delay slightly to ensure script is parsed
+      setTimeout(() => render(getUrlKey(), true), 100);
     };
 
-    // Dark/Light
+    window.onpopstate = (e) => render(e.state?.key || getUrlKey());
+
     document.getElementById('themeBtn').onclick = () => {
       const h = document.documentElement;
       h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     };
-
-    window.onload = () => {
-      renderReflection(getReflectionKey(), true);
-    };
   </script>
 </body>
 </html>
-
-```
