@@ -1,459 +1,595 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const app = createReflectionApp();
-  app.init();
-});
+/* =========================================================
+   SOLITUDE REFLECTIONS - MASTER JS
+   Works with:
+   - /reflections/assets/reflection-data.js
+   - /reflections/assets/master.css?v=7
+   - read-style app-like switching on the same page
+   ========================================================= */
 
-function createReflectionApp() {
+(function () {
+  "use strict";
+
+  /* =========================
+     SAFE HELPERS
+     ========================= */
+  const $ = (id) => document.getElementById(id);
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function normalizeCategory(category) {
+    const value = String(category || "").toLowerCase().trim();
+
+    if (value === "human" || value === "human-nature") return "human";
+    if (value === "spirituality") return "spirituality";
+    return "religion";
+  }
+
+  function themeClassFromCategory(category) {
+    const normalized = normalizeCategory(category);
+    if (normalized === "spirituality") return "theme-spirituality";
+    if (normalized === "human") return "theme-human";
+    return "theme-religion";
+  }
+
+  function categoryLabelFromCategory(category) {
+    const normalized = normalizeCategory(category);
+    if (normalized === "spirituality") return "Spirituality";
+    if (normalized === "human") return "Human Nature";
+    return "Religion";
+  }
+
+  function buildAbsoluteUrl(path) {
+    try {
+      return new URL(path, window.location.origin).toString();
+    } catch (_) {
+      return window.location.origin;
+    }
+  }
+
+  function getAllReflections() {
+    if (typeof window.REFLECTION_DATA === "object" && window.REFLECTION_DATA) {
+      return window.REFLECTION_DATA;
+    }
+    if (typeof window.REFLECTIONS === "object" && window.REFLECTIONS) {
+      return window.REFLECTIONS;
+    }
+    return {};
+  }
+
+  function getReflectionByKey(key) {
+    const all = getAllReflections();
+    return all[key] || null;
+  }
+
+  function getFirstKeyByCategory(category) {
+    const all = getAllReflections();
+    const keys = Object.keys(all);
+
+    for (const key of keys) {
+      const item = all[key];
+      if (normalizeCategory(item.category) === normalizeCategory(category)) {
+        return key;
+      }
+    }
+
+    return keys[0] || null;
+  }
+
+  function getInitialKey() {
+    const fromBody = document.body.dataset.initialKey || "";
+    const fromUrl = new URLSearchParams(window.location.search).get("key") || "";
+    const candidate = fromUrl || fromBody;
+
+    if (candidate && getReflectionByKey(candidate)) return candidate;
+
+    const allKeys = Object.keys(getAllReflections());
+    return allKeys[0] || null;
+  }
+
+  function supportsNativeShare() {
+    return typeof navigator.share === "function";
+  }
+
+  /* =========================
+     DOM REFERENCES
+     ========================= */
+  const body = document.body;
+
+  const heroImage = $("heroImage");
+  const heroCategoryLabel = $("heroCategoryLabel");
+  const reflectionTitle = $("reflectionTitle");
+  const reflectionSubtitle = $("reflectionSubtitle");
+  const heroIdentity = $("heroIdentity");
+
+  const readSectionTitle = $("readSectionTitle");
+  const readContent = $("readContent");
+
+  const audioSection = $("audioSection");
+  const mainAudio = $("mainAudio");
+  const nowPlayingTitle = $("nowPlayingTitle");
+  const playerVisual = $("playerVisual");
+
+  const trackPrimary = $("trackPrimary");
+  const trackSecondary = $("trackSecondary");
+  const trackPrimaryLabel = $("trackPrimaryLabel");
+  const trackSecondaryLabel = $("trackSecondaryLabel");
+
+  const exploreListGrid = $("exploreListGrid");
+  const exploreCategoryButtons = Array.from(document.querySelectorAll(".explore-cat-btn"));
+
+  const shareFacebookBtn = $("shareFacebookBtn");
+  const shareXBtn = $("shareXBtn");
+  const shareMessengerBtn = $("shareMessengerBtn");
+  const copyLinkBtn = $("copyLinkBtn");
+
+  const themeToggle = $("themeToggle");
+
+  /* =========================
+     APP STATE
+     ========================= */
   const state = {
-    data: {},
-    keysByCategory: {
-      spirituality: [],
-      human: [],
-      religion: []
-    },
+    currentKey: null,
     currentCategory: "religion",
-    currentKey: "",
-    currentReflection: null,
-    activeReflectionUrl: window.location.href
+    currentTrackButton: null
   };
 
-  const els = {
-    body: document.body,
-    heroImage: document.getElementById("heroImage"),
-    heroCategoryLabel: document.getElementById("heroCategoryLabel"),
-    reflectionTitle: document.getElementById("reflectionTitle"),
-    reflectionSubtitle: document.getElementById("reflectionSubtitle"),
-    readSectionTitle: document.getElementById("readSectionTitle"),
-    readContent: document.getElementById("readContent"),
+  /* =========================
+     THEME
+     ========================= */
+  function applySavedTheme() {
+    const saved = localStorage.getItem("sr-theme");
+    const theme = saved === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+    updateThemeButtonLabel();
+  }
 
-    themeToggle: document.getElementById("themeToggle"),
+  function updateThemeButtonLabel() {
+    if (!themeToggle) return;
+    const current = document.documentElement.getAttribute("data-theme");
+    themeToggle.textContent = current === "light" ? "Dark Mode" : "Light Mode";
+  }
 
-    audioCard: document.getElementById("audioPlayerCard"),
-    mainAudio: document.getElementById("mainAudio"),
-    nowPlayingTitle: document.getElementById("nowPlayingTitle"),
-    trackPrimary: document.getElementById("trackPrimary"),
-    trackSecondary: document.getElementById("trackSecondary"),
-    trackPrimaryLabel: document.getElementById("trackPrimaryLabel"),
-    trackSecondaryLabel: document.getElementById("trackSecondaryLabel"),
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("sr-theme", next);
+    updateThemeButtonLabel();
+  }
 
-    categoryButtons: Array.from(document.querySelectorAll(".explore-cat-btn")),
-    exploreListGrid: document.getElementById("exploreListGrid"),
+  /* =========================
+     TRACK / AUDIO
+     ========================= */
+  function stopPlayingState() {
+    body.classList.remove("is-playing");
+  }
 
-    shareFacebookBtn: document.getElementById("shareFacebookBtn"),
-    shareXBtn: document.getElementById("shareXBtn"),
-    shareMessengerBtn: document.getElementById("shareMessengerBtn"),
-    copyLinkBtn: document.getElementById("copyLinkBtn")
-  };
+  function startPlayingState() {
+    body.classList.add("is-playing");
+  }
 
-  function init() {
-    setupThemeToggle();
-    setupAudioPlayer();
-    setupCopyLink();
+  function setActiveTrackButton(button) {
+    [trackPrimary, trackSecondary].forEach((btn) => {
+      if (btn) btn.classList.remove("active-track");
+    });
 
-    state.data = getReflectionData();
-    state.keysByCategory = groupKeysByCategory(state.data);
+    if (button) {
+      button.classList.add("active-track");
+      state.currentTrackButton = button;
+    }
+  }
 
-    bindCategoryButtons();
+  function setAudioSource(src, title) {
+    if (!mainAudio) return;
 
-    const requestedKey = getRequestedInitialKey();
-    const safeKey = requestedKey && state.data[requestedKey]
-      ? requestedKey
-      : getFirstAvailableKey(state.keysByCategory);
-
-    if (!safeKey) {
-      renderEmptyState();
+    if (!src) {
+      mainAudio.pause();
+      mainAudio.removeAttribute("src");
+      mainAudio.load();
+      nowPlayingTitle.textContent = title || "No audio available";
+      stopPlayingState();
       return;
     }
 
-    const initialReflection = state.data[safeKey];
-    const initialCategory = normalizeCategory(initialReflection.category);
+    const wasPlaying = !mainAudio.paused;
 
-    setActiveCategory(initialCategory);
-    renderTopicList(initialCategory, safeKey);
-    renderReflection(safeKey);
+    mainAudio.pause();
+    mainAudio.src = src;
+    mainAudio.load();
+    nowPlayingTitle.textContent = title || "Reflection";
+
+    if (wasPlaying) {
+      mainAudio.play().catch(() => {});
+    }
   }
 
-  function getReflectionData() {
-    const raw =
-      window.REFLECTION_DATA ||
-      window.reflectionData ||
-      window.REFLECTIONS ||
-      window.reflections ||
-      {};
+  function configureTrackButton(button, labelEl, label, src, fallbackTitle) {
+    if (!button || !labelEl) return;
 
-    const normalized = {};
+    const cleanLabel = label || fallbackTitle || "Audio";
+    labelEl.textContent = cleanLabel;
+    button.dataset.trackTitle = cleanLabel;
+    button.dataset.trackSrc = src || "";
 
-    Object.keys(raw).forEach((key) => {
-      normalized[key] = normalizeReflection(key, raw[key]);
+    if (src) {
+      button.style.display = "";
+      button.disabled = false;
+      button.setAttribute("aria-hidden", "false");
+    } else {
+      button.style.display = "none";
+      button.disabled = true;
+      button.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function bindTrackButton(button) {
+    if (!button) return;
+
+    button.addEventListener("click", function () {
+      const src = this.dataset.trackSrc || "";
+      const title = this.dataset.trackTitle || "Audio";
+
+      if (!src) return;
+
+      setActiveTrackButton(this);
+      setAudioSource(src, title);
+      mainAudio.play().catch(() => {});
     });
-
-    return normalized;
   }
 
-  function normalizeReflection(key, item) {
-    const category = normalizeCategory(item.category);
-
-    return {
-      key,
-      title: item.title || "Untitled Reflection",
-      subtitle: item.subtitle || item.description || "",
-      category,
-      read: item.read || item.canonical || "",
-      canonical: item.canonical || item.read || "",
-      cover: item.cover || item.coverLandscape || "/reflections/assets/placeholder.jpg",
-      coverLandscape: item.coverLandscape || item.cover || "/reflections/assets/placeholder.jpg",
-      audio1Label: item.audio1Label || "Reflection",
-      audio1: item.audio1 || "",
-      audio2Label: item.audio2Label || "Podcast",
-      audio2: item.audio2 || "",
-      description: item.description || "",
-      articleHtml: item.articleHtml || "<p>No article content available.</p>"
-    };
+  /* =========================
+     SHARE
+     ========================= */
+  function getCurrentReflectionUrl(item) {
+    return item && item.canonical ? item.canonical : window.location.href;
   }
 
-  function normalizeCategory(value) {
-    const raw = String(value || "").trim().toLowerCase();
-
-    if (raw === "spirituality") return "spirituality";
-    if (raw === "religion") return "religion";
-    if (raw === "human" || raw === "human nature" || raw === "human-nature") return "human";
-
-    return "spirituality";
+  function getCurrentShareTitle(item) {
+    return item && item.title ? item.title : document.title;
   }
 
-  function groupKeysByCategory(data) {
-    const grouped = {
-      spirituality: [],
-      human: [],
-      religion: []
-    };
+  function updateShareLinks(item) {
+    const url = encodeURIComponent(getCurrentReflectionUrl(item));
+    const title = encodeURIComponent(getCurrentShareTitle(item));
 
-    Object.keys(data).forEach((key) => {
-      const item = data[key];
-      const category = normalizeCategory(item.category);
-      if (!grouped[category]) grouped[category] = [];
-      grouped[category].push(key);
+    if (shareFacebookBtn) {
+      shareFacebookBtn.href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+      shareFacebookBtn.target = "_blank";
+      shareFacebookBtn.rel = "noopener";
+    }
+
+    if (shareXBtn) {
+      shareXBtn.href = `https://twitter.com/intent/tweet?url=${url}&text=${title}`;
+      shareXBtn.target = "_blank";
+      shareXBtn.rel = "noopener";
+    }
+
+    if (shareMessengerBtn) {
+      shareMessengerBtn.href = `https://www.facebook.com/dialog/send?link=${url}&app_id=2895055444086567&redirect_uri=${url}`;
+      shareMessengerBtn.target = "_blank";
+      shareMessengerBtn.rel = "noopener";
+    }
+  }
+
+  async function copyCurrentLink() {
+    const item = getReflectionByKey(state.currentKey);
+    const url = getCurrentReflectionUrl(item);
+
+    try {
+      await navigator.clipboard.writeText(url);
+      const oldText = copyLinkBtn.textContent;
+      copyLinkBtn.textContent = "✓";
+      setTimeout(() => {
+        copyLinkBtn.textContent = oldText;
+      }, 1200);
+    } catch (_) {
+      window.prompt("Copy this link:", url);
+    }
+  }
+
+  /* =========================
+     RENDER READ / HERO
+     ========================= */
+  function renderHero(item) {
+    if (!item) return;
+
+    const coverSrc = item.coverLandscape || item.cover || "/reflections/assets/placeholder.jpg";
+
+    if (heroImage) {
+      heroImage.src = coverSrc;
+      heroImage.alt = item.title ? `${item.title} cover image` : "Reflection cover image";
+    }
+
+    if (heroCategoryLabel) {
+      heroCategoryLabel.textContent = categoryLabelFromCategory(item.category);
+    }
+
+    if (reflectionTitle) {
+      reflectionTitle.textContent = item.title || "Reflection Title";
+    }
+
+    if (reflectionSubtitle) {
+      reflectionSubtitle.textContent = item.subtitle || item.description || "";
+      reflectionSubtitle.style.display = (item.subtitle || item.description) ? "" : "none";
+    }
+
+    if (heroIdentity) {
+      heroIdentity.textContent = "Stone Grill Press · Ninox Antolihao";
+    }
+  }
+
+  function renderReadSection(item) {
+    if (!item) return;
+
+    if (readSectionTitle) {
+      readSectionTitle.textContent = item.title || "Read the Reflection";
+    }
+
+    if (readContent) {
+      if (item.articleHtml && String(item.articleHtml).trim()) {
+        readContent.innerHTML = item.articleHtml;
+      } else {
+        readContent.innerHTML = `
+          <h2>${escapeHtml(item.title || "Reflection")}</h2>
+          <p>${escapeHtml(item.description || "Reflection content is not yet available.")}</p>
+        `;
+      }
+    }
+  }
+
+  function updateDocumentMeta(item) {
+    if (!item) return;
+
+    document.title = `${item.title || "Solitude Reflections"} · Ninox Antolihao`;
+
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription && item.description) {
+      metaDescription.setAttribute("content", item.description);
+    }
+
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical && item.canonical) {
+      canonical.setAttribute("href", item.canonical);
+    }
+
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    const ogDescription = document.querySelector('meta[property="og:description"]');
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    const ogImage = document.querySelector('meta[property="og:image"]');
+
+    if (ogTitle) ogTitle.setAttribute("content", `${item.title || "Solitude Reflections"} · Ninox Antolihao`);
+    if (ogDescription && item.description) ogDescription.setAttribute("content", item.description);
+    if (ogUrl && item.canonical) ogUrl.setAttribute("content", item.canonical);
+    if (ogImage) ogImage.setAttribute("content", buildAbsoluteUrl(item.coverLandscape || item.cover || "/reflections/assets/reflections-icon-512.png"));
+
+    const twTitle = document.querySelector('meta[name="twitter:title"]');
+    const twDescription = document.querySelector('meta[name="twitter:description"]');
+    const twImage = document.querySelector('meta[name="twitter:image"]');
+
+    if (twTitle) twTitle.setAttribute("content", `${item.title || "Solitude Reflections"} · Ninox Antolihao`);
+    if (twDescription && item.description) twDescription.setAttribute("content", item.description);
+    if (twImage) twImage.setAttribute("content", buildAbsoluteUrl(item.coverLandscape || item.cover || "/reflections/assets/reflections-icon-512.png"));
+  }
+
+  function applyBodyThemeClass(category) {
+    body.classList.remove("theme-spirituality", "theme-human", "theme-human-nature", "theme-religion");
+    body.classList.add(themeClassFromCategory(category));
+  }
+
+  /* =========================
+     EXPLORE MORE
+     ========================= */
+  function getReflectionEntriesByCategory(category) {
+    const all = getAllReflections();
+
+    return Object.entries(all)
+      .filter(([, item]) => normalizeCategory(item.category) === normalizeCategory(category));
+  }
+
+  function renderExploreList(category, activeKey) {
+    if (!exploreListGrid) return;
+
+    const entries = getReflectionEntriesByCategory(category);
+
+    if (!entries.length) {
+      exploreListGrid.innerHTML = `
+        <div class="explore-card-link">
+          <h3 class="explore-card-title">No reflections found</h3>
+          <p class="explore-card-desc">No reflection is available in this category yet.</p>
+        </div>
+      `;
+      return;
+    }
+
+    exploreListGrid.innerHTML = entries.map(([key, item]) => {
+      const isActive = key === activeKey;
+      return `
+        <a
+          href="?key=${encodeURIComponent(key)}"
+          class="explore-card-link${isActive ? " active-reflection-card" : ""}"
+          data-reflection-key="${escapeHtml(key)}"
+          aria-current="${isActive ? "true" : "false"}"
+        >
+          <h3 class="explore-card-title">${escapeHtml(item.title || "Untitled Reflection")}</h3>
+          <p class="explore-card-desc">${escapeHtml(item.description || "")}</p>
+        </a>
+      `;
+    }).join("");
+  }
+
+  function setActiveCategoryButton(category) {
+    exploreCategoryButtons.forEach((button) => {
+      const btnCategory = normalizeCategory(button.dataset.category || "");
+      const isActive = btnCategory === normalizeCategory(category);
+      button.classList.toggle("active-track", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
     });
-
-    return grouped;
   }
 
-  function getRequestedInitialKey() {
-    const url = new URL(window.location.href);
-    const queryKey = url.searchParams.get("topic");
-    const bodyKey = document.body.dataset.initialKey;
+  function bindExploreCategoryButtons() {
+    exploreCategoryButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const category = normalizeCategory(this.dataset.category || "religion");
+        const nextKey = getFirstKeyByCategory(category);
 
-    if (queryKey) return queryKey;
-    if (bodyKey) return bodyKey;
+        state.currentCategory = category;
+        setActiveCategoryButton(category);
+        renderExploreList(category, nextKey);
 
-    return "";
-  }
-
-  function getFirstAvailableKey(grouped) {
-    return grouped.religion[0] || grouped.spirituality[0] || grouped.human[0] || "";
-  }
-
-  function bindCategoryButtons() {
-    els.categoryButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const category = normalizeCategory(btn.dataset.category);
-
-        setActiveCategory(category);
-
-        const firstKeyInCategory =
-          state.currentReflection && normalizeCategory(state.currentReflection.category) === category
-            ? state.currentKey
-            : (state.keysByCategory[category][0] || "");
-
-        renderTopicList(category, firstKeyInCategory);
-
-        if (firstKeyInCategory && firstKeyInCategory !== state.currentKey) {
-          renderReflection(firstKeyInCategory);
+        if (nextKey) {
+          renderReflection(nextKey, true);
+          scrollReadIntoViewOnMobile();
         }
       });
     });
   }
 
-  function setActiveCategory(category) {
-    state.currentCategory = category;
+  function bindExploreCardClicks() {
+    if (!exploreListGrid) return;
 
-    els.categoryButtons.forEach((btn) => {
-      const btnCategory = normalizeCategory(btn.dataset.category);
-      btn.classList.toggle("active-cat", btnCategory === category);
+    exploreListGrid.addEventListener("click", function (event) {
+      const link = event.target.closest("[data-reflection-key]");
+      if (!link) return;
+
+      event.preventDefault();
+      const key = link.dataset.reflectionKey;
+      if (!key) return;
+
+      renderReflection(key, true);
+      scrollReadIntoViewOnMobile();
     });
-
-    els.body.classList.remove("theme-spirituality", "theme-human", "theme-religion");
-    els.body.classList.add(`theme-${category}`);
   }
 
-  function renderTopicList(category, activeKey) {
-    const keys = state.keysByCategory[category] || [];
-
-    els.exploreListGrid.innerHTML = "";
-
-    keys.forEach((key) => {
-      const reflection = state.data[key];
-      const button = document.createElement("button");
-
-      button.type = "button";
-      button.className = "glass-control explore-reflection-link";
-      if (key === activeKey) {
-        button.classList.add("active-topic");
+  function scrollReadIntoViewOnMobile() {
+    if (window.innerWidth <= 768) {
+      const section = $("readSectionWrap");
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
       }
-
-      button.dataset.key = key;
-      button.innerHTML = `
-        <span class="explore-link-title">${escapeHtml(reflection.title)}</span>
-        <span class="explore-link-subtitle">${escapeHtml(reflection.subtitle || reflection.description || "")}</span>
-      `;
-
-      button.addEventListener("click", () => {
-        renderReflection(key);
-        markActiveTopic(key);
-      });
-
-      els.exploreListGrid.appendChild(button);
-    });
+    }
   }
 
-  function markActiveTopic(activeKey) {
-    const topicButtons = Array.from(document.querySelectorAll(".explore-reflection-link"));
-    topicButtons.forEach((btn) => {
-      btn.classList.toggle("active-topic", btn.dataset.key === activeKey);
-    });
+  /* =========================
+     URL / HISTORY
+     ========================= */
+  function updateUrlForKey(key, replaceOnly) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("key", key);
+
+    if (replaceOnly) {
+      window.history.replaceState({ key }, "", url.toString());
+    } else {
+      window.history.pushState({ key }, "", url.toString());
+    }
   }
 
-  function renderReflection(key) {
-    const reflection = state.data[key];
-    if (!reflection) return;
+  /* =========================
+     MAIN RENDER
+     ========================= */
+  function renderReflection(key, pushHistory) {
+    const item = getReflectionByKey(key);
+    if (!item) return;
 
     state.currentKey = key;
-    state.currentReflection = reflection;
-    state.activeReflectionUrl = reflection.read || reflection.canonical || window.location.href;
+    state.currentCategory = normalizeCategory(item.category);
 
-    setActiveCategory(reflection.category);
-    renderTopicList(reflection.category, key);
+    applyBodyThemeClass(item.category);
+    renderHero(item);
+    renderReadSection(item);
+    updateDocumentMeta(item);
+    updateShareLinks(item);
 
-    els.readContent.classList.add("is-switching");
+    configureTrackButton(trackPrimary, trackPrimaryLabel, item.audio1Label || "Reflection", item.audio1 || "", "Reflection");
+    configureTrackButton(trackSecondary, trackSecondaryLabel, item.audio2Label || "Podcast", item.audio2 || "", "Podcast");
 
-    setTimeout(() => {
-      updateMeta(reflection);
-      updateHero(reflection);
-      updateRead(reflection);
-      updateAudio(reflection);
-      updateShare(reflection);
-
-      els.readContent.classList.remove("is-switching");
-    }, 140);
-  }
-
-  function updateMeta(reflection) {
-    const pageTitle = `${reflection.title} — Solitude Reflections · Ninox Antolihao`;
-    document.title = pageTitle;
-
-    setMeta('meta[name="description"]', reflection.description || reflection.subtitle || "");
-    setMeta('meta[name="theme-color"]', getThemeColor(reflection.category));
-
-    setLinkRel("canonical", reflection.canonical || reflection.read || window.location.href);
-
-    setMeta('meta[property="og:title"]', `${reflection.title} — Solitude Reflections`);
-    setMeta('meta[property="og:description"]', reflection.description || reflection.subtitle || "");
-    setMeta('meta[property="og:url"]', reflection.canonical || reflection.read || window.location.href);
-    setMeta('meta[property="og:image"]', absoluteUrl(reflection.coverLandscape || reflection.cover));
-
-    setMeta('meta[name="twitter:title"]', `${reflection.title} — Solitude Reflections`);
-    setMeta('meta[name="twitter:description"]', reflection.description || reflection.subtitle || "");
-    setMeta('meta[name="twitter:image"]', absoluteUrl(reflection.coverLandscape || reflection.cover));
-  }
-
-  function updateHero(reflection) {
-    const cover = reflection.coverLandscape || reflection.cover || "/reflections/assets/placeholder.jpg";
-
-    els.heroImage.src = cover;
-    els.heroImage.alt = reflection.title;
-    els.heroCategoryLabel.textContent = formatCategoryLabel(reflection.category);
-    els.reflectionTitle.textContent = reflection.title;
-    els.reflectionSubtitle.textContent = reflection.subtitle || reflection.description || "";
-    els.readSectionTitle.textContent = reflection.title;
-  }
-
-  function updateRead(reflection) {
-    els.readContent.innerHTML = reflection.articleHtml || "<p>No article content available.</p>";
-  }
-
-  function updateAudio(reflection) {
-    const primaryLabel = reflection.audio1Label || "Reflection";
-    const secondaryLabel = reflection.audio2Label || "Podcast";
-    const primarySrc = reflection.audio1 || "";
-    const secondarySrc = reflection.audio2 || "";
-
-    els.trackPrimary.dataset.trackTitle = primaryLabel;
-    els.trackPrimary.dataset.trackSrc = primarySrc;
-    els.trackPrimaryLabel.textContent = primaryLabel;
-
-    els.trackSecondary.dataset.trackTitle = secondaryLabel;
-    els.trackSecondary.dataset.trackSrc = secondarySrc;
-    els.trackSecondaryLabel.textContent = secondaryLabel;
-
-    els.trackPrimary.classList.add("active-track");
-    els.trackSecondary.classList.remove("active-track");
-
-    els.trackSecondary.style.display = secondarySrc ? "inline-flex" : "none";
-
-    els.nowPlayingTitle.textContent = primaryLabel;
-
-    if (primarySrc) {
-      els.mainAudio.src = primarySrc;
+    if (item.audio1) {
+      setActiveTrackButton(trackPrimary);
+      setAudioSource(item.audio1, item.audio1Label || "Reflection");
+      if (audioSection) audioSection.style.display = "";
+    } else if (item.audio2) {
+      setActiveTrackButton(trackSecondary);
+      setAudioSource(item.audio2, item.audio2Label || "Podcast");
+      if (audioSection) audioSection.style.display = "";
     } else {
-      els.mainAudio.removeAttribute("src");
-      els.mainAudio.load();
+      if (audioSection) audioSection.style.display = "none";
+      setAudioSource("", "No audio available");
     }
 
-    els.audioCard.classList.remove("is-playing");
+    setActiveCategoryButton(state.currentCategory);
+    renderExploreList(state.currentCategory, key);
+
+    updateUrlForKey(key, !pushHistory);
   }
 
-  function updateShare(reflection) {
-    const url = reflection.read || reflection.canonical || window.location.href;
-    const title = reflection.title || document.title;
-    const safeUrl = encodeURIComponent(url);
-    const safeTitle = encodeURIComponent(title);
-
-    if (els.shareFacebookBtn) {
-      els.shareFacebookBtn.href = `https://www.facebook.com/sharer/sharer.php?u=${safeUrl}`;
-      els.shareFacebookBtn.target = "_blank";
-      els.shareFacebookBtn.rel = "noopener noreferrer";
+  /* =========================
+     POPSTATE SUPPORT
+     ========================= */
+  window.addEventListener("popstate", function () {
+    const key = new URLSearchParams(window.location.search).get("key") || getInitialKey();
+    if (key && getReflectionByKey(key)) {
+      renderReflection(key, false);
     }
+  });
 
-    if (els.shareXBtn) {
-      els.shareXBtn.href = `https://twitter.com/intent/tweet?url=${safeUrl}&text=${safeTitle}`;
-      els.shareXBtn.target = "_blank";
-      els.shareXBtn.rel = "noopener noreferrer";
-    }
-
-    if (els.shareMessengerBtn) {
-      els.shareMessengerBtn.href = `fb-messenger://share/?link=${safeUrl}`;
-    }
+  /* =========================
+     AUDIO EVENTS
+     ========================= */
+  if (mainAudio) {
+    mainAudio.addEventListener("play", startPlayingState);
+    mainAudio.addEventListener("pause", stopPlayingState);
+    mainAudio.addEventListener("ended", stopPlayingState);
   }
 
-  function setupThemeToggle() {
-    if (!els.themeToggle) return;
+  /* =========================
+     OPTIONAL NATIVE SHARE
+     ========================= */
+  if (shareMessengerBtn && supportsNativeShare()) {
+    shareMessengerBtn.addEventListener("click", function (event) {
+      if (window.innerWidth > 680) return;
 
-    const syncLabel = () => {
-      const mode = document.documentElement.getAttribute("data-theme") || "dark";
-      els.themeToggle.textContent = mode === "dark" ? "Light Mode" : "Dark Mode";
-    };
+      event.preventDefault();
+      const item = getReflectionByKey(state.currentKey);
+      if (!item) return;
 
-    syncLabel();
-
-    els.themeToggle.addEventListener("click", () => {
-      const current = document.documentElement.getAttribute("data-theme") || "dark";
-      const next = current === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      syncLabel();
+      navigator.share({
+        title: getCurrentShareTitle(item),
+        text: item.description || item.title || "Solitude Reflections",
+        url: getCurrentReflectionUrl(item)
+      }).catch(() => {});
     });
   }
 
-  function setupAudioPlayer() {
-    if (!els.mainAudio || !els.trackPrimary || !els.trackSecondary) return;
+  /* =========================
+     INIT
+     ========================= */
+  function init() {
+    applySavedTheme();
 
-    [els.trackPrimary, els.trackSecondary].forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const src = btn.dataset.trackSrc || "";
-        const title = btn.dataset.trackTitle || "Track";
+    if (themeToggle) {
+      themeToggle.addEventListener("click", toggleTheme);
+    }
 
-        if (!src) return;
+    if (copyLinkBtn) {
+      copyLinkBtn.addEventListener("click", copyCurrentLink);
+    }
 
-        [els.trackPrimary, els.trackSecondary].forEach((item) => {
-          item.classList.remove("active-track");
-        });
+    bindTrackButton(trackPrimary);
+    bindTrackButton(trackSecondary);
+    bindExploreCategoryButtons();
+    bindExploreCardClicks();
 
-        btn.classList.add("active-track");
-        els.nowPlayingTitle.textContent = title;
-        els.mainAudio.src = src;
-        els.mainAudio.play().catch(() => {});
-      });
-    });
-
-    els.mainAudio.addEventListener("play", () => {
-      els.audioCard.classList.add("is-playing");
-    });
-
-    els.mainAudio.addEventListener("pause", () => {
-      els.audioCard.classList.remove("is-playing");
-    });
-
-    els.mainAudio.addEventListener("ended", () => {
-      els.audioCard.classList.remove("is-playing");
-    });
-  }
-
-  function setupCopyLink() {
-    if (!els.copyLinkBtn) return;
-
-    els.copyLinkBtn.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(state.activeReflectionUrl || window.location.href);
-        const original = els.copyLinkBtn.textContent;
-        els.copyLinkBtn.textContent = "✓";
-        setTimeout(() => {
-          els.copyLinkBtn.textContent = original;
-        }, 1200);
-      } catch (error) {
-        console.log("Copy failed:", error);
-      }
-    });
-  }
-
-  function renderEmptyState() {
-    els.reflectionTitle.textContent = "No reflections found";
-    els.reflectionSubtitle.textContent = "reflection-data.js is missing or empty.";
-    els.readSectionTitle.textContent = "No reflections found";
-    els.readContent.innerHTML = "<p>Please make sure your reflection-data.js is loaded correctly.</p>";
-    els.exploreListGrid.innerHTML = "";
-  }
-
-  function setMeta(selector, value) {
-    const el = document.querySelector(selector);
-    if (el && value) {
-      el.setAttribute("content", value);
+    const initialKey = getInitialKey();
+    if (initialKey) {
+      renderReflection(initialKey, false);
     }
   }
 
-  function setLinkRel(rel, href) {
-    const link = document.querySelector(`link[rel="${rel}"]`);
-    if (link && href) {
-      link.setAttribute("href", href);
-    }
-  }
-
-  function getThemeColor(category) {
-    if (category === "human") return "#4c88ff";
-    if (category === "religion") return "#cf5f84";
-    return "#cf9f38";
-  }
-
-  function formatCategoryLabel(category) {
-    if (category === "human") return "Human Nature";
-    if (category === "religion") return "Religion";
-    return "Spirituality";
-  }
-
-  function absoluteUrl(path) {
-    try {
-      return new URL(path, window.location.origin).href;
-    } catch {
-      return path;
-    }
-  }
-
-  function escapeHtml(text) {
-    return String(text || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  return { init };
-}
+  document.addEventListener("DOMContentLoaded", init);
+})();
