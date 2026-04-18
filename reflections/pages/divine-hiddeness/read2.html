@@ -27,7 +27,6 @@
       --shadow: 0 18px 50px rgba(0,0,0,.08);
       --shadow-2: 0 24px 70px rgba(33, 22, 14, .08);
 
-      /* Light */
       --bg: #f7f3ec;
       --panel: #fffaf3;
       --panel-2: #f2eadf;
@@ -327,7 +326,6 @@
       margin-top: 10px;
     }
 
-    /* UPDATED FULL-WIDTH EXPLORE SECTION */
     .explore-band {
       width: 100vw;
       margin-left: calc(50% - 50vw);
@@ -685,7 +683,6 @@
     </section>
   </main>
 
-  <!-- FULL-WIDTH EXPLORE MORE SECTION BELOW AUDIO FLOW -->
   <section class="explore-band" id="exploreMoreSection">
     <div class="explore-inner">
       <div class="explore-card">
@@ -707,7 +704,7 @@
 
   <footer class="footer shell">
     <div class="footer-card">
-      <div>Stone Grill Press -- ❖ -- Solitude Reflections</div>
+      <div>Stone Grill Press — ❖ — Solitude Reflections</div>
       <div class="footer-links">
         <a href="/">Main Home</a>
         <a href="/reflections/">Reflections Home</a>
@@ -717,7 +714,13 @@
   </footer>
 
   <script>
-    const PAGE = REFLECTION_DATA[PAGE_KEY];
+    const PAGE = typeof REFLECTION_DATA !== "undefined"
+      ? REFLECTION_DATA[PAGE_KEY]
+      : null;
+
+    console.log("PAGE_KEY:", PAGE_KEY);
+    console.log("REFLECTION_DATA exists:", typeof REFLECTION_DATA !== "undefined");
+    console.log("PAGE:", PAGE);
 
     function categoryLabel(key) {
       if (key === "spirituality") return "Spirituality";
@@ -763,14 +766,14 @@
     }
 
     function renderHead() {
-      const title = PAGE.title || "Solitude Reflections";
-      const description = PAGE.description || `A reflection page from Solitude Reflections: ${title}.`;
-      const canonical = PAGE.canonical || location.href;
-      const ogImage = PAGE.cover
+      const title = PAGE?.title || "Solitude Reflections";
+      const description = PAGE?.description || "A reflection page from Solitude Reflections.";
+      const canonical = PAGE?.canonical || location.href;
+      const ogImage = PAGE?.cover
         ? `https://stonegrillresto.net${PAGE.cover}`
         : "https://stonegrillresto.net/reflections/og-default.jpg";
 
-      document.title = `${title} -- Solitude Reflections · Ninox Antolihao`;
+      document.title = `${title} — Solitude Reflections · Ninox Antolihao`;
       setMeta("description", description);
       setCanonical(canonical);
 
@@ -787,6 +790,11 @@
     function renderPage() {
       if (!PAGE) {
         document.getElementById("pageTitle").textContent = "Reflection not found";
+        document.getElementById("pageSubtitle").textContent = "Check PAGE_KEY or reflection-data.js syntax.";
+        document.getElementById("articleBody").innerHTML = `
+          <p>The page data could not be loaded.</p>
+          <p>Please check the PAGE_KEY and make sure reflection-data.js has no syntax errors.</p>
+        `;
         return;
       }
 
@@ -806,18 +814,25 @@
 
       const article = document.getElementById("articleBody");
       article.innerHTML = PAGE.articleHtml || `<p>${escapeHtml(PAGE.description || "Reflection content will appear here.")}</p>`;
+
       document.getElementById("audioCaption").textContent = title;
       document.getElementById("pageCategoryTag").classList.add(`tag--${category}`);
     }
 
     function renderAudio() {
+      const container = document.getElementById("audioButtons");
+      const player = document.getElementById("audioPlayer");
+
+      if (!PAGE) {
+        container.innerHTML = `<span class="subtitle">Audio unavailable because page data did not load.</span>`;
+        player.remove();
+        return;
+      }
+
       const tracks = [
         PAGE.audio1 ? { label: PAGE.audio1Label || "Reflection", src: PAGE.audio1 } : null,
         PAGE.audio2 ? { label: PAGE.audio2Label || "Podcast", src: PAGE.audio2 } : null
       ].filter(Boolean);
-
-      const container = document.getElementById("audioButtons");
-      const player = document.getElementById("audioPlayer");
 
       if (!tracks.length) {
         container.innerHTML = `<span class="subtitle">No audio available yet.</span>`;
@@ -827,7 +842,7 @@
 
       function loadTrack(track, btn) {
         player.src = track.src;
-        document.getElementById("audioCaption").textContent = `${PAGE.title} -- ${track.label}`;
+        document.getElementById("audioCaption").textContent = `${PAGE.title} — ${track.label}`;
         [...container.querySelectorAll(".audio-btn")].forEach(b => b.classList.remove("active"));
         if (btn) btn.classList.add("active");
       }
@@ -853,6 +868,8 @@
         "religion": []
       };
 
+      if (typeof REFLECTION_DATA === "undefined") return groups;
+
       Object.entries(REFLECTION_DATA).forEach(([key, item]) => {
         const group = item.category || "religion";
         if (!groups[group]) groups[group] = [];
@@ -863,9 +880,15 @@
     }
 
     function renderExploreMore() {
-      const groups = buildGroupedData();
-      const tabsWrap = document.getElementById("topicTabs");
       const panelsWrap = document.getElementById("topicPanels");
+      const tabsWrap = document.getElementById("topicTabs");
+
+      if (!PAGE || typeof REFLECTION_DATA === "undefined") {
+        panelsWrap.innerHTML = `<div class="topic-panel active"><div class="topic-panel-head"><strong>Unavailable</strong><span>Reflection data not loaded.</span></div></div>`;
+        return;
+      }
+
+      const groups = buildGroupedData();
       const order = ["spirituality", "human-nature", "religion"];
       const activeTopic = PAGE.category || "religion";
 
@@ -949,6 +972,8 @@
     }
 
     function setupShare() {
+      if (!PAGE) return;
+
       const btn = document.getElementById("shareBtn");
       btn.addEventListener("click", async () => {
         const shareData = {
@@ -970,6 +995,8 @@
     }
 
     function setupCusdis() {
+      if (!PAGE) return;
+
       const thread = document.getElementById("cusdis_thread");
       thread.setAttribute("data-page-id", PAGE_KEY);
       thread.setAttribute("data-page-url", PAGE.canonical || location.href);
