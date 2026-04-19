@@ -1,9 +1,10 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ninox Payroll Cloud</title>
+    <title>Stone Grill Payroll</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -13,9 +14,10 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root">
-        <div class="h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
-            <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p class="text-[10px] font-black tracking-widest uppercase">Initializing Cloud Handshake...</p>
+        <div class="h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
+            <div class="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p id="loading-text" class="text-[10px] font-black tracking-widest uppercase mb-2">Establishing Cloud Link...</p>
+            <p id="error-status" class="text-xs text-orange-400 font-mono mt-4"></p>
         </div>
     </div>
 
@@ -24,22 +26,17 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
-        // ===================================================
-        // STEP 1: PASTE YOUR FIREBASE PROJECT CREDENTIALS HERE
-        // Found in Firebase Console > Project Settings > Your Apps
-        // ===================================================
-        const existingConfig = {
-            apiKey: "PASTE_HERE",
-            authDomain: "PASTE_HERE",
-            projectId: "PASTE_HERE",
-            storageBucket: "PASTE_HERE",
-            messagingSenderId: "PASTE_HERE",
-            appId: "PASTE_HERE"
+        const firebaseConfig = {
+            apiKey: "AIzaSyDX6OKrMdfnzml4LA8SE4PDFkDJLVPmKIc",
+            authDomain: "stone-grill-app.firebaseapp.com",
+            projectId: "stone-grill-app",
+            storageBucket: "stone-grill-app.firebasestorage.app",
+            messagingSenderId: "724825019953",
+            appId: "1:724825019953:web:11f3a85e658b4cf48ba710",
+            measurementId: "G-HL5M5HE1BC"
         };
-        // ===================================================
 
-        const firebaseConfig = (window.__firebase_config && window.__firebase_config !== "{}") ? JSON.parse(window.__firebase_config) : existingConfig;
-        const appId = window.__app_id || 'ninox-kitchen-payroll-v1';
+        const appId = 'stone-grill-payroll';
         const ADMIN_PIN = "1234";
 
         let state = {
@@ -50,7 +47,7 @@
             selectedEmpId: "",
             dateRange: {
                 start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-                end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+                end: new Date().toISOString().split('T')[0]
             },
             activeTab: 'summary',
             error: null
@@ -59,37 +56,30 @@
         let db, auth;
 
         async function init() {
-            if (existingConfig.apiKey === "PASTE_HERE" && !window.__firebase_config) {
-                state.error = "Firebase Configuration Missing. Please edit line 28 of index.html.";
-                render();
-                return;
-            }
-
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        state.isConnected = true;
-                        sync();
-                    } else {
-                        signInAnonymously(auth);
-                    }
-                    render();
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) sync();
+                    else await signInAnonymously(auth);
                 });
+
             } catch (e) {
-                state.error = "Cloud Connection Failed. Check your API keys.";
-                render();
+                document.getElementById('error-status').innerText = "INIT_FAIL: " + e.message;
             }
         }
 
         function sync() {
             onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'employees'), (snap) => {
+                state.isConnected = true;
                 if (snap.exists()) state.employees = snap.data();
                 render();
+            }, (err) => {
+                document.getElementById('error-status').innerText = "DATABASE_LOCKED: Please fix Rules in Firebase Console.";
             });
+
             onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'attendance'), (snap) => {
                 if (snap.exists()) state.attendance = snap.data().records || [];
                 render();
@@ -97,23 +87,15 @@
         }
 
         window.checkPin = () => {
-            const val = document.getElementById('pinInput').value;
-            if (val === ADMIN_PIN) { state.isUnlocked = true; render(); }
+            if (document.getElementById('pinInput').value === ADMIN_PIN) { state.isUnlocked = true; render(); }
             else alert("Invalid PIN");
         };
 
         window.updateStaff = async (e) => {
             e.preventDefault();
             const fd = new FormData(e.target);
-            const id = fd.get('id');
-            const data = { 
-                ...state.employees, 
-                [id]: { 
-                    name: fd.get('name'), 
-                    rate: parseFloat(fd.get('rate')), 
-                    deduct: parseFloat(fd.get('deduct')) || 0 
-                } 
-            };
+            const id = fd.get('id').trim();
+            const data = { ...state.employees, [id]: { name: fd.get('name'), rate: parseFloat(fd.get('rate')), deduct: parseFloat(fd.get('deduct')) || 0 } };
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees'), data);
             e.target.reset();
         };
@@ -122,103 +104,79 @@
             if (!text.trim()) return;
             const lines = text.split('\n').filter(l => l.includes('\t'));
             const logs = {};
-            
             lines.forEach(line => {
                 const parts = line.split('\t').map(p => p.trim());
                 if (parts.length < 4) return;
-                const id = parts[0];
-                const rawTime = parts[3]; 
-                const [dPart, tPart] = rawTime.split(/\s+/).filter(x => x);
-                if(!dPart) return;
+                const id = parts[0], rawTime = parts[3];
+                const [dPart, tPart] = rawTime.split(/\s+/);
                 const [m, d, y] = dPart.split('/');
-                const isoDate = `${y}-${m}-${d}`;
-                const key = `${id}_${isoDate}`;
+                const isoDate = `${y}-${m}-${d}`, key = `${id}_${isoDate}`;
                 if (!logs[key]) logs[key] = { empId: id, date: isoDate, times: [] };
                 logs[key].times.push(tPart);
             });
-
             let combined = [...state.attendance];
             Object.values(logs).forEach(day => {
                 day.times.sort();
-                const record = { 
-                    empId: day.empId, 
-                    date: day.date, 
-                    in: day.times[0], 
-                    out: day.times.length > 1 ? day.times[day.times.length-1] : null 
-                };
+                const record = { empId: day.empId, date: day.date, in: day.times[0], out: day.times.length > 1 ? day.times[day.times.length-1] : null };
                 const idx = combined.findIndex(r => r.empId === day.empId && r.date === day.date);
                 if (idx > -1) combined[idx] = record; else combined.push(record);
             });
-
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance'), { records: combined });
-            alert("Attendance synced to your Firebase project!");
+            alert("SUCCESS: Biometric Data Uploaded!");
         };
 
         function render() {
             const root = document.getElementById('root');
-            if (state.error) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center p-6 text-center"><div class="bg-white p-8 rounded-3xl shadow-xl border-t-4 border-red-500 max-w-sm"><h2 class="font-black text-red-600 mb-2">Cloud Disconnected</h2><p class="text-xs text-slate-500">${state.error}</p></div></div>`;
-                return;
-            }
+            if (!state.isConnected) return;
+
             if (!state.isUnlocked) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center bg-slate-900 p-6"><div class="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm text-center"><div class="w-16 h-16 bg-blue-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-black text-3xl">N</div><h1 class="text-2xl font-black mb-8">NINOX PAYROLL</h1><input type="password" id="pinInput" placeholder="ADMIN PIN" class="w-full text-center text-3xl p-4 bg-slate-50 border-2 rounded-2xl mb-4 outline-none focus:border-blue-600 font-mono tracking-widest"><button onclick="checkPin()" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-blue-700 active:scale-95 transition">UNLOCK</button></div></div>`;
+                root.innerHTML = `<div class="h-screen flex items-center justify-center bg-slate-900 p-6"><div class="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm text-center"><div class="w-16 h-16 bg-orange-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-black text-3xl">S</div><h1 class="text-2xl font-black mb-8 tracking-tighter uppercase">Stone Grill Admin</h1><input type="password" id="pinInput" placeholder="PIN" class="w-full text-center text-3xl p-4 bg-slate-50 border-2 rounded-2xl mb-4 outline-none focus:border-orange-600 font-mono tracking-widest"><button onclick="checkPin()" class="w-full bg-orange-600 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-orange-700">UNLOCK SYSTEM</button></div></div>`;
                 return;
             }
 
             root.innerHTML = `
                 <nav class="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 flex justify-between items-center no-print">
-                    <div class="flex items-center gap-2"><div class="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white text-[10px] font-black">N</div><span class="font-black tracking-tighter uppercase text-sm">Ninox <span class="text-blue-600">Kitchen</span></span></div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-[9px] ${state.isConnected ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'} px-2 py-1 rounded-full font-black uppercase">
-                            ● ${state.isConnected ? 'Connected to Project' : 'Searching Cloud...'}
-                        </span>
-                    </div>
+                    <div class="flex items-center gap-2"><div class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white text-[10px] font-black">S</div><span class="font-black tracking-tighter uppercase text-sm">Stone Grill <span class="text-orange-600">Payroll</span></span></div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span><span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Live Cloud</span></div>
                 </nav>
-
                 <div class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8 no-print">
                     <div class="space-y-6">
                         <div class="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-                            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Update Staff</h3>
+                            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Add/Edit Staff</h3>
                             <form onsubmit="updateStaff(event)" class="space-y-3">
                                 <div class="grid grid-cols-3 gap-2">
-                                    <input name="id" placeholder="ID" class="p-3 bg-slate-50 rounded-xl text-sm border-none font-bold" required>
-                                    <input name="name" placeholder="NAME" class="col-span-2 p-3 bg-slate-50 rounded-xl text-sm border-none font-bold" required>
+                                    <input name="id" placeholder="BIO ID" class="p-3 bg-slate-50 rounded-xl text-sm font-bold border-none" required>
+                                    <input name="name" placeholder="NAME" class="col-span-2 p-3 bg-slate-50 rounded-xl text-sm font-bold border-none" required>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <input name="rate" placeholder="DAILY RATE" class="p-3 bg-slate-50 rounded-xl text-sm border-none font-bold" required>
-                                    <input name="deduct" placeholder="DEDUCT" class="p-3 bg-slate-50 rounded-xl text-sm border-none font-bold">
+                                    <input name="rate" placeholder="RATE" class="p-3 bg-slate-50 rounded-xl text-sm font-bold border-none" required>
+                                    <input name="deduct" placeholder="DEDUCT" class="p-3 bg-slate-50 rounded-xl text-sm font-bold border-none">
                                 </div>
-                                <button class="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-[10px] uppercase shadow-lg">Save Changes</button>
+                                <button class="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-[10px] uppercase transition hover:bg-black">Save Employee</button>
                             </form>
                         </div>
-                        <div class="bg-slate-900 p-6 rounded-[32px] text-white shadow-xl">
-                            <h3 class="text-[10px] font-black text-blue-400 mb-3 uppercase">Sync Logs.txt</h3>
-                            <textarea onblur="importLogs(this.value); this.value=''" placeholder="Paste biometric content..." class="w-full h-32 bg-slate-800 rounded-2xl p-4 text-[10px] font-mono outline-none border-none focus:ring-2 ring-blue-500 mb-2"></textarea>
+                        <div class="bg-slate-900 p-6 rounded-[32px] text-white shadow-2xl">
+                            <h3 class="text-[10px] font-black text-orange-400 mb-3 uppercase tracking-widest">Biometric Import</h3>
+                            <textarea id="logBox" placeholder="Paste data from logs.txt here..." class="w-full h-32 bg-slate-800 rounded-2xl p-4 text-[10px] font-mono outline-none focus:ring-1 ring-orange-500 mb-4"></textarea>
+                            <button onclick="importLogs(document.getElementById('logBox').value); document.getElementById('logBox').value=''" class="w-full bg-orange-600 text-white py-4 rounded-xl font-black text-[10px] uppercase">Upload Log File</button>
                         </div>
                     </div>
-
                     <div class="lg:col-span-2 space-y-6">
-                        <div class="bg-white p-5 rounded-[32px] border border-slate-200 flex flex-wrap gap-4 shadow-sm items-end">
-                            <div class="flex-1 min-w-[150px]">
-                                <label class="text-[9px] font-black text-slate-400 mb-1 block">Staff</label>
-                                <select onchange="state.selectedEmpId = this.value; render()" class="w-full p-2.5 bg-slate-50 border-none rounded-xl text-sm font-bold">
-                                    <option value="">-- ALL STAFF --</option>
-                                    ${Object.entries(state.employees).map(([id, e]) => `<option value="${id}" ${state.selectedEmpId === id ? 'selected' : ''}>${e.name.toUpperCase()}</option>`).join('')}
-                                </select>
-                            </div>
+                        <div class="bg-white p-4 rounded-[32px] border border-slate-200 flex flex-wrap gap-4 items-center">
+                            <select onchange="state.selectedEmpId = this.value; render()" class="flex-1 min-w-[150px] p-2.5 bg-slate-50 rounded-xl text-sm font-bold border-none">
+                                <option value="">ALL EMPLOYEES</option>
+                                ${Object.entries(state.employees).map(([id, e]) => `<option value="${id}" ${state.selectedEmpId === id ? 'selected' : ''}>${e.name.toUpperCase()}</option>`).join('')}
+                            </select>
                             <div class="flex gap-2">
-                                <input type="date" value="${state.dateRange.start}" onchange="state.dateRange.start=this.value; render()" class="p-2 bg-slate-50 border-none rounded-xl text-xs font-bold">
-                                <input type="date" value="${state.dateRange.end}" onchange="state.dateRange.end=this.value; render()" class="p-2 bg-slate-50 border-none rounded-xl text-xs font-bold">
+                                <input type="date" value="${state.dateRange.start}" onchange="state.dateRange.start=this.value; render()" class="p-2 bg-slate-50 rounded-xl text-[10px] font-bold border-none">
+                                <input type="date" value="${state.dateRange.end}" onchange="state.dateRange.end=this.value; render()" class="p-2 bg-slate-50 rounded-xl text-[10px] font-bold border-none">
                             </div>
                         </div>
-
                         <div class="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm min-h-[400px]">
                             <div class="p-2 bg-slate-50 flex gap-1">
-                                ${['summary', 'history', 'payslip'].map(t => `<button onclick="state.activeTab='${t}'; render()" class="flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${state.activeTab === t ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}">${t}</button>`).join('')}
+                                ${['summary', 'history', 'payslip'].map(t => `<button onclick="state.activeTab='${t}'; render()" class="flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition ${state.activeTab === t ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}">${t}</button>`).join('')}
                             </div>
-                            <div class="p-6">
-                                ${renderTable()}
-                            </div>
+                            <div class="p-6">${renderView()}</div>
                         </div>
                     </div>
                 </div>
@@ -226,58 +184,33 @@
             `;
         }
 
-        function renderTable() {
+        function renderView() {
             if (state.activeTab === 'summary') {
-                return `
-                    <table class="w-full text-xs">
-                        <thead class="text-slate-400 uppercase text-[10px] font-black border-b border-slate-50">
-                            <tr><th class="pb-4 text-left">Member</th><th class="pb-4 text-center">Days</th><th class="pb-4 text-right">Net</th></tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50">
-                            ${Object.entries(state.employees).map(([id, emp]) => {
-                                const att = state.attendance.filter(a => a.empId === id && a.date >= state.dateRange.start && a.date <= state.dateRange.end);
-                                const net = (att.length * emp.rate) - emp.deduct;
-                                return `<tr onclick="state.selectedEmpId='${id}'; state.activeTab='payslip'; render()" class="cursor-pointer hover:bg-slate-50"><td class="py-4 font-black">${emp.name}</td><td class="py-4 text-center font-black">${att.length}</td><td class="py-4 text-right font-black">P${net.toLocaleString()}</td></tr>`;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                `;
+                const entries = Object.entries(state.employees);
+                if (entries.length === 0) return `<div class="py-20 text-center text-slate-300 font-black text-[10px] uppercase">No staff records. Add employees to begin.</div>`;
+                return `<table class="w-full text-xs"><thead class="text-slate-400 uppercase text-[10px] font-black"><tr><th class="pb-4 text-left">Staff</th><th class="pb-4 text-center">Days</th><th class="pb-4 text-right">Net</th></tr></thead><tbody class="divide-y divide-slate-50">${entries.map(([id, emp]) => {
+                    const att = state.attendance.filter(a => a.empId === id && a.date >= state.dateRange.start && a.date <= state.dateRange.end);
+                    const net = (att.length * emp.rate) - emp.deduct;
+                    return `<tr onclick="state.selectedEmpId='${id}'; state.activeTab='payslip'; render()" class="cursor-pointer hover:bg-slate-50"><td class="py-4 font-black">${emp.name}<br><span class="text-[8px] text-slate-400">ID: ${id}</span></td><td class="py-4 text-center font-black">${att.length}</td><td class="py-4 text-right font-black text-orange-600">P${net.toLocaleString()}</td></tr>`;
+                }).join('')}</tbody></table>`;
             }
             if (state.activeTab === 'history' && state.selectedEmpId) {
                 const att = state.attendance.filter(a => a.empId === state.selectedEmpId && a.date >= state.dateRange.start && a.date <= state.dateRange.end);
-                return `<table class="w-full text-xs"><tbody class="divide-y divide-slate-50">${att.map(a=>`<tr><td class="py-3 font-bold">${a.date}</td><td class="py-3 text-center text-blue-600 font-black">${a.in}</td><td class="py-3 text-right font-black">${a.out||'--:--'}</td></tr>`).join('')}</tbody></table>`;
+                return `<table class="w-full text-xs"><tbody class="divide-y divide-slate-50">${att.sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<tr><td class="py-3 font-bold text-slate-500 uppercase">${a.date}</td><td class="py-3 text-center text-orange-600 font-black">${a.in}</td><td class="py-3 text-right font-black">${a.out||'--:--'}</td></tr>`).join('')}</tbody></table>`;
             }
-            return `<div class="py-20 text-center text-slate-300 font-black text-[10px]">SELECT STAFF TO VIEW DATA</div>`;
+            return `<div class="py-20 text-center text-slate-300 font-black text-[10px] uppercase">Select an employee</div>`;
         }
 
         function renderPayslip() {
-            if (!state.selectedEmpId) return "";
-            const emp = state.employees[state.selectedEmpId];
-            const att = state.attendance.filter(a => a.empId === state.selectedEmpId && a.date >= state.dateRange.start && a.date <= state.dateRange.end);
-            const gross = att.length * emp.rate;
-            const net = gross - emp.deduct;
-            return `
-                <div class="fixed inset-0 bg-white z-[100] p-16 font-mono text-sm hidden print:block">
-                    <div class="text-center mb-10"><h1 class="text-3xl font-black">NINOX KITCHEN</h1><p class="text-[10px]">PAYSLIP: ${state.dateRange.start} TO ${state.dateRange.end}</p></div>
-                    <div class="border-y-2 border-black py-4 mb-10 flex justify-between font-bold uppercase"><div>Staff: ${emp.name}</div><div>ID: ${state.selectedEmpId}</div></div>
-                    <div class="space-y-4 mb-20 text-lg">
-                        <div class="flex justify-between"><span>Work Days:</span> <span>${att.length}</span></div>
-                        <div class="flex justify-between"><span>Daily Rate:</span> <span>P${emp.rate.toLocaleString()}</span></div>
-                        <div class="flex justify-between font-bold border-t border-black pt-4"><span>GROSS:</span> <span>P${gross.toLocaleString()}</span></div>
-                        <div class="flex justify-between text-red-600"><span>Deductions:</span> <span>-P${emp.deduct.toLocaleString()}</span></div>
-                        <div class="flex justify-between text-4xl font-black pt-10 border-t-4 border-black"><span>NET PAY:</span><span>P${net.toLocaleString()}</span></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-20 text-center text-[10px] uppercase font-bold pt-20"><div class="border-t-2 border-black pt-2">Received By</div><div class="border-t-2 border-black pt-2">Approved By</div></div>
-                </div>
-                <div class="max-w-md mx-auto bg-white border-2 border-black rounded-[40px] p-8 my-10 shadow-2xl no-print text-center">
-                    <div class="text-3xl font-black mb-6 uppercase">${emp.name}</div>
-                    <div class="text-4xl font-black text-blue-600 mb-10">P${net.toLocaleString()}</div>
-                    <button onclick="window.print()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">Print Slip</button>
-                </div>
-            `;
+            if (!state.selectedEmpId || !state.employees[state.selectedEmpId]) return "";
+            const emp = state.employees[state.selectedEmpId], att = state.attendance.filter(a => a.empId === state.selectedEmpId && a.date >= state.dateRange.start && a.date <= state.dateRange.end);
+            const net = (att.length * emp.rate) - emp.deduct;
+            return `<div class="fixed inset-0 bg-white z-[100] p-16 font-mono text-sm hidden print:block text-center"><h1 class="text-3xl font-black mb-8 uppercase">Stone Grill Payroll</h1><div class="border-y border-black py-4 mb-8 flex justify-between font-bold"><span>Name: ${emp.name}</span><span>ID: ${state.selectedEmpId}</span></div><div class="space-y-4 text-lg"><div class="flex justify-between"><span>Days Worked:</span> <span>${att.length}</span></div><div class="flex justify-between"><span>Rate:</span> <span>P${emp.rate.toLocaleString()}</span></div><div class="flex justify-between text-red-600"><span>Deduct:</span> <span>-P${emp.deduct.toLocaleString()}</span></div><div class="flex justify-between text-4xl font-black pt-10 border-t-2 border-black"><span>NET PAY:</span><span>P${net.toLocaleString()}</span></div></div><div class="grid grid-cols-2 gap-20 pt-32 text-[10px] font-black uppercase"><div class="border-t border-black pt-2">Receiver</div><div class="border-t border-black pt-2">Authorized</div></div></div><div class="max-w-md mx-auto bg-white border-2 border-black rounded-[40px] p-8 my-10 text-center no-print shadow-2xl"><div class="text-4xl font-black mb-10 text-slate-900">P${net.toLocaleString()}</div><button onclick="window.print()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-black transition">Print Official Slip</button></div>`;
         }
 
         init();
     </script>
 </body>
 </html>
+
+```
