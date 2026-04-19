@@ -1324,7 +1324,7 @@ const REFLECTION_DATA = {
     read: "/reflections/pages/divine-hiddeness/read.html",
     canonical: "https://stonegrillresto.net/reflections/pages/divine-hiddeness/read.html",
     cover: "/reflections/pages/divine-hiddeness/devinepremise.jpg",
-    coverLandscape: "/reflections/pages/divine-hiddeness/devinepremise1.jpg",
+    coverLandscape: "/reflections/pages/divine-hiddeness/SPIRITUALITY-3.png",
     audio1Label: "Reflection",
     audio1: "/reflections/pages/divine-hiddeness/premiseofgod.mp3",
     audio2Label: "Podcast",
