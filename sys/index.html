@@ -205,9 +205,6 @@
                 }
             };
 
-            const [employees, setEmployees] = useState(initialEmployees);
-            const [attendance, setAttendance] = useState([]);
-            const [cashAdvances, setCashAdvances] = useState(initialCashAdvances);
             const [selectedMonth, setSelectedMonth] = useState('2026-03');
 
             const [showPayCard, setShowPayCard] = useState(null);
@@ -216,6 +213,27 @@
             // Lifted states from sub-render functions to top level
             const [rawInput, setRawInput] = useState(defaultRawData);
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '' });
+            
+            // Added states for Profile View and Date Range Reports
+            const [viewProfile, setViewProfile] = useState(null);
+            const [reportDates, setReportDates] = useState({ start: '2026-03-01', end: '2026-03-31' });
+
+            // --- DATA PERSISTENCE (LOCAL STORAGE) ---
+            const loadData = (key, defaultData) => {
+                try {
+                    const saved = localStorage.getItem('stonegrill_' + key);
+                    return saved ? JSON.parse(saved) : defaultData;
+                } catch (e) { return defaultData; }
+            };
+
+            const [employees, setEmployees] = useState(() => loadData('employees', initialEmployees));
+            const [attendance, setAttendance] = useState(() => loadData('attendance', []));
+            const [cashAdvances, setCashAdvances] = useState(() => loadData('cashAdvances', initialCashAdvances));
+
+            useEffect(() => { localStorage.setItem('stonegrill_employees', JSON.stringify(employees)); }, [employees]);
+            useEffect(() => { localStorage.setItem('stonegrill_attendance', JSON.stringify(attendance)); }, [attendance]);
+            useEffect(() => { localStorage.setItem('stonegrill_cashAdvances', JSON.stringify(cashAdvances)); }, [cashAdvances]);
+            // ----------------------------------------
 
             // Computed Payroll Data
             const payrollData = useMemo(() => {
@@ -333,8 +351,20 @@
                     };
                 });
 
-                setAttendance(processed);
-                alert(`Successfully processed ${processed.length} attendance records.`);
+                // Merge into existing attendance instead of completely replacing it
+                setAttendance(prev => {
+                    const merged = [...prev];
+                    let addedCount = 0;
+                    processed.forEach(newLog => {
+                        const exists = merged.find(a => a.empId === newLog.empId && a.date === newLog.date && a.firstIn === newLog.firstIn);
+                        if (!exists) {
+                            merged.push(newLog);
+                            addedCount++;
+                        }
+                    });
+                    alert(`Successfully imported ${addedCount} new attendance records.`);
+                    return merged;
+                });
             };
 
             const renderDashboard = () => (
@@ -426,7 +456,7 @@
                                                 </span>
                                             </td>
                                             <td className="px-3 py-1.5">
-                                                <button className="text-blue-600 hover:underline text-xs font-medium">Edit</button>
+                                                <button onClick={() => setViewProfile(emp)} className="text-blue-600 hover:underline text-xs font-medium">View Profile</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -657,7 +687,25 @@
                                         <button 
                                             onClick={() => {
                                                 if(newCa.empId && newCa.amount) {
-                                                    alert('Cash Advance recorded! (Mock only)');
+                                                    const empIdNum = parseInt(newCa.empId);
+                                                    const amountNum = parseFloat(newCa.amount);
+                                                    
+                                                    // Update CA records
+                                                    setCashAdvances(prev => [...prev, {
+                                                        id: Date.now(),
+                                                        empId: empIdNum,
+                                                        date: new Date().toISOString().slice(0,10),
+                                                        amount: amountNum,
+                                                        balance: amountNum,
+                                                        reason: newCa.reason || 'Not specified'
+                                                    }]);
+                                                    
+                                                    // Update Employee CA Balance
+                                                    setEmployees(prev => prev.map(emp => 
+                                                        emp.id === empIdNum ? { ...emp, caBalance: emp.caBalance + amountNum } : emp
+                                                    ));
+
+                                                    alert('Cash Advance recorded!');
                                                     setNewCa({empId: '', amount: '', reason: ''});
                                                 }
                                             }} 
@@ -699,6 +747,191 @@
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderReports = () => {
+                const filteredAttendance = attendance.filter(a => {
+                    if(!reportDates.start || !reportDates.end) return true;
+                    return a.date >= reportDates.start && a.date <= reportDates.end;
+                });
+
+                return (
+                    <div className="animate-in fade-in duration-300 flex flex-col h-full">
+                        <div className="flex justify-between items-center mb-4 shrink-0">
+                            <h2 className="text-xl font-bold text-gray-800">Date Range Reports</h2>
+                            <div className="flex gap-2 items-center bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">From:</label>
+                                    <input type="date" value={reportDates.start} onChange={e => setReportDates({...reportDates, start: e.target.value})} className="border border-gray-300 p-1.5 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                                </div>
+                                <div className="flex items-center gap-2 ml-2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">To:</label>
+                                    <input type="date" value={reportDates.end} onChange={e => setReportDates({...reportDates, end: e.target.value})} className="border border-gray-300 p-1.5 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                                </div>
+                                <button className="bg-blue-900 text-white px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-blue-950 transition-colors ml-2 flex items-center">
+                                    <Search className="w-3.5 h-3.5 mr-1" /> Filter
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0">
+                            <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
+                                <h3 className="font-bold text-gray-800 text-sm">Attendance Logs</h3>
+                                <button className="text-blue-600 flex items-center text-xs font-bold hover:underline"><Download className="w-3.5 h-3.5 mr-1"/> Export to CSV</button>
+                            </div>
+                            <div className="overflow-y-auto flex-1">
+                                <table className="w-full text-xs text-left">
+                                    <thead className="text-[10px] text-gray-500 uppercase bg-gray-50 sticky top-0 shadow-sm z-10">
+                                        <tr>
+                                            <th className="px-4 py-2">Date</th>
+                                            <th className="px-4 py-2">Employee</th>
+                                            <th className="px-4 py-2 text-center">In</th>
+                                            <th className="px-4 py-2 text-center">Out</th>
+                                            <th className="px-4 py-2 text-right">Hrs</th>
+                                            <th className="px-4 py-2 text-right">Day Eq.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredAttendance.length === 0 ? <tr><td colSpan="6" className="p-6 text-center text-gray-500">No data for selected date range.</td></tr> :
+                                            filteredAttendance.map((log, i) => {
+                                                const emp = employees.find(e => e.id === log.empId);
+                                                return (
+                                                    <tr key={i} className="hover:bg-blue-50 transition-colors">
+                                                        <td className="px-4 py-2 font-medium text-gray-600">{log.date}</td>
+                                                        <td className="px-4 py-2 font-bold text-gray-800">{emp?.name || `ID:${log.empId}`}</td>
+                                                        <td className="px-4 py-2 text-center text-blue-600 font-mono tracking-tight">{log.firstIn}</td>
+                                                        <td className="px-4 py-2 text-center text-orange-600 font-mono tracking-tight">{log.lastOut}</td>
+                                                        <td className="px-4 py-2 text-right font-mono tracking-tight text-gray-600">{log.hours}</td>
+                                                        <td className="px-4 py-2 text-right font-bold text-gray-800">{log.dayEquivalent}</td>
+                                                    </tr>
+                                                )
+                                            })
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderSettings = () => {
+                const handleExportData = () => {
+                    const data = { employees, attendance, cashAdvances };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `stonegrill_backup_${new Date().toISOString().slice(0,10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                };
+
+                const handleImportData = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            
+                            // NEW: Ask user if they want to Merge or Overwrite
+                            if(window.confirm('Do you want to safely MERGE this backup with your current data?\n\n• Click [OK] to Merge (keeps your recent new data and adds missing old data).\n• Click [Cancel] to completely Overwrite all current data with this file.')) {
+                                
+                                // MERGE LOGIC (Safely adds missing records without deleting new ones)
+                                if (data.employees) {
+                                    setEmployees(prev => {
+                                        const newEmps = [...prev];
+                                        data.employees.forEach(importedEmp => {
+                                            if(!newEmps.find(e => e.id === importedEmp.id)) newEmps.push(importedEmp);
+                                        });
+                                        return newEmps;
+                                    });
+                                }
+                                if (data.attendance) {
+                                    setAttendance(prev => {
+                                        const merged = [...prev];
+                                        data.attendance.forEach(importedAtt => {
+                                            // Avoid duplicate logs for the same person on the same date/time
+                                            const exists = merged.find(a => a.empId === importedAtt.empId && a.date === importedAtt.date && a.firstIn === importedAtt.firstIn);
+                                            if(!exists) merged.push(importedAtt);
+                                        });
+                                        return merged;
+                                    });
+                                }
+                                if (data.cashAdvances) {
+                                    setCashAdvances(prev => {
+                                        const merged = [...prev];
+                                        data.cashAdvances.forEach(importedCa => {
+                                            if(!merged.find(c => c.id === importedCa.id)) merged.push(importedCa);
+                                        });
+                                        return merged;
+                                    });
+                                }
+                                alert('Data successfully MERGED! Your recent entries were kept safe.');
+
+                            } else {
+                                // OVERWRITE LOGIC (Original behavior)
+                                if (data.employees) setEmployees(data.employees);
+                                if (data.attendance) setAttendance(data.attendance);
+                                if (data.cashAdvances) setCashAdvances(data.cashAdvances);
+                                alert('Data successfully OVERWRITTEN with the backup file.');
+                            }
+
+                        } catch (err) {
+                            alert('Error importing file. Please ensure it is a valid Stonegrill backup JSON file.');
+                        }
+                    };
+                    reader.readAsText(file);
+                    e.target.value = ''; // reset file input
+                };
+
+                const handleClearData = () => {
+                    if(window.confirm('WARNING: This will delete ALL data (Employees, Attendance, and Cash Advances) and reset the system to the initial sample data. Ensure you have downloaded a backup first. Proceed?')) {
+                        localStorage.removeItem('stonegrill_employees');
+                        localStorage.removeItem('stonegrill_attendance');
+                        localStorage.removeItem('stonegrill_cashAdvances');
+                        window.location.reload();
+                    }
+                };
+
+                return (
+                    <div className="animate-in fade-in duration-300">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">System Settings & Data Backup</h2>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">Data Backup (Export)</h3>
+                                <p className="text-sm text-gray-500 mb-6">Download a copy of all your current records (Employees, Attendance, Cash Advances) to your computer for safekeeping.</p>
+                                
+                                <button onClick={handleExportData} className="w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-lg flex items-center justify-center transition-colors">
+                                    <Download className="w-5 h-5 mr-2" /> Download Backup (.json)
+                                </button>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">Restore Data (Import)</h3>
+                                <p className="text-sm text-gray-500 mb-6">Upload a previously saved `.json` backup file to restore your data. This will overwrite current records.</p>
+                                
+                                <label className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-lg flex items-center justify-center transition-colors cursor-pointer border border-gray-300">
+                                    <FileSpreadsheet className="w-5 h-5 mr-2" /> Select Backup File
+                                    <input type="file" accept=".json" className="hidden" onChange={handleImportData} />
+                                </label>
+                            </div>
+                            
+                            <div className="bg-red-50 p-6 rounded-xl shadow-sm border border-red-200 md:col-span-2 mt-4">
+                                <h3 className="text-lg font-bold text-red-800 mb-2">Danger Zone: System Reset</h3>
+                                <p className="text-sm text-red-600 mb-4">Clicking this will wipe all local data and restore the system to its original blank sample state.</p>
+                                <button onClick={handleClearData} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                                    Wipe All Data & Reset System
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -800,6 +1033,74 @@
                             </div>
                         )}
 
+                        {/* EMPLOYEE PROFILE MODAL */}
+                        {viewProfile && (
+                            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                                    <div className="bg-blue-900 text-white p-4 flex justify-between items-center shrink-0">
+                                        <h2 className="text-xl font-bold tracking-tight">Employee Profile Ledger</h2>
+                                        <button onClick={() => setViewProfile(null)} className="text-white/70 hover:text-white"><X className="w-5 h-5"/></button>
+                                    </div>
+                                    <div className="overflow-y-auto p-4 md:p-6 flex-1 space-y-6">
+                                        
+                                        {/* Status & Basic Info */}
+                                        <div className="flex justify-between items-start border-b border-gray-100 pb-4">
+                                            <div>
+                                                <h3 className="text-2xl font-bold text-gray-800 mb-1">{viewProfile.name}</h3>
+                                                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">ID: {viewProfile.id} • Dept: {viewProfile.dept}</p>
+                                            </div>
+                                            <div className="text-right flex flex-col items-end">
+                                                <span className="px-3 py-1 text-xs uppercase tracking-wider font-bold rounded-full bg-green-100 text-green-800 shadow-sm">{viewProfile.status}</span>
+                                                <p className="mt-2 text-sm font-mono tracking-tight text-gray-600">Rate: ₱{viewProfile.rate.toFixed(2)}/day</p>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Summaries */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="border border-gray-200 p-4 rounded-xl bg-gray-50 shadow-sm">
+                                                <h4 className="font-bold text-gray-500 text-[11px] mb-1 uppercase tracking-wider">Total Days Worked</h4>
+                                                <p className="text-3xl font-mono tracking-tight text-blue-700 font-bold">
+                                                    {attendance.filter(a => a.empId === viewProfile.id).reduce((sum, a) => sum + a.dayEquivalent, 0)} <span className="text-sm font-sans font-medium text-gray-500">days</span>
+                                                </p>
+                                            </div>
+                                            <div className="border border-red-200 p-4 rounded-xl bg-red-50 shadow-sm">
+                                                <h4 className="font-bold text-red-800/60 text-[11px] mb-1 uppercase tracking-wider">Outstanding C.A. Balance</h4>
+                                                <p className="text-3xl font-mono tracking-tight text-red-600 font-bold">₱{viewProfile.caBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* CA Ledger */}
+                                        <div>
+                                            <h4 className="font-bold text-gray-800 mb-3 flex items-center text-sm"><Banknote className="w-4 h-4 mr-1.5 text-gray-500"/> Cash Advance Ledger</h4>
+                                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                                <table className="w-full text-xs text-left">
+                                                    <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] tracking-wider">
+                                                        <tr>
+                                                            <th className="p-3">Date</th>
+                                                            <th className="p-3">Reason</th>
+                                                            <th className="p-3 text-right">Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-100">
+                                                        {cashAdvances.filter(ca => ca.empId === viewProfile.id).length === 0 ? 
+                                                            <tr><td colSpan="3" className="p-6 text-center text-gray-400">No cash advances on record for this employee.</td></tr> :
+                                                            cashAdvances.filter(ca => ca.empId === viewProfile.id).map(ca => (
+                                                                <tr key={ca.id} className="hover:bg-gray-50 transition-colors">
+                                                                    <td className="p-3 font-medium text-gray-700">{ca.date}</td>
+                                                                    <td className="p-3 text-gray-600">{ca.reason}</td>
+                                                                    <td className="p-3 text-right font-mono tracking-tight font-bold text-red-600">₱{ca.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                                                </tr>
+                                                            ))
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* MOCK ADD EMPLOYEE MODAL */}
                         {showAddEmp && (
                             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -861,11 +1162,11 @@
                             <NavItem icon={<Clock />} label="Attendance Logs" active={activeTab === 'attendance'} onClick={() => handleTabSwitch('attendance')} open={isSidebarOpen} />
                             <NavItem icon={<Banknote />} label="Cash Advances" active={activeTab === 'ca'} onClick={() => handleTabSwitch('ca')} open={isSidebarOpen} />
                             <NavItem icon={<Calculator />} label="Payroll Summary" active={activeTab === 'payroll'} onClick={() => handleTabSwitch('payroll')} open={isSidebarOpen} />
-                            <NavItem icon={<FileSpreadsheet />} label="Reports" active={activeTab === 'reports'} onClick={() => alert('Reports module pending')} open={isSidebarOpen} />
+                            <NavItem icon={<FileSpreadsheet />} label="Reports" active={activeTab === 'reports'} onClick={() => handleTabSwitch('reports')} open={isSidebarOpen} />
                         </nav>
 
                         <div className="p-4 border-t border-blue-800">
-                            <NavItem icon={<Settings />} label="Settings" active={false} onClick={() => {}} open={isSidebarOpen} />
+                            <NavItem icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => handleTabSwitch('settings')} open={isSidebarOpen} />
                         </div>
                     </aside>
 
@@ -898,6 +1199,8 @@
                                 {activeTab === 'attendance' && renderAttendance()}
                                 {activeTab === 'payroll' && renderPayroll()}
                                 {activeTab === 'ca' && renderCA()}
+                                {activeTab === 'reports' && renderReports()}
+                                {activeTab === 'settings' && renderSettings()}
                             </div>
                         </div>
                     </main>
