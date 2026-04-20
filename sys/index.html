@@ -2,34 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stone Grill | Master Suite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stone Grill | Master Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
-        @media print { .no-print { display: none !important; } }
+        @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
+        .print-only { display: none; }
+        .compact-table td, .compact-table th { padding: 8px 12px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
     <div id="root"></div>
 
     <script>
-        const ADMIN_PIN = "1234"; 
+        const ADMIN_PIN = "6789"; 
 
         const INITIAL_STAFF = {
-            "1": { name: "NINOX", rate: 100, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "2": { name: "NEL2X", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "4": { name: "JHIE", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "5": { name: "ROEL", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "6": { name: "LIZA", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "7": { name: "CALOY", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "9": { name: "JEREY", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "12": { name: "CHRIS", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "13": { name: "DELIA", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "14": { name: "JEVON", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "18": { name: "CLAUDINE LOTA", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 },
-            "19": { name: "RAFFY JAVIER", rate: 80, sss: 0, phil: 0, pagibig: 0, advance: 0 }
+            "1": { name: "NINOX", rate: 100, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "2": { name: "NEL2X", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "4": { name: "JHIE", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "5": { name: "ROEL", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "6": { name: "LIZA", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "7": { name: "CALOY", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "9": { name: "JEREY", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "12": { name: "CHRIS", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "13": { name: "DELIA", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "14": { name: "JEVON", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "18": { name: "CLAUDINE LOTA", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] },
+            "19": { name: "RAFFY JAVIER", rate: 80, sss: 0, phil: 0, pag: 0, advance: 0, advances: [] }
         };
 
         let state = {
@@ -49,17 +51,20 @@
 
         window.checkPin = () => {
             if (document.getElementById('pinInput').value === ADMIN_PIN) { state.isUnlocked = true; render(); }
-            else { alert("Invalid PIN"); }
+            else alert("Invalid PIN");
         };
 
-        window.updateFilters = () => {
-            state.query = document.getElementById('searchBox')?.value.toUpperCase() || '';
-            state.startDate = document.getElementById('startD')?.value || state.startDate;
-            state.endDate = document.getElementById('endD')?.value || state.endDate;
-            render();
-        };
+        window.switchTab = (t) => { state.activeTab = t; render(); };
 
-        window.switchTab = (tab) => { state.activeTab = tab; render(); };
+        window.addAdvance = (id) => {
+            const amt = parseFloat(prompt("Enter Cash Advance Amount:"));
+            if (!amt) return;
+            const emp = state.employees[id];
+            if(!emp.advances) emp.advances = [];
+            emp.advances.push({ date: new Date().toISOString().split('T')[0], amount: amt });
+            emp.advance = (emp.advance || 0) + amt;
+            persist(); render();
+        };
 
         window.importLogs = () => {
             const text = document.getElementById('rawLogs').value;
@@ -85,81 +90,58 @@
                 const idx = combined.findIndex(r => r.empId === day.empId && r.date === day.date);
                 if (idx > -1) combined[idx] = record; else combined.push(record);
             });
-            state.attendance = combined; persist(); render(); alert("Logs Synced");
-        };
-
-        window.updateStaff = (e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            const id = fd.get('id').trim();
-            state.employees[id] = {
-                name: fd.get('name').toUpperCase(),
-                rate: parseFloat(fd.get('rate')) || 0,
-                sss: parseFloat(fd.get('sss')) || 0,
-                phil: parseFloat(fd.get('phil')) || 0,
-                pagibig: parseFloat(fd.get('pagibig')) || 0,
-                advance: parseFloat(fd.get('advance')) || 0
-            };
-            persist(); render(); alert("Saved");
+            state.attendance = combined; persist(); render(); alert("Sync Complete");
         };
 
         function render() {
             const root = document.getElementById('root');
             if (!state.isUnlocked) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center bg-slate-900 p-6"><div class="bg-white p-12 rounded-[50px] shadow-2xl w-full max-w-md text-center"><div class="w-20 h-20 bg-orange-600 rounded-[30px] mx-auto mb-8 flex items-center justify-center text-white font-black text-4xl shadow-xl shadow-orange-900/20">S</div><h1 class="text-3xl font-black mb-10 tracking-tighter uppercase italic">Stone Grill</h1><input type="password" id="pinInput" placeholder="PIN" class="w-full text-center text-3xl p-5 bg-slate-50 border-2 rounded-3xl mb-6 outline-none focus:border-orange-600 font-mono tracking-widest"><button onclick="checkPin()" class="w-full bg-orange-600 text-white font-black py-6 rounded-3xl shadow-xl hover:bg-orange-700 transition-all">SIGN IN</button></div></div>`;
+                root.innerHTML = `<div class="h-screen flex items-center justify-center bg-slate-900 p-4"><div class="bg-white p-10 rounded-[40px] w-full max-w-sm text-center shadow-2xl"><div class="w-16 h-16 bg-orange-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-black text-3xl">S</div><h1 class="text-2xl font-black mb-8 italic uppercase tracking-tighter">Stone Grill Admin</h1><input type="number" id="pinInput" placeholder="PIN" class="w-full text-center text-2xl p-4 bg-slate-50 border-2 rounded-2xl mb-4 outline-none focus:border-orange-600 font-mono"><button onclick="checkPin()" class="w-full bg-orange-600 text-white font-black py-5 rounded-2xl shadow-xl active:scale-95 transition-all uppercase">Enter System</button></div></div>`;
                 return;
             }
 
             root.innerHTML = `
-                <nav class="bg-white border-b border-slate-200 p-6 sticky top-0 z-50 flex justify-between items-center no-print">
-                    <div class="flex items-center gap-6">
-                        <div class="flex items-center gap-2 font-black italic tracking-tighter uppercase text-lg"><div class="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center text-white text-[10px]">S</div>Stone Grill</div>
-                        <div class="flex bg-slate-100 p-1 rounded-2xl gap-1">
-                            ${['summary', 'attendance', 'accounting'].map(tab => `
-                                <button onclick="switchTab('${tab}')" class="px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${state.activeTab === tab ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}">${tab}</button>
+                <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 no-print">
+                    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center p-3 md:p-4 gap-3">
+                        <div class="flex items-center gap-2 font-black italic tracking-tighter uppercase text-sm"><div class="w-7 h-7 bg-orange-600 rounded-lg flex items-center justify-center text-white text-[9px]">S</div>Stone Grill</div>
+                        <div class="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
+                            ${['summary', 'attendance', 'accounting', 'payslips'].map(tab => `
+                                <button onclick="switchTab('${tab}')" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-[9px] font-black uppercase transition-all whitespace-nowrap ${state.activeTab === tab ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}">${tab}</button>
                             `).join('')}
                         </div>
                     </div>
                 </nav>
-                <div class="max-w-7xl mx-auto p-8">
+                <div class="max-w-7xl mx-auto p-3 md:p-8">
                     ${state.activeTab === 'summary' ? renderSummary() : ''}
                     ${state.activeTab === 'attendance' ? renderAttendance() : ''}
                     ${state.activeTab === 'accounting' ? renderAccounting() : ''}
+                    ${state.activeTab === 'payslips' ? renderPayslips() : ''}
                 </div>
             `;
         }
 
         function renderSummary() {
             return `
-                <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm mb-8 no-print">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div class="md:col-span-2">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Search Employee</p>
-                            <input id="searchBox" oninput="updateFilters()" value="${state.query}" placeholder="Type Name..." class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm">
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">From</p>
-                            <input type="date" id="startD" onchange="updateFilters()" value="${state.startDate}" class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm">
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">To</p>
-                            <input type="date" id="endD" onchange="updateFilters()" value="${state.endDate}" class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-sm">
-                        </div>
+                <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm mb-4 no-print">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <input id="searchBox" oninput="state.query=this.value.toUpperCase();render()" value="${state.query}" placeholder="Search Name..." class="col-span-2 p-3 bg-slate-50 rounded-xl border-none font-bold text-[10px] uppercase">
+                        <input type="date" onchange="state.startDate=this.value;render()" value="${state.startDate}" class="p-3 bg-slate-50 rounded-xl border-none font-bold text-[10px]">
+                        <input type="date" onchange="state.endDate=this.value;render()" value="${state.endDate}" class="p-3 bg-slate-50 rounded-xl border-none font-bold text-[10px]">
                     </div>
                 </div>
-                <div class="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase"><tr><th class="p-8">Employee</th><th class="p-8">Days</th><th class="p-8">Gross</th><th class="p-8 text-rose-500">Deductions</th><th class="p-8 text-right">Net Pay</th></tr></thead>
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-x-auto">
+                    <table class="w-full text-left text-[11px] md:text-sm min-w-[700px] compact-table">
+                        <thead class="bg-slate-50 text-[9px] font-black text-slate-400 uppercase border-b">
+                            <tr><th>Employee</th><th>Work Days</th><th>Gross</th><th>Total Ded.</th><th class="text-right">Net Pay</th></tr>
+                        </thead>
                         <tbody class="divide-y divide-slate-50">
-                            ${Object.entries(state.employees)
-                                .filter(([id, emp]) => emp.name.includes(state.query))
-                                .map(([id, emp]) => {
-                                    const logsInRange = state.attendance.filter(l => l.empId === id && l.date >= state.startDate && l.date <= state.endDate);
-                                    const days = logsInRange.reduce((s, l) => s + l.count, 0);
-                                    const gross = days * 8 * emp.rate;
-                                    const totalDed = emp.sss + emp.phil + emp.pagibig + emp.advance;
-                                    return `<tr class="hover:bg-slate-50/50"><td class="p-8"><b>${emp.name}</b><br><span class="text-[10px] text-slate-400 font-bold uppercase">ID ${id}</span></td><td class="p-8 font-black">${days.toFixed(1)}</td><td class="p-8">₱${gross.toLocaleString()}</td><td class="p-8 text-rose-500">-₱${totalDed.toLocaleString()}</td><td class="p-8 text-right font-black text-orange-600 text-lg">₱${(gross - totalDed).toLocaleString()}</td></tr>`;
-                                }).join('')}
+                            ${Object.entries(state.employees).filter(([id, emp]) => emp.name.includes(state.query)).map(([id, emp]) => {
+                                const logs = state.attendance.filter(l => l.empId === id && l.date >= state.startDate && l.date <= state.endDate);
+                                const days = logs.reduce((s, l) => s + l.count, 0);
+                                const gross = days * 8 * emp.rate;
+                                const ded = (emp.sss||0) + (emp.phil||0) + (emp.pag||0) + (emp.advance||0);
+                                return `<tr><td class="font-black">${emp.name}<br><span class="text-[8px] text-slate-400">ID ${id}</span></td><td class="font-bold">${days.toFixed(1)}</td><td>₱${gross.toLocaleString()}</td><td class="text-rose-500 font-bold">-₱${ded.toLocaleString()}</td><td class="text-right font-black text-orange-600 text-sm">₱${(gross - ded).toLocaleString()}</td></tr>`;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -168,15 +150,18 @@
 
         function renderAttendance() {
             return `
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm h-fit">
-                        <h3 class="text-[10px] font-black uppercase text-slate-400 mb-6 tracking-widest">Process Machine Data</h3>
-                        <textarea id="rawLogs" placeholder="Paste tabbed text from machine..." class="w-full h-64 p-6 bg-slate-50 rounded-[30px] border-none font-mono text-[10px] mb-6 outline-none focus:ring-2 ring-orange-100"></textarea>
-                        <button onclick="importLogs()" class="w-full bg-slate-900 text-white py-5 rounded-[25px] font-black text-[10px] uppercase shadow-xl">Sync Logs</button>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm h-fit">
+                        <textarea id="rawLogs" placeholder="Paste data here..." class="w-full h-32 p-4 bg-slate-50 rounded-2xl font-mono text-[9px] mb-4 outline-none"></textarea>
+                        <button onclick="importLogs()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-[10px] uppercase">Process Sync</button>
                     </div>
-                    <div class="lg:col-span-2 bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
-                         <table class="w-full text-left text-sm font-medium"><thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase"><tr><th class="p-6">Staff</th><th class="p-6">Date</th><th class="p-6 text-right">Status</th></tr></thead>
-                         <tbody class="divide-y divide-slate-50">${state.attendance.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(log=>`<tr class="hover:bg-slate-50/50"><td class="p-6 uppercase font-black text-xs">${state.employees[log.empId]?.name || 'Unknown'}</td><td class="p-6 text-slate-500">${log.date}</td><td class="p-6 text-right"><span class="px-4 py-1.5 rounded-full text-[10px] font-black ${log.count===1?'bg-emerald-100 text-emerald-700':'bg-orange-100 text-orange-700'}">${log.count===1?'FULL':'HALF'}</span></td></tr>`).join('')}</tbody></table>
+                    <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-x-auto">
+                        <table class="w-full text-left text-[11px] min-w-[400px] compact-table">
+                            <thead class="bg-slate-50 text-[9px] font-black text-slate-400 uppercase"><tr><th>Staff</th><th>Date</th><th class="text-right">Shift</th></tr></thead>
+                            <tbody class="divide-y divide-slate-50">
+                                ${state.attendance.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(log=>`<tr><td class="font-black uppercase">${state.employees[log.empId]?.name || 'ID '+log.empId}</td><td class="text-slate-500">${log.date}</td><td class="text-right font-black ${log.count===1?'text-emerald-600':'text-orange-500'}">${log.count===1?'FULL':'HALF'}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             `;
@@ -184,42 +169,66 @@
 
         function renderAccounting() {
             return `
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm h-fit">
-                        <h3 class="text-[10px] font-black uppercase text-slate-400 mb-6 tracking-widest">Employee Financial Data</h3>
-                        <form onsubmit="updateStaff(event)" class="space-y-4">
-                            <input name="id" placeholder="BIO ID" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs" required>
-                            <input name="name" placeholder="FULL NAME" class="w-full p-4 bg-slate-50 rounded-2xl font-bold text-xs" required>
-                            <div class="grid grid-cols-2 gap-4">
-                                <input name="rate" placeholder="RATE (₱)" class="p-4 bg-slate-50 rounded-2xl font-bold text-xs" required>
-                                <input name="advance" placeholder="CASH ADVANCE" class="p-4 bg-orange-50 rounded-2xl font-bold text-xs text-orange-700">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    ${Object.entries(state.employees).map(([id, emp]) => `
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col gap-3">
+                            <div class="flex justify-between border-b pb-2">
+                                <div><p class="text-[8px] font-black text-slate-400">ID ${id}</p><p class="font-black text-[11px] uppercase">${emp.name}</p></div>
+                                <button onclick="addAdvance('${id}')" class="text-[9px] bg-orange-50 text-orange-600 font-black px-3 py-1 rounded-lg border border-orange-200">+ CASH ADVANCE</button>
                             </div>
-                            <div class="grid grid-cols-3 gap-2">
-                                <input name="sss" placeholder="SSS" class="p-4 bg-slate-50 rounded-2xl font-bold text-xs">
-                                <input name="phil" placeholder="PHIL" class="p-4 bg-slate-50 rounded-2xl font-bold text-xs">
-                                <input name="pagibig" placeholder="PAGI" class="p-4 bg-slate-50 rounded-2xl font-bold text-xs">
+                            <div class="grid grid-cols-4 gap-2 text-center">
+                                <div><p class="text-[8px] font-black text-slate-400 uppercase">Rate</p><input type="number" onchange="state.employees['${id}'].rate=parseFloat(this.value);persist();render()" value="${emp.rate}" class="w-full text-center text-[10px] font-black border-none bg-slate-50 rounded-lg p-1"></div>
+                                <div><p class="text-[8px] font-black text-slate-400 uppercase">SSS</p><input type="number" onchange="state.employees['${id}'].sss=parseFloat(this.value);persist();render()" value="${emp.sss||0}" class="w-full text-center text-[10px] font-black border-none bg-slate-50 rounded-lg p-1"></div>
+                                <div><p class="text-[8px] font-black text-slate-400 uppercase">PH</p><input type="number" onchange="state.employees['${id}'].phil=parseFloat(this.value);persist();render()" value="${emp.phil||0}" class="w-full text-center text-[10px] font-black border-none bg-slate-50 rounded-lg p-1"></div>
+                                <div><p class="text-[8px] font-black text-orange-400 uppercase">Debt</p><p class="text-[10px] font-black text-orange-600">₱${emp.advance||0}</p></div>
                             </div>
-                            <button type="submit" class="w-full bg-orange-600 text-white py-5 rounded-[25px] font-black text-[10px] uppercase shadow-lg mt-2">Update Record</button>
-                        </form>
-                    </div>
-                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${Object.entries(state.employees).map(([id, emp]) => `
-                            <div class="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                                <div class="flex justify-between items-start mb-6">
-                                    <div><p class="text-[9px] font-black text-slate-400 uppercase mb-1">ID ${id}</p><p class="font-black text-sm uppercase">${emp.name}</p></div>
-                                    <div class="text-right"><p class="text-[9px] font-black text-orange-400 uppercase mb-1">Current Advance</p><p class="font-black text-orange-600">₱${emp.advance.toLocaleString()}</p></div>
-                                </div>
-                                <div class="grid grid-cols-3 gap-2 p-4 bg-slate-50 rounded-2xl">
-                                    <div class="text-center"><p class="text-[8px] font-black text-slate-400 uppercase">SSS</p><p class="font-black text-xs">₱${emp.sss}</p></div>
-                                    <div class="text-center"><p class="text-[8px] font-black text-slate-400 uppercase">PHIL</p><p class="font-black text-xs">₱${emp.phil}</p></div>
-                                    <div class="text-center"><p class="text-[8px] font-black text-slate-400 uppercase">PAGI</p><p class="font-black text-xs">₱${emp.pagibig}</p></div>
-                                </div>
+                            <div class="text-[8px] text-slate-400 italic">
+                                History: ${emp.advances?.map(a => `${a.date}: ₱${a.amount}`).join(' | ') || 'No history'}
                             </div>
-                        `).join('')}
-                    </div>
+                        </div>
+                    `).join('')}
                 </div>
             `;
         }
+
+        function renderPayslips() {
+            return `
+                <div class="no-print mb-6"><button onclick="window.print()" class="w-full bg-slate-900 text-white font-black py-4 rounded-xl text-[10px] uppercase">Print All Payslips</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    ${Object.entries(state.employees).map(([id, emp]) => {
+                        const logs = state.attendance.filter(l => l.empId === id && l.date >= state.startDate && l.date <= state.endDate);
+                        const days = logs.reduce((s, l) => s + l.count, 0);
+                        const gross = days * 8 * emp.rate;
+                        const ded = (emp.sss||0) + (emp.phil||0) + (emp.pag||0) + (emp.advance||0);
+                        if(days === 0) return '';
+                        return `
+                            <div class="bg-white p-8 border-2 border-slate-100 rounded-[30px] shadow-sm relative overflow-hidden">
+                                <div class="flex justify-between items-start mb-6 border-b pb-4">
+                                    <div><p class="text-[10px] font-black text-orange-600 tracking-widest uppercase">Stone Grill</p><p class="text-lg font-black uppercase">${emp.name}</p></div>
+                                    <div class="text-right"><p class="text-[9px] font-bold text-slate-400 uppercase">Pay Period</p><p class="text-[10px] font-bold">${state.startDate} to ${state.endDate}</p></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-8 mb-6">
+                                    <div><p class="text-[9px] font-black text-slate-400 uppercase mb-2">Earnings</p>
+                                        <div class="flex justify-between text-xs font-bold mb-1"><span>Days (${days.toFixed(1)})</span><span>₱${gross.toLocaleString()}</span></div>
+                                        <div class="border-t pt-1 flex justify-between text-xs font-black"><span>Gross</span><span>₱${gross.toLocaleString()}</span></div>
+                                    </div>
+                                    <div><p class="text-[9px] font-black text-rose-400 uppercase mb-2">Deductions</p>
+                                        <div class="flex justify-between text-[10px] font-medium mb-1"><span>SSS/PH/PAG</span><span>₱${((emp.sss||0)+(emp.phil||0)+(emp.pag||0)).toLocaleString()}</span></div>
+                                        <div class="flex justify-between text-[10px] font-medium mb-1"><span>Cash Advance</span><span>₱${(emp.advance||0).toLocaleString()}</span></div>
+                                        <div class="border-t pt-1 flex justify-between text-[10px] font-black text-rose-500 uppercase"><span>Total Ded.</span><span>₱${ded.toLocaleString()}</span></div>
+                                    </div>
+                                </div>
+                                <div class="bg-slate-900 text-white p-4 rounded-2xl flex justify-between items-center">
+                                    <span class="text-[10px] font-black uppercase tracking-widest">Net Amount</span>
+                                    <span class="text-xl font-black italic">₱${(gross - ded).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
         render();
     </script>
 </body>
