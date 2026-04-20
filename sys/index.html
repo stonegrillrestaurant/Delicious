@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stone Grill Payroll</title>
+    <title>Stone Grill Payroll - Pro Mode</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -12,97 +12,74 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
-    <div id="root">
-        <div class="h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
-            <div class="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p id="loading-text" class="text-[10px] font-black tracking-widest uppercase mb-2">Establishing Cloud Link...</p>
-            <p id="error-status" class="text-xs text-orange-400 font-mono mt-4"></p>
-        </div>
-    </div>
+    <div id="root"></div>
 
-   <script type="module">
-        // 1. Imports (The CDN links)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+    <script>
+        const ADMIN_PIN = "1234"; 
 
-        // 2. The Config (The ID Card)
-        const firebaseConfig = {
-            apiKey: "AIzaSyDX6OKrMdfnzml4LA8SE4PDFkDJLVPmKIc",
-            authDomain: "stone-grill-app.firebaseapp.com",
-            projectId: "stone-grill-app",
-            storageBucket: "stone-grill-app.firebasestorage.app",
-            messagingSenderId: "724825019953",
-            appId: "1:724825019953:web:5ef20e131ff2fa858ba710",
-            measurementId: "G-HNX9584D6Z"
+        const DEFAULT_EMPLOYEES = {
+            "1": { name: "Ninox", rate: 0, dept: "Kitchen" },
+            "2": { name: "NEL2x", rate: 0, dept: "Kitchen" },
+            "4": { name: "Jhie", rate: 0, dept: "Kitchen" },
+            "5": { name: "Roel", rate: 0, dept: "Kitchen" },
+            "6": { name: "LIZA", rate: 0, dept: "Kitchen" },
+            "7": { name: "CALOY", rate: 0, dept: "Kitchen" },
+            "9": { name: "JEREY", rate: 0, dept: "Kitchen" },
+            "12": { name: "CHRIS", rate: 0, dept: "Kitchen" },
+            "13": { name: "DELIA", rate: 0, dept: "Kitchen" },
+            "14": { name: "JEVON", rate: 0, dept: "Kitchen" },
+            "18": { name: "Claudine LOTA", rate: 0, dept: "Not Set" },
+            "19": { name: "Raffy Javier", rate: 0, dept: "Kitchen" }
         };
-
-        const appId = 'stone-grill-payroll';
-        const ADMIN_PIN = "1234";
 
         let state = {
             isUnlocked: false,
-            isConnected: false,
-            employees: {},
-            attendance: [],
-            selectedEmpId: "",
-            dateRange: {
-                start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-                end: new Date().toISOString().split('T')[0]
-            },
-            activeTab: 'summary',
-            error: null
+            activeTab: 'staff',
+            employees: { ...DEFAULT_EMPLOYEES, ...(JSON.parse(localStorage.getItem('sg_employees')) || {}) },
+            attendance: JSON.parse(localStorage.getItem('sg_attendance')) || []
         };
 
-        let db, auth;
-
-        // 3. Initialize & Logic
-        async function init() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) sync();
-                    else await signInAnonymously(auth);
-                });
-
-            } catch (e) {
-                document.getElementById('error-status').innerText = "INIT_FAIL: " + e.message;
-            }
-        }
-
-        function sync() {
-            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'employees'), (snap) => {
-                state.isConnected = true;
-                if (snap.exists()) state.employees = snap.data();
-                render();
-            }, (err) => {
-                document.getElementById('error-status').innerText = "DATABASE_LOCKED: Check your Firestore Folders and Rules.";
-            });
-
-            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'attendance'), (snap) => {
-                if (snap.exists()) state.attendance = snap.data().records || [];
-                render();
-            });
+        function persist() {
+            localStorage.setItem('sg_employees', JSON.stringify(state.employees));
+            localStorage.setItem('sg_attendance', JSON.stringify(state.attendance));
         }
 
         window.checkPin = () => {
-            if (document.getElementById('pinInput').value === ADMIN_PIN) { state.isUnlocked = true; render(); }
-            else alert("Invalid PIN");
+            if (document.getElementById('pinInput').value === ADMIN_PIN) {
+                state.isUnlocked = true;
+                render();
+            } else { alert("Invalid PIN"); }
         };
 
-        window.updateStaff = async (e) => {
+        window.switchTab = (tab) => { state.activeTab = tab; render(); };
+
+        // CALCULATE ATTENDANCE VALUE (1.0 vs 0.5)
+        function calculateDayValue(timeIn, timeOut) {
+            if (!timeIn || !timeOut) return 0.5; // Missing Tap = Half Day
+            
+            const start = new Date(`2026-01-01 ${timeIn}`);
+            const end = new Date(`2026-01-01 ${timeOut}`);
+            const diffHours = (end - start) / (1000 * 60 * 60);
+            
+            return diffHours < 5 ? 0.5 : 1.0; // Below 5 hours = Half Day
+        }
+
+        window.updateStaff = (e) => {
             e.preventDefault();
             const fd = new FormData(e.target);
             const id = fd.get('id').trim();
-            const data = { ...state.employees, [id]: { name: fd.get('name'), rate: parseFloat(fd.get('rate')), deduct: parseFloat(fd.get('deduct')) || 0 } };
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees'), data);
-            e.target.reset();
+            state.employees[id] = {
+                name: fd.get('name'),
+                rate: parseFloat(fd.get('rate')) || 0,
+                dept: fd.get('dept') || "Kitchen"
+            };
+            persist();
+            render();
+            alert("Updated!");
         };
 
-        window.importLogs = async (text) => {
+        window.importLogs = () => {
+            const text = document.getElementById('rawLogs').value;
             if (!text.trim()) return;
             const lines = text.split('\n').filter(l => l.includes('\t'));
             const logs = {};
@@ -119,61 +96,95 @@
             let combined = [...state.attendance];
             Object.values(logs).forEach(day => {
                 day.times.sort();
-                const record = { empId: day.empId, date: day.date, in: day.times[0], out: day.times.length > 1 ? day.times[day.times.length-1] : null };
+                const timeIn = day.times[0];
+                const timeOut = day.times.length > 1 ? day.times[day.times.length-1] : null;
+                const record = { 
+                    empId: day.empId, 
+                    date: day.date, 
+                    in: timeIn, 
+                    out: timeOut,
+                    count: calculateDayValue(timeIn, timeOut) // Apply the 0.5 rule
+                };
                 const idx = combined.findIndex(r => r.empId === day.empId && r.date === day.date);
                 if (idx > -1) combined[idx] = record; else combined.push(record);
             });
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance'), { records: combined });
-            alert("SUCCESS: Biometric Data Uploaded!");
+            state.attendance = combined;
+            persist();
+            render();
+            alert("Logs Synced with 0.5 Rule!");
+        };
+
+        window.downloadCSV = () => {
+            let csv = "Type,ID,Name,Date,In,Out,WorkDayValue\n";
+            state.attendance.forEach(log => {
+                const name = state.employees[log.empId]?.name || 'Unknown';
+                csv += `LOG,${log.empId},${name},${log.date},${log.in},${log.out || ''},${log.count}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `stone-grill-payroll.csv`;
+            a.click();
         };
 
         function render() {
             const root = document.getElementById('root');
-            if (!state.isConnected) return;
-
             if (!state.isUnlocked) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center bg-slate-900 p-6"><div class="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm text-center"><div class="w-16 h-16 bg-orange-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-black text-3xl">S</div><h1 class="text-2xl font-black mb-8 tracking-tighter uppercase">Stone Grill Admin</h1><input type="password" id="pinInput" placeholder="PIN" class="w-full text-center text-3xl p-4 bg-slate-50 border-2 rounded-2xl mb-4 outline-none focus:border-orange-600 font-mono tracking-widest"><button onclick="checkPin()" class="w-full bg-orange-600 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-orange-700">UNLOCK SYSTEM</button></div></div>`;
+                root.innerHTML = `<div class="h-screen flex items-center justify-center bg-slate-900 p-6"><div class="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm text-center"><div class="w-16 h-16 bg-orange-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-black text-3xl">S</div><h1 class="text-2xl font-black mb-8 tracking-tighter uppercase">Stone Grill Admin</h1><input type="password" id="pinInput" placeholder="PIN" class="w-full text-center text-3xl p-4 bg-slate-50 border-2 rounded-2xl mb-4 outline-none focus:border-orange-600 font-mono tracking-widest"><button onclick="checkPin()" class="w-full bg-orange-600 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-orange-700">UNLOCK</button></div></div>`;
                 return;
             }
 
             root.innerHTML = `
                 <nav class="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 flex justify-between items-center no-print">
-                    <div class="flex items-center gap-2"><div class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white text-[10px] font-black">S</div><span class="font-black tracking-tighter uppercase text-sm">Stone Grill <span class="text-orange-600">Payroll</span></span></div>
-                    <div class="flex items-center gap-2"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span><span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Live Cloud</span></div>
+                    <div class="flex items-center gap-4">
+                        <span class="font-black tracking-tighter uppercase text-sm">Stone Grill <span class="text-orange-600">Payroll</span></span>
+                        <div class="flex bg-slate-100 p-1 rounded-xl">
+                            <button onclick="switchTab('staff')" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase ${state.activeTab === 'staff' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}">Staff</button>
+                            <button onclick="switchTab('logs')" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase ${state.activeTab === 'logs' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}">Attendance</button>
+                        </div>
+                    </div>
+                    <button onclick="downloadCSV()" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase">CSV Export</button>
                 </nav>
-                <div class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8 no-print">
-                    <div class="space-y-6">
-                        <div class="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-                            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Add/Edit Staff</h3>
-                            <form onsubmit="updateStaff(event)" class="space-y-3">
-                                <div class="grid grid-cols-3 gap-2">
-                                    <input name="id" placeholder="BIO ID" class="p-3 bg-slate-50 rounded-xl text-sm font-bold border-none" required>
-                                    <input name="name" placeholder="NAME" class="col-span-2 p-3 bg-slate-50 rounded-xl text-sm font-bold border-none" required>
+                <div class="max-w-7xl mx-auto p-4 md:p-8">
+                    ${state.activeTab === 'staff' ? `
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            ${Object.entries(state.employees).map(([id, emp]) => `
+                                <div class="flex justify-between items-center p-5 bg-white rounded-2xl border border-slate-200">
+                                    <div><p class="text-[10px] text-slate-400 font-black">ID ${id}</p><p class="font-black text-slate-900 uppercase">${emp.name}</p></div>
+                                    <div class="text-right"><p class="text-[10px] text-slate-400 font-black uppercase">Rate</p><input onchange="state.employees['${id}'].rate=this.value;persist()" type="number" value="${emp.rate}" class="w-20 text-right font-black text-orange-600 bg-transparent border-b border-dashed border-orange-200"></div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <input name="rate" placeholder="RATE" class="p-3 bg-slate-50 rounded-xl text-sm font-bold border-none" required>
-                                    <input name="deduct" placeholder="DEDUCT" class="p-3 bg-slate-50 rounded-xl text-sm font-bold border-none">
-                                </div>
-                                <button class="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-[10px] uppercase transition hover:bg-black">Save Employee</button>
-                            </form>
+                            `).join('')}
                         </div>
-                    </div>
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="bg-white p-4 rounded-[32px] border border-slate-200 overflow-hidden shadow-sm min-h-[400px]">
-                            <div class="p-6">${renderView()}</div>
+                    ` : `
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+                                <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Paste Biometric Data</h3>
+                                <textarea id="rawLogs" class="w-full h-32 p-4 bg-slate-50 rounded-2xl border-none font-mono text-xs mb-4" placeholder="Paste data here..."></textarea>
+                                <button onclick="importLogs()" class="bg-slate-900 text-white px-8 py-4 rounded-xl font-black text-[10px] uppercase">Process Attendance</button>
+                            </div>
+                            <div class="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase">
+                                        <tr><th class="p-4">Staff</th><th class="p-4">Date</th><th class="p-4">Hours</th><th class="p-4">Value</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        ${state.attendance.sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => `
+                                            <tr class="border-t">
+                                                <td class="p-4 font-bold uppercase">${state.employees[log.empId]?.name || 'Unknown'}</td>
+                                                <td class="p-4">${log.date}</td>
+                                                <td class="p-4 text-xs font-mono">${log.in} - ${log.out || 'Missing'}</td>
+                                                <td class="p-4"><span class="px-3 py-1 rounded-full text-[10px] font-black ${log.count === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">${log.count.toFixed(1)} Day</span></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
+                    `}
                 </div>
             `;
         }
-
-        function renderView() {
-            const entries = Object.entries(state.employees);
-            if (entries.length === 0) return `<div class="py-20 text-center text-slate-300 font-black text-[10px] uppercase">Waiting for Firestore Folder...</div>`;
-            return `<p>Connection Successful!</p>`;
-        }
-
-        init();
+        render();
     </script>
 </body>
 </html>
