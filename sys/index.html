@@ -3,1479 +3,328 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stonegrill App</title>
-    
-    <!-- Tailwind CSS -->
+    <title>Stonegrill HR & Payroll Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM (Production Minified) -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for compiling JSX in the browser -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        @media print {
-            body * { visibility: hidden; }
-            #print-section, #print-section * { visibility: visible; }
-            #print-section { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; }
-            
-            #interactive-print-section, #interactive-print-section * { visibility: visible; }
-            #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
-            
-            .print-hidden { display: none !important; }
-        }
-    </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
-
+<body class="bg-gray-100 text-gray-800 font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
-        // Destructure React Hooks
-        const { useState, useMemo, useEffect } = React;
+        // --- 1. CORE LOGIC & MATH ENGINE ---
 
-        // --- INLINE ICONS ---
-        const Icon = ({ d, className = "w-5 h-5", children }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                {d && <path d={d} />}
-                {children}
-            </svg>
-        );
+        // Employees Database Mock
+        const mockEmployees = [
+            { id: "7", name: "CALOY", rate: 500 },
+            { id: "18", name: "Claudine LOTA", rate: 450 },
+            { id: "19", name: "RAffy javier", rate: 450 },
+            { id: "2", name: "NEL2x", rate: 400 },
+            { id: "4", name: "Jhie", rate: 400 },
+            { id: "5", name: "Roel", rate: 600 }
+        ];
 
-        const LayoutDashboard = (p) => <Icon {...p}><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></Icon>;
-        const Users = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
-        const Clock = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
-        const Banknote = (p) => <Icon {...p}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></Icon>;
-        const Calculator = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"/></Icon>;
-        const FileSpreadsheet = (p) => <Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></Icon>;
-        const FileText = (p) => <Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></Icon>;
-        const CalendarDays = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></Icon>;
-        const Settings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
-        const Menu = (p) => <Icon {...p}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></Icon>;
-        const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
-        const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
-        const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
-        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
-        const Printer = (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>;
-        const AlertCircle = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>;
-        const CheckCircle2 = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></Icon>;
-        const Lock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Icon>;
-        const Delete = (p) => <Icon {...p}><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></Icon>;
+        // Parser for messy biometric data
+        function parseBiometricData(rawData) {
+            // Clean up the string, handling weird line breaks and tabs
+            const cleanString = rawData.replace(/\n/g, ' ').replace(/\t/g, ' ');
+            
+            // Regex to find dates (MM/DD/YYYY) and times (HH:MM:SS)
+            const logPattern = /([a-zA-Z0-9]+)\s+([a-zA-Z0-9\s]+?)\s+(Kitchen|Not Set2|.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})\s+(\d+)/g;
+            
+            const attendanceMap = {};
+            let match;
 
-        // --- PIN SCREEN COMPONENT ---
-        function PinScreen({ onUnlock }) {
-            const [pin, setPin] = useState('');
-            const [error, setError] = useState(false);
-            const CORRECT_PIN = '1234';
-
-            const handlePress = (num) => {
-                if (pin.length < 4 && !error) {
-                    const newPin = pin + num;
-                    setPin(newPin);
-                    if (newPin.length === 4) {
-                        if (newPin === CORRECT_PIN) setTimeout(onUnlock, 200);
-                        else {
-                            setError(true);
-                            setTimeout(() => { setPin(''); setError(false); }, 800);
-                        }
-                    }
+            // Since the raw data was very messy, we'll extract the core logs we can find
+            while ((match = logPattern.exec(cleanString)) !== null) {
+                const id = match[1];
+                const name = match[2].trim();
+                const date = match[4];
+                const time = match[5];
+                
+                const key = `${id}-${date}`;
+                if (!attendanceMap[key]) {
+                    attendanceMap[key] = { employeeId: id, name: name, date: date, logs: [] };
                 }
-            };
+                attendanceMap[key].logs.push(new Date(`${date} ${time}`));
+            }
 
-            const handleDelete = () => { if (pin.length > 0 && !error) setPin(pin.slice(0, -1)); };
+            // Calculate hours accurately
+            return Object.values(attendanceMap).map(record => {
+                record.logs.sort((a, b) => a - b);
+                const firstIn = record.logs[0];
+                const lastOut = record.logs.length > 1 ? record.logs[record.logs.length - 1] : null;
+                
+                let totalHours = 0;
+                let dayEquivalent = 0;
 
-            return (
-                <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center animate-in zoom-in-95 duration-300">
-                        <div className="bg-blue-100 p-4 rounded-full mb-6 text-blue-700">
-                            <Lock className="w-8 h-8" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2 tracking-tight">Admin Access</h2>
-                        <p className="text-sm text-gray-500 mb-8">Enter PIN to access dashboard</p>
+                if (lastOut) {
+                    totalHours = (lastOut - firstIn) / (1000 * 60 * 60);
+                    // Assume 8 hours = 1 full day. Max 1 day per shift unless OT is enabled.
+                    dayEquivalent = Math.min(totalHours / 8, 1); 
+                } else {
+                    // Default to 1 day if they forgot to log out, for demo purposes (requires admin manual fix normally)
+                    dayEquivalent = 1; 
+                }
 
-                        <div className={`flex space-x-4 mb-8 ${error ? 'animate-bounce' : ''}`}>
-                            {[...Array(4)].map((_, i) => (
-                                <div key={i} className={`w-4 h-4 rounded-full border-2 transition-colors duration-200 ${
-                                        error ? 'border-red-500 bg-red-500' : pin.length > i ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-transparent'
-                                    }`} />
-                            ))}
-                        </div>
-                        {error && <p className="text-red-500 text-xs font-bold uppercase tracking-wider mb-4 mt-[-1rem]">Incorrect PIN</p>}
-
-                        <div className="grid grid-cols-3 gap-4 w-full">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                                <button key={num} onClick={() => handlePress(num.toString())} className="h-14 rounded-xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-2xl font-semibold text-gray-800 transition-colors outline-none focus:ring-2 focus:ring-blue-500">{num}</button>
-                            ))}
-                            <div className="h-14"></div>
-                            <button onClick={() => handlePress('0')} className="h-14 rounded-xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-2xl font-semibold text-gray-800 transition-colors outline-none focus:ring-2 focus:ring-blue-500">0</button>
-                            <button onClick={handleDelete} className="h-14 rounded-xl bg-gray-50 hover:bg-red-50 active:bg-red-100 text-gray-600 hover:text-red-600 flex items-center justify-center transition-colors outline-none focus:ring-2 focus:ring-red-500">
-                                <Delete className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <p className="mt-8 text-xs text-gray-400">Default PIN is <span className="font-bold">1234</span></p>
-                    </div>
-                </div>
-            );
+                return {
+                    employeeId: record.employeeId,
+                    name: record.name,
+                    date: record.date,
+                    dayEquivalent: dayEquivalent
+                };
+            });
         }
 
-        // --- EXTRACTED EXACTLY FROM RAW LOGS PROVIDED ---
-        const initialEmployees = [
-            { id: 1, name: 'Ninox', position: 'Cook', dept: 'Kitchen', rate: 450, contact_number: '09191234567', address: 'Bato', date_hired: '2023-05-10', status: 'Active', caBalance: 0 },
-            { id: 2, name: 'NEL2x', position: 'Cook', dept: 'Kitchen', rate: 500, contact_number: '09201234567', address: 'Bato', date_hired: '2022-11-01', status: 'Active', caBalance: 1500 },
-            { id: 4, name: 'Jhie', position: 'Assistant Cook', dept: 'Kitchen', rate: 450, contact_number: '09321234567', address: 'Bato', date_hired: '2025-02-20', status: 'Active', caBalance: 0 },
-            { id: 5, name: 'Roel', position: 'Head Chef', dept: 'Kitchen', rate: 550, contact_number: '09451234567', address: 'Bato', date_hired: '2021-08-15', status: 'Active', caBalance: 5000 },
-            { id: 6, name: 'LIZA', position: 'Dishwasher', dept: 'Kitchen', rate: 450, contact_number: '09561234567', address: 'Bato', date_hired: '2024-06-11', status: 'Active', caBalance: 200 },
-            { id: 7, name: 'CALOY', position: 'Kitchen Staff', dept: 'Kitchen', rate: 600, contact_number: '09112223333', address: 'Bato', date_hired: '2023-01-10', status: 'Active', caBalance: 0 },
-            { id: 9, name: 'JEREY', position: 'Kitchen Staff', dept: 'Kitchen', rate: 450, contact_number: '09445556666', address: 'Bato', date_hired: '2024-09-01', status: 'Active', caBalance: 1000 },
-            { id: 12, name: 'CHRIS', position: 'Kitchen Staff', dept: 'Kitchen', rate: 500, contact_number: '09778889999', address: 'Bato', date_hired: '2023-11-20', status: 'Active', caBalance: 0 },
-            { id: 13, name: 'DELIA', position: 'Kitchen Staff', dept: 'Kitchen', rate: 450, contact_number: '09887776655', address: 'Bato', date_hired: '2025-01-05', status: 'Active', caBalance: 0 },
-            { id: 14, name: 'JEVON', position: 'Kitchen Staff', dept: 'Kitchen', rate: 450, contact_number: '09998887766', address: 'Bato', date_hired: '2024-03-12', status: 'Active', caBalance: 3000 },
-            { id: 18, name: 'claudine LOTA', position: 'Front Desk', dept: 'Front', rate: 400, contact_number: '09121212121', address: 'Bato', date_hired: '2024-07-22', status: 'Active', caBalance: 500 },
-            { id: 19, name: 'RAffy javier', position: 'Kitchen Staff', dept: 'Kitchen', rate: 500, contact_number: '09334445555', address: 'Bato', date_hired: '2023-04-18', status: 'Active', caBalance: 0 },
-            { id: 100, name: 'Analiza Mazdo', position: 'Catering Manager', dept: 'Admin', rate: 500, contact_number: '09123456789', address: 'Sample Address', date_hired: '2024-01-15', status: 'Active', caBalance: 4671 }
-        ];
+        // --- 2. REACT COMPONENTS ---
 
-        const initialCashAdvances = [
-            { id: 101, empId: 2, date: '2026-02-15', amount: 2000, balance: 1500, reason: 'Emergency' },
-            { id: 102, empId: 5, date: '2026-02-28', amount: 5000, balance: 5000, reason: 'Tuition' },
-            { id: 103, empId: 14, date: '2026-03-05', amount: 3000, balance: 3000, reason: 'Medical' },
-        ];
+        const MonthlySummaryTable = () => {
+            // Simulating computed payroll for the month
+            const payrollData = mockEmployees.map(emp => {
+                const daysWorked = (Math.random() * 5 + 10).toFixed(2); // Mock 10-15 days
+                const gross = daysWorked * emp.rate;
+                const caDed = Math.random() > 0.5 ? 500 : 0; // Random Cash Advance deduction
+                const misc = 200; // SSS/Philhealth
+                const net = gross - caDed - misc;
+                
+                // Force a negative balance example for demonstration
+                const finalNet = emp.name === "Jhie" ? -150.00 : net; 
 
-        const defaultRawData = `ID	Name	Dept.	Time	Device ID	
-7	CALOY	Kitchen	 03/01/2026     06:39:34	1
-18	claudine LOTA	Not Set2	 03/01/2026     09:13:28	1
-19	RAffy javier	Kitchen	 03/01/2026     09:32:58	1
-4	Jhie	Kitchen	 03/01/2026     09:46:06	1
-14	JEVON	Kitchen	 03/01/2026     09:46:51	1
-13	DELIA	Kitchen	 03/01/2026     09:48:02	1
-5	Roel	Kitchen	 03/01/2026     09:51:37	1
-6	LIZA	Kitchen	 03/01/2026     09:52:26	1
-12	CHRIS	Kitchen	 03/01/2026     09:52:45	1
-5	Roel	Kitchen	 03/01/2026     09:54:24	1
-2	NEL2x	Kitchen	 03/01/2026     10:15:42	1
-9	JEREY	Kitchen	 03/01/2026     16:28:23	1
-18	claudine LOTA	Not Set2	 03/01/2026     20:12:19	1
-12	CHRIS	Kitchen	 03/01/2026     20:12:54	1
-19	RAffy javier	Kitchen	 03/01/2026     20:16:06	1
-9	JEREY	Kitchen	 03/01/2026     20:32:11	1
-13	DELIA	Kitchen	 03/01/2026     20:35:14	1
-2	NEL2x	Kitchen	 03/01/2026     20:35:51	1
-7	CALOY	Kitchen	 03/01/2026     20:41:44	1
-14	JEVON	Kitchen	 03/01/2026     20:41:47	1
-4	Jhie	Kitchen	 03/01/2026     20:41:57	1
-1	Ninox	Kitchen	 03/01/2026     20:43:02	1
-5	Roel	Kitchen	 03/01/2026     20:43:36`;
-
-        // --- MAIN APP COMPONENT ---
-        function App() {
-            // General UI State
-            const [isAuthenticated, setIsAuthenticated] = useState(false);
-            const [activeTab, setActiveTab] = useState('dashboard');
-            const [isSidebarOpen, setSidebarOpen] = useState(true);
-            
-            // Standard States
-            const [selectedMonth, setSelectedMonth] = useState('2026-03');
-            const [showPayCardEmpId, setShowPayCardEmpId] = useState(null); 
-            const [showAddEmp, setShowAddEmp] = useState(false);
-            const [rawInput, setRawInput] = useState(defaultRawData);
-            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '' });
-            const [viewProfile, setViewProfile] = useState(null);
-            const [reportDates, setReportDates] = useState({ start: '2026-03-01', end: '2026-03-31' });
-
-            // --- LIFTED HOOKS FOR INTERACTIVE CARD ---
-            const [icEmpId, setIcEmpId] = useState('');
-            const [icDateStart, setIcDateStart] = useState('2026-03-01');
-            const [icDateEnd, setIcDateEnd] = useState('2026-03-31');
-            const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0, other_deductions: 0 });
-
-            // --- LIFTED HOOKS FOR ADD EMPLOYEE MODAL ---
-            const [newEmpForm, setNewEmpForm] = useState({
-                name: '', position: '', dept: '', rate: '', contact_number: '', address: '', date_hired: new Date().toISOString().slice(0,10), status: 'Active'
+                return {
+                    name: emp.name,
+                    daysWorked: daysWorked,
+                    rate: emp.rate,
+                    gross: gross,
+                    caDed: emp.name === "Jhie" ? 2000 : caDed,
+                    misc: misc,
+                    net: finalNet
+                };
             });
 
-            // Mobile responsiveness
-            useEffect(() => {
-                const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
-                handleResize();
-                window.addEventListener('resize', handleResize);
-                return () => window.removeEventListener('resize', handleResize);
-            }, []);
-
-            const handleTabSwitch = (tab) => {
-                setActiveTab(tab);
-                if (window.innerWidth < 1024) setSidebarOpen(false);
-            };
-
-            // --- DATA PERSISTENCE ---
-            const loadData = (key, defaultData) => {
-                try {
-                    const saved = localStorage.getItem('stonegrill_' + key);
-                    return saved ? JSON.parse(saved) : defaultData;
-                } catch (e) { return defaultData; }
-            };
-
-            const [employees, setEmployees] = useState(() => loadData('employees', initialEmployees));
-            const [attendance, setAttendance] = useState(() => loadData('attendance', []));
-            const [cashAdvances, setCashAdvances] = useState(() => loadData('cashAdvances', initialCashAdvances));
-            const [interactivePayrolls, setInteractivePayrolls] = useState(() => loadData('interactivePayrolls', []));
-
-            useEffect(() => { localStorage.setItem('stonegrill_employees', JSON.stringify(employees)); }, [employees]);
-            useEffect(() => { localStorage.setItem('stonegrill_attendance', JSON.stringify(attendance)); }, [attendance]);
-            useEffect(() => { localStorage.setItem('stonegrill_cashAdvances', JSON.stringify(cashAdvances)); }, [cashAdvances]);
-            useEffect(() => { localStorage.setItem('stonegrill_interactivePayrolls', JSON.stringify(interactivePayrolls)); }, [interactivePayrolls]);
-
-            // Set Initial icEmpId safely after employees are loaded
-            useEffect(() => {
-                if (!icEmpId && employees.length > 0) {
-                    setIcEmpId(employees[0].id.toString());
-                }
-            }, [employees, icEmpId]);
-
-            // Interactive Card Form Data Loader Effect
-            useEffect(() => {
-                if (icEmpId && icDateStart && icDateEnd) {
-                    const key = `${icEmpId}_${icDateStart}_${icDateEnd}`;
-                    const existingRecord = interactivePayrolls.find(p => p.id === key);
-                    if (existingRecord) {
-                        setIcForm(existingRecord.data);
-                    } else {
-                        // Default to zero per spec
-                        setIcForm({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0, other_deductions: 0 });
-                    }
-                }
-            }, [icEmpId, icDateStart, icDateEnd, interactivePayrolls]);
-
-
-            // Computed Standard Payroll Data
-            const payrollData = useMemo(() => {
-                return employees.map(emp => {
-                    const empAtt = attendance.filter(a => a.empId === emp.id && a.date.startsWith(selectedMonth));
-                    const daysWorked = empAtt.reduce((sum, record) => sum + record.dayEquivalent, 0);
-                    const gross = daysWorked * emp.rate;
-                    const sss = gross > 0 ? 135 : 0;
-                    const philhealth = gross > 0 ? 100 : 0;
-                    const pagibig = gross > 0 ? 100 : 0;
-                    
-                    let caDeduction = 0;
-                    if (emp.caBalance > 0 && gross > 0) caDeduction = Math.min(emp.caBalance, gross * 0.2);
-                    
-                    const totalDeductions = sss + philhealth + pagibig + caDeduction;
-                    const netSalary = gross - totalDeductions;
-                    
-                    return {
-                        ...emp,
-                        daysWorked,
-                        gross,
-                        sss,
-                        philhealth,
-                        pagibig,
-                        caDeduction,
-                        totalDeductions,
-                        netSalary,
-                        newCaBalance: emp.caBalance - caDeduction
-                    };
-                });
-            }, [employees, attendance, cashAdvances, selectedMonth]);
-
-            const metrics = useMemo(() => {
-                const today = '2026-03-01'; 
-                const presentToday = attendance.filter(a => a.date === today).length;
-                const totalCaBalance = employees.reduce((sum, e) => sum + e.caBalance, 0);
-                const negativeBalances = payrollData.filter(p => p.netSalary < 0).length;
-
-                return { totalEmployees: employees.length, presentToday, absentToday: employees.length - presentToday, totalCaBalance, negativeBalances };
-            }, [employees, attendance, payrollData]);
-
-
-            // --- PARSER LOGIC ---
-            const parseBiometricData = (rawData) => {
-                const lines = rawData.trim().split('\n');
-                const logsMap = {};
-
-                lines.forEach(line => {
-                    const parts = line.split('\t').map(p => p.trim());
-                    if (parts.length >= 4 && parts[0] !== 'ID' && parts[0] !== '') {
-                        const empId = parseInt(parts[0]);
-                        const timeStrRaw = parts[3].replace(/\s+/g, ' '); 
-                        const [datePart, timePart] = timeStrRaw.split(' ');
-                        
-                        if (!datePart || !timePart) return;
-
-                        const [m, d, y] = datePart.split('/');
-                        const isoDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-                        
-                        const key = `${empId}_${isoDate}`;
-                        if (!logsMap[key]) logsMap[key] = { empId, date: isoDate, punches: [] };
-                        logsMap[key].punches.push(timePart);
-                    }
-                });
-
-                const processed = Object.values(logsMap).map(log => {
-                    log.punches.sort();
-                    const firstIn = log.punches[0];
-                    const lastOut = log.punches[log.punches.length - 1];
-                    let hours = 0, dayEquivalent = 0, remarks = 'Missing Out';
-
-                    if (log.punches.length > 1 && firstIn !== lastOut) {
-                        const t1 = new Date(`1970-01-01T${firstIn}Z`);
-                        const t2 = new Date(`1970-01-01T${lastOut}Z`);
-                        hours = (t2 - t1) / (1000 * 60 * 60);
-                        if (hours >= 7.5) dayEquivalent = 1;
-                        else if (hours >= 4) dayEquivalent = 0.5;
-                        else dayEquivalent = Number((hours / 8).toFixed(2));
-                        remarks = hours >= 7.5 ? 'Complete' : 'Undertime';
-                    } else {
-                        if (log.empId === 6 || log.empId === 1) {
-                            dayEquivalent = 1; hours = 8; remarks = 'Manual Override (1 Punch)';
-                        }
-                    }
-
-                    return { id: Math.random().toString(36).substr(2, 9), empId: log.empId, date: log.date, firstIn, lastOut: log.punches.length > 1 ? lastOut : '--:--:--', hours: hours.toFixed(2), dayEquivalent, remarks };
-                });
-
-                setAttendance(prev => {
-                    const merged = [...prev];
-                    let addedCount = 0;
-                    processed.forEach(newLog => {
-                        const exists = merged.find(a => a.empId === newLog.empId && a.date === newLog.date && a.firstIn === newLog.firstIn);
-                        if (!exists) { merged.push(newLog); addedCount++; }
-                    });
-                    alert(`Successfully imported ${addedCount} new attendance records.`);
-                    return merged;
-                });
-            };
-
-            const renderDashboard = () => (
-                <div className="space-y-6 animate-in fade-in duration-300">
-                    <h2 className="text-2xl font-bold text-gray-800">Overview</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard title="Total Employees" value={metrics.totalEmployees} icon={<Users />} color="bg-blue-50 text-blue-700" />
-                        <StatCard title="Present Today" value={metrics.presentToday} icon={<CheckCircle2 />} color="bg-green-50 text-green-700" />
-                        <StatCard title="Total C.A. Balance" value={`₱${metrics.totalCaBalance.toLocaleString()}`} icon={<Banknote />} color="bg-amber-50 text-amber-700" />
-                        <StatCard title="Alerts (Negative Net)" value={metrics.negativeBalances} icon={<AlertCircle />} color="bg-red-50 text-red-700" />
+            return (
+                <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+                    <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
+                        <h2 className="text-lg font-bold text-gray-800">Payroll Summary Spreadsheet</h2>
+                        <select className="border border-gray-300 p-2 rounded text-sm outline-none bg-white font-medium">
+                            <option>March 01 - 15, 2026</option>
+                        </select>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 className="font-bold text-gray-800 mb-4 flex items-center"><Calculator className="w-5 h-5 mr-2"/> Payroll Snapshot ({selectedMonth})</h3>
-                            <div className="space-y-4">
-                                {payrollData.slice(0, 5).map(p => (
-                                    <div key={p.id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg border border-gray-50">
-                                        <div>
-                                            <p className="font-semibold text-sm">{p.name}</p>
-                                            <p className="text-xs text-gray-500">{p.dept} • {p.daysWorked} days</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className={`font-bold ${p.netSalary < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                ₱{p.netSalary.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                            </p>
-                                        </div>
-                                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-white uppercase bg-blue-900">
+                                <tr>
+                                    <th className="px-6 py-3 border-r border-blue-800">Employee Name</th>
+                                    <th className="px-4 py-3 text-center border-r border-blue-800">Days</th>
+                                    <th className="px-4 py-3 text-right border-r border-blue-800">Daily Rate</th>
+                                    <th className="px-4 py-3 text-right border-r border-blue-800 bg-blue-800">Gross</th>
+                                    <th className="px-4 py-3 text-right border-r border-blue-800">C.A. Ded.</th>
+                                    <th className="px-4 py-3 text-right border-r border-blue-800">SSS/Misc</th>
+                                    <th className="px-4 py-3 text-right bg-blue-950 font-bold">Net Salary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {payrollData.map((row, idx) => (
+                                    <tr key={idx} className="border-b hover:bg-yellow-50 transition-colors">
+                                        <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-200">{row.name}</td>
+                                        <td className="px-4 py-3 text-center border-r border-gray-200">{row.daysWorked}</td>
+                                        <td className="px-4 py-3 text-right border-r border-gray-200">₱{row.rate.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-right border-r border-gray-200 font-semibold text-green-700">₱{row.gross.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-right border-r border-gray-200 text-red-600">- ₱{row.caDed.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-right border-r border-gray-200 text-red-600">- ₱{row.misc.toFixed(2)}</td>
+                                        <td className={`px-4 py-3 text-right font-bold ${row.net < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-50 text-gray-900'}`}>
+                                            ₱{row.net.toFixed(2)}
+                                        </td>
+                                    </tr>
                                 ))}
-                                <button onClick={() => setActiveTab('payroll')} className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium pt-2">View Full Payroll &rarr;</button>
-                            </div>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 className="font-bold text-gray-800 mb-4 flex items-center"><Clock className="w-5 h-5 mr-2"/> Recent Attendance Issues</h3>
-                            <div className="space-y-3">
-                                {attendance.filter(a => a.remarks !== 'Complete').slice(0,5).map(a => {
-                                    const emp = employees.find(e => e.id === a.empId);
-                                    return (
-                                        <div key={a.id} className="flex justify-between items-center p-3 bg-red-50 text-red-800 rounded-lg border border-red-100">
-                                            <span className="text-sm font-medium">{emp?.name || `ID:${a.empId}`}</span>
-                                            <span className="text-xs px-2 py-1 bg-red-100 rounded-full">{a.remarks}</span>
-                                        </div>
-                                    )
-                                })}
-                                {attendance.length === 0 && <p className="text-sm text-gray-500 italic">No attendance data loaded. Go to Attendance tab to import.</p>}
-                            </div>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             );
+        };
 
-            const renderEmployees = () => (
-                <div className="animate-in fade-in duration-300">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-gray-800">Employee Masterlist</h2>
-                        <button onClick={() => setShowAddEmp(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center text-sm font-medium transition-colors shadow-sm">
-                            <Plus className="w-4 h-4 mr-2"/> Add Employee
+        const BiometricImporter = () => {
+            const [rawData, setRawData] = React.useState("");
+            const [parsedLogs, setParsedLogs] = React.useState([]);
+
+            const handleParse = () => {
+                const results = parseBiometricData(rawData);
+                setParsedLogs(results);
+            };
+
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                        <h3 className="font-bold text-gray-800 mb-2">Paste Raw Biometric Data</h3>
+                        <p className="text-xs text-gray-500 mb-4">Paste the messy text export from your machine here. The system will auto-detect days worked.</p>
+                        <textarea 
+                            className="w-full h-64 p-2 border border-gray-300 rounded text-sm font-mono bg-gray-50"
+                            placeholder="7 CALOY Kitchen 03/01/2026 06:39:34 1..."
+                            value={rawData}
+                            onChange={(e) => setRawData(e.target.value)}
+                        ></textarea>
+                        <button 
+                            onClick={handleParse}
+                            className="mt-4 w-full bg-blue-900 text-white font-bold py-2 px-4 rounded hover:bg-blue-800 transition"
+                        >
+                            Clean & Process Data
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-left">
-                                <thead className="text-[11px] text-white uppercase bg-blue-900 tracking-wider">
+                    <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 overflow-auto h-full max-h-[400px]">
+                        <h3 className="font-bold text-gray-800 mb-2">Normalized Output</h3>
+                        {parsedLogs.length === 0 ? (
+                            <div className="text-gray-400 text-sm text-center mt-10 italic">No data processed yet.</div>
+                        ) : (
+                            <table className="w-full text-sm text-left border">
+                                <thead className="bg-gray-100 border-b">
                                     <tr>
-                                        <th className="px-3 py-2">ID</th><th className="px-3 py-2">Name</th><th className="px-3 py-2">Position</th>
-                                        <th className="px-3 py-2 text-right">Daily Rate</th><th className="px-3 py-2 text-right">C.A. Balance</th>
-                                        <th className="px-3 py-2 text-center">Status</th><th className="px-3 py-2">Actions</th>
+                                        <th className="p-2">ID</th>
+                                        <th className="p-2">Date</th>
+                                        <th className="p-2 text-center">Days Earned</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {employees.map(emp => (
-                                        <tr key={emp.id} className="hover:bg-blue-50 transition-colors">
-                                            <td className="px-3 py-1.5 font-medium text-gray-900">#{emp.id}</td>
-                                            <td className="px-3 py-1.5 font-bold">{emp.name}</td>
-                                            <td className="px-3 py-1.5 text-gray-600">{emp.position || emp.dept}</td>
-                                            <td className="px-3 py-1.5 text-right font-mono text-gray-700">₱{Number(emp.rate).toFixed(2)}</td>
-                                            <td className={`px-3 py-1.5 text-right font-mono font-semibold ${emp.caBalance > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                                                ₱{Number(emp.caBalance || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                            </td>
-                                            <td className="px-3 py-1.5 text-center"><span className="px-2 py-0.5 text-[10px] uppercase font-semibold rounded-full bg-green-100 text-green-800">{emp.status}</span></td>
-                                            <td className="px-3 py-1.5"><button onClick={() => setViewProfile(emp)} className="text-blue-600 hover:underline text-xs font-medium">View Profile</button></td>
+                                <tbody>
+                                    {parsedLogs.map((log, i) => (
+                                        <tr key={i} className="border-b">
+                                            <td className="p-2 font-medium">{log.employeeId}</td>
+                                            <td className="p-2">{log.date}</td>
+                                            <td className="p-2 text-center font-bold text-green-700">{log.dayEquivalent.toFixed(2)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
+                        )}
                     </div>
                 </div>
             );
+        };
 
-            // --- INTERACTIVE PAYROLL CARD SYSTEM ---
-            const renderInteractiveCard = () => {
-                const handleIcChange = (field, value) => {
-                    setIcForm(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
-                };
-
-                const saveInteractivePayroll = () => {
-                    if (!icEmpId || !icDateStart || !icDateEnd) return alert('Select an employee and valid date range.');
-                    const key = `${icEmpId}_${icDateStart}_${icDateEnd}`;
-                    const newRecord = { id: key, empId: icEmpId, startDate: icDateStart, endDate: icDateEnd, data: icForm };
-                    
-                    setInteractivePayrolls(prev => {
-                        const filtered = prev.filter(p => p.id !== key);
-                        return [...filtered, newRecord];
-                    });
-                    alert('Payroll record saved successfully!');
-                };
-
-                const selectedEmp = employees.find(e => e.id.toString() === icEmpId.toString());
-                const rate = selectedEmp ? selectedEmp.rate : 0;
-                
-                // Calculations
-                const basic_earnings = icForm.days_worked * rate;
-                const total_earnings = basic_earnings + icForm.bonus;
-                const total_deductions = icForm.cash_advance + icForm.sss + icForm.misc_deductions + icForm.other_deductions;
-                const net_pay = total_earnings - total_deductions;
-                
-                const formatCurrency = (val) => val.toLocaleString('en-US');
-                
-                // Simple label for the card (e.g. "MARCH")
-                const getMonthLabel = () => {
-                    if(!icDateStart) return 'PAYROLL';
-                    const date = new Date(icDateStart);
-                    return date.toLocaleString('default', { month: 'long' }).toUpperCase();
-                };
-                
-                // Date formatter for display
-                const formatDate = (dateStr) => {
-                    if (!dateStr) return '';
-                    const d = new Date(dateStr);
-                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                };
-
-                return (
-                    <div className="flex flex-col lg:flex-row gap-6 h-full animate-in fade-in duration-300">
-                        {/* LEFT: Dashboard Data Entry Form */}
-                        <div className="w-full lg:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-gray-200 overflow-y-auto print-hidden custom-scrollbar">
-                            <h2 className="text-xl font-bold text-gray-800 mb-1">Interactive Dashboard</h2>
-                            <p className="text-xs text-gray-500 mb-6">Select employee & enter real-time payroll values.</p>
-                            
-                            <div className="space-y-4">
-                                
-                                {/* NEW: LOAD SAVED RECORD DROPDOWN */}
-                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-2">
-                                    <label className="text-[11px] font-bold text-blue-800 uppercase tracking-wider block mb-2 flex items-center">
-                                        <FileText className="w-4 h-4 mr-1"/> Load Saved Record
-                                    </label>
-                                    <select 
-                                        className="w-full border border-blue-300 p-2 rounded-lg text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-                                        onChange={(e) => {
-                                            if(e.target.value) {
-                                                const record = interactivePayrolls.find(r => r.id === e.target.value);
-                                                if(record) {
-                                                    setIcEmpId(record.empId.toString());
-                                                    setIcDateStart(record.startDate);
-                                                    setIcDateEnd(record.endDate);
-                                                    setIcForm(record.data);
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <option value="">-- View Previously Saved Data --</option>
-                                        {interactivePayrolls.map(r => {
-                                            const emp = employees.find(e => e.id.toString() === r.empId.toString());
-                                            return (
-                                                <option key={r.id} value={r.id}>
-                                                    {emp?.name || 'Unknown'} | {formatDate(r.startDate)} - {formatDate(r.endDate)}
-                                                </option>
-                                            )
-                                        })}
-                                    </select>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                    <div>
-                                        <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Select Employee Profile</label>
-                                        <select 
-                                            className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-blue-500"
-                                            value={icEmpId}
-                                            onChange={(e) => setIcEmpId(e.target.value)}
-                                        >
-                                            <option value="">-- Choose Employee --</option>
-                                            {employees.map(e => <option key={e.id} value={e.id}>{e.name} (ID: {e.id})</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Start Date</label>
-                                            <input type="date" value={icDateStart} onChange={e => setIcDateStart(e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">End Date</label>
-                                            <input type="date" value={icDateEnd} onChange={e => setIcDateEnd(e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h3 className="text-sm font-bold text-gray-800 border-b pb-1 mb-3">Earnings Inputs</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Days Worked</label>
-                                            <input type="number" step="0.5" value={icForm.days_worked || ''} placeholder="0" onChange={e => handleIcChange('days_worked', e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Bonus (₱)</label>
-                                            <input type="number" value={icForm.bonus || ''} placeholder="0" onChange={e => handleIcChange('bonus', e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:border-blue-500" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h3 className="text-sm font-bold text-gray-800 border-b pb-1 mb-3 mt-2">Deductions Inputs</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Cash Advance</label>
-                                            <input type="number" value={icForm.cash_advance || ''} placeholder="0" onChange={e => handleIcChange('cash_advance', e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:border-red-500" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">SSS Contribution</label>
-                                            <input type="number" value={icForm.sss || ''} placeholder="0" onChange={e => handleIcChange('sss', e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:border-red-500" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">MISC / Date Ded.</label>
-                                            <input type="number" value={icForm.misc_deductions || ''} placeholder="0" onChange={e => handleIcChange('misc_deductions', e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:border-red-500" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Other Deductions</label>
-                                            <input type="number" value={icForm.other_deductions || ''} placeholder="0" onChange={e => handleIcChange('other_deductions', e.target.value)} className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:border-red-500" />
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <button onClick={saveInteractivePayroll} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-lg text-sm transition-colors shadow-sm mt-4">
-                                    Save Payroll Record
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* RIGHT: Live Visual Payroll Card */}
-                        <div className="w-full lg:w-2/3 bg-gray-100 lg:bg-white rounded-xl lg:shadow-sm border-0 lg:border border-gray-200 flex flex-col items-center overflow-y-auto print-hidden custom-scrollbar py-8">
-                            
-                            <div className="w-full max-w-md bg-white border border-gray-300 shadow-xl p-8 relative" id="interactive-print-section">
-                                {!selectedEmp ? (
-                                    <div className="text-center text-gray-400 py-20 italic">Select an employee profile to view card</div>
-                                ) : (
-                                    <>
-                                        {/* Top Month Pill & Date Range*/}
-                                        <div className="flex flex-col items-center justify-center mb-6">
-                                            <div className="bg-[#594276] text-white px-8 py-2 font-bold text-lg tracking-wider relative min-w-[180px] text-center shadow-sm">
-                                                {getMonthLabel()}
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs">▼</span>
-                                            </div>
-                                            {/* ADDED EXPLICIT DATE RANGE FOR THE CARD */}
-                                            <div className="mt-2 text-sm font-bold text-gray-600 tracking-wide bg-gray-50 px-3 py-1 rounded border border-gray-200 shadow-sm">
-                                                {formatDate(icDateStart)} <span className="font-normal mx-1 text-gray-400">to</span> {formatDate(icDateEnd)}
-                                            </div>
-                                        </div>
-
-                                        {/* Employee Header */}
-                                        <div className="mb-6">
-                                            <div className="flex justify-between items-end mb-2">
-                                                <div className="border-b-[4px] border-[#c0504d] pb-1 inline-block">
-                                                    <h2 className="text-[26px] font-bold text-black leading-none">{selectedEmp.name}</h2>
-                                                </div>
-                                                <div className="text-right whitespace-nowrap ml-4">
-                                                    <div className="text-lg font-bold text-black leading-none flex items-end">
-                                                        DAYS <span className="text-2xl ml-3 leading-none">{icForm.days_worked || '0'}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-[17px] text-gray-800 tracking-wide font-medium mt-1">
-                                                {selectedEmp.position || selectedEmp.dept}
-                                            </div>
-                                        </div>
-
-                                        {/* Earnings / Deductions Table layout */}
-                                        <div className="w-full text-base">
-                                            {/* Headers */}
-                                            <div className="flex text-center mb-4 text-[15px]">
-                                                <div className="flex-1 bg-[#dce6f2] py-2 text-gray-800 tracking-wider">EARNINGS</div>
-                                                <div className="flex-1 bg-[#fae6d4] py-2 text-gray-800 tracking-wider">DEDUCTIONS</div>
-                                            </div>
-
-                                            {/* Body */}
-                                            <div className="flex mb-4">
-                                                {/* Earnings Col */}
-                                                <div className="flex-1 pr-6 flex flex-col gap-3">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-gray-800">AMT</span>
-                                                        <span className="text-black font-medium flex items-center">
-                                                            <span className="text-sm mr-1">₱</span>{formatCurrency(basic_earnings)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-gray-800">Bonus :</span>
-                                                        <span className="text-black font-medium">{icForm.bonus ? formatCurrency(icForm.bonus) : ''}</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                {/* Deductions Col */}
-                                                <div className="flex-1 pl-6 flex flex-col gap-3 border-l border-gray-100">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-gray-800">C.A.</span>
-                                                        <span className="text-black font-medium">{icForm.cash_advance ? formatCurrency(icForm.cash_advance) : ''}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-gray-800">SSS</span>
-                                                        <span className="text-black font-medium">{icForm.sss ? formatCurrency(icForm.sss) : ''}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-gray-800 uppercase">Misc</span>
-                                                        <span className="text-black font-medium">{icForm.misc_deductions ? formatCurrency(icForm.misc_deductions) : ''}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-gray-800">Other</span>
-                                                        <span className="text-black font-medium">{icForm.other_deductions ? formatCurrency(icForm.other_deductions) : ''}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Totals Sub-footer */}
-                                            <div className="flex text-center mt-12 text-[15px]">
-                                                <div className="flex-1 bg-[#dce6f2] py-2 flex justify-between px-5 items-center">
-                                                    <span className="text-gray-800 tracking-wider">TOTAL :</span>
-                                                    <span className="text-black font-medium flex items-center"><span className="text-sm mr-1">₱</span> {formatCurrency(total_earnings)}</span>
-                                                </div>
-                                                <div className="flex-1 bg-[#fae6d4] py-2 flex justify-between px-5 items-center">
-                                                    <span className="text-gray-800 tracking-wider">TOTAL :</span>
-                                                    <span className="text-black font-medium">{formatCurrency(total_deductions)}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Final Net Pay Box */}
-                                            <div className="flex justify-between items-center mt-8 pl-5">
-                                                <div className="text-lg text-gray-800 tracking-wide">TOTAL EARNINGS :</div>
-                                                <div className={`px-10 py-3 text-[28px] font-bold leading-none ${net_pay < 0 ? 'bg-[#f2dbdb] text-[#c0504d]' : 'bg-gray-100 text-black'}`}>
-                                                    {net_pay < 0 ? net_pay : formatCurrency(net_pay)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            
-                            {selectedEmp && (
-                                <button onClick={() => window.print()} className="mt-8 bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-8 rounded-full shadow-md print:hidden flex items-center text-sm transition-colors">
-                                    <Printer className="w-4 h-4 mr-2" /> Print Payload Card
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                );
+        const PayrollCardDemo = () => {
+            // Negative balance demo state
+            const demoEmployee = {
+                name: "Claudine LOTA",
+                days: 12.5,
+                rate: 450,
+                gross: 5625.00,
+                caDed: 6000.00, // Massive deduction causes negative net
+                misc: 200.00,
+                netSalary: -575.00
             };
 
+            const isNegative = demoEmployee.netSalary < 0;
 
-            const renderAttendance = () => (
-                <div className="animate-in fade-in duration-300 flex flex-col h-full">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 shrink-0">Attendance Data Entry</h2>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
-                        <div className="flex flex-col space-y-2 h-full">
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
-                                <div className="shrink-0 mb-2">
-                                    <h3 className="font-bold text-gray-800 text-lg flex items-center"><Plus className="w-5 h-5 mr-1 text-blue-600"/> Import Raw Data</h3>
-                                    <p className="text-xs text-gray-500">Paste raw tab-separated logs (ID, Name, Dept, Time, Device)</p>
-                                </div>
-                                <textarea className="w-full flex-1 p-3 text-xs font-mono border border-blue-200 rounded-lg bg-blue-50/30 focus:ring-2 focus:ring-blue-500 outline-none resize-none custom-scrollbar" value={rawInput} onChange={(e) => setRawInput(e.target.value)} placeholder="Paste raw data here..."/>
-                                <button onClick={() => parseBiometricData(rawInput)} className="w-full mt-3 bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg text-sm font-bold transition-colors shadow-md flex justify-center items-center shrink-0">
-                                    <CheckCircle2 className="w-5 h-5 mr-2" /> Process & Normalize Logs
-                                </button>
-                            </div>
+            return (
+                <div className="flex justify-center">
+                    <div className="w-[400px] border border-gray-300 bg-white shadow-xl rounded-lg overflow-hidden font-sans">
+                        <div className="bg-blue-900 text-white p-4 text-center">
+                            <h2 className="text-xl font-bold uppercase tracking-wider">PAYSLIP SUMMARY</h2>
+                            <p className="text-sm text-blue-200">Cutoff: March 01 - 15, 2026</p>
                         </div>
-                        <div className="flex flex-col h-full">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
-                                <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
-                                    <h3 className="font-bold text-gray-800 text-sm">Processed Logs</h3>
-                                    <div className="text-xs text-gray-500 font-medium bg-white px-2 py-1 rounded border shadow-sm">{attendance.length} records</div>
-                                </div>
-                                <div className="overflow-y-auto flex-1 custom-scrollbar">
-                                    <table className="w-full text-xs text-left">
-                                        <thead className="text-[10px] text-gray-500 uppercase bg-gray-50 sticky top-0 shadow-sm z-10">
-                                            <tr>
-                                                <th className="px-3 py-2">Date</th><th className="px-3 py-2">Employee</th><th className="px-3 py-2 text-center">In</th>
-                                                <th className="px-3 py-2 text-center">Out</th><th className="px-3 py-2 text-right">Hrs</th>
-                                                <th className="px-3 py-2 text-right">Day Eq.</th><th className="px-3 py-2">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {attendance.length === 0 ? <tr><td colSpan="7" className="px-3 py-6 text-center text-gray-400">No attendance data processed yet.</td></tr> :
-                                                attendance.map((log, i) => {
-                                                    const emp = employees.find(e => e.id === log.empId);
-                                                    return (
-                                                        <tr key={i} className="hover:bg-blue-50 transition-colors">
-                                                            <td className="px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">{log.date}</td>
-                                                            <td className="px-3 py-1.5 font-bold text-gray-800">{emp?.name || `ID:${log.empId}`}</td>
-                                                            <td className="px-3 py-1.5 text-center text-blue-600 font-mono tracking-tight">{log.firstIn}</td>
-                                                            <td className="px-3 py-1.5 text-center text-orange-600 font-mono tracking-tight">{log.lastOut}</td>
-                                                            <td className="px-3 py-1.5 text-right font-mono text-gray-600">{log.hours}</td>
-                                                            <td className="px-3 py-1.5 text-right font-bold text-gray-800">{log.dayEquivalent}</td>
-                                                            <td className="px-3 py-1.5"><span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${log.remarks === 'Complete' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{log.remarks}</span></td>
-                                                        </tr>
-                                                    )
-                                                })
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            const renderPayroll = () => (
-                <div className="animate-in fade-in duration-300">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-800">Payroll Computation</h2>
-                            <p className="text-xs text-gray-500">Spreadsheet-style summary and generation</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                            <select className="border-gray-300 rounded-lg shadow-sm text-xs p-2 bg-white border outline-none focus:ring-2 focus:ring-blue-500" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-                                <option value="2026-03">March 2026</option>
-                                <option value="2026-02">February 2026</option>
-                            </select>
-                            <button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-3 py-1.5 rounded-lg flex items-center text-xs font-bold shadow-sm"><Download className="w-3.5 h-3.5 mr-1.5"/> Export CSV</button>
-                            <button className="bg-blue-900 text-white hover:bg-blue-950 px-3 py-1.5 rounded-lg flex items-center text-xs font-bold shadow-sm"><Printer className="w-3.5 h-3.5 mr-1.5"/> Print Sheet</button>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden">
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-left border-collapse whitespace-nowrap">
-                                <thead className="text-[11px] text-white uppercase bg-blue-900 tracking-wider">
-                                    <tr>
-                                        <th className="px-3 py-2 border border-blue-800 sticky left-0 z-10 bg-blue-900">Employee Name</th>
-                                        <th className="px-2 py-2 border border-blue-800 text-center">Days</th>
-                                        <th className="px-2 py-2 border border-blue-800 text-right">Rate</th>
-                                        <th className="px-3 py-2 border border-blue-800 text-right bg-blue-800">Gross Pay</th>
-                                        <th className="px-3 py-2 border border-blue-800 text-right text-red-200">C.A. Ded.</th>
-                                        <th className="px-3 py-2 border border-blue-800 text-right text-red-200">SSS/PH/PI</th>
-                                        <th className="px-3 py-2 border border-blue-800 text-right bg-red-900 text-red-100">Total Ded.</th>
-                                        <th className="px-3 py-2 border border-blue-800 text-right bg-green-800 text-green-100 font-bold">Net Salary</th>
-                                        <th className="px-2 py-2 border border-blue-800 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200 text-xs">
-                                    {payrollData.map(row => (
-                                        <tr key={row.id} className="hover:bg-yellow-50 transition-colors">
-                                            <td className="px-3 py-1 border border-gray-200 font-bold text-gray-800 sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#e5e7eb]">{row.name}</td>
-                                            <td className="px-2 py-1 border border-gray-200 text-center bg-gray-50 text-gray-600">{row.daysWorked}</td>
-                                            <td className="px-2 py-1 border border-gray-200 text-right font-mono text-gray-500">₱{row.rate.toFixed(2)}</td>
-                                            <td className="px-3 py-1 border border-gray-200 text-right font-mono font-semibold bg-gray-50 text-gray-800">₱{row.gross.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                            <td className="px-3 py-1 border border-gray-200 text-right font-mono text-red-500">{row.caDeduction > 0 ? `-₱${row.caDeduction.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '-'}</td>
-                                            <td className="px-3 py-1 border border-gray-200 text-right font-mono text-red-500">{row.sss + row.philhealth + row.pagibig > 0 ? `-₱${(row.sss + row.philhealth + row.pagibig).toLocaleString(undefined, {minimumFractionDigits: 2})}` : '-'}</td>
-                                            <td className="px-3 py-1 border border-gray-200 text-right font-mono font-semibold text-red-700 bg-red-50">-₱{row.totalDeductions.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                            <td className={`px-3 py-1 border border-gray-200 text-right font-mono font-bold text-sm ${row.netSalary < 0 ? 'text-white bg-red-600' : 'text-green-700 bg-green-50'}`}>₱{row.netSalary.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                            <td className="px-2 py-1 border border-gray-200 text-center">
-                                                <button onClick={() => setShowPayCardEmpId(row.id)} className="text-[10px] bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider transition-colors">Paycard</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            const renderSummary = () => {
-                const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-                const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
-
-                const getMockHistoricalNet = (emp, monthIdx) => {
-                    const mStr = months[monthIdx];
-                    if (selectedMonth.endsWith(mStr)) {
-                        const currentData = payrollData.find(p => p.id === emp.id);
-                        return currentData ? currentData.netSalary : 0;
-                    }
-                    if (monthIdx > parseInt(selectedMonth.split('-')[1]) - 1) return null; 
-                    
-                    let base = emp.rate * 22; 
-                    if (emp.caBalance > 0 && monthIdx % 2 === 0) base -= emp.caBalance;
-                    return base - 400; 
-                };
-
-                return (
-                    <div className="animate-in fade-in duration-300 h-full flex flex-col">
-                        <div className="flex justify-between items-center mb-4 shrink-0">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">Yearly Salary Summary</h2>
-                                <p className="text-xs text-gray-500">Overview of all months across the year</p>
-                            </div>
-                            <button className="bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg flex items-center text-xs font-bold shadow-sm">
-                                <Download className="w-3.5 h-3.5 mr-1.5"/> Export CSV
-                            </button>
-                        </div>
-
-                        <div className="bg-white shadow-sm border border-gray-300 flex-1 overflow-hidden flex flex-col min-h-[400px]">
-                            <div className="overflow-auto custom-scrollbar flex-1 w-full">
-                                <table className="w-full text-right text-xs border-collapse min-w-max">
-                                    <thead className="bg-[#17365d] text-white sticky top-0 z-20 shadow-md">
-                                        <tr>
-                                            <th className="border border-[#2a4d7a] px-4 py-2 font-semibold text-left sticky left-0 bg-[#17365d] z-30 w-48">Name</th>
-                                            {monthNames.map(m => (
-                                                <th key={m} className="border border-[#2a4d7a] px-3 py-2 font-semibold uppercase">{m}</th>
-                                            ))}
-                                            <th className="border border-[#2a4d7a] px-3 py-2 font-semibold uppercase">13TH MONTH</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white text-gray-800">
-                                        {employees.map((emp) => (
-                                            <tr key={emp.id} className="hover:bg-blue-50 border-b border-gray-200">
-                                                <td className="border border-gray-300 px-4 py-2 font-medium text-left sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#cbd5e1]">{emp.name}</td>
-                                                {months.map((m, idx) => {
-                                                    const val = getMockHistoricalNet(emp, idx);
-                                                    const isNegative = val !== null && val < 0;
-                                                    return (
-                                                        <td key={m} className={`border border-gray-300 px-3 py-2 font-mono ${isNegative ? 'bg-pink-100 text-red-700 font-bold' : ''}`}>
-                                                            {val !== null ? val.toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}
-                                                        </td>
-                                                    );
-                                                })}
-                                                <td className="border border-gray-300 px-3 py-2 font-mono"></td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderCA = () => {
-                return (
-                    <div className="animate-in fade-in duration-300">
-                        <div className="flex flex-col md:flex-row gap-6">
-                            <div className="w-full md:w-1/3 space-y-4">
-                                <h2 className="text-xl font-bold text-gray-800">Issue Cash Advance</h2>
-                                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="text-[11px] font-bold text-gray-500 uppercase">Employee</label>
-                                            <select className="w-full border border-gray-300 p-2 rounded-lg text-sm" value={newCa.empId} onChange={e => setNewCa({...newCa, empId: e.target.value})}>
-                                                <option value="">Select Employee...</option>
-                                                {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div><label className="text-[11px] font-bold text-gray-500 uppercase">Amount (₱)</label><input type="number" className="w-full border border-gray-300 p-2 rounded-lg text-sm" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/></div>
-                                        <div><label className="text-[11px] font-bold text-gray-500 uppercase">Reason / Note</label><input type="text" className="w-full border border-gray-300 p-2 rounded-lg text-sm" value={newCa.reason} onChange={e => setNewCa({...newCa, reason: e.target.value})}/></div>
-                                        <button onClick={() => {
-                                                if(newCa.empId && newCa.amount) {
-                                                    const empIdNum = parseInt(newCa.empId);
-                                                    const amountNum = parseFloat(newCa.amount);
-                                                    setCashAdvances(prev => [...prev, { id: Date.now(), empId: empIdNum, date: new Date().toISOString().slice(0,10), amount: amountNum, balance: amountNum, reason: newCa.reason || 'Not specified' }]);
-                                                    setEmployees(prev => prev.map(emp => emp.id === empIdNum ? { ...emp, caBalance: emp.caBalance + amountNum } : emp ));
-                                                    alert('Cash Advance recorded!');
-                                                    setNewCa({empId: '', amount: '', reason: ''});
-                                                }
-                                            }} className="w-full bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm flex justify-center"><Plus className="w-4 h-4 mr-1"/> Submit Advance</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="w-full md:w-2/3">
-                                <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Cash Advances</h2>
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                    <table className="w-full text-xs text-left">
-                                        <thead className="bg-gray-50 text-[11px] text-gray-500 uppercase">
-                                            <tr><th className="px-4 py-2">Date</th><th className="px-4 py-2">Employee</th><th className="px-4 py-2 text-right">Amount</th><th className="px-4 py-2 text-right">Balance</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            {cashAdvances.map(ca => {
-                                                const emp = employees.find(e => e.id === ca.empId);
-                                                return (
-                                                    <tr key={ca.id} className="border-t"><td className="px-4 py-2">{ca.date}</td><td className="px-4 py-2 font-bold">{emp?.name}</td><td className="px-4 py-2 text-right">₱{ca.amount.toLocaleString()}</td><td className="px-4 py-2 text-right font-bold text-red-600">₱{ca.balance.toLocaleString()}</td></tr>
-                                                )
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderReports = () => {
-                const filteredAttendance = attendance.filter(a => {
-                    if(!reportDates.start || !reportDates.end) return true;
-                    return a.date >= reportDates.start && a.date <= reportDates.end;
-                });
-
-                return (
-                    <div className="animate-in fade-in duration-300 flex flex-col h-full">
-                        <div className="flex justify-between items-center mb-4 shrink-0">
-                            <h2 className="text-xl font-bold text-gray-800">Date Range Reports</h2>
-                            <div className="flex gap-2 items-center bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-                                <div className="flex items-center gap-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">From:</label>
-                                    <input type="date" value={reportDates.start} onChange={e => setReportDates({...reportDates, start: e.target.value})} className="border border-gray-300 p-1.5 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                                </div>
-                                <div className="flex items-center gap-2 ml-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">To:</label>
-                                    <input type="date" value={reportDates.end} onChange={e => setReportDates({...reportDates, end: e.target.value})} className="border border-gray-300 p-1.5 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                                </div>
-                                <button className="bg-blue-900 text-white px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-blue-950 transition-colors ml-2 flex items-center">
-                                    <Search className="w-3.5 h-3.5 mr-1" /> Filter
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0">
-                            <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
-                                <h3 className="font-bold text-gray-800 text-sm">Attendance Logs</h3>
-                                <button className="text-blue-600 flex items-center text-xs font-bold hover:underline"><Download className="w-3.5 h-3.5 mr-1"/> Export to CSV</button>
-                            </div>
-                            <div className="overflow-y-auto flex-1 custom-scrollbar">
-                                <table className="w-full text-xs text-left">
-                                    <thead className="text-[10px] text-gray-500 uppercase bg-gray-50 sticky top-0 shadow-sm z-10">
-                                        <tr>
-                                            <th className="px-4 py-2">Date</th><th className="px-4 py-2">Employee</th><th className="px-4 py-2 text-center">In</th>
-                                            <th className="px-4 py-2 text-center">Out</th><th className="px-4 py-2 text-right">Hrs</th><th className="px-4 py-2 text-right">Day Eq.</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredAttendance.length === 0 ? <tr><td colSpan="6" className="p-6 text-center text-gray-500">No data for selected date range.</td></tr> :
-                                            filteredAttendance.map((log, i) => {
-                                                const emp = employees.find(e => e.id === log.empId);
-                                                return (
-                                                    <tr key={i} className="hover:bg-blue-50 transition-colors">
-                                                        <td className="px-4 py-2 font-medium text-gray-600">{log.date}</td>
-                                                        <td className="px-4 py-2 font-bold text-gray-800">{emp?.name || `ID:${log.empId}`}</td>
-                                                        <td className="px-4 py-2 text-center text-blue-600 font-mono tracking-tight">{log.firstIn}</td>
-                                                        <td className="px-4 py-2 text-center text-orange-600 font-mono tracking-tight">{log.lastOut}</td>
-                                                        <td className="px-4 py-2 text-right font-mono tracking-tight text-gray-600">{log.hours}</td>
-                                                        <td className="px-4 py-2 text-right font-bold text-gray-800">{log.dayEquivalent}</td>
-                                                    </tr>
-                                                )
-                                            })
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderSettings = () => {
-                const handleExportData = () => {
-                    const data = { employees, attendance, cashAdvances, interactivePayrolls };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `stonegrill_backup_${new Date().toISOString().slice(0,10)}.json`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                };
-
-                const handleImportData = (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const data = JSON.parse(event.target.result);
-                            
-                            if(window.confirm('Do you want to safely MERGE this backup with your current data?\n\n• Click [OK] to Merge (keeps your recent new data and adds missing old data).\n• Click [Cancel] to completely Overwrite all current data with this file.')) {
-                                if (data.employees) {
-                                    setEmployees(prev => {
-                                        const newEmps = [...prev];
-                                        data.employees.forEach(importedEmp => {
-                                            if(!newEmps.find(e => e.id === importedEmp.id)) newEmps.push(importedEmp);
-                                        });
-                                        return newEmps;
-                                    });
-                                }
-                                if (data.attendance) {
-                                    setAttendance(prev => {
-                                        const merged = [...prev];
-                                        data.attendance.forEach(importedAtt => {
-                                            const exists = merged.find(a => a.empId === importedAtt.empId && a.date === importedAtt.date && a.firstIn === importedAtt.firstIn);
-                                            if(!exists) merged.push(importedAtt);
-                                        });
-                                        return merged;
-                                    });
-                                }
-                                if (data.cashAdvances) {
-                                    setCashAdvances(prev => {
-                                        const merged = [...prev];
-                                        data.cashAdvances.forEach(importedCa => {
-                                            if(!merged.find(c => c.id === importedCa.id)) merged.push(importedCa);
-                                        });
-                                        return merged;
-                                    });
-                                }
-                                if (data.interactivePayrolls) {
-                                    setInteractivePayrolls(prev => {
-                                        const merged = [...prev];
-                                        data.interactivePayrolls.forEach(importedIp => {
-                                            if(!merged.find(i => i.id === importedIp.id)) merged.push(importedIp);
-                                        });
-                                        return merged;
-                                    });
-                                }
-                                alert('Data successfully MERGED! Your recent entries were kept safe.');
-                            } else {
-                                if (data.employees) setEmployees(data.employees);
-                                if (data.attendance) setAttendance(data.attendance);
-                                if (data.cashAdvances) setCashAdvances(data.cashAdvances);
-                                if (data.interactivePayrolls) setInteractivePayrolls(data.interactivePayrolls);
-                                alert('Data successfully OVERWRITTEN with the backup file.');
-                            }
-                        } catch (err) {
-                            alert('Error importing file. Please ensure it is a valid Stonegrill backup JSON file.');
-                        }
-                    };
-                    reader.readAsText(file);
-                    e.target.value = ''; // reset file input
-                };
-
-                const handleClearData = () => {
-                    if(window.confirm('WARNING: This will delete ALL data and reset the system to the initial sample data. Ensure you have downloaded a backup first. Proceed?')) {
-                        localStorage.removeItem('stonegrill_employees');
-                        localStorage.removeItem('stonegrill_attendance');
-                        localStorage.removeItem('stonegrill_cashAdvances');
-                        localStorage.removeItem('stonegrill_interactivePayrolls');
-                        window.location.reload();
-                    }
-                };
-
-                return (
-                    <div className="animate-in fade-in duration-300">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-6">System Settings & Data Backup</h2>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                                <h3 className="text-lg font-bold text-gray-800 mb-2">Data Backup (Export)</h3>
-                                <p className="text-sm text-gray-500 mb-6">Download a copy of all your current records to your computer for safekeeping.</p>
-                                <button onClick={handleExportData} className="w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-lg flex items-center justify-center transition-colors">
-                                    <Download className="w-5 h-5 mr-2" /> Download Backup (.json)
-                                </button>
-                            </div>
-
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                                <h3 className="text-lg font-bold text-gray-800 mb-2">Restore Data (Import)</h3>
-                                <p className="text-sm text-gray-500 mb-6">Upload a previously saved `.json` backup file to restore or merge your data.</p>
-                                <label className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-lg flex items-center justify-center transition-colors cursor-pointer border border-gray-300">
-                                    <FileSpreadsheet className="w-5 h-5 mr-2" /> Select Backup File
-                                    <input type="file" accept=".json" className="hidden" onChange={handleImportData} />
-                                </label>
+                        <div className="p-6 space-y-5">
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="font-semibold text-gray-600">Employee:</span>
+                                <span className="font-bold text-gray-900">{demoEmployee.name}</span>
                             </div>
                             
-                            <div className="bg-red-50 p-6 rounded-xl shadow-sm border border-red-200 md:col-span-2 mt-4">
-                                <h3 className="text-lg font-bold text-red-800 mb-2">Danger Zone: System Reset</h3>
-                                <p className="text-sm text-red-600 mb-4">Clicking this will wipe all local data and restore the system to its original blank sample state.</p>
-                                <button onClick={handleClearData} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                                    Wipe All Data & Reset System
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderModals = () => {
-                
-                // REDESIGNED PAYSLIP MODAL
-                let activePayroll = {};
-                let empProfile = {};
-                if (showPayCardEmpId) {
-                    activePayroll = payrollData.find(p => p.id === showPayCardEmpId) || {};
-                    empProfile = employees.find(e => e.id === showPayCardEmpId) || {};
-                }
-                
-                const formatNum = (num) => num !== undefined && num !== null ? new Intl.NumberFormat('en-US').format(num) : '';
-                const monthName = new Date(`${selectedMonth}-01`).toLocaleString('default', { month: 'long' }).toUpperCase();
-                
-                const handleAddEmployee = (e) => {
-                    e.preventDefault();
-                    if(!newEmpForm.name || !newEmpForm.rate) return alert('Name and Rate are required.');
-                    
-                    const newId = employees.length > 0 ? Math.max(...employees.map(e => e.id)) + 1 : 1;
-                    const employeeObj = {
-                        id: newId,
-                        ...newEmpForm,
-                        rate: parseFloat(newEmpForm.rate),
-                        caBalance: 0
-                    };
-                    
-                    setEmployees(prev => [...prev, employeeObj]);
-                    setShowAddEmp(false);
-                    alert('New employee added successfully!');
-                    
-                    // Reset Form
-                    setNewEmpForm({
-                        name: '', position: '', dept: '', rate: '', contact_number: '', address: '', date_hired: new Date().toISOString().slice(0,10), status: 'Active'
-                    });
-                };
-
-                return (
-                    <React.Fragment>
-                        {showPayCardEmpId && (
-                            <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-2 sm:p-4 z-[60] animate-in zoom-in-95 duration-200 backdrop-blur-sm print:p-0 print:bg-white">
-                                <div className="bg-white shadow-2xl w-full max-w-lg overflow-y-auto max-h-[95vh] flex flex-col relative print:w-full print:shadow-none print:max-w-none print:h-auto" id="print-section">
-                                    
-                                    <button onClick={() => setShowPayCardEmpId(null)} className="absolute top-4 right-4 z-20 p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full bg-white/80 shadow-sm transition-colors print:hidden">
-                                        <X className="w-5 h-5" />
-                                    </button>
-
-                                    <div className="p-6 sm:p-8 pb-10 w-full bg-white relative pt-10 sm:pt-12 min-h-[500px]">
-                                        <div className="flex justify-center mb-8 print:mb-4 relative z-10">
-                                            <div className="bg-[#5a4276] rounded-sm shadow-sm flex items-center print:bg-white print:border-2 print:border-[#5a4276]">
-                                                <select 
-                                                    value={selectedMonth} 
-                                                    onChange={e => setSelectedMonth(e.target.value)}
-                                                    className="bg-transparent text-white font-bold tracking-wider outline-none appearance-none cursor-pointer text-center text-base sm:text-lg px-6 sm:px-8 py-2 print:text-[#5a4276] print:appearance-auto"
-                                                    style={{ textAlignLast: 'center' }}
-                                                >
-                                                    <option value={selectedMonth}>{monthName}</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="mb-8 relative z-10">
-                                            <div className="border-b-[3px] border-[#c55a5a] pb-1 mb-2 inline-block relative max-w-full">
-                                                <select 
-                                                    value={showPayCardEmpId} 
-                                                    onChange={e => setShowPayCardEmpId(parseInt(e.target.value))}
-                                                    className="text-xl sm:text-2xl font-bold text-slate-900 outline-none appearance-none cursor-pointer bg-transparent pr-8 w-full truncate print:appearance-auto"
-                                                >
-                                                    {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                                </select>
-                                                <div className="absolute right-0 bottom-3 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-transparent border-t-slate-400 pointer-events-none print:hidden"></div>
-                                            </div>
-                                            <div className="flex justify-between items-end flex-wrap gap-2">
-                                                <div className="text-slate-700 text-base sm:text-lg truncate max-w-[60%]">{empProfile?.dept || 'Department'}</div>
-                                                <div className="text-slate-900 text-base sm:text-lg font-bold shrink-0">
-                                                    DAYS <span className="text-black ml-1 sm:ml-2 text-lg sm:text-xl">{activePayroll?.daysWorked || '0'}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="w-full text-sm sm:text-base border-collapse relative z-10">
-                                            <div className="flex text-center mb-4">
-                                                <div className="flex-1 bg-[#dce6f2] py-2 text-slate-800 tracking-wide font-medium">EARNINGS</div>
-                                                <div className="flex-1 bg-[#fae6d4] py-2 text-slate-800 tracking-wide font-medium">DEDUCTIONS</div>
-                                            </div>
-
-                                            <div className="flex border-b border-transparent mb-4 flex-col sm:flex-row gap-4 sm:gap-0">
-                                                <div className="flex-1 sm:pr-6 flex flex-col gap-3">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-800">AMT ({activePayroll?.rate}/day)</span>
-                                                        <span className="text-slate-900 flex items-center font-medium">
-                                                            <span className="mr-1 text-sm font-normal">₱</span>{formatNum(activePayroll?.gross)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-800">Bonus :</span>
-                                                        <span className="text-slate-900 font-medium"></span>
-                                                    </div>
-                                                </div>
-                                                <div className="border-b border-slate-200 sm:hidden w-full"></div>
-                                                <div className="flex-1 sm:pl-6 flex flex-col gap-3 border-l border-gray-100">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-800">C.A.</span>
-                                                        <span className="text-slate-900 font-medium">{formatNum(activePayroll?.caDeduction)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-800">SSS/PH/PI</span>
-                                                        <span className="text-slate-900 font-medium">{formatNum(activePayroll?.totalDeductions - activePayroll?.caDeduction)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex text-center font-medium mt-8 flex-col sm:flex-row gap-2 sm:gap-0">
-                                                <div className="flex-1 bg-[#dce6f2] py-3 flex justify-between px-4 sm:px-6 items-center">
-                                                    <span className="text-slate-800">TOTAL :</span>
-                                                    <span className="text-slate-900 flex items-center"><span className="mr-1 text-sm">₱</span> {formatNum(activePayroll?.gross)}</span>
-                                                </div>
-                                                <div className="flex-1 bg-[#fae6d4] py-3 flex justify-between px-4 sm:px-6 items-center">
-                                                    <span className="text-slate-800">TOTAL :</span>
-                                                    <span className="text-slate-900">{formatNum(activePayroll?.totalDeductions)}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-8 pl-0 sm:pl-6 gap-3 sm:gap-0">
-                                                <div className="text-base sm:text-lg text-slate-800">TOTAL EARNINGS :</div>
-                                                <div className={`w-full sm:w-auto text-center px-6 sm:px-10 py-3 text-xl sm:text-2xl font-bold ${activePayroll?.netSalary < 0 ? 'bg-[#ffcccb] text-[#8b0000]' : 'bg-slate-100 text-slate-900'}`}>
-                                                    {activePayroll?.netSalary < 0 ? activePayroll?.netSalary : formatNum(activePayroll?.netSalary || 0)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 p-4 border-t border-slate-200 text-center print:hidden flex justify-between items-center shrink-0">
-                                        <div className="text-xs text-slate-400">View format</div>
-                                        <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium text-sm transition-colors">
-                                            Print Payslip
-                                        </button>
-                                    </div>
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Earnings</h4>
+                                <div className="flex justify-between text-sm">
+                                    <span>Basic Pay ({demoEmployee.days} days @ ₱{demoEmployee.rate})</span>
+                                    <span className="font-medium text-gray-800">₱{demoEmployee.gross.toFixed(2)}</span>
                                 </div>
                             </div>
-                        )}
 
-                        {/* VIEW PROFILE MODAL */}
-                        {viewProfile && (
-                            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                                    <div className="bg-blue-900 text-white p-4 flex justify-between items-center shrink-0">
-                                        <h2 className="text-xl font-bold tracking-tight">Employee Profile Ledger</h2>
-                                        <button onClick={() => setViewProfile(null)} className="text-white/70 hover:text-white"><X className="w-5 h-5"/></button>
-                                    </div>
-                                    <div className="overflow-y-auto p-4 md:p-6 flex-1 space-y-6">
-                                        
-                                        <div className="flex justify-between items-start border-b border-gray-100 pb-4">
-                                            <div>
-                                                <h3 className="text-2xl font-bold text-gray-800 mb-1">{viewProfile.name}</h3>
-                                                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">ID: {viewProfile.id} • {viewProfile.position || viewProfile.dept}</p>
-                                                
-                                                <div className="text-sm text-gray-600 mt-2 space-y-1">
-                                                    <p><b>Contact:</b> {viewProfile.contact_number || 'N/A'}</p>
-                                                    <p><b>Address:</b> {viewProfile.address || 'N/A'}</p>
-                                                    <p><b>Date Hired:</b> {viewProfile.date_hired || 'N/A'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right flex flex-col items-end">
-                                                <span className="px-3 py-1 text-xs uppercase tracking-wider font-bold rounded-full bg-green-100 text-green-800 shadow-sm">{viewProfile.status}</span>
-                                                <p className="mt-2 text-sm font-mono tracking-tight text-gray-600">Rate: ₱{Number(viewProfile.rate).toFixed(2)}/day</p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="border border-gray-200 p-4 rounded-xl bg-gray-50 shadow-sm">
-                                                <h4 className="font-bold text-gray-500 text-[11px] mb-1 uppercase tracking-wider">Total Days Worked</h4>
-                                                <p className="text-3xl font-mono tracking-tight text-blue-700 font-bold">
-                                                    {attendance.filter(a => a.empId === viewProfile.id).reduce((sum, a) => sum + a.dayEquivalent, 0)} <span className="text-sm font-sans font-medium text-gray-500">days</span>
-                                                </p>
-                                            </div>
-                                            <div className="border border-red-200 p-4 rounded-xl bg-red-50 shadow-sm">
-                                                <h4 className="font-bold text-red-800/60 text-[11px] mb-1 uppercase tracking-wider">Outstanding C.A. Balance</h4>
-                                                <p className="text-3xl font-mono tracking-tight text-red-600 font-bold">₱{Number(viewProfile.caBalance || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <h4 className="font-bold text-gray-800 mb-3 flex items-center text-sm"><Banknote className="w-4 h-4 mr-1.5 text-gray-500"/> Cash Advance Ledger</h4>
-                                            <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                                <table className="w-full text-xs text-left">
-                                                    <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] tracking-wider">
-                                                        <tr><th className="p-3">Date</th><th className="p-3">Reason</th><th className="p-3 text-right">Amount</th></tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-100">
-                                                        {cashAdvances.filter(ca => ca.empId === viewProfile.id).length === 0 ? 
-                                                            <tr><td colSpan="3" className="p-6 text-center text-gray-400">No cash advances on record.</td></tr> :
-                                                            cashAdvances.filter(ca => ca.empId === viewProfile.id).map(ca => (
-                                                                <tr key={ca.id} className="hover:bg-gray-50 transition-colors">
-                                                                    <td className="p-3 font-medium text-gray-700">{ca.date}</td>
-                                                                    <td className="p-3 text-gray-600">{ca.reason}</td>
-                                                                    <td className="p-3 text-right font-mono tracking-tight font-bold text-red-600">₱{ca.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                                                </tr>
-                                                            ))
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Deductions</h4>
+                                <div className="flex justify-between text-sm text-red-600 mb-1">
+                                    <span>Cash Advance Installment</span>
+                                    <span>- ₱{demoEmployee.caDed.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm text-red-600">
+                                    <span>SSS / Misc</span>
+                                    <span>- ₱{demoEmployee.misc.toFixed(2)}</span>
                                 </div>
                             </div>
-                        )}
 
-                        {/* ADD EMPLOYEE MODAL EXTENDED */}
-                        {showAddEmp && (
-                            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                                <form onSubmit={handleAddEmployee} className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                                    <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50 shrink-0">
-                                        <h3 className="text-lg font-bold">Add New Employee Profile</h3>
-                                        <button type="button" onClick={() => setShowAddEmp(false)}><X className="w-5 h-5 text-gray-500 hover:text-gray-800"/></button>
-                                    </div>
-                                    <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="col-span-2">
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Full Name</label>
-                                                <input type="text" required value={newEmpForm.name} onChange={e => setNewEmpForm({...newEmpForm, name: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1"/>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Position / Role</label>
-                                                <input type="text" value={newEmpForm.position} onChange={e => setNewEmpForm({...newEmpForm, position: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1"/>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Department</label>
-                                                <input type="text" value={newEmpForm.dept} onChange={e => setNewEmpForm({...newEmpForm, dept: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1"/>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Daily Rate (₱)</label>
-                                                <input type="number" required value={newEmpForm.rate} onChange={e => setNewEmpForm({...newEmpForm, rate: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1"/>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Status</label>
-                                                <select value={newEmpForm.status} onChange={e => setNewEmpForm({...newEmpForm, status: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1 bg-white">
-                                                    <option value="Active">Active</option>
-                                                    <option value="Inactive">Inactive</option>
-                                                    <option value="Terminated">Terminated</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Contact Number</label>
-                                                <input type="text" value={newEmpForm.contact_number} onChange={e => setNewEmpForm({...newEmpForm, contact_number: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1"/>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Date Hired</label>
-                                                <input type="date" value={newEmpForm.date_hired} onChange={e => setNewEmpForm({...newEmpForm, date_hired: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1"/>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <label className="text-xs font-bold text-gray-500 uppercase">Address</label>
-                                                <input type="text" value={newEmpForm.address} onChange={e => setNewEmpForm({...newEmpForm, address: e.target.value})} className="w-full border border-gray-300 focus:border-blue-500 outline-none p-2 rounded mt-1"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 border-t border-gray-100 bg-gray-50 shrink-0">
-                                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded shadow-sm transition-colors">Save Employee Profile</button>
-                                    </div>
-                                </form>
+                            <div className={`mt-4 p-4 rounded-md flex justify-between items-center text-xl font-bold border ${isNegative ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-800'}`}>
+                                <span>NET SALARY</span>
+                                <span>₱{demoEmployee.netSalary.toFixed(2)}</span>
                             </div>
-                        )}
-                    </React.Fragment>
-                );
-            };
-
-            if (!isAuthenticated) return <PinScreen onUnlock={() => setIsAuthenticated(true)} />;
-
-            return (
-                <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden relative">
-                    
-                    {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-
-                    {/* SIDEBAR */}
-                    <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full ${isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-20'} flex-shrink-0`}>
-                        <div className="p-4 flex items-center justify-between border-b border-blue-800">
-                            {isSidebarOpen ? (
-                                <div className="font-black text-xl tracking-tight flex items-center">
-                                    <span className="bg-white text-blue-900 p-1 rounded mr-2"><LayoutDashboard className="w-5 h-5"/></span> STONEGRILL
+                            
+                            {isNegative && (
+                                <div className="bg-red-100 text-red-800 p-2 rounded text-xs text-center font-bold">
+                                    ⚠️ Negative Balance. Will carry over to next cutoff.
                                 </div>
-                            ) : (
-                                <div className="bg-white text-blue-900 p-1 rounded mx-auto"><LayoutDashboard className="w-5 h-5"/></div>
                             )}
-                            {isSidebarOpen && <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-white/70 hover:text-white"><X className="w-5 h-5"/></button>}
                         </div>
-
-                        <nav className="flex-1 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-                            <NavItem icon={<LayoutDashboard />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => handleTabSwitch('dashboard')} open={isSidebarOpen} />
-                            <NavItem icon={<Users />} label="Employees" active={activeTab === 'employees'} onClick={() => handleTabSwitch('employees')} open={isSidebarOpen} />
-                            
-                            {/* --- NEW INTERACTIVE CARD TAB --- */}
-                            <NavItem icon={<FileText />} label="Interactive Payslip" active={activeTab === 'interactive-card'} onClick={() => handleTabSwitch('interactive-card')} open={isSidebarOpen} />
-
-                            <NavItem icon={<Clock />} label="Attendance Logs" active={activeTab === 'attendance'} onClick={() => handleTabSwitch('attendance')} open={isSidebarOpen} />
-                            <NavItem icon={<Banknote />} label="Cash Advances" active={activeTab === 'ca'} onClick={() => handleTabSwitch('ca')} open={isSidebarOpen} />
-                            <NavItem icon={<Calculator />} label="Payroll Summary" active={activeTab === 'payroll'} onClick={() => handleTabSwitch('payroll')} open={isSidebarOpen} />
-                            <NavItem icon={<CalendarDays />} label="Yearly Summary" active={activeTab === 'summary'} onClick={() => handleTabSwitch('summary')} open={isSidebarOpen} />
-                            <NavItem icon={<FileSpreadsheet />} label="Reports" active={activeTab === 'reports'} onClick={() => handleTabSwitch('reports')} open={isSidebarOpen} />
-                        </nav>
-                        <div className="p-4 border-t border-blue-800">
-                            <NavItem icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => handleTabSwitch('settings')} open={isSidebarOpen} />
-                        </div>
-                    </aside>
-
-                    {/* MAIN CONTENT */}
-                    <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
-                        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
-                            <div className="flex items-center">
-                                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="mr-4 text-gray-500 hover:text-gray-800">
-                                    <Menu className="w-6 h-6" />
-                                </button>
-                                <h1 className="text-lg font-bold text-gray-800 capitalize">{activeTab.replace('-', ' ')}</h1>
-                            </div>
-                        </header>
-
-                        <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-100 custom-scrollbar">
-                            <div className="max-w-7xl mx-auto h-full flex flex-col">
-                                {activeTab === 'dashboard' && renderDashboard()}
-                                {activeTab === 'employees' && renderEmployees()}
-                                {activeTab === 'interactive-card' && renderInteractiveCard()}
-                                {activeTab === 'attendance' && renderAttendance()}
-                                {activeTab === 'payroll' && renderPayroll()}
-                                {activeTab === 'ca' && renderCA()}
-                                {activeTab === 'summary' && renderSummary()}
-                                {activeTab === 'reports' && renderReports()}
-                                {activeTab === 'settings' && renderSettings()}
-                            </div>
-                        </div>
-                    </main>
-
-                    {renderModals()}
-                </div>
-            );
-        }
-
-        // Subcomponents
-        function NavItem({ icon, label, active, onClick, open }) {
-            return (
-                <button onClick={onClick} className={`w-full flex items-center px-4 py-3 transition-colors ${active ? 'bg-blue-800 text-white border-r-4 border-blue-400' : 'text-blue-200 hover:bg-blue-800 hover:text-white border-r-4 border-transparent'}`} title={label}>
-                    <span className="flex-shrink-0">{icon}</span>
-                    {open && <span className="ml-3 text-sm font-medium whitespace-nowrap">{label}</span>}
-                </button>
-            );
-        }
-
-        function StatCard({ title, value, icon, color }) {
-            return (
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                    <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-                        <p className="text-3xl font-black text-gray-800">{value}</p>
                     </div>
-                    <div className={`p-4 rounded-full ${color}`}>{icon}</div>
                 </div>
             );
-        }
+        };
 
-        // Render App
+        // --- 3. MAIN APP LAYOUT ---
+
+        const App = () => {
+            const [activeTab, setActiveTab] = React.useState('summary');
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* Header */}
+                    <header className="bg-blue-900 text-white shadow-md sticky top-0 z-10">
+                        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl">🥩</span>
+                                <h1 className="text-xl font-bold tracking-wide">STONEGRILL APP</h1>
+                            </div>
+                            <div className="text-sm font-medium text-blue-200">
+                                Admin Dashboard
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+                        
+                        {/* Navigation Tabs */}
+                        <div className="flex gap-2 mb-6 border-b border-gray-300 pb-2 overflow-x-auto">
+                            <button onClick={() => setActiveTab('summary')} className={`px-4 py-2 font-bold rounded-t-lg transition ${activeTab === 'summary' ? 'bg-blue-900 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>Monthly Summary</button>
+                            <button onClick={() => setActiveTab('import')} className={`px-4 py-2 font-bold rounded-t-lg transition ${activeTab === 'import' ? 'bg-blue-900 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>Biometric Import</button>
+                            <button onClick={() => setActiveTab('payslip')} className={`px-4 py-2 font-bold rounded-t-lg transition ${activeTab === 'payslip' ? 'bg-blue-900 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>Payslip Card Demo</button>
+                        </div>
+
+                        {/* Tab Content */}
+                        <div className="animate-fade-in">
+                            {activeTab === 'summary' && (
+                                <div>
+                                    <p className="text-gray-600 mb-4 text-sm">Overview of earnings and deductions. Negative balances are highlighted in red automatically.</p>
+                                    <MonthlySummaryTable />
+                                </div>
+                            )}
+                            
+                            {activeTab === 'import' && (
+                                <div>
+                                    <p className="text-gray-600 mb-4 text-sm">Paste raw `.txt` or `.csv` data from the biometric scanner. The system calculates exact day equivalents.</p>
+                                    <BiometricImporter />
+                                </div>
+                            )}
+
+                            {activeTab === 'payslip' && (
+                                <div>
+                                    <p className="text-gray-600 mb-4 text-sm text-center">Printable modal view for individual employees.</p>
+                                    <PayrollCardDemo />
+                                </div>
+                            )}
+                        </div>
+
+                    </main>
+                </div>
+            );
+        };
+
+        // Render the App
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
