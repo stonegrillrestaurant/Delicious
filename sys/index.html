@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,20 +125,29 @@
             );
         }
 
-        // --- INITIAL MOCK DATA ---
+        // --- EXTRACTED EXACTLY FROM RAW LOGS PROVIDED ---
         const initialEmployees = [
-            { id: 1, name: 'Analiza Mazdo', position: 'Catering Manager', dept: 'Admin', rate: 500, contact_number: '09123456789', address: 'Sample Address, City', date_hired: '2024-01-15', status: 'Active', caBalance: 4671 },
-            { id: 2, name: 'Ninox', position: 'Cook', dept: 'Kitchen', rate: 450, contact_number: '09191234567', address: 'Bato', date_hired: '2023-05-10', status: 'Active', caBalance: 0 },
-            { id: 3, name: 'NEL2x', position: 'Cook', dept: 'Kitchen', rate: 500, contact_number: '09201234567', address: 'Bato', date_hired: '2022-11-01', status: 'Active', caBalance: 1500 },
+            { id: 1, name: 'Ninox', position: 'Cook', dept: 'Kitchen', rate: 450, contact_number: '09191234567', address: 'Bato', date_hired: '2023-05-10', status: 'Active', caBalance: 0 },
+            { id: 2, name: 'NEL2x', position: 'Cook', dept: 'Kitchen', rate: 500, contact_number: '09201234567', address: 'Bato', date_hired: '2022-11-01', status: 'Active', caBalance: 1500 },
             { id: 4, name: 'Jhie', position: 'Assistant Cook', dept: 'Kitchen', rate: 450, contact_number: '09321234567', address: 'Bato', date_hired: '2025-02-20', status: 'Active', caBalance: 0 },
-            { id: 5, name: 'Roel Masdo', position: 'Head Chef', dept: 'Kitchen', rate: 550, contact_number: '09451234567', address: 'Bato', date_hired: '2021-08-15', status: 'Active', caBalance: 5000 },
+            { id: 5, name: 'Roel', position: 'Head Chef', dept: 'Kitchen', rate: 550, contact_number: '09451234567', address: 'Bato', date_hired: '2021-08-15', status: 'Active', caBalance: 5000 },
             { id: 6, name: 'LIZA', position: 'Dishwasher', dept: 'Kitchen', rate: 450, contact_number: '09561234567', address: 'Bato', date_hired: '2024-06-11', status: 'Active', caBalance: 200 },
+            { id: 7, name: 'CALOY', position: 'Kitchen Staff', dept: 'Kitchen', rate: 600, contact_number: '09112223333', address: 'Bato', date_hired: '2023-01-10', status: 'Active', caBalance: 0 },
+            { id: 9, name: 'JEREY', position: 'Kitchen Staff', dept: 'Kitchen', rate: 450, contact_number: '09445556666', address: 'Bato', date_hired: '2024-09-01', status: 'Active', caBalance: 1000 },
+            { id: 12, name: 'CHRIS', position: 'Kitchen Staff', dept: 'Kitchen', rate: 500, contact_number: '09778889999', address: 'Bato', date_hired: '2023-11-20', status: 'Active', caBalance: 0 },
+            { id: 13, name: 'DELIA', position: 'Kitchen Staff', dept: 'Kitchen', rate: 450, contact_number: '09887776655', address: 'Bato', date_hired: '2025-01-05', status: 'Active', caBalance: 0 },
+            { id: 14, name: 'JEVON', position: 'Kitchen Staff', dept: 'Kitchen', rate: 450, contact_number: '09998887766', address: 'Bato', date_hired: '2024-03-12', status: 'Active', caBalance: 3000 },
+            { id: 18, name: 'claudine LOTA', position: 'Front Desk', dept: 'Front', rate: 400, contact_number: '09121212121', address: 'Bato', date_hired: '2024-07-22', status: 'Active', caBalance: 500 },
+            { id: 19, name: 'RAffy javier', position: 'Kitchen Staff', dept: 'Kitchen', rate: 500, contact_number: '09334445555', address: 'Bato', date_hired: '2023-04-18', status: 'Active', caBalance: 0 },
+            
+            // Added Manager profile from instructions to prevent data loss
+            { id: 100, name: 'Analiza Mazdo', position: 'Catering Manager', dept: 'Admin', rate: 500, contact_number: '09123456789', address: 'Sample Address', date_hired: '2024-01-15', status: 'Active', caBalance: 4671 }
         ];
 
         const initialCashAdvances = [
-            { id: 101, empId: 3, date: '2026-02-15', amount: 2000, balance: 1500, reason: 'Emergency' },
-            { id: 102, empId: 5, date: '2026-02-28', amount: 5000, balance: 5000, reason: 'Tuition' },
-            { id: 103, empId: 1, date: '2026-03-05', amount: 4671, balance: 4671, reason: 'Medical' },
+            { id: 101, empId: 2, date: '2026-02-15', amount: 2000, balance: 1500, reason: 'Emergency' }, // NEL2x
+            { id: 102, empId: 5, date: '2026-02-28', amount: 5000, balance: 5000, reason: 'Tuition' },   // Roel
+            { id: 103, empId: 14, date: '2026-03-05', amount: 3000, balance: 3000, reason: 'Medical' },  // JEVON
         ];
 
         const defaultRawData = `ID	Name	Dept.	Time	Device ID	
@@ -169,10 +177,31 @@
 
         // --- MAIN APP COMPONENT ---
         function App() {
+            // General UI State
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [activeTab, setActiveTab] = useState('dashboard');
             const [isSidebarOpen, setSidebarOpen] = useState(true);
             
+            // Standard States
+            const [selectedMonth, setSelectedMonth] = useState('2026-03');
+            const [showPayCardEmpId, setShowPayCardEmpId] = useState(null); 
+            const [showAddEmp, setShowAddEmp] = useState(false);
+            const [rawInput, setRawInput] = useState(defaultRawData);
+            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '' });
+            const [viewProfile, setViewProfile] = useState(null);
+            const [reportDates, setReportDates] = useState({ start: '2026-03-01', end: '2026-03-31' });
+
+            // --- LIFTED HOOKS FOR INTERACTIVE CARD ---
+            const [icEmpId, setIcEmpId] = useState('');
+            const [icDateStart, setIcDateStart] = useState('2026-03-01');
+            const [icDateEnd, setIcDateEnd] = useState('2026-03-31');
+            const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0, other_deductions: 0 });
+
+            // --- LIFTED HOOKS FOR ADD EMPLOYEE MODAL ---
+            const [newEmpForm, setNewEmpForm] = useState({
+                name: '', position: '', dept: '', rate: '', contact_number: '', address: '', date_hired: new Date().toISOString().slice(0,10), status: 'Active'
+            });
+
             // Mobile responsiveness
             useEffect(() => {
                 const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
@@ -185,14 +214,6 @@
                 setActiveTab(tab);
                 if (window.innerWidth < 1024) setSidebarOpen(false);
             };
-
-            const [selectedMonth, setSelectedMonth] = useState('2026-03');
-            const [showPayCardEmpId, setShowPayCardEmpId] = useState(null); 
-            const [showAddEmp, setShowAddEmp] = useState(false);
-            const [rawInput, setRawInput] = useState(defaultRawData);
-            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '' });
-            const [viewProfile, setViewProfile] = useState(null);
-            const [reportDates, setReportDates] = useState({ start: '2026-03-01', end: '2026-03-31' });
 
             // --- DATA PERSISTENCE ---
             const loadData = (key, defaultData) => {
@@ -211,6 +232,28 @@
             useEffect(() => { localStorage.setItem('stonegrill_attendance', JSON.stringify(attendance)); }, [attendance]);
             useEffect(() => { localStorage.setItem('stonegrill_cashAdvances', JSON.stringify(cashAdvances)); }, [cashAdvances]);
             useEffect(() => { localStorage.setItem('stonegrill_interactivePayrolls', JSON.stringify(interactivePayrolls)); }, [interactivePayrolls]);
+
+            // Set Initial icEmpId safely after employees are loaded
+            useEffect(() => {
+                if (!icEmpId && employees.length > 0) {
+                    setIcEmpId(employees[0].id.toString());
+                }
+            }, [employees, icEmpId]);
+
+            // Interactive Card Form Data Loader Effect
+            useEffect(() => {
+                if (icEmpId && icDateStart && icDateEnd) {
+                    const key = `${icEmpId}_${icDateStart}_${icDateEnd}`;
+                    const existingRecord = interactivePayrolls.find(p => p.id === key);
+                    if (existingRecord) {
+                        setIcForm(existingRecord.data);
+                    } else {
+                        // Default to zero per spec
+                        setIcForm({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0, other_deductions: 0 });
+                    }
+                }
+            }, [icEmpId, icDateStart, icDateEnd, interactivePayrolls]);
+
 
             // Computed Standard Payroll Data
             const payrollData = useMemo(() => {
@@ -401,25 +444,6 @@
 
             // --- INTERACTIVE PAYROLL CARD SYSTEM ---
             const renderInteractiveCard = () => {
-                const [icEmpId, setIcEmpId] = useState(employees[0]?.id || '');
-                const [icDateStart, setIcDateStart] = useState('2026-03-01');
-                const [icDateEnd, setIcDateEnd] = useState('2026-03-31');
-                const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0, other_deductions: 0 });
-
-                // Load existing data if available, otherwise set to defaults (0)
-                useEffect(() => {
-                    if (icEmpId && icDateStart && icDateEnd) {
-                        const key = `${icEmpId}_${icDateStart}_${icDateEnd}`;
-                        const existingRecord = interactivePayrolls.find(p => p.id === key);
-                        if (existingRecord) {
-                            setIcForm(existingRecord.data);
-                        } else {
-                            // Default to zero per spec
-                            setIcForm({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0, other_deductions: 0 });
-                        }
-                    }
-                }, [icEmpId, icDateStart, icDateEnd, interactivePayrolls]);
-
                 const handleIcChange = (field, value) => {
                     setIcForm(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
                 };
@@ -436,7 +460,7 @@
                     alert('Payroll record saved successfully!');
                 };
 
-                const selectedEmp = employees.find(e => e.id == icEmpId);
+                const selectedEmp = employees.find(e => e.id.toString() === icEmpId.toString());
                 const rate = selectedEmp ? selectedEmp.rate : 0;
                 
                 // Calculations
@@ -586,7 +610,7 @@
                                                 </div>
                                                 
                                                 {/* Deductions Col */}
-                                                <div className="flex-1 pl-6 flex flex-col gap-3">
+                                                <div className="flex-1 pl-6 flex flex-col gap-3 border-l border-gray-100">
                                                     <div className="flex justify-between items-center">
                                                         <span className="text-gray-800">C.A.</span>
                                                         <span className="text-black font-medium">{icForm.cash_advance ? formatCurrency(icForm.cash_advance) : ''}</span>
@@ -682,7 +706,7 @@
                                                             <td className="px-3 py-1.5 font-bold text-gray-800">{emp?.name || `ID:${log.empId}`}</td>
                                                             <td className="px-3 py-1.5 text-center text-blue-600 font-mono tracking-tight">{log.firstIn}</td>
                                                             <td className="px-3 py-1.5 text-center text-orange-600 font-mono tracking-tight">{log.lastOut}</td>
-                                                            <td className="px-3 py-1.5 text-right font-mono text-gray-600">{log.hours}</td>
+                                                            <td className="px-3 py-1.5 text-right font-mono tracking-tight text-gray-600">{log.hours}</td>
                                                             <td className="px-3 py-1.5 text-right font-bold text-gray-800">{log.dayEquivalent}</td>
                                                             <td className="px-3 py-1.5"><span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${log.remarks === 'Complete' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{log.remarks}</span></td>
                                                         </tr>
@@ -1057,11 +1081,17 @@
 
             const renderModals = () => {
                 
-                // --- ADD EMPLOYEE FORM STATE ---
-                const [newEmpForm, setNewEmpForm] = useState({
-                    name: '', position: '', dept: '', rate: '', contact_number: '', address: '', date_hired: new Date().toISOString().slice(0,10), status: 'Active'
-                });
-
+                // REDESIGNED PAYSLIP MODAL
+                let activePayroll = {};
+                let empProfile = {};
+                if (showPayCardEmpId) {
+                    activePayroll = payrollData.find(p => p.id === showPayCardEmpId) || {};
+                    empProfile = employees.find(e => e.id === showPayCardEmpId) || {};
+                }
+                
+                const formatNum = (num) => num !== undefined && num !== null ? new Intl.NumberFormat('en-US').format(num) : '';
+                const monthName = new Date(`${selectedMonth}-01`).toLocaleString('default', { month: 'long' }).toUpperCase();
+                
                 const handleAddEmployee = (e) => {
                     e.preventDefault();
                     if(!newEmpForm.name || !newEmpForm.rate) return alert('Name and Rate are required.');
@@ -1077,11 +1107,118 @@
                     setEmployees(prev => [...prev, employeeObj]);
                     setShowAddEmp(false);
                     alert('New employee added successfully!');
+                    
+                    // Reset Form
+                    setNewEmpForm({
+                        name: '', position: '', dept: '', rate: '', contact_number: '', address: '', date_hired: new Date().toISOString().slice(0,10), status: 'Active'
+                    });
                 };
 
                 return (
                     <React.Fragment>
-                        {/* LEGACY VIEW PROFILE MODAL */}
+                        {showPayCardEmpId && (
+                            <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-2 sm:p-4 z-[60] animate-in zoom-in-95 duration-200 backdrop-blur-sm print:p-0 print:bg-white">
+                                <div className="bg-white shadow-2xl w-full max-w-lg overflow-y-auto max-h-[95vh] flex flex-col relative print:w-full print:shadow-none print:max-w-none print:h-auto" id="print-section">
+                                    
+                                    <button onClick={() => setShowPayCardEmpId(null)} className="absolute top-4 right-4 z-20 p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full bg-white/80 shadow-sm transition-colors print:hidden">
+                                        <X className="w-5 h-5" />
+                                    </button>
+
+                                    <div className="p-6 sm:p-8 pb-10 w-full bg-white relative pt-10 sm:pt-12 min-h-[500px]">
+                                        <div className="flex justify-center mb-8 print:mb-4 relative z-10">
+                                            <div className="bg-[#5a4276] rounded-sm shadow-sm flex items-center print:bg-white print:border-2 print:border-[#5a4276]">
+                                                <select 
+                                                    value={selectedMonth} 
+                                                    onChange={e => setSelectedMonth(e.target.value)}
+                                                    className="bg-transparent text-white font-bold tracking-wider outline-none appearance-none cursor-pointer text-center text-base sm:text-lg px-6 sm:px-8 py-2 print:text-[#5a4276] print:appearance-auto"
+                                                    style={{ textAlignLast: 'center' }}
+                                                >
+                                                    <option value={selectedMonth}>{monthName}</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-8 relative z-10">
+                                            <div className="border-b-[3px] border-[#c55a5a] pb-1 mb-2 inline-block relative max-w-full">
+                                                <select 
+                                                    value={showPayCardEmpId} 
+                                                    onChange={e => setShowPayCardEmpId(parseInt(e.target.value))}
+                                                    className="text-xl sm:text-2xl font-bold text-slate-900 outline-none appearance-none cursor-pointer bg-transparent pr-8 w-full truncate print:appearance-auto"
+                                                >
+                                                    {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                                                </select>
+                                                <div className="absolute right-0 bottom-3 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-transparent border-t-slate-400 pointer-events-none print:hidden"></div>
+                                            </div>
+                                            <div className="flex justify-between items-end flex-wrap gap-2">
+                                                <div className="text-slate-700 text-base sm:text-lg truncate max-w-[60%]">{empProfile?.dept || 'Department'}</div>
+                                                <div className="text-slate-900 text-base sm:text-lg font-bold shrink-0">
+                                                    DAYS <span className="text-black ml-1 sm:ml-2 text-lg sm:text-xl">{activePayroll?.daysWorked || '0'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full text-sm sm:text-base border-collapse relative z-10">
+                                            <div className="flex text-center mb-4">
+                                                <div className="flex-1 bg-[#dce6f2] py-2 text-slate-800 tracking-wide font-medium">EARNINGS</div>
+                                                <div className="flex-1 bg-[#fae6d4] py-2 text-slate-800 tracking-wide font-medium">DEDUCTIONS</div>
+                                            </div>
+
+                                            <div className="flex border-b border-transparent mb-4 flex-col sm:flex-row gap-4 sm:gap-0">
+                                                <div className="flex-1 sm:pr-6 flex flex-col gap-3">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-slate-800">AMT ({activePayroll?.rate}/day)</span>
+                                                        <span className="text-slate-900 flex items-center font-medium">
+                                                            <span className="mr-1 text-sm font-normal">₱</span>{formatNum(activePayroll?.gross)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-slate-800">Bonus :</span>
+                                                        <span className="text-slate-900 font-medium"></span>
+                                                    </div>
+                                                </div>
+                                                <div className="border-b border-slate-200 sm:hidden w-full"></div>
+                                                <div className="flex-1 sm:pl-6 flex flex-col gap-3 border-l border-gray-100">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-slate-800">C.A.</span>
+                                                        <span className="text-slate-900 font-medium">{formatNum(activePayroll?.caDeduction)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-slate-800">SSS/PH/PI</span>
+                                                        <span className="text-slate-900 font-medium">{formatNum(activePayroll?.totalDeductions - activePayroll?.caDeduction)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex text-center font-medium mt-8 flex-col sm:flex-row gap-2 sm:gap-0">
+                                                <div className="flex-1 bg-[#dce6f2] py-3 flex justify-between px-4 sm:px-6 items-center">
+                                                    <span className="text-slate-800">TOTAL :</span>
+                                                    <span className="text-slate-900 flex items-center"><span className="mr-1 text-sm">₱</span> {formatNum(activePayroll?.gross)}</span>
+                                                </div>
+                                                <div className="flex-1 bg-[#fae6d4] py-3 flex justify-between px-4 sm:px-6 items-center">
+                                                    <span className="text-slate-800">TOTAL :</span>
+                                                    <span className="text-slate-900">{formatNum(activePayroll?.totalDeductions)}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-8 pl-0 sm:pl-6 gap-3 sm:gap-0">
+                                                <div className="text-base sm:text-lg text-slate-800">TOTAL EARNINGS :</div>
+                                                <div className={`w-full sm:w-auto text-center px-6 sm:px-10 py-3 text-xl sm:text-2xl font-bold ${activePayroll?.netSalary < 0 ? 'bg-[#ffcccb] text-[#8b0000]' : 'bg-slate-100 text-slate-900'}`}>
+                                                    {activePayroll?.netSalary < 0 ? activePayroll?.netSalary : formatNum(activePayroll?.netSalary || 0)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 p-4 border-t border-slate-200 text-center print:hidden flex justify-between items-center shrink-0">
+                                        <div className="text-xs text-slate-400">View format</div>
+                                        <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium text-sm transition-colors">
+                                            Print Payslip
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* VIEW PROFILE MODAL */}
                         {viewProfile && (
                             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1303,6 +1440,3 @@
     </script>
 </body>
 </html>
-
-
-```
