@@ -172,8 +172,8 @@
                 return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
             });
 
-            // Form state maps exactly to the Biometric raw values
-            const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', status: 'active' });
+            // Form state maps exactly to the Biometric raw values + SSS/Rate
+            const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', status: 'active' });
             const [isEditing, setIsEditing] = useState(false);
 
             // --- NAVIGATION HELPER ---
@@ -217,6 +217,8 @@
                             position: data.position || '',
                             rate: data.dailyRate || 0,
                             contactNumber: data.contactNumber || '',
+                            sssNumber: data.sssNumber || '',
+                            sssRate: data.sssRate || 0,
                             status: data.status || 'active',
                             caBalance: data.caBalance || 0
                         };
@@ -248,9 +250,16 @@
                     const empAtt = attendance.filter(a => a.empId.toString() === emp.id.toString() && a.date.startsWith(selectedMonth));
                     const days = empAtt.reduce((sum, r) => sum + (parseFloat(r.dayEquivalent) || 0), 0);
                     const gross = days * (emp.rate || 0);
+                    
+                    // SSS Deduction dynamically pulls from the employee profile (default to 0 if not set)
+                    const sss = gross > 0 ? (emp.sssRate || 0) : 0;
+                    const philhealth = gross > 0 ? 100 : 0;
+                    const pagibig = gross > 0 ? 100 : 0;
+                    
                     const caDed = (emp.caBalance > 0 && gross > 0) ? Math.min(emp.caBalance, gross * 0.2) : 0;
-                    const net = gross - caDed;
-                    return { ...emp, days, gross, caDed, net };
+                    const totalDeductions = sss + philhealth + pagibig + caDed;
+                    const net = gross - totalDeductions;
+                    return { ...emp, days, gross, caDed, totalDeductions, net };
                 });
             }, [employees, attendance, selectedMonth]);
 
@@ -271,7 +280,9 @@
                     searchedDays = att.reduce((sum, r) => sum + (parseFloat(r.dayEquivalent) || 0), 0);
                     searchedGross = searchedDays * (searchedEmp.rate || 0);
                     searchedCaDed = (searchedEmp.caBalance > 0 && searchedGross > 0) ? Math.min(searchedEmp.caBalance, searchedGross * 0.2) : 0;
-                    searchedMisc = searchedGross > 0 ? 335 : 0; // Fixed default simulation for visual
+                    
+                    // Fixed logic: Use the specific employee's SSS rate + PH/PI
+                    searchedMisc = searchedGross > 0 ? (searchedEmp.sssRate || 0) + 200 : 0; 
                 }
             }
 
@@ -294,6 +305,8 @@
                             position: newEmpForm.position,
                             dailyRate: parseFloat(newEmpForm.dailyRate) || 0,
                             contactNumber: newEmpForm.contactNumber || '',
+                            sssNumber: newEmpForm.sssNumber || '',
+                            sssRate: parseFloat(newEmpForm.sssRate) || 0,
                             status: newEmpForm.status || 'active'
                         });
                         alert("Profile successfully updated.");
@@ -306,6 +319,8 @@
                             position: newEmpForm.position,
                             dailyRate: parseFloat(newEmpForm.dailyRate) || 0,
                             contactNumber: newEmpForm.contactNumber || '',
+                            sssNumber: newEmpForm.sssNumber || '',
+                            sssRate: parseFloat(newEmpForm.sssRate) || 0,
                             caBalance: 0,
                             status: newEmpForm.status || 'active',
                             createdAt: Date.now()
@@ -315,7 +330,7 @@
 
                     setShowAddEmp(false);
                     setIsEditing(false);
-                    setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', status: 'active' });
+                    setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', status: 'active' });
                 } catch (err) { alert("Error: " + err.message); }
             };
 
@@ -392,7 +407,7 @@
                         }
                     }
                     setRawInput('');
-                    alert("Imported " + count + " records to the cloud. " + (errCount > 0 ? "(Skipped " + errCount + " lines)" : ""));
+                    alert(`Imported ${count} records to the cloud. ${errCount > 0 ? "(Skipped " + errCount + " invalid/unrecognized lines)" : ""}`);
                 } catch (err) {
                     alert("Error parsing logs: " + err.message);
                 }
@@ -428,6 +443,8 @@
                     position: viewProfile.position || '',
                     dailyRate: viewProfile.rate || '',
                     contactNumber: viewProfile.contactNumber || '',
+                    sssNumber: viewProfile.sssNumber || '',
+                    sssRate: viewProfile.sssRate || '',
                     status: viewProfile.status || 'active'
                 });
                 setIsEditing(true);
@@ -537,7 +554,7 @@
                                     <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
                                         <div className="p-6 border-b flex justify-between items-center bg-gray-50/50">
                                             <h2 className="font-black uppercase tracking-widest text-slate-700">Database Masterlist</h2>
-                                            <button onClick={() => { setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', status: 'active' }); setShowAddEmp(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-black shadow-lg transition-all transform active:scale-95 tracking-widest">+ NEW STAFF</button>
+                                            <button onClick={() => { setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', status: 'active' }); setShowAddEmp(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-black shadow-lg transition-all transform active:scale-95 tracking-widest">+ NEW STAFF</button>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-sm">
@@ -860,7 +877,7 @@
                     {showAddEmp && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
                             <form onSubmit={handleAddStaff} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-                                <div className="p-6 border-b bg-gray-50 flex justify-between items-center"><h3 className="font-black uppercase tracking-widest text-blue-900 text-sm">{isEditing ? 'Edit Profile' : 'Onboard New Member'}</h3><button type="button" onClick={() => { setShowAddEmp(false); setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', status: 'active' }); }} className="text-gray-400 hover:text-slate-900"><X /></button></div>
+                                <div className="p-6 border-b bg-gray-50 flex justify-between items-center"><h3 className="font-black uppercase tracking-widest text-blue-900 text-sm">{isEditing ? 'Edit Profile' : 'Onboard New Member'}</h3><button type="button" onClick={() => { setShowAddEmp(false); setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', status: 'active' }); }} className="text-gray-400 hover:text-slate-900"><X /></button></div>
                                 <div className="p-8 space-y-5">
                                     <div>
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Biometric ID (e.g. 7)</label>
@@ -879,6 +896,10 @@
                                         <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Contact Number</label><input type="text" placeholder="+639123456789" value={newEmpForm.contactNumber} onChange={e => setNewEmpForm({...newEmpForm, contactNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
                                         <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Status</label><select value={newEmpForm.status} onChange={e => setNewEmpForm({...newEmpForm, status: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 font-bold focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">SSS Number</label><input type="text" placeholder="00-0000000-0" value={newEmpForm.sssNumber} onChange={e => setNewEmpForm({...newEmpForm, sssNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">SSS Deduction (₱)</label><input type="number" placeholder="135.00" value={newEmpForm.sssRate} onChange={e => setNewEmpForm({...newEmpForm, sssRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                                    </div>
                                     <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest transform active:scale-[0.98] mt-2">{isEditing ? 'Update Profile' : 'Save to Cloud Ledger'}</button>
                                 </div>
                             </form>
@@ -895,6 +916,10 @@
                                         <div>
                                             <h3 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">{viewProfile.name}</h3>
                                             <p className="text-xs text-slate-400 uppercase font-black tracking-widest mt-3">{viewProfile.position || 'Restaurant Staff'} (ID: {viewProfile.id})</p>
+                                            <div className="flex gap-2 mt-3 flex-wrap">
+                                                {viewProfile.contactNumber && <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black tracking-widest uppercase">📞 {viewProfile.contactNumber}</span>}
+                                                {viewProfile.sssNumber && <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black tracking-widest uppercase">SSS: {viewProfile.sssNumber} (₱{formatMoney(viewProfile.sssRate)})</span>}
+                                            </div>
                                             <button onClick={handleEditClick} className="mt-4 bg-slate-100 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"><Edit className="w-3.5 h-3.5"/> Edit Profile</button>
                                         </div>
                                         <div className="text-right shrink-0">
