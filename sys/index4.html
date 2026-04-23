@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stone Grill Employee Attendance & Cash Advance Tracker</title>
+  <style>
+    :root{
+      --bg:#120c0a;
+      --panel:#1b1310;
+      --panel-2:#241915;
+      --line:rgba(255,255,255,0.08);
+      --text:#f6eee8;
+      --muted:#c9b8ad;
+      --brand:#ff7a2f;
+      --brand-2:#ff9a5e;
+      --ok:#2dbb74;
+      --warn:#ffd166;
+      --danger:#ff5f5f;
+      --shadow:0 20px 50px rgba(0,0,0,.35);
+      --radius:22px;
+      --field:#0f0b09;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:
+      radial-gradient(circle at top right, rgba(255,122,47,.18), transparent 25%),
+      radial-gradient(circle at bottom left, rgba(255,154,94,.12), transparent 20%),
+      linear-gradient(180deg, #1a110e 0%, #100b09 100%);color:var(--text);min-height:100%;}
+    body{min-height:100vh;padding:18px;}
+    .app{width:100%;max-width:1480px;margin:0 auto;display:grid;grid-template-columns:380px 1fr;gap:18px;}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(10px);overflow:hidden;}
+    .panel{padding:20px;}
+    .brand-title{font-size:40px;line-height:1;margin:18px 0 10px;font-weight:800;}
+    .brand-sub{color:var(--muted);font-size:15px;line-height:1.65;}
+    .badge{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:10px 14px;border-radius:999px;background:rgba(255,122,47,.12);color:#ffd7c0;border:1px solid rgba(255,122,47,.22);font-size:13px;letter-spacing:.3px;}
+    .hero-boxes{display:grid;grid-template-columns:1fr;gap:12px;margin-top:22px;}
+    .mini{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:18px;padding:16px;}
+    .mini h4{margin:0 0 8px;font-size:14px;color:#ffe0cf;}
+    .mini p{margin:0;color:var(--muted);font-size:13px;line-height:1.5;}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    .topbar h2,.topbar h3{margin:0;}
+    .mode-switch,.tabbar,.action-row,.summary-grid,.filters,.stack-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .chip,.btn,.tabbtn,select{border:none;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--line);font-weight:700;font-size:14px;}
+    .chip,.btn,.tabbtn{cursor:pointer}
+    .chip.active,.tabbtn.active,.btn-primary{background:linear-gradient(180deg, var(--brand), var(--brand-2));color:#1b120d;border-color:transparent;}
+    .btn-soft{background:rgba(255,255,255,.06);color:var(--text)}
+    .btn-dark{background:#111;color:#fff}
+    .btn-danger{background:rgba(255,95,95,.13);color:#ffd5d5;border-color:rgba(255,95,95,.18)}
+    .btn-success{background:rgba(45,187,116,.12);color:#caffdf;border-color:rgba(45,187,116,.18)}
+    .small{font-size:12px;color:var(--muted);line-height:1.6;}
+    .divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted);font-size:13px;}
+    .divider::before,.divider::after{content:"";height:1px;flex:1;background:rgba(255,255,255,.08)}
+    label{display:block;font-size:13px;color:#e7d5ca;margin-bottom:7px;font-weight:700;}
+    input,textarea{width:100%;border:none;outline:none;padding:13px 14px;border-radius:14px;background:var(--field);color:var(--text);border:1px solid rgba(255,255,255,.08);font-size:14px;}
+    input:focus,textarea:focus,select:focus{border-color:rgba(255,122,47,.55);box-shadow:0 0 0 3px rgba(255,122,47,.12);outline:none;}
+    textarea{min-height:130px;resize:vertical}
+    .form-grid{display:grid;gap:14px}
+    .row-2,.row-3,.row-4{display:grid;gap:12px}
+    .row-2{grid-template-columns:repeat(2,1fr)}
+    .row-3{grid-template-columns:repeat(3,1fr)}
+    .row-4{grid-template-columns:repeat(4,1fr)}
+    .auth-panel{display:flex;flex-direction:column;gap:12px;min-height:720px}
+    .section{display:none}
+    .section.active{display:block}
+    .message{min-height:22px;font-size:14px;font-weight:700;margin-top:6px}
+    .message.ok{color:#7ce0ab}.message.error{color:#ff8f8f}.message.info{color:#ffd7be}
+    .dashboard{display:none;gap:16px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .dashboard-shell{display:grid;grid-template-columns:1fr;gap:16px}
+    .summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .summary-card{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:18px;padding:16px;}
+    .summary-card h4{margin:0 0 8px;font-size:13px;color:#ffd9c7}
+    .summary-card .big{font-size:28px;font-weight:800}
+    .summary-card .small{margin-top:8px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top}
+    th{color:#ffd9c7;font-size:12px;letter-spacing:.25px;background:rgba(255,255,255,.02);position:sticky;top:0}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.02)}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+    .pill.ok{background:rgba(45,187,116,.12);color:#bff4d2}
+    .pill.warn{background:rgba(255,209,102,.12);color:#ffe9a6}
+    .pill.danger{background:rgba(255,95,95,.12);color:#ffc2c2}
+    .split{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+    .stack{display:grid;gap:16px}
+    .muted{color:var(--muted)}
+    .hidden{display:none!important}
+    .footer-note{margin-top:16px;color:#e7d8cf;opacity:.85;font-size:14px}
+    @media (max-width:1180px){.app{grid-template-columns:1fr}.split,.summary-cards{grid-template-columns:1fr 1fr}}
+    @media (max-width:760px){.row-2,.row-3,.row-4,.summary-cards,.split{grid-template-columns:1fr}.brand-title{font-size:34px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="card panel">
+      <div class="badge">Stone Grill Restaurant • Enjoyable and Relaxing</div>
+      <h1 class="brand-title">Employee Tracker</h1>
+      <p class="brand-sub">Firebase login plus a real attendance and cash advance tracker. This version can add employees, accept biometric raw logs, process daily attendance, and track cash advances with payroll-ready balances.</p>
+
+      <div class="hero-boxes">
+        <div class="mini"><h4>Shift Rules</h4><p>Opening time: 10:00 AM<br>Closing time: 9:00 PM<br>Grace period: 15 minutes</p></div>
+        <div class="mini"><h4>Raw Log Support</h4><p>Paste or upload tab-separated biometric exports with columns like ID, Name, Dept., Time, Device ID.</p></div>
+        <div class="mini"><h4>Storage</h4><p>Employees, advances, and processed attendance are stored locally in the browser now so it works immediately. Firebase Auth remains active for sign in.</p></div>
+      </div>
+
+      <div class="footer-note">
+        Stone Grill Restaurant<br>
+        stonegrill2014@gmail.com • 053 568 0539
+      </div>
+    </aside>
+
+    <main class="card panel">
+      <section id="authArea" class="auth-panel">
+        <div class="topbar">
+          <h2 id="panelTitle">Welcome Back</h2>
+          <div class="mode-switch">
+            <button class="chip active" id="loginTab" type="button">Login</button>
+            <button class="chip" id="signupTab" type="button">Sign Up</button>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <form id="loginForm" class="form-grid">
+            <div>
+              <label for="loginEmail">Email</label>
+              <input type="email" id="loginEmail" placeholder="Enter your email" required />
+            </div>
+            <div>
+              <label for="loginPassword">Password</label>
+              <input type="password" id="loginPassword" placeholder="Enter your password" required />
+            </div>
+            <button class="btn btn-primary" type="submit">Login with Email</button>
+          </form>
+
+          <form id="signupForm" class="form-grid hidden">
+            <div class="row-2">
+              <div>
+                <label for="signupName">Full Name</label>
+                <input type="text" id="signupName" placeholder="Your full name" required />
+              </div>
+              <div>
+                <label for="signupPhone">Mobile</label>
+                <input type="text" id="signupPhone" placeholder="+63..." />
+              </div>
+            </div>
+            <div>
+              <label for="signupEmail">Email</label>
+              <input type="email" id="signupEmail" placeholder="Enter your email" required />
+            </div>
+            <div>
+              <label for="signupPassword">Password</label>
+              <input type="password" id="signupPassword" placeholder="Create password" required />
+            </div>
+            <button class="btn btn-primary" type="submit">Create Account</button>
+          </form>
+
+          <div class="divider">or continue with</div>
+          <button class="btn btn-dark" id="facebookLoginBtn" type="button">Login with Facebook</button>
+          <div id="message" class="message info"></div>
+          <div class="small">Login is still protected by your Firebase project. After sign in, the employee modules appear below.</div>
+        </div>
+      </section>
+
+      <section id="dashboard" class="dashboard">
+        <div class="toolbar">
+          <div>
+            <h2 style="margin:0 0 6px">Stone Grill Employee Dashboard</h2>
+            <div id="userMeta" class="small">Signed in.</div>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-soft" id="seedLogsBtn" type="button">Load Sample April Logs</button>
+            <button class="btn btn-soft" id="exportDataBtn" type="button">Export Data</button>
+            <button class="btn btn-danger" id="clearDataBtn" type="button">Clear Saved Tracker Data</button>
+            <button class="btn btn-dark" id="logoutBtn" type="button">Logout</button>
+          </div>
+        </div>
+
+        <div class="summary-cards" id="summaryCards"></div>
+
+        <div class="tabbar">
+          <button class="tabbtn active" data-tab="overview" type="button">Overview</button>
+          <button class="tabbtn" data-tab="employees" type="button">Employees</button>
+          <button class="tabbtn" data-tab="attendance" type="button">Attendance Logs</button>
+          <button class="tabbtn" data-tab="daily" type="button">Daily Attendance</button>
+          <button class="tabbtn" data-tab="advances" type="button">Cash Advances</button>
+          <button class="tabbtn" data-tab="payroll" type="button">Payroll Summary</button>
+        </div>
+
+        <div class="dashboard-shell">
+          <section class="section active" id="section-overview">
+            <div class="split">
+              <div class="card panel">
+                <div class="topbar"><h3>Recent Attendance Days</h3><div class="small">Processed from raw biometric logs</div></div>
+                <div class="table-wrap"><table><thead><tr><th>Date</th><th>Employees</th><th>Late</th><th>Incomplete</th><th>OT</th></tr></thead><tbody id="overviewDaysBody"></tbody></table></div>
+              </div>
+              <div class="stack">
+                <div class="card panel">
+                  <div class="topbar"><h3>Auth Profile</h3></div>
+                  <div class="small" id="profileBox"></div>
+                </div>
+                <div class="card panel">
+                  <div class="topbar"><h3>Attendance Rules</h3></div>
+                  <div class="small">Shift start: <b>10:00 AM</b><br>Late after: <b>10:15 AM</b><br>Standard shift end used for payroll summary: <b>9:00 PM</b><br>Single punch in one day = <b>Incomplete</b>.</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="section-employees">
+            <div class="split">
+              <div class="card panel">
+                <div class="topbar"><h3>Add / Update Employee</h3><div class="small">Biometric ID should match your machine export ID</div></div>
+                <form id="employeeForm" class="form-grid">
+                  <input type="hidden" id="employeeInternalId" />
+                  <div class="row-3">
+                    <div><label for="employeeCode">Biometric ID</label><input id="employeeCode" required placeholder="e.g. 7" /></div>
+                    <div><label for="employeeName">Full Name</label><input id="employeeName" required placeholder="Employee name" /></div>
+                    <div><label for="employeeDept">Department</label><input id="employeeDept" value="Kitchen" /></div>
+                  </div>
+                  <div class="row-4">
+                    <div><label for="employeeRate">Daily Rate</label><input id="employeeRate" type="number" step="0.01" placeholder="0.00" /></div>
+                    <div><label for="employeeSss">SSS</label><input id="employeeSss" type="number" step="0.01" placeholder="0.00" /></div>
+                    <div><label for="employeeAllowance">Allowance</label><input id="employeeAllowance" type="number" step="0.01" placeholder="0.00" /></div>
+                    <div><label for="employeeStatus">Status</label><select id="employeeStatus"><option>Active</option><option>Inactive</option></select></div>
+                  </div>
+                  <div class="row-3">
+                    <div><label for="employeePhone">Phone</label><input id="employeePhone" placeholder="09..." /></div>
+                    <div><label for="employeeCashBalance">Opening Cash Advance Balance</label><input id="employeeCashBalance" type="number" step="0.01" placeholder="0.00" /></div>
+                    <div><label for="employeeNotes">Notes</label><input id="employeeNotes" placeholder="Optional notes" /></div>
+                  </div>
+                  <div class="action-row">
+                    <button class="btn btn-primary" type="submit">Save Employee</button>
+                    <button class="btn btn-soft" type="button" id="resetEmployeeBtn">Reset Form</button>
+                  </div>
+                </form>
+              </div>
+              <div class="card panel">
+                <div class="topbar"><h3>Employee List</h3><div class="small">Edit or delete employee records</div></div>
+                <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Dept</th><th>Rate</th><th>Advance Balance</th><th>Status</th><th>Action</th></tr></thead><tbody id="employeesBody"></tbody></table></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="section-attendance">
+            <div class="split">
+              <div class="card panel">
+                <div class="topbar"><h3>Import Raw Biometric Logs</h3><div class="small">Paste tab-separated logs or upload a text/CSV export</div></div>
+                <div class="form-grid">
+                  <div>
+                    <label for="rawLogsInput">Paste Raw Logs</label>
+                    <textarea id="rawLogsInput" placeholder="ID\tName\tDept.\tTime\tDevice ID\n7\tCALOY\tKitchen\t 04/01/2026     06:34:27\t1"></textarea>
+                  </div>
+                  <div class="row-2">
+                    <div>
+                      <label for="rawFileInput">Upload Text / CSV</label>
+                      <input id="rawFileInput" type="file" accept=".txt,.csv,.tsv" />
+                    </div>
+                    <div>
+                      <label>&nbsp;</label>
+                      <button class="btn btn-primary" id="processLogsBtn" type="button">Process Logs</button>
+                    </div>
+                  </div>
+                  <div id="attendanceMessage" class="message info"></div>
+                  <div class="small">Processing rules: earliest punch per day = Time In, latest punch per day = Time Out, one punch only = Incomplete, late after 10:15 AM.</div>
+                </div>
+              </div>
+              <div class="card panel">
+                <div class="topbar"><h3>Raw Log Preview</h3><div class="small">Latest imported punches</div></div>
+                <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Date Time</th><th>Device</th></tr></thead><tbody id="rawLogsBody"></tbody></table></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="section-daily">
+            <div class="card panel">
+              <div class="topbar">
+                <h3>Daily Attendance</h3>
+                <div class="filters">
+                  <input type="date" id="dailyDateFilter" />
+                  <button class="btn btn-soft" type="button" id="todayFilterBtn">Latest Day</button>
+                </div>
+              </div>
+              <div class="table-wrap"><table><thead><tr><th>Date</th><th>ID</th><th>Name</th><th>In</th><th>Out</th><th>Late</th><th>Worked</th><th>OT</th><th>Status</th></tr></thead><tbody id="dailyAttendanceBody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section class="section" id="section-advances">
+            <div class="split">
+              <div class="card panel">
+                <div class="topbar"><h3>Add Cash Advance</h3><div class="small">Balance updates automatically</div></div>
+                <form id="advanceForm" class="form-grid">
+                  <div class="row-3">
+                    <div><label for="advanceEmployee">Employee</label><select id="advanceEmployee"></select></div>
+                    <div><label for="advanceDate">Date</label><input id="advanceDate" type="date" /></div>
+                    <div><label for="advanceAmount">Amount</label><input id="advanceAmount" type="number" step="0.01" required /></div>
+                  </div>
+                  <div>
+                    <label for="advanceReason">Reason / Note</label>
+                    <input id="advanceReason" placeholder="Cash advance note" />
+                  </div>
+                  <button class="btn btn-primary" type="submit">Save Cash Advance</button>
+                </form>
+              </div>
+              <div class="card panel">
+                <div class="topbar"><h3>Advance Records</h3><div class="small">All employee advances</div></div>
+                <div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>Amount</th><th>Reason</th><th>Running Balance</th><th>Action</th></tr></thead><tbody id="advancesBody"></tbody></table></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="section-payroll">
+            <div class="card panel">
+              <div class="topbar">
+                <h3>Payroll Summary</h3>
+                <div class="filters">
+                  <input type="date" id="payrollStart" />
+                  <input type="date" id="payrollEnd" />
+                  <button class="btn btn-soft" type="button" id="runPayrollBtn">Run Summary</button>
+                </div>
+              </div>
+              <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Days</th><th>Late Mins</th><th>Incomplete</th><th>Gross</th><th>Allowance</th><th>SSS</th><th>Advance Balance</th><th>Net Est.</th></tr></thead><tbody id="payrollBody"></tbody></table></div>
+              <div class="small" style="margin-top:10px">Net estimate formula here: <b>(days × daily rate) + allowance − SSS − remaining cash advance balance</b>. Adjust later if you want more exact payroll rules.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      updateProfile,
+      signInWithPopup,
+      FacebookAuthProvider,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    // UPDATED: Firebase config inserted from user
+    const firebaseConfig = {
+      apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
+      authDomain: "stone-grill-payroll.firebaseapp.com",
+      projectId: "stone-grill-payroll",
+      storageBucket: "stone-grill-payroll.firebasestorage.app",
+      messagingSenderId: "255528914541",
+      appId: "1:255528914541:web:d58d9731a29d27fc253964"
+    };
+
+    const SHIFT_START_MINUTES = 10 * 60;
+    const SHIFT_END_MINUTES = 21 * 60;
+    const GRACE_MINUTES = 15;
+    const LATE_AFTER_MINUTES = SHIFT_START_MINUTES + GRACE_MINUTES;
+
+    // UPDATED: Sample logs based on user-provided biometric export
+    const SAMPLE_LOGS = `ID\tName\tDept.\tTime\tDevice ID
+7\tCALOY\tKitchen\t 04/01/2026     06:34:27\t1
+4\tJhie\tKitchen\t 04/01/2026     09:26:49\t1
+14\tJEVON\tKitchen\t 04/01/2026     09:27:22\t1
+8\tRONY\tKitchen\t 04/01/2026     09:46:02\t1
+5\tRoel\tKitchen\t 04/01/2026     09:48:47\t1
+6\tLIZA\tKitchen\t 04/01/2026     09:50:15\t1
+18\tclaudine\tKitchen\t 04/01/2026     09:57:57\t1
+19\tRAffy\tKitchen\t 04/01/2026     10:02:47\t1
+2\tNEL2x\tKitchen\t 04/01/2026     10:04:11\t1
+9\tJEREY\tKitchen\t 04/01/2026     10:23:15\t1
+8\tRONY\tKitchen\t 04/01/2026     20:02:51\t1
+2\tNEL2x\tKitchen\t 04/01/2026     20:19:02\t1
+19\tRAffy\tKitchen\t 04/01/2026     20:19:07\t1
+5\tRoel\tKitchen\t 04/01/2026     20:19:11\t1
+18\tclaudine\tKitchen\t 04/01/2026     20:22:00\t1
+9\tJEREY\tKitchen\t 04/01/2026     20:25:50\t1
+4\tJhie\tKitchen\t 04/01/2026     20:29:28\t1
+14\tJEVON\tKitchen\t 04/01/2026     20:29:31\t1
+6\tLIZA\tKitchen\t 04/01/2026     20:43:16\t1
+7\tCALOY\tKitchen\t 04/01/2026     20:43:56\t1
+7\tCALOY\tKitchen\t 04/02/2026     07:12:27\t1
+6\tLIZA\tKitchen\t 04/02/2026     09:48:48\t1
+5\tRoel\tKitchen\t 04/02/2026     09:48:57\t1
+19\tRAffy\tKitchen\t 04/02/2026     10:03:24\t1
+7\tCALOY\tKitchen\t 04/04/2026     07:50:09\t1
+4\tJhie\tKitchen\t 04/04/2026     09:34:30\t1
+6\tLIZA\tKitchen\t 04/04/2026     09:34:49\t1
+14\tJEVON\tKitchen\t 04/04/2026     09:35:09\t1
+5\tRoel\tKitchen\t 04/04/2026     09:35:38\t1
+12\tCHRIS\tKitchen\t 04/04/2026     09:39:23\t1
+13\tDELIA\tKitchen\t 04/04/2026     09:52:00\t1
+18\tclaudine\tKitchen\t 04/04/2026     09:52:58\t1
+19\tRAffy\tKitchen\t 04/04/2026     10:03:12\t1
+2\tNEL2x\tKitchen\t 04/04/2026     10:06:33\t1
+9\tJEREY\tKitchen\t 04/04/2026     10:15:00\t1
+2\tNEL2x\tKitchen\t 04/04/2026     20:17:50\t1
+18\tclaudine\tKitchen\t 04/04/2026     20:20:38\t1
+12\tCHRIS\tKitchen\t 04/04/2026     20:23:16\t1
+19\tRAffy\tKitchen\t 04/04/2026     20:29:31\t1
+14\tJEVON\tKitchen\t 04/04/2026     20:29:56\t1
+9\tJEREY\tKitchen\t 04/04/2026     20:52:37\t1
+7\tCALOY\tKitchen\t 04/04/2026     20:53:23\t1
+5\tRoel\tKitchen\t 04/04/2026     20:55:11\t1
+4\tJhie\tKitchen\t 04/04/2026     20:55:46\t1
+6\tLIZA\tKitchen\t 04/04/2026     20:57:59\t1`;
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const fbProvider = new FacebookAuthProvider();
+    fbProvider.addScope("email");
+
+    const STORE_KEY = "stonegrill_employee_tracker_v1";
+    const DEFAULT_DATA = { employees: [], rawLogs: [], dailyAttendance: [], advances: [] };
+
+    const authArea = document.getElementById("authArea");
+    const dashboard = document.getElementById("dashboard");
+    const panelTitle = document.getElementById("panelTitle");
+    const loginTab = document.getElementById("loginTab");
+    const signupTab = document.getElementById("signupTab");
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const signupName = document.getElementById("signupName");
+    const signupPhone = document.getElementById("signupPhone");
+    const signupEmail = document.getElementById("signupEmail");
+    const signupPassword = document.getElementById("signupPassword");
+    const facebookLoginBtn = document.getElementById("facebookLoginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const message = document.getElementById("message");
+    const userMeta = document.getElementById("userMeta");
+    const profileBox = document.getElementById("profileBox");
+
+    const employeeForm = document.getElementById("employeeForm");
+    const employeeInternalId = document.getElementById("employeeInternalId");
+    const employeeCode = document.getElementById("employeeCode");
+    const employeeName = document.getElementById("employeeName");
+    const employeeDept = document.getElementById("employeeDept");
+    const employeeRate = document.getElementById("employeeRate");
+    const employeeSss = document.getElementById("employeeSss");
+    const employeeAllowance = document.getElementById("employeeAllowance");
+    const employeeStatus = document.getElementById("employeeStatus");
+    const employeePhone = document.getElementById("employeePhone");
+    const employeeCashBalance = document.getElementById("employeeCashBalance");
+    const employeeNotes = document.getElementById("employeeNotes");
+    const resetEmployeeBtn = document.getElementById("resetEmployeeBtn");
+
+    const employeesBody = document.getElementById("employeesBody");
+    const rawLogsInput = document.getElementById("rawLogsInput");
+    const rawFileInput = document.getElementById("rawFileInput");
+    const processLogsBtn = document.getElementById("processLogsBtn");
+    const attendanceMessage = document.getElementById("attendanceMessage");
+    const rawLogsBody = document.getElementById("rawLogsBody");
+    const dailyAttendanceBody = document.getElementById("dailyAttendanceBody");
+    const dailyDateFilter = document.getElementById("dailyDateFilter");
+    const todayFilterBtn = document.getElementById("todayFilterBtn");
+    const overviewDaysBody = document.getElementById("overviewDaysBody");
+    const summaryCards = document.getElementById("summaryCards");
+    const advanceForm = document.getElementById("advanceForm");
+    const advanceEmployee = document.getElementById("advanceEmployee");
+    const advanceDate = document.getElementById("advanceDate");
+    const advanceAmount = document.getElementById("advanceAmount");
+    const advanceReason = document.getElementById("advanceReason");
+    const advancesBody = document.getElementById("advancesBody");
+    const payrollStart = document.getElementById("payrollStart");
+    const payrollEnd = document.getElementById("payrollEnd");
+    const runPayrollBtn = document.getElementById("runPayrollBtn");
+    const payrollBody = document.getElementById("payrollBody");
+    const seedLogsBtn = document.getElementById("seedLogsBtn");
+    const exportDataBtn = document.getElementById("exportDataBtn");
+    const clearDataBtn = document.getElementById("clearDataBtn");
+
+    let db = loadData();
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORE_KEY);
+        if (!raw) return structuredClone(DEFAULT_DATA);
+        const parsed = JSON.parse(raw);
+        return {
+          employees: Array.isArray(parsed.employees) ? parsed.employees : [],
+          rawLogs: Array.isArray(parsed.rawLogs) ? parsed.rawLogs : [],
+          dailyAttendance: Array.isArray(parsed.dailyAttendance) ? parsed.dailyAttendance : [],
+          advances: Array.isArray(parsed.advances) ? parsed.advances : []
+        };
+      } catch {
+        return structuredClone(DEFAULT_DATA);
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORE_KEY, JSON.stringify(db));
+    }
+
+    function showMessage(text, type = "info") {
+      message.textContent = text;
+      message.className = "message " + type;
+    }
+
+    function showAttendanceMessage(text, type = "info") {
+      attendanceMessage.textContent = text;
+      attendanceMessage.className = "message " + type;
+    }
+
+    function setMode(mode) {
+      if (mode === "login") {
+        loginTab.classList.add("active");
+        signupTab.classList.remove("active");
+        loginForm.classList.remove("hidden");
+        signupForm.classList.add("hidden");
+        panelTitle.textContent = "Welcome Back";
+        showMessage("Login to continue.", "info");
+      } else {
+        signupTab.classList.add("active");
+        loginTab.classList.remove("active");
+        signupForm.classList.remove("hidden");
+        loginForm.classList.add("hidden");
+        panelTitle.textContent = "Create Account";
+        showMessage("Create your Stone Grill account.", "info");
+      }
+    }
+
+    function readableError(error) {
+      const code = error?.code || "";
+      switch (code) {
+        case "auth/invalid-email": return "Invalid email address.";
+        case "auth/missing-password": return "Password is missing.";
+        case "auth/weak-password": return "Password should be at least 6 characters.";
+        case "auth/email-already-in-use": return "This email is already in use.";
+        case "auth/user-not-found": return "No account found for that email.";
+        case "auth/wrong-password":
+        case "auth/invalid-credential": return "Incorrect email or password.";
+        case "auth/popup-closed-by-user": return "Facebook login popup was closed.";
+        case "auth/account-exists-with-different-credential": return "This email already exists with a different sign-in method.";
+        case "auth/unauthorized-domain": return "This domain is not authorized in Firebase.";
+        case "auth/operation-not-allowed": return "This sign-in method is not enabled in Firebase.";
+        default: return error?.message || "Something went wrong.";
+      }
+    }
+
+    function normalizeName(name) {
+      return String(name || "").trim().replace(/\s+/g, " ");
+    }
+
+    function uid() {
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function money(value) {
+      return Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function dateKeyFromDate(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function parseMachineDate(raw) {
+      const cleaned = String(raw || "").trim().replace(/\s+/g, " ");
+      const match = cleaned.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+      if (!match) return null;
+      const [, mm, dd, yyyy, hh, mi, ss] = match;
+      return new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(mi), Number(ss));
+    }
+
+    function formatDateHuman(dateKey) {
+      const [y, m, d] = dateKey.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function formatTime(dateObj) {
+      if (!dateObj) return "—";
+      return dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+
+    function timeMinutes(dateObj) {
+      return (dateObj.getHours() * 60) + dateObj.getMinutes();
+    }
+
+    function hoursBetween(start, end) {
+      if (!start || !end) return 0;
+      return Math.max(0, (end - start) / (1000 * 60 * 60));
+    }
+
+    function extractRowsFromText(text) {
+      const lines = String(text || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const rows = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (/^ID\s+Name/i.test(line) || /^ID\tName/i.test(line)) continue;
+        const parts = line.includes("\t") ? line.split("\t") : line.split(/\s{2,}/);
+        if (parts.length < 5) continue;
+        const [id, name, dept, timeRaw, deviceId] = parts;
+        const dt = parseMachineDate(timeRaw);
+        if (!dt || !id) continue;
+        rows.push({
+          id: String(id).trim(),
+          name: normalizeName(name),
+          dept: normalizeName(dept),
+          timeRaw: String(timeRaw),
+          deviceId: String(deviceId).trim(),
+          timestamp: dt.toISOString(),
+          dateKey: dateKeyFromDate(dt)
+        });
+      }
+      return rows;
+    }
+
+    function mergeRawLogs(newRows) {
+      const existingKeys = new Set(db.rawLogs.map(r => `${r.id}|${r.timestamp}|${r.deviceId}`));
+      let added = 0;
+      newRows.forEach(row => {
+        const key = `${row.id}|${row.timestamp}|${row.deviceId}`;
+        if (!existingKeys.has(key)) {
+          db.rawLogs.push(row);
+          existingKeys.add(key);
+          added++;
+        }
+        upsertEmployeeFromRaw(row);
+      });
+      return added;
+    }
+
+    function upsertEmployeeFromRaw(row) {
+      const existing = db.employees.find(emp => String(emp.employeeCode) === String(row.id));
+      if (existing) {
+        if (!existing.fullName && row.name) existing.fullName = row.name;
+        if (!existing.department && row.dept) existing.department = row.dept;
+        return;
+      }
+      db.employees.push({
+        internalId: uid(),
+        employeeCode: String(row.id),
+        fullName: row.name || `Employee ${row.id}`,
+        department: row.dept || "Kitchen",
+        dailyRate: 0,
+        sss: 0,
+        allowance: 0,
+        status: "Active",
+        phone: "",
+        cashAdvanceBalance: 0,
+        notes: "Auto-created from raw biometric log"
+      });
+    }
+
+    function processDailyAttendance() {
+      const grouped = new Map();
+      db.rawLogs.forEach(log => {
+        const key = `${log.id}|${log.dateKey}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(log);
+      });
+
+      const daily = [];
+      grouped.forEach((logs, key) => {
+        logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        const first = new Date(logs[0].timestamp);
+        const last = new Date(logs[logs.length - 1].timestamp);
+        const employee = db.employees.find(e => String(e.employeeCode) === String(logs[0].id));
+        const lateMinutes = Math.max(0, timeMinutes(first) - LATE_AFTER_MINUTES);
+        const overtimeMinutes = Math.max(0, timeMinutes(last) - SHIFT_END_MINUTES);
+        const incomplete = logs.length === 1;
+        const workedHours = incomplete ? 0 : hoursBetween(first, last);
+        daily.push({
+          recordId: key,
+          dateKey: logs[0].dateKey,
+          employeeCode: String(logs[0].id),
+          name: employee?.fullName || logs[0].name || `Employee ${logs[0].id}`,
+          department: employee?.department || logs[0].dept || "Kitchen",
+          timeIn: first.toISOString(),
+          timeOut: incomplete ? "" : last.toISOString(),
+          lateMinutes,
+          overtimeMinutes,
+          workedHours,
+          punchCount: logs.length,
+          status: incomplete ? "Incomplete" : (lateMinutes > 0 ? "Late" : "Present")
+        });
+      });
+
+      daily.sort((a, b) => {
+        if (a.dateKey === b.dateKey) return String(a.name).localeCompare(String(b.name));
+        return a.dateKey.localeCompare(b.dateKey);
+      });
+      db.dailyAttendance = daily;
+    }
+
+    function getEmployeeAdvanceBalance(employeeCode) {
+      return db.advances
+        .filter(item => String(item.employeeCode) === String(employeeCode))
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    }
+
+    function refreshEmployeeBalances() {
+      db.employees.forEach(emp => {
+        const manualOpening = Number(emp.manualOpeningBalance || emp.cashAdvanceBalance || 0);
+        const advancesTotal = db.advances
+          .filter(a => String(a.employeeCode) === String(emp.employeeCode))
+          .reduce((sum, a) => sum + Number(a.amount || 0), 0);
+        emp.cashAdvanceBalance = manualOpening + advancesTotal;
+      });
+    }
+
+    function renderSummary() {
+      const records = db.dailyAttendance;
+      const latestDate = records.length ? records[records.length - 1].dateKey : null;
+      const latestRecords = latestDate ? records.filter(r => r.dateKey === latestDate) : [];
+      const lateCount = latestRecords.filter(r => r.lateMinutes > 0).length;
+      const incompleteCount = latestRecords.filter(r => r.status === "Incomplete").length;
+      const totalAdvance = db.employees.reduce((sum, emp) => sum + Number(emp.cashAdvanceBalance || 0), 0);
+      summaryCards.innerHTML = `
+        <div class="summary-card"><h4>Employees</h4><div class="big">${db.employees.length}</div><div class="small">Active records in tracker</div></div>
+        <div class="summary-card"><h4>Latest Attendance Day</h4><div class="big">${latestRecords.length}</div><div class="small">${latestDate ? formatDateHuman(latestDate) : 'No data yet'}</div></div>
+        <div class="summary-card"><h4>Late / Incomplete</h4><div class="big">${lateCount} / ${incompleteCount}</div><div class="small">Based on 10:15 AM late threshold</div></div>
+        <div class="summary-card"><h4>Total Advance Balance</h4><div class="big">₱${money(totalAdvance)}</div><div class="small">Current employee liabilities</div></div>
+      `;
+    }
+
+    function renderEmployees() {
+      refreshEmployeeBalances();
+      employeesBody.innerHTML = db.employees
+        .sort((a, b) => String(a.fullName).localeCompare(String(b.fullName)))
+        .map(emp => `
+          <tr>
+            <td>${emp.employeeCode || ''}</td>
+            <td>${emp.fullName || ''}</td>
+            <td>${emp.department || ''}</td>
+            <td>₱${money(emp.dailyRate || 0)}</td>
+            <td>₱${money(emp.cashAdvanceBalance || 0)}</td>
+            <td><span class="pill ${emp.status === 'Active' ? 'ok' : 'warn'}">${emp.status || 'Active'}</span></td>
+            <td>
+              <button class="btn btn-soft" data-edit-employee="${emp.internalId}" type="button">Edit</button>
+              <button class="btn btn-danger" data-delete-employee="${emp.internalId}" type="button">Delete</button>
+            </td>
+          </tr>
+        `).join("") || `<tr><td colspan="7" class="muted">No employees saved yet.</td></tr>`;
+
+      advanceEmployee.innerHTML = `<option value="">Select employee</option>` + db.employees
+        .filter(emp => emp.status !== "Inactive")
+        .sort((a,b) => String(a.fullName).localeCompare(String(b.fullName)))
+        .map(emp => `<option value="${emp.employeeCode}">${emp.fullName} (${emp.employeeCode})</option>`).join("");
+    }
+
+    function renderRawLogs() {
+      const logs = [...db.rawLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 40);
+      rawLogsBody.innerHTML = logs.map(log => `
+        <tr>
+          <td>${log.id}</td>
+          <td>${log.name || ''}</td>
+          <td>${new Date(log.timestamp).toLocaleString()}</td>
+          <td>${log.deviceId || ''}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="4" class="muted">No raw logs imported yet.</td></tr>`;
+    }
+
+    function renderOverviewDays() {
+      const grouped = {};
+      db.dailyAttendance.forEach(row => {
+        if (!grouped[row.dateKey]) grouped[row.dateKey] = [];
+        grouped[row.dateKey].push(row);
+      });
+      const rows = Object.keys(grouped).sort().reverse().slice(0, 12);
+      overviewDaysBody.innerHTML = rows.map(dateKey => {
+        const items = grouped[dateKey];
+        const late = items.filter(x => x.lateMinutes > 0).length;
+        const incomplete = items.filter(x => x.status === "Incomplete").length;
+        const ot = items.filter(x => x.overtimeMinutes > 0).length;
+        return `<tr><td>${formatDateHuman(dateKey)}</td><td>${items.length}</td><td>${late}</td><td>${incomplete}</td><td>${ot}</td></tr>`;
+      }).join("") || `<tr><td colspan="5" class="muted">No attendance processed yet.</td></tr>`;
+    }
+
+    function renderDailyAttendance() {
+      const records = [...db.dailyAttendance].sort((a, b) => {
+        if (a.dateKey === b.dateKey) return String(a.name).localeCompare(String(b.name));
+        return b.dateKey.localeCompare(a.dateKey);
+      });
+      const filterDate = dailyDateFilter.value;
+      const filtered = filterDate ? records.filter(r => r.dateKey === filterDate) : records;
+      dailyAttendanceBody.innerHTML = filtered.map(row => `
+        <tr>
+          <td>${formatDateHuman(row.dateKey)}</td>
+          <td>${row.employeeCode}</td>
+          <td>${row.name}</td>
+          <td>${formatTime(new Date(row.timeIn))}</td>
+          <td>${row.timeOut ? formatTime(new Date(row.timeOut)) : '—'}</td>
+          <td>${row.lateMinutes} min</td>
+          <td>${row.workedHours ? row.workedHours.toFixed(2) + ' h' : '—'}</td>
+          <td>${row.overtimeMinutes} min</td>
+          <td><span class="pill ${row.status === 'Present' ? 'ok' : row.status === 'Late' ? 'warn' : 'danger'}">${row.status}</span></td>
+        </tr>
+      `).join("") || `<tr><td colspan="9" class="muted">No daily attendance records.</td></tr>`;
+    }
+
+    function renderAdvances() {
+      refreshEmployeeBalances();
+      advancesBody.innerHTML = [...db.advances].sort((a,b) => b.date.localeCompare(a.date)).map(item => `
+        <tr>
+          <td>${item.date}</td>
+          <td>${item.employeeName}</td>
+          <td>₱${money(item.amount)}</td>
+          <td>${item.reason || ''}</td>
+          <td>₱${money(getRunningBalanceForAdvance(item.id))}</td>
+          <td><button class="btn btn-danger" type="button" data-delete-advance="${item.id}">Delete</button></td>
+        </tr>
+      `).join("") || `<tr><td colspan="6" class="muted">No cash advance records yet.</td></tr>`;
+    }
+
+    function getRunningBalanceForAdvance(advanceId) {
+      const adv = db.advances.find(a => a.id === advanceId);
+      if (!adv) return 0;
+      const employee = db.employees.find(e => String(e.employeeCode) === String(adv.employeeCode));
+      return Number(employee?.cashAdvanceBalance || 0);
+    }
+
+    function renderPayroll() {
+      const start = payrollStart.value;
+      const end = payrollEnd.value;
+      let records = [...db.dailyAttendance];
+      if (start) records = records.filter(r => r.dateKey >= start);
+      if (end) records = records.filter(r => r.dateKey <= end);
+      const byEmp = new Map();
+      records.forEach(row => {
+        if (!byEmp.has(row.employeeCode)) byEmp.set(row.employeeCode, []);
+        byEmp.get(row.employeeCode).push(row);
+      });
+      const items = db.employees.map(emp => {
+        const empRows = byEmp.get(String(emp.employeeCode)) || [];
+        const days = empRows.filter(r => r.status !== "Incomplete").length;
+        const lateMinutes = empRows.reduce((sum, r) => sum + Number(r.lateMinutes || 0), 0);
+        const incomplete = empRows.filter(r => r.status === "Incomplete").length;
+        const gross = days * Number(emp.dailyRate || 0);
+        const allowance = Number(emp.allowance || 0);
+        const sss = Number(emp.sss || 0);
+        const advanceBalance = Number(emp.cashAdvanceBalance || 0);
+        const net = gross + allowance - sss - advanceBalance;
+        return { emp, days, lateMinutes, incomplete, gross, allowance, sss, advanceBalance, net };
+      }).filter(item => item.days || item.advanceBalance || item.emp.dailyRate || item.emp.allowance || item.emp.sss);
+
+      payrollBody.innerHTML = items.map(({ emp, days, lateMinutes, incomplete, gross, allowance, sss, advanceBalance, net }) => `
+        <tr>
+          <td>${emp.employeeCode}</td>
+          <td>${emp.fullName}</td>
+          <td>${days}</td>
+          <td>${lateMinutes}</td>
+          <td>${incomplete}</td>
+          <td>₱${money(gross)}</td>
+          <td>₱${money(allowance)}</td>
+          <td>₱${money(sss)}</td>
+          <td>₱${money(advanceBalance)}</td>
+          <td>₱${money(net)}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="10" class="muted">No payroll data yet.</td></tr>`;
+    }
+
+    function renderProfile(user) {
+      const providers = (user.providerData || []).map(p => p.providerId).join(", ") || "Unknown";
+      userMeta.innerHTML = `${user.displayName || 'Stone Grill User'} • ${user.email || 'No email'} • Provider: ${providers}`;
+      profileBox.innerHTML = `User ID: <b>${user.uid}</b><br>Email: <b>${user.email || '—'}</b><br>Name: <b>${user.displayName || '—'}</b><br>Provider: <b>${providers}</b>`;
+    }
+
+    function renderAll() {
+      saveData();
+      renderSummary();
+      renderEmployees();
+      renderRawLogs();
+      renderOverviewDays();
+      renderDailyAttendance();
+      renderAdvances();
+      renderPayroll();
+    }
+
+    function resetEmployeeForm() {
+      employeeInternalId.value = "";
+      employeeForm.reset();
+      employeeDept.value = "Kitchen";
+      employeeStatus.value = "Active";
+    }
+
+    function fillEmployeeForm(id) {
+      const emp = db.employees.find(e => e.internalId === id);
+      if (!emp) return;
+      employeeInternalId.value = emp.internalId;
+      employeeCode.value = emp.employeeCode || "";
+      employeeName.value = emp.fullName || "";
+      employeeDept.value = emp.department || "Kitchen";
+      employeeRate.value = emp.dailyRate || 0;
+      employeeSss.value = emp.sss || 0;
+      employeeAllowance.value = emp.allowance || 0;
+      employeeStatus.value = emp.status || "Active";
+      employeePhone.value = emp.phone || "";
+      employeeCashBalance.value = emp.manualOpeningBalance ?? emp.cashAdvanceBalance ?? 0;
+      employeeNotes.value = emp.notes || "";
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tabbtn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+      document.querySelectorAll('.section').forEach(section => section.classList.toggle('active', section.id === `section-${name}`));
+    }
+
+    function latestAttendanceDate() {
+      if (!db.dailyAttendance.length) return "";
+      return [...db.dailyAttendance].sort((a,b) => b.dateKey.localeCompare(a.dateKey))[0].dateKey;
+    }
+
+    async function handleFileLoad(file) {
+      const text = await file.text();
+      rawLogsInput.value = text;
+    }
+
+    loginTab.addEventListener('click', () => setMode('login'));
+    signupTab.addEventListener('click', () => setMode('signup'));
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showMessage('Signing in...', 'info');
+      try {
+        await signInWithEmailAndPassword(auth, loginEmail.value.trim(), loginPassword.value);
+        showMessage('Login successful.', 'ok');
+      } catch (error) {
+        showMessage(readableError(error), 'error');
+      }
+    });
+
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showMessage('Creating account...', 'info');
+      try {
+        const result = await createUserWithEmailAndPassword(auth, signupEmail.value.trim(), signupPassword.value);
+        if (signupName.value.trim()) {
+          await updateProfile(result.user, { displayName: signupName.value.trim() });
+        }
+        showMessage('Account created successfully.', 'ok');
+      } catch (error) {
+        showMessage(readableError(error), 'error');
+      }
+    });
+
+    facebookLoginBtn.addEventListener('click', async () => {
+      showMessage('Opening Facebook login...', 'info');
+      try {
+        await signInWithPopup(auth, fbProvider);
+        showMessage('Facebook login successful.', 'ok');
+      } catch (error) {
+        showMessage(readableError(error), 'error');
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      try { await signOut(auth); } catch (error) { alert(readableError(error)); }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        authArea.style.display = 'none';
+        dashboard.style.display = 'grid';
+        renderProfile(user);
+        renderAll();
+      } else {
+        authArea.style.display = 'flex';
+        dashboard.style.display = 'none';
+      }
+    });
+
+    document.querySelectorAll('.tabbtn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+    employeeForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const payload = {
+        internalId: employeeInternalId.value || uid(),
+        employeeCode: employeeCode.value.trim(),
+        fullName: normalizeName(employeeName.value),
+        department: normalizeName(employeeDept.value) || 'Kitchen',
+        dailyRate: Number(employeeRate.value || 0),
+        sss: Number(employeeSss.value || 0),
+        allowance: Number(employeeAllowance.value || 0),
+        status: employeeStatus.value,
+        phone: employeePhone.value.trim(),
+        cashAdvanceBalance: Number(employeeCashBalance.value || 0),
+        manualOpeningBalance: Number(employeeCashBalance.value || 0),
+        notes: employeeNotes.value.trim()
+      };
+      const index = db.employees.findIndex(e => e.internalId === payload.internalId || String(e.employeeCode) === String(payload.employeeCode));
+      if (index >= 0) db.employees[index] = { ...db.employees[index], ...payload };
+      else db.employees.push(payload);
+      resetEmployeeForm();
+      renderAll();
+    });
+
+    resetEmployeeBtn.addEventListener('click', resetEmployeeForm);
+
+    employeesBody.addEventListener('click', (e) => {
+      const editId = e.target.dataset.editEmployee;
+      const deleteId = e.target.dataset.deleteEmployee;
+      if (editId) fillEmployeeForm(editId);
+      if (deleteId) {
+        if (!confirm('Delete this employee? This will also remove that employee's raw logs, daily attendance, and cash advances saved in this browser.')) return;
+        const emp = db.employees.find(item => item.internalId === deleteId);
+        const code = emp ? String(emp.employeeCode) : '';
+        db.employees = db.employees.filter(item => item.internalId !== deleteId);
+        if (code) {
+          db.rawLogs = db.rawLogs.filter(item => String(item.id) !== code);
+          db.dailyAttendance = db.dailyAttendance.filter(item => String(item.employeeCode) !== code);
+          db.advances = db.advances.filter(item => String(item.employeeCode) !== code);
+        }
+        renderAll();
+      }
+    });
+
+    rawFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (file) await handleFileLoad(file);
+    });
+
+    processLogsBtn.addEventListener('click', () => {
+      const rows = extractRowsFromText(rawLogsInput.value);
+      if (!rows.length) {
+        showAttendanceMessage('No valid logs found. Check the pasted format.', 'error');
+        return;
+      }
+      const added = mergeRawLogs(rows);
+      processDailyAttendance();
+      renderAll();
+      dailyDateFilter.value = latestAttendanceDate();
+      renderDailyAttendance();
+      showAttendanceMessage(`${added} new raw log entries imported and attendance processed.`, 'ok');
+    });
+
+    todayFilterBtn.addEventListener('click', () => {
+      dailyDateFilter.value = latestAttendanceDate();
+      renderDailyAttendance();
+    });
+
+    dailyDateFilter.addEventListener('change', renderDailyAttendance);
+
+    advanceForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const employee = db.employees.find(emp => String(emp.employeeCode) === String(advanceEmployee.value));
+      if (!employee) {
+        alert('Select an employee first.');
+        return;
+      }
+      db.advances.push({
+        id: uid(),
+        employeeCode: employee.employeeCode,
+        employeeName: employee.fullName,
+        date: advanceDate.value || dateKeyFromDate(new Date()),
+        amount: Number(advanceAmount.value || 0),
+        reason: advanceReason.value.trim()
+      });
+      advanceForm.reset();
+      advanceDate.value = dateKeyFromDate(new Date());
+      renderAll();
+    });
+
+    advancesBody.addEventListener('click', (e) => {
+      const deleteId = e.target.dataset.deleteAdvance;
+      if (!deleteId) return;
+      if (!confirm('Delete this cash advance record?')) return;
+      db.advances = db.advances.filter(item => item.id !== deleteId);
+      renderAll();
+    });
+
+    runPayrollBtn.addEventListener('click', renderPayroll);
+
+    seedLogsBtn.addEventListener('click', () => {
+      rawLogsInput.value = SAMPLE_LOGS;
+      showAttendanceMessage('Sample April logs loaded into the textarea. Click Process Logs.', 'info');
+      switchTab('attendance');
+    });
+
+    exportDataBtn.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'stone-grill-employee-tracker-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    clearDataBtn.addEventListener('click', () => {
+      if (!confirm('Clear all saved tracker data from this browser?')) return;
+      db = structuredClone(DEFAULT_DATA);
+      saveData();
+      resetEmployeeForm();
+      renderAll();
+    });
+
+    advanceDate.value = dateKeyFromDate(new Date());
+    const today = dateKeyFromDate(new Date());
+    payrollEnd.value = today;
+    payrollStart.value = today.slice(0, 8) + '01';
+    setMode('login');
+    renderAll();
+  </script>
+</body>
+</html>
