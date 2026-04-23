@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stone Grill App</title>
+
+  <style>
+    :root{
+      --bg:#120c0a;
+      --panel:#1b1310;
+      --panel-2:#241915;
+      --line:rgba(255,255,255,0.08);
+      --text:#f6eee8;
+      --muted:#c9b8ad;
+      --brand:#ff7a2f;
+      --brand-2:#ff9a5e;
+      --ok:#2dbb74;
+      --danger:#ff5f5f;
+      --shadow:0 20px 50px rgba(0,0,0,.35);
+      --radius:22px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(255,122,47,.18), transparent 25%),
+        radial-gradient(circle at bottom left, rgba(255,154,94,.12), transparent 20%),
+        linear-gradient(180deg, #1a110e 0%, #100b09 100%);
+      color:var(--text);
+      min-height:100%;
+    }
+
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+
+    .app{
+      width:100%;
+      max-width:1100px;
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap:20px;
+    }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .hero{
+      padding:34px 28px;
+      position:relative;
+      min-height:640px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,122,47,.12);
+      color:#ffd7c0;
+      border:1px solid rgba(255,122,47,.22);
+      font-size:13px;
+      letter-spacing:.3px;
+    }
+
+    .brand-title{
+      font-size:46px;
+      line-height:1;
+      margin:18px 0 10px;
+      font-weight:800;
+      letter-spacing:.4px;
+    }
+
+    .brand-sub{
+      color:var(--muted);
+      font-size:17px;
+      line-height:1.6;
+      max-width:560px;
+    }
+
+    .hero-boxes{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+      margin-top:24px;
+    }
+
+    .mini{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px;
+    }
+
+    .mini h4{
+      margin:0 0 8px;
+      font-size:14px;
+      color:#ffe0cf;
+    }
+
+    .mini p{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .hero-footer{
+      margin-top:28px;
+      color:#e7d8cf;
+      opacity:.85;
+      font-size:14px;
+    }
+
+    .auth{
+      padding:24px;
+      min-height:640px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .topbar h2{
+      margin:0;
+      font-size:24px;
+    }
+
+    .mode-switch{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .chip{
+      border:none;
+      border-radius:999px;
+      padding:10px 14px;
+      cursor:pointer;
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      border:1px solid var(--line);
+      font-weight:700;
+    }
+
+    .chip.active{
+      background:linear-gradient(180deg, var(--brand), var(--brand-2));
+      color:#1b120d;
+      border-color:transparent;
+    }
+
+    .panel{
+      margin-top:10px;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:18px;
+    }
+
+    .form-grid{
+      display:grid;
+      gap:14px;
+    }
+
+    .row-2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    label{
+      display:block;
+      font-size:13px;
+      color:#e7d5ca;
+      margin-bottom:7px;
+      font-weight:700;
+    }
+
+    input{
+      width:100%;
+      border:none;
+      outline:none;
+      padding:14px 14px;
+      border-radius:14px;
+      background:#0f0b09;
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.08);
+      font-size:15px;
+    }
+
+    input:focus{
+      border-color:rgba(255,122,47,.55);
+      box-shadow:0 0 0 3px rgba(255,122,47,.12);
+    }
+
+    .btn{
+      width:100%;
+      border:none;
+      outline:none;
+      cursor:pointer;
+      border-radius:15px;
+      padding:14px 16px;
+      font-size:15px;
+      font-weight:800;
+      transition:.2s ease;
+    }
+
+    .btn:hover{transform:translateY(-1px)}
+
+    .btn-primary{
+      background:linear-gradient(180deg, var(--brand), var(--brand-2));
+      color:#1a120d;
+    }
+
+    .btn-dark{
+      background:#111;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.12);
+    }
+
+    .btn-soft{
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+
+    .divider{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin:16px 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .divider::before,
+    .divider::after{
+      content:"";
+      height:1px;
+      flex:1;
+      background:rgba(255,255,255,.08);
+    }
+
+    .message{
+      margin-top:14px;
+      min-height:22px;
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .message.ok{color:#7ce0ab}
+    .message.error{color:#ff8f8f}
+    .message.info{color:#ffd7be}
+
+    .dashboard{
+      display:none;
+      margin-top:14px;
+      gap:14px;
+    }
+
+    .user-card{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:18px;
+    }
+
+    .user-top{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    .avatar{
+      width:64px;
+      height:64px;
+      border-radius:50%;
+      object-fit:cover;
+      background:#111;
+      border:1px solid rgba(255,255,255,.1);
+    }
+
+    .user-name{
+      font-size:20px;
+      font-weight:800;
+      margin:0 0 6px;
+    }
+
+    .user-meta{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+      word-break:break-word;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+
+    .stat{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+    }
+
+    .stat h4{
+      margin:0 0 6px;
+      font-size:13px;
+      color:#ffd9c7;
+    }
+
+    .stat p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+
+    .small{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.6;
+      margin-top:14px;
+    }
+
+    .hidden{display:none !important}
+
+    @media (max-width: 920px){
+      .app{
+        grid-template-columns:1fr;
+      }
+      .hero,
+      .auth{
+        min-height:auto;
+      }
+    }
+
+    @media (max-width: 640px){
+      .brand-title{font-size:34px}
+      .hero-boxes,
+      .row-2,
+      .grid{
+        grid-template-columns:1fr;
+      }
+      .topbar{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app">
+    <section class="card hero">
+      <div>
+        <div class="badge">Stone Grill Restaurant • Enjoyable and Relaxing</div>
+        <h1 class="brand-title">Stone Grill App</h1>
+        <p class="brand-sub">
+          Secure sign in for Stone Grill using Firebase. This version supports
+          email/password login and Facebook login in one clean app screen.
+        </p>
+
+        <div class="hero-boxes">
+          <div class="mini">
+            <h4>Secure Access</h4>
+            <p>Firebase Authentication handles sign in, sign up, session tracking, and logout.</p>
+          </div>
+          <div class="mini">
+            <h4>Facebook Login</h4>
+            <p>Ready for Facebook provider once Meta and Firebase settings are correctly connected.</p>
+          </div>
+          <div class="mini">
+            <h4>Dashboard</h4>
+            <p>After login, user details appear in a simple Stone Grill dashboard view.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-footer">
+        Stone Grill Restaurant<br>
+        stonegrill2014@gmail.com • 053 568 0539
+      </div>
+    </section>
+
+    <section class="card auth">
+      <div id="authArea">
+        <div class="topbar">
+          <h2 id="panelTitle">Welcome Back</h2>
+          <div class="mode-switch">
+            <button class="chip active" id="loginTab" type="button">Login</button>
+            <button class="chip" id="signupTab" type="button">Sign Up</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="loginForm" class="form-grid">
+            <div>
+              <label for="loginEmail">Email</label>
+              <input type="email" id="loginEmail" placeholder="Enter your email" required />
+            </div>
+
+            <div>
+              <label for="loginPassword">Password</label>
+              <input type="password" id="loginPassword" placeholder="Enter your password" required />
+            </div>
+
+            <button class="btn btn-primary" type="submit">Login with Email</button>
+          </form>
+
+          <form id="signupForm" class="form-grid hidden">
+            <div class="row-2">
+              <div>
+                <label for="signupName">Full Name</label>
+                <input type="text" id="signupName" placeholder="Your full name" required />
+              </div>
+
+              <div>
+                <label for="signupPhone">Mobile</label>
+                <input type="text" id="signupPhone" placeholder="+63..." />
+              </div>
+            </div>
+
+            <div>
+              <label for="signupEmail">Email</label>
+              <input type="email" id="signupEmail" placeholder="Enter your email" required />
+            </div>
+
+            <div>
+              <label for="signupPassword">Password</label>
+              <input type="password" id="signupPassword" placeholder="Create password" required />
+            </div>
+
+            <button class="btn btn-primary" type="submit">Create Account</button>
+          </form>
+
+          <div class="divider">or continue with</div>
+
+          <button class="btn btn-dark" id="facebookLoginBtn" type="button">
+            Login with Facebook
+          </button>
+
+          <div id="message" class="message info"></div>
+
+          <div class="small">
+            This app is already connected to your Firebase config.
+            Facebook login will work once your Meta app and Firebase Facebook provider are fully set correctly.
+          </div>
+        </div>
+      </div>
+
+      <div id="dashboard" class="dashboard">
+        <div class="topbar">
+          <h2>Stone Grill Dashboard</h2>
+          <button class="chip" id="logoutBtn" type="button">Logout</button>
+        </div>
+
+        <div class="user-card">
+          <div class="user-top">
+            <img id="userPhoto" class="avatar" alt="User Photo" />
+            <div>
+              <p id="userName" class="user-name">User Name</p>
+              <div id="userMeta" class="user-meta">Loading user info...</div>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="stat">
+              <h4>Auth Provider</h4>
+              <p id="authProvider">—</p>
+            </div>
+            <div class="stat">
+              <h4>User ID</h4>
+              <p id="userUid">—</p>
+            </div>
+            <div class="stat">
+              <h4>Email Verified</h4>
+              <p id="emailVerified">—</p>
+            </div>
+            <div class="stat">
+              <h4>Phone</h4>
+              <p id="userPhone">—</p>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-soft" type="button" id="refreshProfileBtn">Refresh Profile</button>
+          </div>
+
+          <div id="dashMessage" class="message info"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      updateProfile,
+      signInWithPopup,
+      FacebookAuthProvider,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    /* =========================
+       FIREBASE CONFIG INSERTED
+    ========================== */
+    const firebaseConfig = {
+      apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
+      authDomain: "stone-grill-payroll.firebaseapp.com",
+      projectId: "stone-grill-payroll",
+      storageBucket: "stone-grill-payroll.firebasestorage.app",
+      messagingSenderId: "255528914541",
+      appId: "1:255528914541:web:d58d9731a29d27fc253964"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const fbProvider = new FacebookAuthProvider();
+    fbProvider.addScope("email");
+
+    const authArea = document.getElementById("authArea");
+    const dashboard = document.getElementById("dashboard");
+
+    const loginTab = document.getElementById("loginTab");
+    const signupTab = document.getElementById("signupTab");
+    const panelTitle = document.getElementById("panelTitle");
+
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+
+    const signupName = document.getElementById("signupName");
+    const signupPhone = document.getElementById("signupPhone");
+    const signupEmail = document.getElementById("signupEmail");
+    const signupPassword = document.getElementById("signupPassword");
+
+    const facebookLoginBtn = document.getElementById("facebookLoginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const refreshProfileBtn = document.getElementById("refreshProfileBtn");
+
+    const message = document.getElementById("message");
+    const dashMessage = document.getElementById("dashMessage");
+
+    const userPhoto = document.getElementById("userPhoto");
+    const userName = document.getElementById("userName");
+    const userMeta = document.getElementById("userMeta");
+    const authProvider = document.getElementById("authProvider");
+    const userUid = document.getElementById("userUid");
+    const emailVerified = document.getElementById("emailVerified");
+    const userPhone = document.getElementById("userPhone");
+
+    function showMessage(text, type = "info") {
+      message.textContent = text;
+      message.className = "message " + type;
+    }
+
+    function showDashMessage(text, type = "info") {
+      dashMessage.textContent = text;
+      dashMessage.className = "message " + type;
+    }
+
+    function setMode(mode) {
+      if (mode === "login") {
+        loginTab.classList.add("active");
+        signupTab.classList.remove("active");
+        loginForm.classList.remove("hidden");
+        signupForm.classList.add("hidden");
+        panelTitle.textContent = "Welcome Back";
+        showMessage("Login to continue.", "info");
+      } else {
+        signupTab.classList.add("active");
+        loginTab.classList.remove("active");
+        signupForm.classList.remove("hidden");
+        loginForm.classList.add("hidden");
+        panelTitle.textContent = "Create Account";
+        showMessage("Create your Stone Grill account.", "info");
+      }
+    }
+
+    function getProviderName(user) {
+      if (!user || !user.providerData || !user.providerData.length) return "Unknown";
+      const providers = user.providerData.map(p => p.providerId);
+
+      if (providers.includes("facebook.com")) return "Facebook";
+      if (providers.includes("password")) return "Email/Password";
+      return providers.join(", ");
+    }
+
+    function renderUser(user) {
+      const fallbackPhoto =
+        "https://ui-avatars.com/api/?name=" +
+        encodeURIComponent(user.displayName || "Stone Grill") +
+        "&background=2b1b14&color=fff";
+
+      authArea.style.display = "none";
+      dashboard.style.display = "grid";
+
+      userPhoto.src = user.photoURL || fallbackPhoto;
+      userPhoto.onerror = () => {
+        userPhoto.src = fallbackPhoto;
+      };
+
+      userName.textContent = user.displayName || "Stone Grill User";
+      userMeta.innerHTML = `
+        ${user.email || "No email available"}<br>
+        Signed in successfully.
+      `;
+
+      authProvider.textContent = getProviderName(user);
+      userUid.textContent = user.uid || "—";
+      emailVerified.textContent = user.emailVerified ? "Yes" : "No";
+      userPhone.textContent = user.phoneNumber || signupPhone.value || "No phone number";
+
+      showDashMessage("You are now logged in.", "ok");
+    }
+
+    function renderLoggedOut() {
+      authArea.style.display = "block";
+      dashboard.style.display = "none";
+      showMessage("Please login or create an account.", "info");
+    }
+
+    function readableError(error) {
+      const code = error?.code || "";
+
+      switch (code) {
+        case "auth/invalid-email":
+          return "Invalid email address.";
+        case "auth/missing-password":
+          return "Password is missing.";
+        case "auth/weak-password":
+          return "Password should be at least 6 characters.";
+        case "auth/email-already-in-use":
+          return "This email is already in use.";
+        case "auth/user-not-found":
+          return "No account found for that email.";
+        case "auth/wrong-password":
+        case "auth/invalid-credential":
+          return "Incorrect email or password.";
+        case "auth/popup-closed-by-user":
+          return "Facebook login popup was closed.";
+        case "auth/account-exists-with-different-credential":
+          return "This email already exists with a different sign-in method.";
+        case "auth/unauthorized-domain":
+          return "This domain is not authorized in Firebase.";
+        case "auth/operation-not-allowed":
+          return "This sign-in method is not enabled in Firebase.";
+        default:
+          return error.message || "Something went wrong.";
+      }
+    }
+
+    loginTab.addEventListener("click", () => setMode("login"));
+    signupTab.addEventListener("click", () => setMode("signup"));
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showMessage("Signing in...", "info");
+
+      try {
+        const email = loginEmail.value.trim();
+        const password = loginPassword.value;
+
+        await signInWithEmailAndPassword(auth, email, password);
+        showMessage("Login successful.", "ok");
+      } catch (error) {
+        showMessage(readableError(error), "error");
+      }
+    });
+
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showMessage("Creating account...", "info");
+
+      try {
+        const fullName = signupName.value.trim();
+        const email = signupEmail.value.trim();
+        const password = signupPassword.value;
+
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+
+        if (fullName) {
+          await updateProfile(result.user, {
+            displayName: fullName
+          });
+        }
+
+        showMessage("Account created successfully.", "ok");
+      } catch (error) {
+        showMessage(readableError(error), "error");
+      }
+    });
+
+    facebookLoginBtn.addEventListener("click", async () => {
+      showMessage("Opening Facebook login...", "info");
+
+      try {
+        await signInWithPopup(auth, fbProvider);
+        showMessage("Facebook login successful.", "ok");
+      } catch (error) {
+        showMessage(readableError(error), "error");
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        showMessage("Logged out successfully.", "ok");
+      } catch (error) {
+        showDashMessage(readableError(error), "error");
+      }
+    });
+
+    refreshProfileBtn.addEventListener("click", () => {
+      const user = auth.currentUser;
+      if (user) {
+        renderUser(user);
+        showDashMessage("Profile refreshed.", "ok");
+      } else {
+        showDashMessage("No active user session.", "error");
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        renderUser(user);
+      } else {
+        renderLoggedOut();
+      }
+    });
+
+    setMode("login");
+  </script>
+</body>
+</html>

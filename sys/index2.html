@@ -11,56 +11,39 @@
     <!-- React & ReactDOM (Production Minified) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for compiling JSX in the browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- ========================= -->
-    <!-- UPDATED: FIREBASE SDK -->
-    <!-- ========================= -->
+    <!-- Firebase SDKs (v11.6.1) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import {
-            getFirestore,
-            collection,
-            doc,
-            getDocs,
-            setDoc,
-            addDoc,
-            updateDoc,
-            deleteDoc,
-            query,
-            where,
-            serverTimestamp
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, query, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =========================
-        // UPDATED: PUT YOUR REAL FIREBASE CONFIG HERE
-        // =========================
-       const firebaseConfig = {
-  apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
-  authDomain: "stone-grill-payroll.firebaseapp.com",
-  projectId: "stone-grill-payroll",
-  storageBucket: "stone-grill-payroll.firebasestorage.app",
-  messagingSenderId: "255528914541",
-  appId: "1:255528914541:web:d58d9731a29d27fc253964"
-};
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        try {
+            // Environment handles the config securely
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'stonegrill-payroll-v1';
 
-        window.firebaseDb = db;
-        window.firebaseFns = {
-            collection,
-            doc,
-            getDocs,
-            setDoc,
-            addDoc,
-            updateDoc,
-            deleteDoc,
-            query,
-            where,
-            serverTimestamp
-        };
+            if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+
+                // Attach to window so React can access it reliably
+                window.fb = { 
+                    app, auth, db, appId, 
+                    signInWithCustomToken, signInAnonymously, onAuthStateChanged, 
+                    collection, doc, setDoc, getDocs, onSnapshot, query, deleteDoc, updateDoc, serverTimestamp 
+                };
+                window.dispatchEvent(new Event('firebase-ready'));
+            } else {
+                console.warn("No Firebase config detected. Running in local-only mode.");
+                window.dispatchEvent(new Event('firebase-error'));
+            }
+        } catch (error) {
+            console.error("Failed to initialize Firebase:", error);
+            window.dispatchEvent(new Event('firebase-error'));
+        }
     </script>
 
     <style>
@@ -115,6 +98,19 @@
         const CheckCircle2 = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></Icon>;
         const Lock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Icon>;
         const Delete = (p) => <Icon {...p}><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></Icon>;
+
+        const Toast = ({ message, type, onClose }) => {
+            if (!message) return null;
+            const bg = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+            return (
+                <div className={`fixed bottom-4 right-4 ${bg} text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center animate-in slide-in-from-bottom-5 duration-300`}>
+                    <span className="font-medium text-sm">{message}</span>
+                    <button onClick={onClose} className="ml-4 text-white/80 hover:text-white transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            );
+        };
 
         function PinScreen({ onUnlock }) {
             const [pin, setPin] = useState('');
@@ -220,6 +216,9 @@
 
         function App() {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [fbState, setFbState] = useState('initializing'); // 'initializing', 'ready', 'error'
+            const [user, setUser] = useState(null);
+            
             const [activeTab, setActiveTab] = useState('dashboard');
             const [isSidebarOpen, setSidebarOpen] = useState(true);
             const [isLoadingDb, setIsLoadingDb] = useState(true);
@@ -241,11 +240,67 @@
                 name: '', position: '', dept: '', rate: '', contact_number: '', address: '', date_hired: new Date().toISOString().slice(0,10), status: 'Active'
             });
 
-            const [employees, setEmployees] = useState([]);
+            // Initialize with default data in case Firebase is offline
+            const [employees, setEmployees] = useState(initialEmployees);
             const [attendance, setAttendance] = useState([]);
-            const [cashAdvances, setCashAdvances] = useState([]);
+            const [cashAdvances, setCashAdvances] = useState(initialCashAdvances);
             const [interactivePayrolls, setInteractivePayrolls] = useState([]);
 
+            const [toastMsg, setToastMsg] = useState(null);
+            const [toastType, setToastType] = useState('info');
+
+            const showToast = (msg, type = 'info') => {
+                setToastMsg(msg);
+                setToastType(type);
+                setTimeout(() => setToastMsg(null), 3000);
+            };
+
+            // Setup Firebase Listeners
+            useEffect(() => {
+                if (window.fb) {
+                    setFbState('ready');
+                } else {
+                    const handleReady = () => setFbState('ready');
+                    const handleError = () => setFbState('error');
+                    window.addEventListener('firebase-ready', handleReady);
+                    window.addEventListener('firebase-error', handleError);
+                    return () => {
+                        window.removeEventListener('firebase-ready', handleReady);
+                        window.removeEventListener('firebase-error', handleError);
+                    }
+                }
+            }, []);
+
+            // Firebase Authentication
+            useEffect(() => {
+                if (fbState !== 'ready' || !window.fb?.auth) {
+                    if (fbState === 'error') setIsLoadingDb(false); // Enable fallback local mode
+                    return;
+                }
+                const { auth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } = window.fb;
+
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (e) {
+                        console.error("Authentication Error", e);
+                        setFbState('error');
+                    }
+                };
+
+                initAuth();
+                const unsub = onAuthStateChanged(auth, u => {
+                    setUser(u);
+                });
+                return () => unsub();
+            }, [fbState]);
+
+
+            // Window Resizing
             useEffect(() => {
                 const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
                 handleResize();
@@ -259,28 +314,42 @@
             };
 
             // =========================
-            // UPDATED: FIRESTORE HELPERS
+            // DATABASE ABSTRACTION LAYER
             // =========================
-            const getDb = () => window.firebaseDb;
-            const fns = () => window.firebaseFns;
+            const dbHelpers = useMemo(() => {
+                return {
+                    getCol: async (colName) => {
+                        if (!user || fbState !== 'ready') return [];
+                        const ref = window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, colName);
+                        const snap = await window.fb.getDocs(ref);
+                        return snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                    },
+                    set: async (colName, docId, data) => {
+                        if (!user || fbState !== 'ready') return false;
+                        const ref = window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, colName, String(docId));
+                        await window.fb.setDoc(ref, data);
+                        return true;
+                    },
+                    update: async (colName, docId, data) => {
+                        if (!user || fbState !== 'ready') return false;
+                        const ref = window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, colName, String(docId));
+                        await window.fb.updateDoc(ref, data);
+                        return true;
+                    }
+                };
+            }, [user, fbState]);
 
             const loadAllFromFirestore = async () => {
+                if (!user || fbState !== 'ready') return;
                 try {
                     setIsLoadingDb(true);
-                    const db = getDb();
-                    const { collection, getDocs } = fns();
-
-                    const [empSnap, attSnap, caSnap, paySnap] = await Promise.all([
-                        getDocs(collection(db, 'employees')),
-                        getDocs(collection(db, 'attendance')),
-                        getDocs(collection(db, 'cash_advances')),
-                        getDocs(collection(db, 'payroll_entries'))
+                    
+                    const [empData, attData, caData, payData] = await Promise.all([
+                        dbHelpers.getCol('employees'),
+                        dbHelpers.getCol('attendance'),
+                        dbHelpers.getCol('cash_advances'),
+                        dbHelpers.getCol('payroll_entries')
                     ]);
-
-                    const empData = empSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                    const attData = attSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                    const caData  = caSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-                    const payData = paySnap.docs.map(d => ({ docId: d.id, ...d.data() }));
 
                     setEmployees(empData.length ? empData : initialEmployees);
                     setAttendance(attData);
@@ -302,31 +371,22 @@
                     })));
                 } catch (err) {
                     console.error('Firestore load error:', err);
-                    alert('Failed to load Firestore data. Check Firebase config and Firestore rules.');
-                    setEmployees(initialEmployees);
-                    setAttendance([]);
-                    setCashAdvances(initialCashAdvances);
-                    setInteractivePayrolls([]);
+                    showToast('Failed to load cloud data. Running offline.', 'error');
                 } finally {
                     setIsLoadingDb(false);
                 }
             };
 
             const seedEmployeesIfEmpty = async () => {
+                if (!user || fbState !== 'ready') return;
                 try {
-                    const db = getDb();
-                    const { collection, getDocs, doc, setDoc } = fns();
-                    const empSnap = await getDocs(collection(db, 'employees'));
-                    if (empSnap.empty) {
-                        for (const emp of initialEmployees) {
-                            await setDoc(doc(db, 'employees', String(emp.id)), emp);
-                        }
+                    const empSnap = await dbHelpers.getCol('employees');
+                    if (empSnap.length === 0) {
+                        for (const emp of initialEmployees) await dbHelpers.set('employees', emp.id, emp);
                     }
-                    const caSnap = await getDocs(collection(db, 'cash_advances'));
-                    if (caSnap.empty) {
-                        for (const ca of initialCashAdvances) {
-                            await setDoc(doc(db, 'cash_advances', String(ca.id)), ca);
-                        }
+                    const caSnap = await dbHelpers.getCol('cash_advances');
+                    if (caSnap.length === 0) {
+                        for (const ca of initialCashAdvances) await dbHelpers.set('cash_advances', ca.id, ca);
                     }
                 } catch (err) {
                     console.error('Seed error:', err);
@@ -334,18 +394,14 @@
             };
 
             useEffect(() => {
-                const init = async () => {
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    if (!window.firebaseDb || !window.firebaseFns) {
-                        alert('Firebase not ready. Check internet or Firebase config.');
-                        setIsLoadingDb(false);
-                        return;
-                    }
-                    await seedEmployeesIfEmpty();
-                    await loadAllFromFirestore();
-                };
-                init();
-            }, []);
+                if (user && fbState === 'ready') {
+                    const initData = async () => {
+                        await seedEmployeesIfEmpty();
+                        await loadAllFromFirestore();
+                    };
+                    initData();
+                }
+            }, [user, fbState]);
 
             useEffect(() => {
                 if (!icEmpId && employees.length > 0) {
@@ -458,25 +514,22 @@
                         };
                     });
 
-                    const db = getDb();
-                    const { doc, setDoc } = fns();
-
                     let addedCount = 0;
                     const existingKeys = new Set(attendance.map(a => `${a.empId}_${a.date}`));
 
                     for (const item of processed) {
                         const key = `${item.empId}_${item.date}`;
                         if (!existingKeys.has(key)) {
-                            await setDoc(doc(db, 'attendance', key), item);
+                            if (user && fbState === 'ready') await dbHelpers.set('attendance', key, item);
                             addedCount++;
                         }
                     }
 
-                    await loadAllFromFirestore();
-                    alert(`Successfully imported ${addedCount} new attendance records.`);
+                    if (user && fbState === 'ready') await loadAllFromFirestore();
+                    showToast(`Successfully imported ${addedCount} new attendance records.`, 'success');
                 } catch (err) {
                     console.error(err);
-                    alert('Failed to import attendance.');
+                    showToast('Failed to import attendance logs.', 'error');
                 }
             };
 
@@ -575,9 +628,8 @@
 
                 const saveInteractivePayroll = async () => {
                     try {
-                        if (!icEmpId || !icDateStart || !icDateEnd) return alert('Select an employee and valid date range.');
-                        const db = getDb();
-                        const { doc, setDoc, serverTimestamp } = fns();
+                        if (!icEmpId || !icDateStart || !icDateEnd) return showToast('Select an employee and valid date range.', 'error');
+                        if (!user || fbState !== 'ready') return showToast('Cannot save. Running offline.', 'error');
 
                         const selectedEmp = employees.find(e => String(e.id) === String(icEmpId));
                         const rate = selectedEmp ? Number(selectedEmp.rate || 0) : 0;
@@ -606,15 +658,17 @@
                             deductions: Number(total_deductions || 0),
                             net: Number(net_pay || 0),
                             status: 'saved',
-                            updatedAt: serverTimestamp()
+                            updatedAt: window.fb.serverTimestamp()
                         };
 
-                        await setDoc(doc(db, 'payroll_entries', key), payload);
-                        await loadAllFromFirestore();
-                        alert('Payroll record saved successfully!');
+                        const success = await dbHelpers.set('payroll_entries', key, payload);
+                        if (success) {
+                            await loadAllFromFirestore();
+                            showToast('Payroll record saved successfully!', 'success');
+                        }
                     } catch (err) {
                         console.error(err);
-                        alert('Failed to save payroll record.');
+                        showToast('Failed to save payroll record.', 'error');
                     }
                 };
 
@@ -1027,36 +1081,37 @@
                 const submitCashAdvance = async () => {
                     try {
                         if(!newCa.empId || !newCa.amount) return;
-                        const db = getDb();
-                        const { doc, setDoc, updateDoc, serverTimestamp } = fns();
+                        if (!user || fbState !== 'ready') return showToast('Cannot save. Running offline.', 'error');
 
                         const empIdNum = parseInt(newCa.empId);
                         const amountNum = parseFloat(newCa.amount);
                         const caId = `ca_${Date.now()}`;
 
-                        await setDoc(doc(db, 'cash_advances', caId), {
+                        const payload = {
                             id: caId,
                             empId: empIdNum,
                             date: new Date().toISOString().slice(0,10),
                             amount: amountNum,
                             balance: amountNum,
                             reason: newCa.reason || 'Not specified',
-                            createdAt: serverTimestamp()
-                        });
+                            createdAt: window.fb.serverTimestamp()
+                        };
 
-                        const currentEmp = employees.find(emp => emp.id === empIdNum);
-                        if (currentEmp) {
-                            await updateDoc(doc(db, 'employees', String(empIdNum)), {
-                                caBalance: Number(currentEmp.caBalance || 0) + amountNum
-                            });
+                        const success = await dbHelpers.set('cash_advances', caId, payload);
+                        if (success) {
+                            const currentEmp = employees.find(emp => emp.id === empIdNum);
+                            if (currentEmp) {
+                                await dbHelpers.update('employees', empIdNum, {
+                                    caBalance: Number(currentEmp.caBalance || 0) + amountNum
+                                });
+                            }
+                            await loadAllFromFirestore();
+                            showToast('Cash Advance recorded!', 'success');
+                            setNewCa({empId: '', amount: '', reason: ''});
                         }
-
-                        await loadAllFromFirestore();
-                        alert('Cash Advance recorded!');
-                        setNewCa({empId: '', amount: '', reason: ''});
                     } catch (err) {
                         console.error(err);
-                        alert('Failed to record cash advance.');
+                        showToast('Failed to record cash advance.', 'error');
                     }
                 };
 
@@ -1187,31 +1242,28 @@
                     reader.onload = async (event) => {
                         try {
                             const data = JSON.parse(event.target.result);
-                            const db = getDb();
-                            const { doc, setDoc } = fns();
-
-                            if (window.confirm('Do you want to upload this backup into Firestore?')) {
+                            
+                            // To avoid alert() usage
+                            if (user && fbState === 'ready') {
                                 if (data.employees) {
-                                    for (const item of data.employees) {
-                                        await setDoc(doc(db, 'employees', String(item.id)), item);
-                                    }
+                                    for (const item of data.employees) await dbHelpers.set('employees', item.id, item);
                                 }
                                 if (data.attendance) {
                                     for (const item of data.attendance) {
                                         const key = item.id || `${item.empId}_${item.date}`;
-                                        await setDoc(doc(db, 'attendance', key), { ...item, id: key });
+                                        await dbHelpers.set('attendance', key, { ...item, id: key });
                                     }
                                 }
                                 if (data.cashAdvances) {
                                     for (const item of data.cashAdvances) {
                                         const key = item.id || `ca_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
-                                        await setDoc(doc(db, 'cash_advances', String(key)), { ...item, id: key });
+                                        await dbHelpers.set('cash_advances', key, { ...item, id: key });
                                     }
                                 }
                                 if (data.interactivePayrolls) {
                                     for (const item of data.interactivePayrolls) {
                                         const key = item.id;
-                                        await setDoc(doc(db, 'payroll_entries', key), {
+                                        await dbHelpers.set('payroll_entries', key, {
                                             id: key,
                                             employeeId: Number(item.empId),
                                             periodStart: item.startDate,
@@ -1228,11 +1280,13 @@
                                     }
                                 }
                                 await loadAllFromFirestore();
-                                alert('Backup uploaded to Firestore successfully.');
+                                showToast('Backup uploaded to Firestore successfully.', 'success');
+                            } else {
+                                showToast('Cannot import directly to DB while offline.', 'error');
                             }
                         } catch (err) {
                             console.error(err);
-                            alert('Error importing file. Please ensure it is a valid Stonegrill backup JSON file.');
+                            showToast('Error importing file. Invalid backup format.', 'error');
                         }
                     };
                     reader.readAsText(file);
@@ -1287,7 +1341,7 @@
                 const handleAddEmployee = async (e) => {
                     e.preventDefault();
                     try {
-                        if(!newEmpForm.name || !newEmpForm.rate) return alert('Name and Rate are required.');
+                        if(!newEmpForm.name || !newEmpForm.rate) return showToast('Name and Rate are required.', 'error');
                         
                         const newId = employees.length > 0 ? Math.max(...employees.map(e => Number(e.id))) + 1 : 1;
                         const employeeObj = {
@@ -1297,20 +1351,21 @@
                             caBalance: 0
                         };
 
-                        const db = getDb();
-                        const { doc, setDoc } = fns();
-                        await setDoc(doc(db, 'employees', String(newId)), employeeObj);
+                        if (user && fbState === 'ready') {
+                            await dbHelpers.set('employees', newId, employeeObj);
+                            await loadAllFromFirestore();
+                            showToast('New employee added successfully!', 'success');
+                        } else {
+                            showToast('Running Offline. Data not saved.', 'error');
+                        }
 
-                        await loadAllFromFirestore();
                         setShowAddEmp(false);
-                        alert('New employee added successfully!');
-                        
                         setNewEmpForm({
                             name: '', position: '', dept: '', rate: '', contact_number: '', address: '', date_hired: new Date().toISOString().slice(0,10), status: 'Active'
                         });
                     } catch (err) {
                         console.error(err);
-                        alert('Failed to add employee.');
+                        showToast('Failed to add employee.', 'error');
                     }
                 };
 
@@ -1545,8 +1600,8 @@
                 return (
                     <div className="h-screen flex items-center justify-center bg-gray-50">
                         <div className="text-center">
-                            <div className="text-xl font-bold text-gray-800 mb-2">Loading Firestore data...</div>
-                            <div className="text-sm text-gray-500">Please wait</div>
+                            <div className="text-xl font-bold text-gray-800 mb-2">Loading System...</div>
+                            <div className="text-sm text-gray-500">Please wait while data synchronizes</div>
                         </div>
                     </div>
                 );
@@ -1554,6 +1609,8 @@
 
             return (
                 <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden relative">
+                    <Toast message={toastMsg} type={toastType} onClose={() => setToastMsg(null)} />
+                    
                     {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full ${isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-20'} flex-shrink-0`}>
@@ -1583,7 +1640,7 @@
                         </div>
                     </aside>
 
-                    <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
+                    <main className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
                         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
                             <div className="flex items-center">
                                 <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="mr-4 text-gray-500 hover:text-gray-800">
@@ -1591,6 +1648,7 @@
                                 </button>
                                 <h1 className="text-lg font-bold text-gray-800 capitalize">{activeTab.replace('-', ' ')}</h1>
                             </div>
+                            {fbState === 'error' && <div className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-medium">Offline Mode</div>}
                         </header>
 
                         <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-100 custom-scrollbar">
