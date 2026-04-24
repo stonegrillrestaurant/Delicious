@@ -346,8 +346,13 @@
             // (Only triggers if isFullAdmin is true)
 
             const handleProcessLogs = async () => {
+<<<<<<< HEAD
                 if (!user || !isFullAdmin || !rawInput.trim()) return;
                 const { db, appId, setDoc, doc } = window.fb;
+=======
+                if (!user || !isAdmin || !rawInput.trim()) return;
+                const { db, appId, addDoc, collection } = window.fb;
+>>>>>>> parent of e682474 (Update index.html)
                 const lines = rawInput.trim().split('\n');
                 let count = 0;
                 let errCount = 0;
@@ -387,23 +392,35 @@
                         if (!y) y = new Date().getFullYear().toString();
                         const isoDate = `${y}-${(m||'').padStart(2, '0')}-${(d||'').padStart(2, '0')}`;
 
+<<<<<<< HEAD
                         // Prevent Duplicates via Unique Key
                         const uniqueRecordId = `${rawId}_${isoDate}`;
                         const recordRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', uniqueRecordId);
 
                         await setDoc(recordRef, {
+=======
+                        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'attendance'), {
+>>>>>>> parent of e682474 (Update index.html)
                             empId: rawId, 
                             empName: rawName, 
                             date: isoDate, 
                             firstIn: timeRaw, 
                             dayEquivalent: 1, 
                             remarks: 'Normalized'
+<<<<<<< HEAD
                         }, { merge: true }); 
                         
                         count++;
                     }
                     setRawInput('');
                     setToast(`Success: Processed ${count} records. Skipped: ${errCount} lines.`);
+=======
+                        });
+                        count++;
+                    }
+                    setRawInput('');
+                    alert(`Success: Imported ${count} records to the cloud.\nSkipped: ${errCount} unrecognized or header lines.`);
+>>>>>>> parent of e682474 (Update index.html)
                 } catch (err) {
                     console.error("Error parsing logs:", err);
                     setToast("Error parsing logs. Check console.");
