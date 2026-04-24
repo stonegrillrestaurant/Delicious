@@ -254,10 +254,10 @@
             const [selectedMonth, setSelectedMonth] = useState('2026-04');
             const [showAddEmp, setShowAddEmp] = useState(false);
             const [rawInput, setRawInput] = useState('');
-            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '' });
+            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             const [viewProfile, setViewProfile] = useState(null);
             const [reportDates, setReportDates] = useState({ start: '2026-04-01', end: '2026-04-30' });
-
+            
             // Interactive Payslip State
             const [icEmpId, setIcEmpId] = useState('');
             const [icDateStart, setIcDateStart] = useState('2026-04-01');
@@ -516,12 +516,12 @@
                 const emp = employees.find(e => e.id.toString() === newCa.empId.toString());
                 try {
                     await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'cash_advances'), {
-                        empId: newCa.empId, amount: amt, date: new Date().toISOString().slice(0, 10), reason: newCa.reason
+                        empId: newCa.empId, amount: amt, date: newCa.date || new Date().toISOString().slice(0, 10), reason: newCa.reason
                     });
                     await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', newCa.empId), {
                         caBalance: (parseFloat(emp.caBalance) || 0) + amt
                     });
-                    setNewCa({ empId: '', amount: '', reason: '' });
+                    setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
                     alert("Advance issued successfully.");
                 } catch (err) { alert(err.message); }
             };
@@ -881,9 +881,15 @@
                                                     );
                                                 })()}
 
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
-                                                    <input type="number" placeholder="0.00" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
+                                                        <input type="number" placeholder="0.00" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Date</label>
+                                                        <input type="date" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.date} onChange={e => setNewCa({...newCa, date: e.target.value})}/>
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Note</label>
@@ -898,14 +904,33 @@
                                                 <table className="w-full text-sm">
                                                     <thead className="bg-white text-[10px] text-slate-400 uppercase border-b sticky top-0"><tr><th className="p-4 text-left">Date</th><th className="p-4 text-left">Name</th><th className="p-4 text-right">Value</th></tr></thead>
                                                     <tbody className="divide-y divide-gray-50">
-                                                        {cashAdvances.length === 0 ? <tr><td colSpan="3" className="p-16 text-center text-slate-300 italic">No advances on cloud ledger.</td></tr> :
-                                                            cashAdvances.sort((a,b)=>b.date.localeCompare(a.date)).map(ca => (
-                                                            <tr key={ca.id} className="hover:bg-slate-50/50 transition-colors">
-                                                                <td className="p-4 text-slate-400 font-mono text-xs">{ca.date}</td>
-                                                                <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => e.id.toString() === ca.empId.toString())?.name || ca.empId}</td>
-                                                                <td className="p-4 text-right font-black text-red-600 font-mono">₱{formatMoney(ca.amount)}</td>
-                                                            </tr>
-                                                        ))}
+                                                        {(() => {
+                                                            const filteredCAs = newCa.empId 
+                                                                ? cashAdvances.filter(ca => ca.empId.toString() === newCa.empId.toString())
+                                                                : cashAdvances;
+                                                            
+                                                            if (filteredCAs.length === 0) {
+                                                                return <tr><td colSpan="3" className="p-16 text-center text-slate-300 italic">{newCa.empId ? "No advances recorded for this member." : "No advances on cloud ledger."}</td></tr>;
+                                                            }
+                                                            
+                                                            const totalAmount = filteredCAs.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
+
+                                                            return (
+                                                                <React.Fragment>
+                                                                    {filteredCAs.sort((a,b)=>b.date.localeCompare(a.date)).map(ca => (
+                                                                        <tr key={ca.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                            <td className="p-4 text-slate-400 font-mono text-xs">{ca.date}</td>
+                                                                            <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => e.id.toString() === ca.empId.toString())?.name || ca.empId}</td>
+                                                                            <td className="p-4 text-right font-black text-red-600 font-mono">₱{formatMoney(ca.amount)}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                    <tr className="bg-slate-50/80 border-t-2 border-slate-200">
+                                                                        <td colSpan="2" className="p-4 text-right font-black uppercase tracking-widest text-[10px] text-slate-500">Total Advances Listed:</td>
+                                                                        <td className="p-4 text-right font-black text-rose-600 font-mono text-lg">₱{formatMoney(totalAmount)}</td>
+                                                                    </tr>
+                                                                </React.Fragment>
+                                                            );
+                                                        })()}
                                                     </tbody>
                                                 </table>
                                             </div>
