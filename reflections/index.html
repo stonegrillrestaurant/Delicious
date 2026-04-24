@@ -715,29 +715,84 @@ html[data-theme="light"] {
       </div>
     </section>
 
-    <section class="audio-section" aria-label="Reflection audio">
+    <!-- INTRO / LIBRARY NATIVE AUDIO PLAYER -->
+    <section class="audio-section" aria-label="Intro audio">
       <div class="track-list">
 
-        <audio controls preload="metadata" style="width:100%; height:34px;">
+        <audio id="introAudio" controls preload="metadata" style="width:100%; height:34px;">
           <source src="/reflections/noxpage.mp3" type="audio/mpeg">
         </audio>
 
         <div style="display:flex; gap:6px; margin-top:5px;">
-          <a href="/reflections/noxpage.mp3"
-             target="_blank"
-             style="flex:1; text-align:center; text-decoration:none; padding:6px 8px; border-radius:8px; font-size:12px; background:#3b2a22; color:#fff;">
-            Reflection
-          </a>
+          <button type="button"
+                  onclick="setIntroTrack('/reflections/noxpage.mp3')"
+                  style="flex:1; text-align:center; padding:6px 8px; border:0; border-radius:8px; font-size:12px; background:#3b2a22; color:#fff;">
+            Intro
+          </button>
 
-          <a href="/reflections/solitude-library.mp3"
-             target="_blank"
-             style="flex:1; text-align:center; text-decoration:none; padding:6px 8px; border-radius:8px; font-size:12px; background:#ddd2c7; color:#2b211c;">
+          <button type="button"
+                  onclick="setIntroTrack('/reflections/solitude-library.mp3')"
+                  style="flex:1; text-align:center; padding:6px 8px; border:0; border-radius:8px; font-size:12px; background:#ddd2c7; color:#2b211c;">
             Library
-          </a>
+          </button>
         </div>
 
       </div>
     </section>
+
+    <!-- KEEP THIS: GLOBAL PLAYER USED BY REFLECTION / PODCAST BUTTONS -->
+    <section class="audio-bar" id="globalPlayer" aria-label="Global audio player">
+      <div class="audio-shell">
+        <span class="audio-time" id="timeNow">0:00</span>
+        <button type="button" class="audio-play-btn" id="btnPlay" aria-label="Play or pause"></button>
+        <input class="audio-slider" type="range" id="seekBar" min="0" max="1000" value="0" step="1" aria-label="Seek">
+        <span class="audio-time" id="timeDur">0:00</span>
+      </div>
+
+      <audio id="globalAudio" preload="metadata">
+        <source id="globalSource" src="" type="audio/mpeg">
+      </audio>
+    </section>
+
+    <!-- AUDIO SAFETY: PREVENT INTRO AND GLOBAL PLAYER FROM PLAYING TOGETHER -->
+    <script>
+      function setIntroTrack(src) {
+        const introAudio = document.getElementById('introAudio');
+        const globalAudio = document.getElementById('globalAudio');
+
+        if (!introAudio) return;
+
+        if (globalAudio && !globalAudio.paused) {
+          globalAudio.pause();
+        }
+
+        if (introAudio.getAttribute('src') !== src && introAudio.querySelector('source')) {
+          introAudio.querySelector('source').setAttribute('src', src);
+          introAudio.load();
+        }
+
+        introAudio.play();
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        const introAudio = document.getElementById('introAudio');
+        const globalAudio = document.getElementById('globalAudio');
+
+        if (introAudio && globalAudio) {
+          introAudio.addEventListener('play', function () {
+            if (!globalAudio.paused) {
+              globalAudio.pause();
+            }
+          });
+
+          globalAudio.addEventListener('play', function () {
+            if (!introAudio.paused) {
+              introAudio.pause();
+            }
+          });
+        }
+      });
+    </script>
 
     <section class="library-head">
       <div>
@@ -745,7 +800,6 @@ html[data-theme="light"] {
         <p>Listen Reflections and Podcasts.</p>
       </div>
     </section>
-
 <main class="cards-grid" id="cardsGrid"></main>
 <section class="library-head">
     <section class="library-head">
