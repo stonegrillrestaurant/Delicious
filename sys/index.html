@@ -19,15 +19,15 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
-            getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, 
-            FacebookAuthProvider, signInWithPopup 
+            getAuth, signInAnonymously, signInWithCustomToken, signOut, onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, collection, doc, setDoc, addDoc, getDocs, 
             onSnapshot, query, deleteDoc, updateDoc 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
+        // Fallback config
+        const defaultFirebaseConfig = {
             apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
             authDomain: "stone-grill-payroll.firebaseapp.com",
             projectId: "stone-grill-payroll",
@@ -36,15 +36,15 @@
             appId: "1:255528914541:web:d58d9731a29d27fc253964"
         };
 
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : defaultFirebaseConfig;
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = "stone-grill-v1";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : "stone-grill-v1";
 
         window.fb = { 
-            db, auth, appId, signInWithEmailAndPassword, signOut, onAuthStateChanged, 
-            FacebookAuthProvider, signInWithPopup, collection, doc, setDoc, 
-            addDoc, getDocs, onSnapshot, query, deleteDoc, updateDoc 
+            db, auth, appId, signInAnonymously, signInWithCustomToken, signOut, onAuthStateChanged, 
+            collection, doc, setDoc, addDoc, getDocs, onSnapshot, query, deleteDoc, updateDoc 
         };
     </script>
 
@@ -67,6 +67,8 @@
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-down { animation: slideDown 0.3s ease-out forwards; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
@@ -104,93 +106,35 @@
         const AlertCircle = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>;
         const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+        const CheckCircle = (p) => <Icon {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Icon>;
 
-        // --- AUTH SCREENS ---
-        function LoginScreen() {
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
-            const [error, setError] = useState(false);
-            const [loading, setLoading] = useState(false);
-
-            const handleLogin = async (e) => {
-                e.preventDefault();
-                setError(false);
-                setLoading(true);
-                try {
-                    await window.fb.signInWithEmailAndPassword(window.fb.auth, email, password);
-                } catch (err) {
-                    setError(true);
-                    setLoading(false);
-                }
-            };
-
-            const handleFacebookLogin = async () => {
-                setError(false);
-                setLoading(true);
-                try {
-                    const provider = new window.fb.FacebookAuthProvider();
-                    await window.fb.signInWithPopup(window.fb.auth, provider);
-                } catch (err) {
-                    setError(true);
-                    setLoading(false);
-                }
-            };
+        // --- CUSTOM TOAST NOTIFICATION ---
+        function Toast({ message, onClose }) {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 4000);
+                return () => clearTimeout(timer);
+            }, [message, onClose]);
 
             return (
-                <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50 font-sans overflow-y-auto">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up my-auto">
-                        <div className="bg-blue-100 p-4 rounded-full mb-6 text-blue-700"><Lock /></div>
-                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest text-center">System Login</h2>
-                        <p className="text-xs text-slate-400 mb-8 text-center font-bold uppercase tracking-widest leading-relaxed">
-                            Authorized Admin Access Only
-                        </p>
-                        
-                        <form onSubmit={handleLogin} className="w-full space-y-4 mb-6">
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Email</label>
-                                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} 
-                                       className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Password</label>
-                                <input type="password" required value={password} onChange={e => setPassword(e.target.value)} 
-                                       className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800" />
-                            </div>
-                            {error && <p className="text-red-500 text-[10px] font-black uppercase text-center animate-pulse pt-2">Authentication Failed</p>}
-                            <button type="submit" disabled={loading} 
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg disabled:opacity-50 mt-2">
-                                {loading ? 'Validating...' : 'Secure Login'}
-                            </button>
-                        </form>
-
-                        <div className="flex items-center w-full mb-6">
-                            <hr className="flex-1 border-slate-200"/>
-                            <span className="px-3 text-[10px] text-slate-400 font-black uppercase">OR</span>
-                            <hr className="flex-1 border-slate-200"/>
-                        </div>
-                        
-                        <button type="button" onClick={handleFacebookLogin} disabled={loading} 
-                                className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white h-14 rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                            </svg>
-                            Login with Facebook
-                        </button>
+                <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] animate-slide-down">
+                    <div className="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700">
+                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                        <span className="font-bold text-sm tracking-wide">{message}</span>
+                        <button onClick={onClose} className="ml-4 text-slate-400 hover:text-white"><X className="w-4 h-4"/></button>
                     </div>
                 </div>
             );
         }
 
-        // --- ADMIN PIN MODAL ---
+        // --- ADMIN PIN MODAL (Role-Based Access) ---
         function AdminPinModal({ onUnlock, onClose }) {
             const [pin, setPin] = useState('');
             const [error, setError] = useState(false);
             
-            // Edit your PINs here:
+            // EXACTLY TWO ROLES CONFIGURED HERE:
             const allowedPins = { 
-                '1234': 'Main Admin', 
-                '2558': 'Owner', 
-                '8888': 'Shift Lead' 
+                '2558': { name: 'System Admin', level: 'admin' }, 
+                '1234': { name: 'Authorized Viewer', level: 'user' } 
             };
             
             const handlePress = (num) => {
@@ -198,7 +142,7 @@
                     const next = pin + num;
                     setPin(next);
                     if (next.length === 4) {
-                        if (allowedPins[next]) onUnlock(allowedPins[next]);
+                        if (allowedPins[next]) onUnlock(allowedPins[next].name, allowedPins[next].level);
                         else { 
                             setError(true); 
                             setTimeout(() => { setPin(''); setError(false); }, 700); 
@@ -212,8 +156,8 @@
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up relative">
                         <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800"><X/></button>
                         <div className="bg-blue-100 p-4 rounded-full mb-6 text-blue-700"><Unlock /></div>
-                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest">Admin Reveal</h2>
-                        <p className="text-[10px] text-slate-400 mb-10 font-black uppercase tracking-widest">Enter code to view financial data</p>
+                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest">Security Pin</h2>
+                        <p className="text-[10px] text-slate-400 mb-10 font-black uppercase tracking-widest">Enter code to securely access data</p>
                         
                         <div className={`flex space-x-6 mb-12 ${error ? 'animate-bounce text-red-500' : ''}`}>
                             {[...Array(4)].map((_, i) => (
@@ -237,9 +181,15 @@
         function App() {
             const [user, setUser] = useState(null);
             const [isReady, setIsReady] = useState(false);
-            const [isAdmin, setIsAdmin] = useState(false);
+            const [toast, setToast] = useState('');
+            
+            // --- RBAC STATE ---
+            const [accessLevel, setAccessLevel] = useState('staff'); // 'staff', 'user' (viewer), 'admin' (full)
             const [showAdminPin, setShowAdminPin] = useState(false);
             const [currentAdminName, setCurrentAdminName] = useState('');
+            
+            const isPrivileged = accessLevel === 'admin' || accessLevel === 'user'; // Can view sensitive tabs
+            const isFullAdmin = accessLevel === 'admin'; // Can modify data
             
             const [activeTab, setActiveTab] = useState('dashboard');
             const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
@@ -251,29 +201,30 @@
             const [interactivePayrolls, setInteractivePayrolls] = useState([]);
 
             // UI Control States
-            const [selectedMonth, setSelectedMonth] = useState('2026-04');
+            const [selectedMonth, setSelectedMonth] = useState(() => {
+                const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            });
             const [showAddEmp, setShowAddEmp] = useState(false);
             const [rawInput, setRawInput] = useState('');
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             const [viewProfile, setViewProfile] = useState(null);
-            const [reportDates, setReportDates] = useState({ start: '2026-04-01', end: '2026-04-30' });
+            
+            const [reportDates, setReportDates] = useState({ 
+                start: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`, 
+                end: new Date().toISOString().slice(0, 10) 
+            });
             
             // Interactive Payslip State
             const [icEmpId, setIcEmpId] = useState('');
-            const [icDateStart, setIcDateStart] = useState('2026-04-01');
-            const [icDateEnd, setIcDateEnd] = useState('2026-04-30');
+            const [icDateStart, setIcDateStart] = useState(reportDates.start);
+            const [icDateEnd, setIcDateEnd] = useState(reportDates.end);
             const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
 
             // Dashboard Filter Search State
             const [dashSearchEmpId, setDashSearchEmpId] = useState('');
-            const [dashSearchStart, setDashSearchStart] = useState(() => {
-                const d = new Date();
-                return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
-            });
-            const [dashSearchEnd, setDashSearchEnd] = useState(() => {
-                const d = new Date();
-                return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
-            });
+            const [dashSearchStart, setDashSearchStart] = useState(reportDates.start);
+            const [dashSearchEnd, setDashSearchEnd] = useState(reportDates.end);
 
             // Migration Tool state
             const [oldUidInput, setOldUidInput] = useState('');
@@ -286,13 +237,26 @@
             });
             const [isEditing, setIsEditing] = useState(false);
 
-            // Firebase Initialization Listener
+            // Transparent Auto-Login Listener (No Login Screen)
             useEffect(() => {
+                const initAuth = async () => {
+                    try {
+                        if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                            await window.fb.signInWithCustomToken(window.fb.auth, window.__initial_auth_token);
+                        } else {
+                            await window.fb.signInAnonymously(window.fb.auth);
+                        }
+                    } catch (e) {
+                        console.error("Auto-login failed:", e);
+                    }
+                };
+                initAuth();
+
                 const unsub = window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
                     setUser(u); 
                     setIsReady(true); 
                     if(!u) { 
-                        setIsAdmin(false); 
+                        setAccessLevel('staff'); 
                         setCurrentAdminName(''); 
                     }
                 });
@@ -302,13 +266,15 @@
             // Data Sync Listener
             useEffect(() => {
                 if (!user) return;
-                const path = (n) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, n);
                 
-                const uEmps = window.fb.onSnapshot(path('employees'), s => setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const uAtt = window.fb.onSnapshot(path('attendance'), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const uCA = window.fb.onSnapshot(path('cash_advances'), s => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const uLogs = window.fb.onSnapshot(path('audit_logs'), s => setAuditLogs(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const uIP = window.fb.onSnapshot(path('payroll_entries'), s => setInteractivePayrolls(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const path = (n) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', n);
+                const errHandler = (err) => console.error("Firestore sync error:", err);
+
+                const uEmps = window.fb.onSnapshot(path('employees'), s => setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() }))), errHandler);
+                const uAtt = window.fb.onSnapshot(path('attendance'), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))), errHandler);
+                const uCA = window.fb.onSnapshot(path('cash_advances'), s => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))), errHandler);
+                const uLogs = window.fb.onSnapshot(path('audit_logs'), s => setAuditLogs(s.docs.map(d => ({ id: d.id, ...d.data() }))), errHandler);
+                const uIP = window.fb.onSnapshot(path('payroll_entries'), s => setInteractivePayrolls(s.docs.map(d => ({ id: d.id, ...d.data() }))), errHandler);
                 
                 return () => { uEmps(); uAtt(); uCA(); uLogs(); uIP(); };
             }, [user]);
@@ -323,7 +289,7 @@
 
             // Payroll Calculation Logic
             const payrollSummary = useMemo(() => {
-                const [year, month] = selectedMonth.split('-');
+                const [year, month] = (selectedMonth || '2026-04').split('-');
                 const today = new Date();
                 let daysToCount = new Date(year, month, 0).getDate();
                 
@@ -335,17 +301,18 @@
                 }
 
                 return employees.map(emp => {
-                    const empAtt = attendance.filter(a => a.empId.toString() === emp.id.toString() && a.date.startsWith(selectedMonth));
+                    const empAtt = attendance.filter(a => String(a.empId) === String(emp.id) && (a.date || '').startsWith(selectedMonth));
                     const days = empAtt.reduce((sum, r) => sum + (parseFloat(r.dayEquivalent) || 0), 0);
                     const absent = Math.max(0, daysToCount - days);
                     
-                    const gross = days * (parseFloat(emp.rate) || 0);
+                    const activeRate = parseFloat(emp.dailyRate) || parseFloat(emp.rate) || 0;
+                    const gross = days * activeRate;
                     const sss = gross > 0 ? (parseFloat(emp.sssRate) || 0) : 0;
                     const caBalance = parseFloat(emp.caBalance) || 0;
                     const caDed = (caBalance > 0 && gross > 0) ? Math.min(caBalance, gross * 0.2) : 0;
                     const net = gross - sss - caDed;
                     
-                    return { ...emp, days, absent, gross, caDed, net };
+                    return { ...emp, days, absent, gross, caDed, net, activeRate };
                 });
             }, [employees, attendance, selectedMonth]);
 
@@ -360,19 +327,21 @@
             let searchedEmp = null;
             let searchedDays = 0, searchedGross = 0, searchedCaDed = 0, searchedMisc = 0;
             if (dashSearchEmpId) {
-                searchedEmp = employees.find(e => e.id.toString() === dashSearchEmpId);
+                searchedEmp = employees.find(e => String(e.id) === String(dashSearchEmpId));
                 if (searchedEmp && dashSearchStart && dashSearchEnd) {
-                    const att = attendance.filter(a => a.empId.toString() === searchedEmp.id.toString() && a.date >= dashSearchStart && a.date <= dashSearchEnd);
+                    const att = attendance.filter(a => String(a.empId) === String(searchedEmp.id) && (a.date || '') >= dashSearchStart && (a.date || '') <= dashSearchEnd);
                     searchedDays = att.reduce((sum, r) => sum + (parseFloat(r.dayEquivalent) || 0), 0);
-                    searchedGross = searchedDays * (parseFloat(searchedEmp.rate) || 0);
+                    searchedGross = searchedDays * (parseFloat(searchedEmp.dailyRate || searchedEmp.rate) || 0);
                     searchedCaDed = (parseFloat(searchedEmp.caBalance) > 0 && searchedGross > 0) ? Math.min(parseFloat(searchedEmp.caBalance), searchedGross * 0.2) : 0;
                     searchedMisc = searchedGross > 0 ? (parseFloat(searchedEmp.sssRate) || 0) + 200 : 0; 
                 }
             }
 
-            // SMART REGEX PARSER for Biometric Logs
+            // --- SECURE ACTION HANDLERS ---
+            // (Only triggers if isFullAdmin is true)
+
             const handleProcessLogs = async () => {
-                if (!user || !isAdmin || !rawInput.trim()) return;
+                if (!user || !isFullAdmin || !rawInput.trim()) return;
                 const { db, appId, setDoc, doc } = window.fb;
                 const lines = rawInput.trim().split('\n');
                 let count = 0;
@@ -381,41 +350,41 @@
                 try {
                     for (let line of lines) {
                         line = line.trim();
-                        // Skip completely empty lines or Header labels
-                        if (!line || line.toUpperCase().startsWith('ID') || line.toUpperCase().startsWith('NO')) continue;
+                        // Skip empty lines or headers
+                        if (!line || (line.toUpperCase() || '').startsWith('ID') || (line.toUpperCase() || '').startsWith('NO')) continue;
 
-                        // 1. Find Date (e.g., 4/15/2026, 04-15-26)
+                        // 1. Smart Date Match
                         const dateMatch = line.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/);
                         if (!dateMatch) { errCount++; continue; }
                         
                         const dateStr = dateMatch[1];
                         const dateIndex = line.indexOf(dateStr);
                         
-                        // 2. Find Biometric ID (the first number in the string)
+                        // 2. Smart ID Match
                         const idMatch = line.match(/^(\d+)/);
                         if (!idMatch) { errCount++; continue; }
                         const rawId = idMatch[1];
                         
-                        // 3. Find Name (It sits between the ID and the Date)
+                        // 3. Smart Name Extractor
                         const idEnd = idMatch[0].length;
                         let rawName = line.substring(idEnd, dateIndex).trim();
-                        // Strip out extra columns if there are random tabs or massive spaces
                         rawName = rawName.split(/\t| {2,}/)[0].trim();
                         if (!rawName) rawName = 'Unknown Staff';
                         
-                        // 4. Find Time (It sits after the Date)
+                        // 4. Smart Time Extractor
                         const afterDate = line.substring(dateIndex + dateStr.length).trim();
                         const timeMatch = afterDate.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)/i);
                         let timeRaw = timeMatch ? timeMatch[1] : '08:00';
                         
-                        // 5. Standardize Date to YYYY-MM-DD for Database
+                        // 5. Standardize Date
                         let [m, d, y] = dateStr.split(/[\/-]/);
-                        if (y.length === 2) y = '20' + y;
-                        const isoDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                        if (y && y.length === 2) y = '20' + y;
+                        if (!y) y = new Date().getFullYear().toString();
+                        const isoDate = `${y}-${(m||'').padStart(2, '0')}-${(d||'').padStart(2, '0')}`;
 
-                        // Prevent Duplicates: Create a unique ID using employee ID and Date
+                        // Prevent Duplicates via Unique Key
                         const uniqueRecordId = `${rawId}_${isoDate}`;
-                        const recordRef = doc(db, 'artifacts', appId, 'users', user.uid, 'attendance', uniqueRecordId);
+                        const recordRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', uniqueRecordId);
 
                         await setDoc(recordRef, {
                             empId: rawId, 
@@ -424,58 +393,65 @@
                             firstIn: timeRaw, 
                             dayEquivalent: 1, 
                             remarks: 'Normalized'
-                        }, { merge: true }); // merge true so it overwrites safely instead of duplicating
+                        }, { merge: true }); 
                         
                         count++;
                     }
                     setRawInput('');
-                    alert(`Success: Processed ${count} records.\n(Existing records for the same day were updated to prevent duplicates).\nSkipped: ${errCount} lines.`);
+                    setToast(`Success: Processed ${count} records. Skipped: ${errCount} lines.`);
                 } catch (err) {
-                    alert("Error parsing logs: " + err.message);
+                    console.error("Error parsing logs:", err);
+                    setToast("Error parsing logs. Check console.");
                 }
             };
 
-            // Migration Logic (Pull from Guest Account)
             const handleMergeData = async () => {
-                if (!oldUidInput.trim()) return alert("Please enter the Legacy Guest ID.");
+                if (!isFullAdmin || !oldUidInput.trim()) {
+                    setToast("Please enter the Legacy Guest ID.");
+                    return;
+                }
                 setIsMigrating(true);
                 try {
                     const { db, appId, getDocs, collection, setDoc, doc } = window.fb;
-                    const collections = ['employees', 'attendance', 'cash_advances'];
+                    const collections = ['employees', 'attendance', 'cash_advances', 'audit_logs', 'payroll_entries'];
                     
                     for (const collName of collections) {
                         const legacyRef = collection(db, 'artifacts', appId, 'users', oldUidInput, collName);
                         const snap = await getDocs(legacyRef);
                         
                         for (const d of snap.docs) {
-                            const newDocRef = doc(db, 'artifacts', appId, 'users', user.uid, collName, d.id);
+                            const newDocRef = doc(db, 'artifacts', appId, 'public', 'data', collName, d.id);
                             await setDoc(newDocRef, d.data(), { merge: true });
                         }
                     }
-                    alert("Data merged successfully! Check your dashboard.");
+                    setToast("Data merged successfully! Check your dashboard.");
                     setOldUidInput('');
                 } catch (err) {
-                    alert("Migration Error: Folder not found or access denied.");
+                    setToast("Migration Error: Folder not found or access denied.");
                 } finally {
                     setIsMigrating(false);
                 }
             };
 
-            const handleLogout = () => window.fb.signOut(window.fb.auth);
+            const handleLogout = () => {
+                setAccessLevel('staff');
+                setCurrentAdminName('');
+                setActiveTab('dashboard');
+            };
             
             const logAccess = async (n) => {
-                await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'audit_logs'), { action: 'Admin Unlock', adminName: n, timestamp: Date.now() });
+                await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'audit_logs'), { action: 'Security Area Unlocked', adminName: n, timestamp: Date.now() });
             };
 
             const handleSaveStaff = async (e) => {
                 e.preventDefault();
-                if (!user || !window.fb || !isAdmin) return;
+                if (!user || !window.fb || !isFullAdmin) return;
                 const { db, appId, doc, setDoc, updateDoc } = window.fb;
                 const bId = newEmpForm.biometricId.trim();
-                if (!bId) return alert("Biometric ID is required.");
+                if (!bId) return;
                 
                 try {
-                    const newDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'employees', bId);
+                    const newDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'employees', bId);
                     
                     if (isEditing) {
                         await updateDoc(newDocRef, {
@@ -489,7 +465,7 @@
                             sssRate: parseFloat(newEmpForm.sssRate) || 0,
                             status: newEmpForm.status || 'active'
                         });
-                        alert("Profile successfully updated.");
+                        setToast("Profile successfully updated.");
                     } else {
                         await setDoc(newDocRef, {
                             employeeId: bId,
@@ -505,46 +481,46 @@
                             status: newEmpForm.status || 'active',
                             createdAt: Date.now()
                         });
-                        alert("New staff member saved.");
+                        setToast("New staff member saved.");
                     }
 
                     setShowAddEmp(false);
                     setIsEditing(false);
                     setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', status: 'active' });
-                } catch (err) { alert("Error: " + err.message); }
+                } catch (err) { setToast("Error updating staff profile."); }
             };
 
             const handleIssueCA = async () => {
-                if (!user || !isAdmin || !newCa.empId || !newCa.amount) return;
+                if (!user || !isFullAdmin || !newCa.empId || !newCa.amount) return;
                 const { db, appId, addDoc, doc, updateDoc, collection } = window.fb;
                 const amt = parseFloat(newCa.amount);
-                const emp = employees.find(e => e.id.toString() === newCa.empId.toString());
+                const emp = employees.find(e => String(e.id) === String(newCa.empId));
                 try {
-                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'cash_advances'), {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cash_advances'), {
                         empId: newCa.empId, amount: amt, date: newCa.date || new Date().toISOString().slice(0, 10), reason: newCa.reason
                     });
-                    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', newCa.empId), {
-                        caBalance: (parseFloat(emp.caBalance) || 0) + amt
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', newCa.empId), {
+                        caBalance: (parseFloat(emp?.caBalance) || 0) + amt
                     });
                     setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
-                    alert("Advance issued successfully.");
-                } catch (err) { alert(err.message); }
+                    setToast("Advance issued successfully.");
+                } catch (err) { setToast("Error issuing advance."); }
             };
 
             const handleSavePayslip = async () => {
-                if (!user || !isAdmin || !icEmpId) return;
+                if (!user || !isFullAdmin || !icEmpId) return;
                 const { db, appId, doc, setDoc } = window.fb;
                 const key = `${icEmpId}_${icDateStart}_${icDateEnd}`;
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'payroll_entries', key), {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payroll_entries', key), {
                         recordKey: key, empId: icEmpId, startDate: icDateStart, endDate: icDateEnd, data: icForm, updatedAt: Date.now()
                     });
-                    alert("Payslip saved to cloud database.");
-                } catch (err) { alert(err.message); }
+                    setToast("Payslip saved to cloud database.");
+                } catch (err) { setToast("Error saving payslip."); }
             };
 
             const handleExportBackup = () => {
-                if(!isAdmin) return;
+                if(!isFullAdmin) return;
                 const data = { employees, attendance, cashAdvances, interactivePayrolls, auditLogs };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -555,13 +531,13 @@
             };
 
             const handleEditClick = () => {
-                if(!isAdmin) return;
+                if(!isFullAdmin) return;
                 setNewEmpForm({
                     biometricId: viewProfile.id,
                     firstName: viewProfile.firstName || '',
                     lastName: viewProfile.lastName || '',
                     position: viewProfile.position || '',
-                    dailyRate: viewProfile.rate || '',
+                    dailyRate: viewProfile.dailyRate || viewProfile.rate || '',
                     contactNumber: viewProfile.contactNumber || '',
                     sssNumber: viewProfile.sssNumber || '',
                     sssRate: viewProfile.sssRate || '',
@@ -572,17 +548,24 @@
                 setShowAddEmp(true);
             };
 
-            if (!isReady) return <div className="h-screen bg-blue-900 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />Accessing Database...</div>;
-            if (!user) return <LoginScreen />;
+            // Initialization Loading Screen
+            if (!isReady) return <div className="h-screen bg-blue-900 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />Accessing Secure Cloud...</div>;
 
             const formatMoney = (v) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
             return (
                 <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden relative">
+                    {toast && <Toast message={toast} onClose={() => setToast('')} />}
+
                     {showAdminPin && (
                         <AdminPinModal 
                             onClose={() => setShowAdminPin(false)} 
-                            onUnlock={(n) => { setIsAdmin(true); setCurrentAdminName(n); setShowAdminPin(false); logAccess(n); }} 
+                            onUnlock={(name, level) => { 
+                                setAccessLevel(level); 
+                                setCurrentAdminName(name); 
+                                setShowAdminPin(false); 
+                                logAccess(name); 
+                            }} 
                         />
                     )}
                     
@@ -601,30 +584,33 @@
                             <NavItem icon={<LayoutDashboard/>} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} open={isSidebarOpen} />
                             <NavItem icon={<Users/>} label="Staff Directory" active={activeTab === 'employees'} onClick={() => setActiveTab('employees')} open={isSidebarOpen} />
                             <NavItem icon={<Clock/>} label="Attendance" active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} open={isSidebarOpen} />
-                            {isAdmin && (
+                            
+                            {/* Render Sensitive Tabs if unlocked by PIN (Viewer OR Admin) */}
+                            {isPrivileged && (
                                 <>
                                     <NavItem icon={<FileText />} label="Cloud Payslips" active={activeTab === 'interactive-card'} onClick={() => setActiveTab('interactive-card')} open={isSidebarOpen} />
                                     <NavItem icon={<Banknote />} label="Cash Advance" active={activeTab === 'ca'} onClick={() => setActiveTab('ca')} open={isSidebarOpen} />
                                     <NavItem icon={<Calculator/>} label="Payroll Sheets" active={activeTab === 'payroll'} onClick={() => setActiveTab('payroll')} open={isSidebarOpen} />
                                     <NavItem icon={<CalendarDays />} label="Yearly Summary" active={activeTab === 'summary'} onClick={() => setActiveTab('summary')} open={isSidebarOpen} />
                                     <NavItem icon={<FileSpreadsheet />} label="Reports" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} open={isSidebarOpen} />
-                                    <NavItem icon={<Settings/>} label="System Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} open={isSidebarOpen} />
                                 </>
                             )}
+                            {/* Settings is fully restricted to Full Admins only */}
+                            {isFullAdmin && (
+                                <NavItem icon={<Settings/>} label="System Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} open={isSidebarOpen} />
+                            )}
                         </nav>
+
                         <div className="p-4 border-t border-blue-800 space-y-2">
-                            {isAdmin ? (
-                                <button onClick={() => { setIsAdmin(false); setActiveTab('dashboard'); }} className="w-full flex items-center px-6 py-4 text-emerald-300 hover:bg-emerald-900/50 rounded-xl transition-all">
+                            {isPrivileged ? (
+                                <button onClick={handleLogout} className="w-full flex items-center px-6 py-4 text-emerald-300 hover:bg-emerald-900/50 rounded-xl transition-all">
                                     <Lock/><span className="ml-4 text-[10px] font-black uppercase tracking-widest">{isSidebarOpen ? 'Lock System' : ''}</span>
                                 </button>
                             ) : (
                                 <button onClick={() => setShowAdminPin(true)} className="w-full flex items-center px-6 py-4 text-amber-300 hover:bg-amber-900/50 rounded-xl transition-all">
-                                    <Unlock/><span className="ml-4 text-[10px] font-black uppercase tracking-widest">{isSidebarOpen ? 'Admin Login' : ''}</span>
+                                    <Unlock/><span className="ml-4 text-[10px] font-black uppercase tracking-widest">{isSidebarOpen ? 'Security Unlock' : ''}</span>
                                 </button>
                             )}
-                            <button onClick={handleLogout} className="w-full flex items-center px-6 py-4 text-rose-300 hover:bg-rose-900/50 rounded-xl transition-all">
-                                <LogOut/><span className="ml-4 text-[10px] font-black uppercase tracking-widest">{isSidebarOpen ? 'Sign Out' : ''}</span>
-                            </button>
                         </div>
                     </aside>
 
@@ -632,8 +618,8 @@
                         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
                             <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-blue-900 transition-colors"><Menu/></button>
                             <div className="flex items-center gap-4">
-                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${isAdmin ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-stone-50 text-stone-500 border-stone-200'}`}>
-                                    {isAdmin ? `Manager: ${currentAdminName}` : 'Staff Mode (Locked)'}
+                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${isFullAdmin ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : isPrivileged ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-stone-50 text-stone-500 border-stone-200'}`}>
+                                    {isFullAdmin ? `Admin: ${currentAdminName}` : isPrivileged ? `User (View Only): ${currentAdminName}` : 'Staff Mode (Locked)'}
                                 </span>
                                 <h1 className="text-sm font-black uppercase tracking-widest hidden md:block">{activeTab.replace('-', ' ')}</h1>
                             </div>
@@ -642,12 +628,13 @@
                         <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar bg-slate-50">
                             <div className="max-w-6xl mx-auto space-y-6 fade-in">
                                 
+                                {/* DASHBOARD */}
                                 {activeTab === 'dashboard' && (
                                     <>
-                                        <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-2'} gap-6`}>
+                                        <div className={`grid grid-cols-1 ${isPrivileged ? 'md:grid-cols-4' : 'md:grid-cols-2'} gap-6`}>
                                             <StatCard title="Active Staff" value={stats.count} icon={<Users />} color="bg-blue-50 text-blue-700" />
                                             <StatCard title="Clocked In Today" value={stats.present} icon={<Clock />} color="bg-emerald-50 text-emerald-700" />
-                                            {isAdmin && (
+                                            {isPrivileged && (
                                                 <>
                                                     <StatCard title="Total CA" value={`₱${formatMoney(stats.totalCA)}`} icon={<Banknote />} color="bg-amber-50 text-amber-700" />
                                                     <StatCard title="Payroll Alerts" value={stats.alerts} icon={<AlertCircle />} color="bg-rose-50 text-rose-700" />
@@ -655,7 +642,7 @@
                                             )}
                                         </div>
 
-                                        {isAdmin && (
+                                        {isPrivileged && (
                                             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mt-6 animate-slide-up">
                                                 <h3 className="font-black text-blue-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                                                     <Search className="w-5 h-5 text-blue-500"/> Employee Quick Lookup
@@ -696,18 +683,17 @@
                                     </>
                                 )}
 
+                                {/* STAFF DIRECTORY */}
                                 {activeTab === 'employees' && (
                                     <div className="bg-white rounded-3xl border shadow-sm overflow-hidden animate-slide-up">
                                         <div className="p-6 border-b flex flex-wrap justify-between items-center bg-gray-50/50 gap-4">
                                             <h2 className="font-black uppercase tracking-tighter">Stone Grill Staff Directory</h2>
                                             <div className="flex items-center gap-4">
                                                 <select className="border rounded-xl px-4 py-2 text-xs bg-white text-blue-900 font-black outline-none shadow-sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
-                                                    <option value="2026-04">April 2026</option>
-                                                    <option value="2026-03">March 2026</option>
-                                                    <option value="2026-02">February 2026</option>
-                                                    <option value="2026-01">January 2026</option>
+                                                    <option value={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`}>Current Month</option>
+                                                    <option value={`${new Date().getFullYear()}-${String(new Date().getMonth()).padStart(2, '0')}`}>Previous Month</option>
                                                 </select>
-                                                {isAdmin && (
+                                                {isFullAdmin && (
                                                     <button onClick={() => { setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', status: 'active' }); setShowAddEmp(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95">+ NEW ONBOARD</button>
                                                 )}
                                             </div>
@@ -721,21 +707,21 @@
                                                         <th className="p-5 text-center">Present</th>
                                                         <th className="p-5 text-center">Absent</th>
                                                         <th className="p-5">Position</th>
-                                                        {isAdmin && <th className="p-5 text-right">Daily Salary</th>}
+                                                        {isPrivileged && <th className="p-5 text-right">Daily Salary</th>}
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-50">
                                                     {payrollSummary.length === 0 ? (
-                                                        <tr><td colSpan={isAdmin ? "6" : "5"} className="p-20 text-center text-stone-300 italic">Database folder is empty. Use migration tool if you had data before.</td></tr>
+                                                        <tr><td colSpan={isPrivileged ? "6" : "5"} className="p-20 text-center text-stone-300 italic">Database folder is empty. Use migration tool if you had data before.</td></tr>
                                                     ) : (
                                                         payrollSummary.map(e => (
-                                                            <tr key={e.id} className={`border-b transition-colors group ${isAdmin ? 'hover:bg-blue-50/50 cursor-pointer' : 'hover:bg-stone-50'}`} onClick={() => isAdmin && setViewProfile(e)}>
+                                                            <tr key={e.id} className={`border-b transition-colors group ${isPrivileged ? 'hover:bg-blue-50/50 cursor-pointer' : 'hover:bg-stone-50'}`} onClick={() => isPrivileged && setViewProfile(e)}>
                                                                 <td className="p-5 font-mono font-bold text-blue-600">#{e.id}</td>
                                                                 <td className="p-5 font-black uppercase group-hover:text-blue-900 transition-colors">{e.name}</td>
                                                                 <td className="p-5 text-center font-black text-emerald-600 font-mono text-lg">{e.days}</td>
                                                                 <td className="p-5 text-center font-black text-rose-600 font-mono text-lg">{e.absent}</td>
                                                                 <td className="p-5 text-slate-400 font-medium uppercase text-xs">{e.position || 'Staff Member'}</td>
-                                                                {isAdmin && <td className="p-5 text-right font-black text-slate-700 font-mono">₱{formatMoney(e.rate)}</td>}
+                                                                {isPrivileged && <td className="p-5 text-right font-black text-slate-700 font-mono">₱{formatMoney(e.activeRate)}</td>}
                                                             </tr>
                                                         ))
                                                     )}
@@ -745,10 +731,11 @@
                                     </div>
                                 )}
 
+                                {/* ATTENDANCE */}
                                 {activeTab === 'attendance' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full min-h-0">
-                                        {/* ADMIN ONLY: IMPORT LOGS */}
-                                        {isAdmin && (
+                                        
+                                        {isFullAdmin && (
                                             <div className="bg-white p-8 rounded-3xl border shadow-xl animate-slide-up">
                                                 <h3 className="font-black text-blue-900 uppercase tracking-widest mb-2">Import Machine Logs</h3>
                                                 <p className="text-xs text-slate-400 mb-6 font-medium">Paste the raw data straight from the Biometric device output.</p>
@@ -762,7 +749,7 @@
                                             </div>
                                         )}
 
-                                        <div className={`bg-white rounded-3xl border overflow-hidden flex flex-col shadow-xl ${!isAdmin ? 'md:col-span-2' : ''}`}>
+                                        <div className={`bg-white rounded-3xl border overflow-hidden flex flex-col shadow-xl ${!isFullAdmin ? 'md:col-span-2' : ''}`}>
                                             <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
                                                 <span className="font-black text-blue-900 uppercase tracking-widest text-xs">Live Attendance Feed</span>
                                             </div>
@@ -772,10 +759,10 @@
                                                         <tr><th className="p-4">Date</th><th className="p-4">Staff Member</th><th className="p-4 text-right">Time In</th></tr>
                                                     </thead>
                                                     <tbody>
-                                                        {attendance.sort((a,b)=>b.date.localeCompare(a.date)).slice(0, 100).map((a, i) => (
+                                                        {[...attendance].sort((a,b)=>(b.date || '').localeCompare(a.date || '')).slice(0, 100).map((a, i) => (
                                                             <tr key={i} className="border-b hover:bg-slate-50 transition-colors">
                                                                 <td className="p-4 font-mono text-slate-400">{a.date}</td>
-                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>e.id.toString()===a.empId.toString())?.name || a.empName || a.empId}</td>
+                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>String(e.id)===String(a.empId))?.name || a.empName || a.empId}</td>
                                                                 <td className="p-4 text-right text-blue-600 font-black font-mono">{a.firstIn}</td>
                                                             </tr>
                                                         ))}
@@ -786,8 +773,8 @@
                                     </div>
                                 )}
 
-                                {/* PROTECTED VIEWS BELOW */}
-                                {isAdmin && activeTab === 'interactive-card' && (
+                                {/* PAYSLIP BUILDER */}
+                                {isPrivileged && activeTab === 'interactive-card' && (
                                     <div className="flex flex-col lg:flex-row gap-8">
                                         <div className="w-full lg:w-1/3 bg-white p-8 rounded-3xl border border-gray-100 shadow-xl space-y-6">
                                             <h3 className="font-black text-blue-900 uppercase tracking-widest border-b pb-4">Payslip Builder</h3>
@@ -810,15 +797,22 @@
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">CA Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-red-600" value={icForm.cash_advance} onChange={e => setIcForm({...icForm, cash_advance: parseFloat(e.target.value) || 0})}/></div>
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Misc Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-red-600" value={icForm.sss} onChange={e => setIcForm({...icForm, sss: parseFloat(e.target.value) || 0})}/></div>
                                             </div>
-                                            <button onClick={handleSavePayslip} className="w-full bg-blue-700 text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-blue-800 transition-all tracking-widest text-xs">Save to Cloud Archive</button>
+                                            
+                                            {isFullAdmin ? (
+                                                <button onClick={handleSavePayslip} className="w-full bg-blue-700 text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-blue-800 transition-all tracking-widest text-xs">Save to Cloud Archive</button>
+                                            ) : (
+                                                <div className="w-full bg-slate-100 text-slate-400 py-4 rounded-2xl font-black uppercase text-center text-xs tracking-widest cursor-not-allowed">View-Only Mode</div>
+                                            )}
                                         </div>
+
+                                        {/* Card Render preview Area */}
                                         <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
                                             {icEmpId ? (
                                                 <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative rounded-sm" id="interactive-print-section">
                                                     <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYROLL</div></div>
-                                                    <h2 className="text-2xl font-black border-b-4 border-red-500 mb-2 uppercase tracking-tighter leading-none pb-2">{employees.find(e => e.id.toString() === icEmpId.toString())?.name}</h2>
+                                                    <h2 className="text-2xl font-black border-b-4 border-red-500 mb-2 uppercase tracking-tighter leading-none pb-2">{employees.find(e => String(e.id) === String(icEmpId))?.name}</h2>
                                                     <div className="flex justify-between items-end mb-8 text-sm font-bold text-slate-500">
-                                                        <span className="uppercase tracking-widest">{employees.find(e => e.id.toString() === icEmpId.toString())?.position}</span>
+                                                        <span className="uppercase tracking-widest">{employees.find(e => String(e.id) === String(icEmpId))?.position}</span>
                                                         <span className="text-slate-900 font-black text-xl">DAYS {icForm.days_worked}</span>
                                                     </div>
                                                     <div className="flex text-center mb-2 font-black text-[10px] tracking-widest">
@@ -827,7 +821,7 @@
                                                     </div>
                                                     <div className="flex h-36 border-b border-slate-100">
                                                         <div className="flex-1 p-3 text-xs space-y-2 border-r border-slate-100 font-mono">
-                                                            <div className="flex justify-between opacity-60"><span>Basic:</span><span>₱{formatMoney(icForm.days_worked * (parseFloat(employees.find(e => e.id.toString() === icEmpId.toString())?.rate) || 0))}</span></div>
+                                                            <div className="flex justify-between opacity-60"><span>Basic:</span><span>₱{formatMoney(icForm.days_worked * (parseFloat(employees.find(e => String(e.id) === String(icEmpId))?.dailyRate || employees.find(e => String(e.id) === String(icEmpId))?.rate) || 0))}</span></div>
                                                             <div className="flex justify-between font-black text-emerald-600 italic"><span>Bonus:</span><span>{icForm.bonus > 0 ? formatMoney(icForm.bonus) : '--'}</span></div>
                                                         </div>
                                                         <div className="flex-1 p-3 text-xs space-y-2 font-mono text-rose-600 font-bold">
@@ -837,7 +831,7 @@
                                                     </div>
                                                     <div className="flex justify-between items-center mt-8">
                                                         <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">TOTAL NET</span>
-                                                        <span className="text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter">₱{formatMoney((icForm.days_worked * (parseFloat(employees.find(e => e.id.toString() === icEmpId.toString())?.rate) || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss))}</span>
+                                                        <span className="text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter">₱{formatMoney((icForm.days_worked * (parseFloat(employees.find(e => String(e.id) === String(icEmpId))?.dailyRate || employees.find(e => String(e.id) === String(icEmpId))?.rate) || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss))}</span>
                                                     </div>
                                                     <button onClick={() => window.print()} className="mt-10 w-full bg-slate-800 hover:bg-black text-white py-3 rounded-full font-black uppercase tracking-widest text-[10px] print-hidden flex items-center justify-center gap-3 transition-all"><Printer className="w-4 h-4"/> Print Card</button>
                                                 </div>
@@ -846,72 +840,80 @@
                                     </div>
                                 )}
 
-                                {isAdmin && activeTab === 'ca' && (
+                                {/* CASH ADVANCE */}
+                                {isPrivileged && activeTab === 'ca' && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl space-y-6">
-                                            <h2 className="font-black text-blue-900 uppercase tracking-widest flex items-center gap-2"><Banknote className="text-amber-500"/> Issue Advance</h2>
-                                            
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Staff Member</label>
-                                                    <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.empId} onChange={e => setNewCa({...newCa, empId: e.target.value})}>
-                                                        <option value="">-- Choose Member --</option>
-                                                        {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                                    </select>
-                                                </div>
+                                        
+                                        {/* CA Form (Admin Only) */}
+                                        {isFullAdmin && (
+                                            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl space-y-6">
+                                                <h2 className="font-black text-blue-900 uppercase tracking-widest flex items-center gap-2"><Banknote className="text-amber-500"/> Issue Advance</h2>
+                                                
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Staff Member</label>
+                                                        <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.empId} onChange={e => setNewCa({...newCa, empId: e.target.value})}>
+                                                            <option value="">-- Choose Member --</option>
+                                                            {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                                                        </select>
+                                                    </div>
 
-                                                {/* DYNAMIC RECENT ADVANCES & BALANCE */}
-                                                {newCa.empId && (() => {
-                                                    const caEmp = employees.find(e => e.id.toString() === newCa.empId.toString());
-                                                    if (!caEmp) return null;
-                                                    const recentCAs = cashAdvances.filter(ca => ca.empId.toString() === newCa.empId.toString()).sort((a,b) => b.date.localeCompare(a.date)).slice(0,3);
-                                                    return (
-                                                        <div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 mb-4 animate-slide-up">
-                                                            <div className="flex justify-between items-center mb-3">
-                                                                <span className="text-[10px] font-black text-rose-800/60 uppercase tracking-widest">Current Balance</span>
-                                                                <span className="text-xl font-black text-rose-600 font-mono">₱{formatMoney(caEmp.caBalance)}</span>
-                                                            </div>
-                                                            {recentCAs.length > 0 && (
-                                                                <div className="space-y-2 mt-4 pt-3 border-t border-rose-100/60">
-                                                                    <p className="text-[9px] font-black text-rose-800/40 uppercase tracking-widest mb-2">Recent Advances</p>
-                                                                    {recentCAs.map(rc => (
-                                                                        <div key={rc.id} className="flex justify-between text-xs font-bold text-rose-900/70 font-mono">
-                                                                            <span>{rc.date}</span>
-                                                                            <span>₱{formatMoney(rc.amount)}</span>
-                                                                        </div>
-                                                                    ))}
+                                                    {newCa.empId && (() => {
+                                                        const caEmp = employees.find(e => String(e.id) === String(newCa.empId));
+                                                        if (!caEmp) return null;
+                                                        const recentCAs = [...cashAdvances].filter(ca => String(ca.empId) === String(newCa.empId)).sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0,3);
+                                                        return (
+                                                            <div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 mb-4 animate-slide-up">
+                                                                <div className="flex justify-between items-center mb-3">
+                                                                    <span className="text-[10px] font-black text-rose-800/60 uppercase tracking-widest">Current Balance</span>
+                                                                    <span className="text-xl font-black text-rose-600 font-mono">₱{formatMoney(caEmp.caBalance)}</span>
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })()}
+                                                                {recentCAs.length > 0 && (
+                                                                    <div className="space-y-2 mt-4 pt-3 border-t border-rose-100/60">
+                                                                        <p className="text-[9px] font-black text-rose-800/40 uppercase tracking-widest mb-2">Recent Advances</p>
+                                                                        {recentCAs.map(rc => (
+                                                                            <div key={rc.id} className="flex justify-between text-xs font-bold text-rose-900/70 font-mono">
+                                                                                <span>{rc.date}</span>
+                                                                                <span>₱{formatMoney(rc.amount)}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
 
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
-                                                        <input type="number" placeholder="0.00" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
+                                                            <input type="number" placeholder="0.00" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Date</label>
+                                                            <input type="date" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.date} onChange={e => setNewCa({...newCa, date: e.target.value})}/>
+                                                        </div>
                                                     </div>
                                                     <div>
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Date</label>
-                                                        <input type="date" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.date} onChange={e => setNewCa({...newCa, date: e.target.value})}/>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Note</label>
+                                                        <input type="text" placeholder="Reason..." className="w-full p-3 border rounded-xl bg-slate-50 font-medium outline-none focus:ring-2 focus:ring-blue-500" value={newCa.reason} onChange={e => setNewCa({...newCa, reason: e.target.value})}/>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Note</label>
-                                                    <input type="text" placeholder="Reason..." className="w-full p-3 border rounded-xl bg-slate-50 font-medium outline-none focus:ring-2 focus:ring-blue-500" value={newCa.reason} onChange={e => setNewCa({...newCa, reason: e.target.value})}/>
-                                                </div>
+                                                <button onClick={handleIssueCA} className="w-full bg-amber-600 hover:bg-amber-700 text-white py-4 rounded-2xl font-black uppercase shadow-xl transition-all text-xs tracking-widest">Commit to Ledger</button>
                                             </div>
-                                            <button onClick={handleIssueCA} className="w-full bg-amber-600 hover:bg-amber-700 text-white py-4 rounded-2xl font-black uppercase shadow-xl transition-all text-xs tracking-widest">Commit to Ledger</button>
-                                        </div>
-                                        <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col">
-                                            <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px] tracking-widest">Recent Archive</div>
+                                        )}
+
+                                        <div className={`${isFullAdmin ? 'md:col-span-2' : 'md:col-span-3'} bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col`}>
+                                            <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px] tracking-widest flex justify-between">
+                                                <span>Archive & Ledger Viewer</span>
+                                                {!isFullAdmin && <span className="text-slate-400">View-Only</span>}
+                                            </div>
                                             <div className="overflow-y-auto max-h-[500px] custom-scrollbar">
                                                 <table className="w-full text-sm">
                                                     <thead className="bg-white text-[10px] text-slate-400 uppercase border-b sticky top-0"><tr><th className="p-4 text-left">Date</th><th className="p-4 text-left">Name</th><th className="p-4 text-right">Value</th></tr></thead>
                                                     <tbody className="divide-y divide-gray-50">
                                                         {(() => {
                                                             const filteredCAs = newCa.empId 
-                                                                ? cashAdvances.filter(ca => ca.empId.toString() === newCa.empId.toString())
+                                                                ? cashAdvances.filter(ca => String(ca.empId) === String(newCa.empId))
                                                                 : cashAdvances;
                                                             
                                                             if (filteredCAs.length === 0) {
@@ -922,10 +924,10 @@
 
                                                             return (
                                                                 <React.Fragment>
-                                                                    {filteredCAs.sort((a,b)=>b.date.localeCompare(a.date)).map(ca => (
+                                                                    {[...filteredCAs].sort((a,b)=>(b.date || '').localeCompare(a.date || '')).map(ca => (
                                                                         <tr key={ca.id} className="hover:bg-slate-50/50 transition-colors">
                                                                             <td className="p-4 text-slate-400 font-mono text-xs">{ca.date}</td>
-                                                                            <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => e.id.toString() === ca.empId.toString())?.name || ca.empId}</td>
+                                                                            <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => String(e.id) === String(ca.empId))?.name || ca.empId}</td>
                                                                             <td className="p-4 text-right font-black text-red-600 font-mono">₱{formatMoney(ca.amount)}</td>
                                                                         </tr>
                                                                     ))}
@@ -943,7 +945,8 @@
                                     </div>
                                 )}
 
-                                {isAdmin && activeTab === 'payroll' && (
+                                {/* PAYROLL WORKSHEET */}
+                                {isPrivileged && activeTab === 'payroll' && (
                                     <div className="bg-white rounded-3xl border shadow-lg overflow-hidden">
                                         <div className="p-6 border-b bg-blue-900 text-white flex justify-between items-center">
                                             <h2 className="font-black uppercase text-xs tracking-widest">Payroll Worksheet</h2>
@@ -970,11 +973,14 @@
                                     </div>
                                 )}
 
-                                {isAdmin && activeTab === 'summary' && (
+                                {/* YEARLY SUMMARY */}
+                                {isPrivileged && activeTab === 'summary' && (
                                     <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col min-h-[500px]">
                                         <div className="p-6 border-b bg-slate-900 text-white flex justify-between items-center">
                                             <h2 className="font-black uppercase tracking-widest flex items-center gap-2"><CalendarDays className="w-5 h-5"/> Yearly Overview</h2>
-                                            <button onClick={handleExportBackup} className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-all"><Download className="w-4 h-4"/> Backup</button>
+                                            {isFullAdmin && (
+                                                <button onClick={handleExportBackup} className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-all"><Download className="w-4 h-4"/> Backup</button>
+                                            )}
                                         </div>
                                         <div className="overflow-auto flex-1 custom-scrollbar">
                                             <table className="w-full text-right text-xs border-collapse min-w-max">
@@ -989,10 +995,10 @@
                                                         <tr key={emp.id} className="border-b border-gray-100 hover:bg-blue-50/50">
                                                             <td className="p-4 text-left border-r border-gray-100 sticky left-0 bg-white font-black uppercase text-slate-700 z-10">{emp.name}</td>
                                                             {Array.from({length: 12}).map((_, i) => {
-                                                                const isCurrent = selectedMonth.endsWith((i+1).toString().padStart(2,'0'));
+                                                                const isCurrent = (selectedMonth || '').endsWith((i+1).toString().padStart(2,'0'));
                                                                 return (
                                                                     <td key={i} className={`p-4 font-mono font-bold border-r border-gray-50 ${isCurrent ? 'text-blue-600 bg-blue-50/30' : 'text-slate-300 italic'}`}>
-                                                                        {isCurrent ? `₱${formatMoney(payrollSummary.find(p=>p.id===emp.id)?.net)}` : '--'}
+                                                                        {isCurrent ? `₱${formatMoney(payrollSummary.find(p => String(p.id) === String(emp.id))?.net)}` : '--'}
                                                                     </td>
                                                                 );
                                                             })}
@@ -1004,7 +1010,8 @@
                                     </div>
                                 )}
 
-                                {isAdmin && activeTab === 'reports' && (
+                                {/* REPORTS */}
+                                {isPrivileged && activeTab === 'reports' && (
                                     <div className="flex flex-col h-full space-y-6">
                                         <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex flex-wrap gap-6 items-center">
                                             <div className="flex items-center gap-3">
@@ -1025,10 +1032,10 @@
                                                         <tr><th className="p-4">Date</th><th className="p-4">Member</th><th className="p-4">Clock-In</th><th className="p-4 text-center">Day Equiv.</th><th className="p-4">Status</th></tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-50">
-                                                        {attendance.filter(a => a.date >= reportDates.start && a.date <= reportDates.end).map((a, i) => (
+                                                        {attendance.filter(a => (a.date || '') >= reportDates.start && (a.date || '') <= reportDates.end).map((a, i) => (
                                                             <tr key={i} className="hover:bg-slate-50 transition-colors">
                                                                 <td className="p-4 font-mono text-slate-500">{a.date}</td>
-                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e => e.id.toString() === a.empId.toString())?.name || a.empName || a.empId}</td>
+                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e => String(e.id) === String(a.empId))?.name || a.empName || a.empId}</td>
                                                                 <td className="p-4 text-blue-600 font-black">{a.firstIn}</td>
                                                                 <td className="p-4 text-center font-bold text-slate-900">{a.dayEquivalent}</td>
                                                                 <td className="p-4"><span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase border ${a.remarks === 'Normalized' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>{a.remarks}</span></td>
@@ -1041,7 +1048,8 @@
                                     </div>
                                 )}
 
-                                {isAdmin && activeTab === 'settings' && (
+                                {/* SETTINGS (FULL ADMIN ONLY) */}
+                                {isFullAdmin && activeTab === 'settings' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 flex flex-col space-y-6">
                                             <div className="flex items-center gap-4 text-amber-600 mb-2">
@@ -1079,7 +1087,7 @@
                                                     {auditLogs.length === 0 ? (
                                                         <p className="text-center text-slate-400 italic mt-10 text-sm">No admin logins recorded yet.</p>
                                                     ) : (
-                                                        auditLogs.sort((a,b) => b.timestamp - a.timestamp).map(log => (
+                                                        [...auditLogs].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).map(log => (
                                                             <div key={log.id} className="flex justify-between items-center text-sm border-b border-gray-100 pb-3">
                                                                 <div>
                                                                     <p className="font-black text-slate-800 uppercase tracking-tight">{log.adminName}</p>
@@ -1095,15 +1103,14 @@
                                                 </div>
                                             </div>
                                         </div>
-
                                     </div>
                                 )}
                             </div>
                         </div>
                     </main>
 
-                    {/* MODAL FOR ADDING/EDITING STAFF */}
-                    {showAddEmp && isAdmin && (
+                    {/* MODAL FOR ADDING/EDITING STAFF (FULL ADMIN ONLY) */}
+                    {showAddEmp && isFullAdmin && (
                         <div className="fixed inset-0 bg-blue-950/50 backdrop-blur-md z-50 flex items-center justify-center p-4">
                             <form onSubmit={handleSaveStaff} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-slide-up">
                                 <div className="p-6 border-b bg-gray-50 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-500">
@@ -1175,8 +1182,8 @@
                         </div>
                     )}
 
-                    {/* LEDGER PROFILE MODAL */}
-                    {viewProfile && isAdmin && (
+                    {/* LEDGER PROFILE MODAL (AVAILABLE TO PRIVILEGED, EDITS TO FULL ADMIN) */}
+                    {viewProfile && isPrivileged && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                                 <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0"><h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6"/> Staff Cloud Ledger</h2><button onClick={() => setViewProfile(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X/></button></div>
@@ -1189,16 +1196,18 @@
                                                 {viewProfile.contactNumber && <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black tracking-widest uppercase">📞 {viewProfile.contactNumber}</span>}
                                                 {viewProfile.sssNumber && <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black tracking-widest uppercase">SSS: {viewProfile.sssNumber} (₱{formatMoney(viewProfile.sssRate)})</span>}
                                             </div>
-                                            <button onClick={handleEditClick} className="mt-4 bg-slate-100 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"><Edit className="w-3.5 h-3.5"/> Edit Profile</button>
+                                            {isFullAdmin && (
+                                                <button onClick={handleEditClick} className="mt-4 bg-slate-100 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"><Edit className="w-3.5 h-3.5"/> Edit Profile</button>
+                                            )}
                                         </div>
                                         <div className="text-right shrink-0">
                                             <span className={`px-4 py-1.5 text-[10px] font-black rounded-full uppercase border shadow-sm ${viewProfile.status === 'inactive' ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}>{viewProfile.status || 'ACTIVE'}</span>
-                                            <p className="mt-4 font-black text-blue-600 font-mono text-xl tracking-tighter uppercase">₱{formatMoney(viewProfile.rate)}/DAY</p>
+                                            <p className="mt-4 font-black text-blue-600 font-mono text-xl tracking-tighter uppercase">₱{formatMoney(viewProfile.dailyRate || viewProfile.rate)}/DAY</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-6 text-center">
                                         <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase tracking-widest mb-2">Total C.A. Due</p><p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(viewProfile.caBalance)}</p></div>
-                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm"><p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Attendance Count</p><p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => a.empId.toString() === viewProfile.id.toString()).length}</p></div>
+                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm"><p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Attendance Count</p><p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => String(a.empId) === String(viewProfile.id)).length}</p></div>
                                     </div>
                                 </div>
                             </div>
