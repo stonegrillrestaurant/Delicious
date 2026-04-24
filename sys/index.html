@@ -207,14 +207,19 @@
             });
             const [showAddEmp, setShowAddEmp] = useState(false);
             const [rawInput, setRawInput] = useState('');
-            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
+            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '' });
             const [viewProfile, setViewProfile] = useState(null);
+<<<<<<< HEAD
             
             const [reportDates, setReportDates] = useState({ 
                 start: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`, 
                 end: new Date().toISOString().slice(0, 10) 
             });
             
+=======
+            const [reportDates, setReportDates] = useState({ start: '2026-04-01', end: '2026-04-30' });
+
+>>>>>>> parent of 71a2d0a (edit appp)
             // Interactive Payslip State
             const [icEmpId, setIcEmpId] = useState('');
             const [icDateStart, setIcDateStart] = useState(reportDates.start);
@@ -496,15 +501,26 @@
                 const amt = parseFloat(newCa.amount);
                 const emp = employees.find(e => String(e.id) === String(newCa.empId));
                 try {
+<<<<<<< HEAD
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cash_advances'), {
                         empId: newCa.empId, amount: amt, date: newCa.date || new Date().toISOString().slice(0, 10), reason: newCa.reason
+=======
+                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'cash_advances'), {
+                        empId: newCa.empId, amount: amt, date: new Date().toISOString().slice(0, 10), reason: newCa.reason
+>>>>>>> parent of 71a2d0a (edit appp)
                     });
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', newCa.empId), {
                         caBalance: (parseFloat(emp?.caBalance) || 0) + amt
                     });
+<<<<<<< HEAD
                     setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
                     setToast("Advance issued successfully.");
                 } catch (err) { setToast("Error issuing advance."); }
+=======
+                    setNewCa({ empId: '', amount: '', reason: '' });
+                    alert("Advance issued successfully.");
+                } catch (err) { alert(err.message); }
+>>>>>>> parent of 71a2d0a (edit appp)
             };
 
             const handleSavePayslip = async () => {
@@ -883,6 +899,7 @@
                                                         );
                                                     })()}
 
+<<<<<<< HEAD
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div>
                                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
@@ -897,6 +914,11 @@
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Note</label>
                                                         <input type="text" placeholder="Reason..." className="w-full p-3 border rounded-xl bg-slate-50 font-medium outline-none focus:ring-2 focus:ring-blue-500" value={newCa.reason} onChange={e => setNewCa({...newCa, reason: e.target.value})}/>
                                                     </div>
+=======
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
+                                                    <input type="number" placeholder="0.00" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/>
+>>>>>>> parent of 71a2d0a (edit appp)
                                                 </div>
                                                 <button onClick={handleIssueCA} className="w-full bg-amber-600 hover:bg-amber-700 text-white py-4 rounded-2xl font-black uppercase shadow-xl transition-all text-xs tracking-widest">Commit to Ledger</button>
                                             </div>
@@ -911,6 +933,7 @@
                                                 <table className="w-full text-sm">
                                                     <thead className="bg-white text-[10px] text-slate-400 uppercase border-b sticky top-0"><tr><th className="p-4 text-left">Date</th><th className="p-4 text-left">Name</th><th className="p-4 text-right">Value</th></tr></thead>
                                                     <tbody className="divide-y divide-gray-50">
+<<<<<<< HEAD
                                                         {(() => {
                                                             const filteredCAs = newCa.empId 
                                                                 ? cashAdvances.filter(ca => String(ca.empId) === String(newCa.empId))
@@ -938,6 +961,16 @@
                                                                 </React.Fragment>
                                                             );
                                                         })()}
+=======
+                                                        {cashAdvances.length === 0 ? <tr><td colSpan="3" className="p-16 text-center text-slate-300 italic">No advances on cloud ledger.</td></tr> :
+                                                            cashAdvances.sort((a,b)=>b.date.localeCompare(a.date)).map(ca => (
+                                                            <tr key={ca.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="p-4 text-slate-400 font-mono text-xs">{ca.date}</td>
+                                                                <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => e.id.toString() === ca.empId.toString())?.name || ca.empId}</td>
+                                                                <td className="p-4 text-right font-black text-red-600 font-mono">₱{formatMoney(ca.amount)}</td>
+                                                            </tr>
+                                                        ))}
+>>>>>>> parent of 71a2d0a (edit appp)
                                                     </tbody>
                                                 </table>
                                             </div>
