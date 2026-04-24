@@ -373,7 +373,7 @@
             // SMART REGEX PARSER for Biometric Logs
             const handleProcessLogs = async () => {
                 if (!user || !isAdmin || !rawInput.trim()) return;
-                const { db, appId, addDoc, collection } = window.fb;
+                const { db, appId, setDoc, doc } = window.fb;
                 const lines = rawInput.trim().split('\n');
                 let count = 0;
                 let errCount = 0;
@@ -413,18 +413,23 @@
                         if (y.length === 2) y = '20' + y;
                         const isoDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
-                        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'attendance'), {
+                        // Prevent Duplicates: Create a unique ID using employee ID and Date
+                        const uniqueRecordId = `${rawId}_${isoDate}`;
+                        const recordRef = doc(db, 'artifacts', appId, 'users', user.uid, 'attendance', uniqueRecordId);
+
+                        await setDoc(recordRef, {
                             empId: rawId, 
                             empName: rawName, 
                             date: isoDate, 
                             firstIn: timeRaw, 
                             dayEquivalent: 1, 
                             remarks: 'Normalized'
-                        });
+                        }, { merge: true }); // merge true so it overwrites safely instead of duplicating
+                        
                         count++;
                     }
                     setRawInput('');
-                    alert(`Success: Imported ${count} records to the cloud.\nSkipped: ${errCount} unrecognized or header lines.`);
+                    alert(`Success: Processed ${count} records.\n(Existing records for the same day were updated to prevent duplicates).\nSkipped: ${errCount} lines.`);
                 } catch (err) {
                     alert("Error parsing logs: " + err.message);
                 }
