@@ -89,7 +89,7 @@
         const AlertCircle = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>;
         const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
-        const Upload = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Icon>;
+        const CheckCircle2 = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></Icon>;
         const Edit = (p) => <Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
         const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
 
@@ -248,7 +248,6 @@
         function App() {
             const [user, setUser] = useState(null);
             const [isReady, setIsReady] = useState(false);
-            const [isRestoring, setIsRestoring] = useState(false);
             
             // App RBAC State
             const [userRole, setUserRole] = useState('Staff'); 
@@ -284,6 +283,7 @@
             const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
             const [showAddEmp, setShowAddEmp] = useState(false);
             const [rawInput, setRawInput] = useState('');
+            // FIX: Added Date into newCa state
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             const [viewProfile, setViewProfile] = useState(null);
             
@@ -528,6 +528,7 @@
             };
 
             const handleIssueCA = async () => {
+                // FIX: Ensure newCa.date exists
                 if (!user || !isAdmin || !newCa.empId || !newCa.amount || !newCa.date) return;
                 const { db, appId, addDoc, doc, updateDoc, collection } = window.fb;
                 const amt = parseFloat(newCa.amount);
@@ -553,7 +554,9 @@
                 let errCount = 0;
                 let newStaffCount = 0;
                 const processedIds = new Set();
-                const processedAttKeys = new Set(); // To prevent double counting in the same batch
+                
+                // FIX: To prevent double counting in the same batch input
+                const processedAttKeys = new Set(); 
                 
                 try {
                     for (const line of lines) {
@@ -638,10 +641,10 @@
 
                         // SMART DEDUPLICATION: Don't add if employee already clocked in on this specific date
                         if (isoDate) {
-                            const attKey = `${cleanId}_${isoDate}`;
-                            const isDuplicateDB = attendance.some(a => a.empId.toString() === cleanId && a.date === isoDate);
+                            const attKey = `${cleanId}_${isoDate}`; // FIX: check against in-batch processing
+                            const isDuplicate = attendance.some(a => a.empId.toString() === cleanId && a.date === isoDate);
                             
-                            if (!isDuplicateDB && !processedAttKeys.has(attKey)) {
+                            if (!isDuplicate && !processedAttKeys.has(attKey)) {
                                 processedAttKeys.add(attKey);
                                 await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'attendance'), {
                                     empId: cleanId, 
@@ -685,51 +688,6 @@
                 a.click();
             };
 
-            // NEW RESTORE BACKUP LOGIC
-            const handleImportBackup = (event) => {
-                const file = event.target.files[0];
-                if (!file || !user || !isAdmin) return;
-
-                setIsRestoring(true);
-                const reader = new FileReader();
-                
-                reader.onload = async (e) => {
-                    try {
-                        const data = JSON.parse(e.target.result);
-                        const { db, appId, doc, setDoc } = window.fb;
-
-                        let totalRestored = 0;
-
-                        // Helper function to safely inject items into collections based on their original ID
-                        const restoreCollection = async (collectionName, items) => {
-                            if (!items || !Array.isArray(items)) return;
-                            for (const item of items) {
-                                const { id, ...rest } = item;
-                                if (id) {
-                                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, collectionName, id), rest);
-                                    totalRestored++;
-                                }
-                            }
-                        };
-
-                        // Process all arrays found in the JSON
-                        await restoreCollection('employees', data.employees);
-                        await restoreCollection('attendance', data.attendance);
-                        await restoreCollection('cash_advances', data.cashAdvances);
-                        await restoreCollection('payroll_entries', data.interactivePayrolls);
-
-                        setIsRestoring(false);
-                        alert(`Restore Complete!\nSuccessfully imported and recovered ${totalRestored} database records.`);
-                    } catch (err) {
-                        setIsRestoring(false);
-                        alert("Error parsing or restoring backup: " + err.message);
-                    }
-                };
-                
-                reader.readAsText(file);
-                event.target.value = ''; // reset the input so you can upload the same file again if needed
-            };
-
             const handleEditClick = () => {
                 if(!isAdmin) return;
                 setNewEmpForm({
@@ -752,15 +710,13 @@
             if (!isReady) return <div className="h-screen bg-blue-900 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />Checking Cloud Identity...</div>;
             if (!user) return <LoginScreen />;
 
-            // --- SMART CURRENCY FORMATTER (Removes unnecessary .00 decimals automatically) ---
+            // FIX: Removed unnecessary double zero decimals if amount is whole
             const formatMoney = (v) => {
                 const num = Number(v || 0);
-                return num % 1 === 0 
-                    ? num.toLocaleString('en-US') 
-                    : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
-            // Cash Advance List Filtering
+            // FIX: Filter Cash Advance Display by Selected Employee
             const displayCAs = newCa.empId 
                 ? cashAdvances.filter(ca => ca.empId.toString() === newCa.empId.toString()) 
                 : cashAdvances;
@@ -778,15 +734,6 @@
                                 logAdminAccess(name);
                             }} 
                         />
-                    )}
-
-                    {/* RESTORE LOADING OVERLAY */}
-                    {isRestoring && (
-                        <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-50 font-sans flex-col text-white">
-                            <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mb-6" />
-                            <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2>
-                            <p className="text-sm font-bold text-blue-300 mt-2">Injecting records safely. Please do not close the window.</p>
-                        </div>
                     )}
 
                     {/* SIDEBAR OVERLAY FOR MOBILE */}
@@ -957,6 +904,7 @@
                                                             const pSum = payrollSummary.find(p => p.id === e.id) || { days: 0, gross: 0, misc: 0, sss: 0, caDed: 0, net: 0 };
                                                             return (
                                                             <tr key={e.id} className={`border-b transition-colors ${isPrivileged ? 'hover:bg-blue-50/50 cursor-pointer' : 'hover:bg-stone-50'}`} onClick={() => isPrivileged && setViewProfile(e)}>
+                                                                {/* FIX: Removed the # from ID Display */}
                                                                 <td className="p-4 text-slate-500 font-mono font-bold">{e.id}</td>
                                                                 <td className="p-4 font-black text-slate-800 uppercase tracking-tighter">{e.name}</td>
                                                                 {isPrivileged && <td className="p-4 text-center font-bold font-mono">{pSum.days > 0 ? pSum.days : ''}</td>}
@@ -1123,16 +1071,16 @@
                                                     );
                                                 })()}
 
+                                                {/* FIX: ADDED DATE PICKER HERE */}
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Date</label>
                                                     <input type="date" disabled={!isAdmin} className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60" value={newCa.date} onChange={e => setNewCa({...newCa, date: e.target.value})}/>
                                                 </div>
-                                                
+
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
                                                     <input type="number" disabled={!isAdmin} placeholder="0.00" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/>
                                                 </div>
-                                                
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Note</label>
                                                     <input type="text" disabled={!isAdmin} placeholder="Reason..." className="w-full p-3 border rounded-xl bg-slate-50 font-medium outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60" value={newCa.reason} onChange={e => setNewCa({...newCa, reason: e.target.value})}/>
@@ -1145,6 +1093,7 @@
                                             )}
                                         </div>
                                         <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col">
+                                            {/* FIX: TITLE CHANGES IF FILTERED BY SELECTED EMPLOYEE */}
                                             <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px] tracking-widest">
                                                 {newCa.empId ? `Advance History: ${employees.find(e => e.id.toString() === newCa.empId.toString())?.name}` : 'Recent Archive (All)'}
                                             </div>
@@ -1290,28 +1239,14 @@
 
                                 {activeTab === 'settings' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        
-                                        <div className="space-y-6">
-                                            {/* Backup Section */}
-                                            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-                                                <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Backup</h3>
-                                                <p className="text-sm text-slate-400 mb-8 font-medium">Download a complete snapshot of your restaurant database for manual archival.</p>
-                                                <button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3"><Download /> Download JSON</button>
-                                            </div>
-
-                                            {/* Restore Section */}
-                                            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 animate-slide-up">
-                                                <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Restore</h3>
-                                                <p className="text-sm text-slate-400 mb-8 font-medium">Upload a previously downloaded JSON backup file to recover your data.</p>
-                                                <label className={`w-full ${isAdmin ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer' : 'bg-slate-300 cursor-not-allowed'} text-white py-5 rounded-2xl font-black uppercase shadow-xl transition-all flex items-center justify-center gap-3`}>
-                                                    <Upload /> {isAdmin ? 'Restore JSON Backup' : 'Admin Required'}
-                                                    <input type="file" accept=".json" className="hidden" disabled={!isAdmin} onChange={handleImportBackup} />
-                                                </label>
-                                            </div>
+                                        <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+                                            <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Backup</h3>
+                                            <p className="text-sm text-slate-400 mb-8 font-medium">Download a complete snapshot of your restaurant database for manual archival.</p>
+                                            <button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3"><Download /> Download JSON</button>
                                         </div>
 
                                         {/* Security Audit Logs */}
-                                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-full min-h-[350px] animate-slide-up">
+                                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-[350px] animate-slide-up">
                                             <div className="p-6 bg-slate-900 text-white border-b flex justify-between items-center">
                                                 <h3 className="font-black uppercase tracking-widest text-xs">Security Audit Logs</h3>
                                                 <span className="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full">{auditLogs.length} Records</span>
