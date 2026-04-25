@@ -89,7 +89,7 @@
         const AlertCircle = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>;
         const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
-        const CheckCircle2 = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></Icon>;
+        const Upload = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Icon>;
         const Edit = (p) => <Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
         const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
 
@@ -248,6 +248,7 @@
         function App() {
             const [user, setUser] = useState(null);
             const [isReady, setIsReady] = useState(false);
+            const [isRestoring, setIsRestoring] = useState(false);
             
             // App RBAC State
             const [userRole, setUserRole] = useState('Staff'); 
@@ -684,6 +685,51 @@
                 a.click();
             };
 
+            // NEW RESTORE BACKUP LOGIC
+            const handleImportBackup = (event) => {
+                const file = event.target.files[0];
+                if (!file || !user || !isAdmin) return;
+
+                setIsRestoring(true);
+                const reader = new FileReader();
+                
+                reader.onload = async (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        const { db, appId, doc, setDoc } = window.fb;
+
+                        let totalRestored = 0;
+
+                        // Helper function to safely inject items into collections based on their original ID
+                        const restoreCollection = async (collectionName, items) => {
+                            if (!items || !Array.isArray(items)) return;
+                            for (const item of items) {
+                                const { id, ...rest } = item;
+                                if (id) {
+                                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, collectionName, id), rest);
+                                    totalRestored++;
+                                }
+                            }
+                        };
+
+                        // Process all arrays found in the JSON
+                        await restoreCollection('employees', data.employees);
+                        await restoreCollection('attendance', data.attendance);
+                        await restoreCollection('cash_advances', data.cashAdvances);
+                        await restoreCollection('payroll_entries', data.interactivePayrolls);
+
+                        setIsRestoring(false);
+                        alert(`Restore Complete!\nSuccessfully imported and recovered ${totalRestored} database records.`);
+                    } catch (err) {
+                        setIsRestoring(false);
+                        alert("Error parsing or restoring backup: " + err.message);
+                    }
+                };
+                
+                reader.readAsText(file);
+                event.target.value = ''; // reset the input so you can upload the same file again if needed
+            };
+
             const handleEditClick = () => {
                 if(!isAdmin) return;
                 setNewEmpForm({
@@ -732,6 +778,15 @@
                                 logAdminAccess(name);
                             }} 
                         />
+                    )}
+
+                    {/* RESTORE LOADING OVERLAY */}
+                    {isRestoring && (
+                        <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-50 font-sans flex-col text-white">
+                            <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mb-6" />
+                            <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2>
+                            <p className="text-sm font-bold text-blue-300 mt-2">Injecting records safely. Please do not close the window.</p>
+                        </div>
                     )}
 
                     {/* SIDEBAR OVERLAY FOR MOBILE */}
@@ -1235,14 +1290,28 @@
 
                                 {activeTab === 'settings' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-                                            <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Backup</h3>
-                                            <p className="text-sm text-slate-400 mb-8 font-medium">Download a complete snapshot of your restaurant database for manual archival.</p>
-                                            <button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3"><Download /> Download JSON</button>
+                                        
+                                        <div className="space-y-6">
+                                            {/* Backup Section */}
+                                            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+                                                <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Backup</h3>
+                                                <p className="text-sm text-slate-400 mb-8 font-medium">Download a complete snapshot of your restaurant database for manual archival.</p>
+                                                <button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3"><Download /> Download JSON</button>
+                                            </div>
+
+                                            {/* Restore Section */}
+                                            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 animate-slide-up">
+                                                <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Restore</h3>
+                                                <p className="text-sm text-slate-400 mb-8 font-medium">Upload a previously downloaded JSON backup file to recover your data.</p>
+                                                <label className={`w-full ${isAdmin ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer' : 'bg-slate-300 cursor-not-allowed'} text-white py-5 rounded-2xl font-black uppercase shadow-xl transition-all flex items-center justify-center gap-3`}>
+                                                    <Upload /> {isAdmin ? 'Restore JSON Backup' : 'Admin Required'}
+                                                    <input type="file" accept=".json" className="hidden" disabled={!isAdmin} onChange={handleImportBackup} />
+                                                </label>
+                                            </div>
                                         </div>
 
                                         {/* Security Audit Logs */}
-                                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-[350px] animate-slide-up">
+                                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-full min-h-[350px] animate-slide-up">
                                             <div className="p-6 bg-slate-900 text-white border-b flex justify-between items-center">
                                                 <h3 className="font-black uppercase tracking-widest text-xs">Security Audit Logs</h3>
                                                 <span className="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full">{auditLogs.length} Records</span>
