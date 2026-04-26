@@ -1,16 +1,19 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stone Grill Payroll - Smart Cloud Suite</title>
+    
     <!-- STONE GRILL PAYROLL APP ICONS -->
-<link rel="icon" type="image/png" href="/sys/icon.png">
-<link rel="apple-touch-icon" href="/sys/icon.png">
+    <link rel="icon" type="image/png" href="/sys/icon.png">
+    <link rel="apple-touch-icon" href="/sys/icon.png">
 
-<!-- PWA / Add to Home Screen -->
-<link rel="manifest" href="/sys/manifest.json">
-<meta name="theme-color" content="#7a2e13">
+    <!-- PWA / Add to Home Screen -->
+    <link rel="manifest" href="/sys/manifest.json">
+    <meta name="theme-color" content="#7a2e13">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -71,6 +74,18 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
+        // --- GLOBAL ID NORMALIZATION ENGINE ---
+        // Fixes discrepancies like "007" vs "7" to ensure data merges correctly.
+        const normalizeId = (id) => {
+            if (id === undefined || id === null) return '';
+            const strId = String(id).trim();
+            // If it's pure digits, strip leading zeros by parsing to int
+            if (/^\d+$/.test(strId)) {
+                return parseInt(strId, 10).toString();
+            }
+            return strId.toLowerCase();
+        };
+
         // --- ICONS ---
         const Icon = ({ d, className = "w-5 h-5", children }) => (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -99,7 +114,7 @@
         const Edit = (p) => <Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
         const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
 
-        // --- FIREBASE LOGIN SCREEN (Protects DB Connection) ---
+        // --- FIREBASE LOGIN SCREEN ---
         function LoginScreen() {
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
@@ -194,7 +209,7 @@
             );
         }
 
-        // --- ADMIN PIN MODAL (Protects Sensitive Views) ---
+        // --- ADMIN PIN MODAL ---
         function AdminPinModal({ onUnlock, onClose }) {
             const [pin, setPin] = useState('');
             const [error, setError] = useState(false);
@@ -256,7 +271,6 @@
             const [isReady, setIsReady] = useState(false);
             const [isRestoring, setIsRestoring] = useState(false);
             
-            // App RBAC State
             const [userRole, setUserRole] = useState('Staff'); 
             const [showAdminPin, setShowAdminPin] = useState(false);
             const [currentAdminName, setCurrentAdminName] = useState(''); 
@@ -273,7 +287,6 @@
             const [interactivePayrolls, setInteractivePayrolls] = useState([]);
             const [auditLogs, setAuditLogs] = useState([]);
 
-            // DYNAMIC MONTH OPTIONS (Last 12 Months)
             const monthOptions = useMemo(() => {
                 const options = [];
                 const d = new Date();
@@ -286,7 +299,6 @@
                 return options;
             }, []);
 
-            // UI Control States
             const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
             const [showAddEmp, setShowAddEmp] = useState(false);
             const [rawInput, setRawInput] = useState('');
@@ -299,30 +311,24 @@
                 end: new Date(defaultDate.getFullYear(), defaultDate.getMonth() + 1, 0).toISOString().slice(0, 10) 
             });
             
-            // Interactive Payslip State
             const [icEmpId, setIcEmpId] = useState('');
             const [icDateStart, setIcDateStart] = useState(() => new Date(defaultDate.getFullYear(), defaultDate.getMonth(), 1).toISOString().slice(0, 10));
             const [icDateEnd, setIcDateEnd] = useState(() => new Date(defaultDate.getFullYear(), defaultDate.getMonth() + 1, 0).toISOString().slice(0, 10));
             const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
 
-            // Dashboard Filter Search State
             const [dashSearchEmpId, setDashSearchEmpId] = useState('');
             const [dashSearchStart, setDashSearchStart] = useState(reportDates.start);
             const [dashSearchEnd, setDashSearchEnd] = useState(reportDates.end);
 
-            // Form state (Added miscRate)
             const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
             const [isEditing, setIsEditing] = useState(false);
 
-            // --- NAVIGATION HELPER ---
             const switchTab = (tab) => {
                 setActiveTab(tab);
-                if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                }
+                if (window.innerWidth < 1024) setSidebarOpen(false);
             };
 
-            // --- FIREBASE SYNC WITH EMAIL AUTH ---
+            // --- FIREBASE SYNC ---
             useEffect(() => {
                 const initFirebase = async () => {
                     if (window.fb) {
@@ -330,10 +336,7 @@
                         onAuthStateChanged(auth, (u) => {
                             setUser(u);
                             setIsReady(true);
-                            if(!u) {
-                                setUserRole('Staff');
-                                setCurrentAdminName('');
-                            }
+                            if(!u) { setUserRole('Staff'); setCurrentAdminName(''); }
                         });
                     }
                 };
@@ -364,60 +367,43 @@
                         };
                     }).sort((a,b)=>a.name.localeCompare(b.name)));
                 });
-                const unsubAtt = onSnapshot(userPath('attendance'), (snap) => {
-                    setAttendance(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                const unsubCA = onSnapshot(userPath('cash_advances'), (snap) => {
-                    setCashAdvances(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                const unsubIP = onSnapshot(userPath('payroll_entries'), (snap) => {
-                    setInteractivePayrolls(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                const unsubLogs = onSnapshot(userPath('audit_logs'), (snap) => {
-                    setAuditLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
+                const unsubAtt = onSnapshot(userPath('attendance'), (snap) => setAttendance(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubCA = onSnapshot(userPath('cash_advances'), (snap) => setCashAdvances(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubIP = onSnapshot(userPath('payroll_entries'), (snap) => setInteractivePayrolls(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubLogs = onSnapshot(userPath('audit_logs'), (snap) => setAuditLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); unsubLogs(); };
             }, [user]);
 
             // SMART PAYSLIP AUTO-FILLER
             useEffect(() => {
                 if (icEmpId && icDateStart && icDateEnd) {
-                    const key = `${icEmpId}_${icDateStart}_${icDateEnd}`;
+                    const key = `${normalizeId(icEmpId)}_${icDateStart}_${icDateEnd}`;
                     const saved = interactivePayrolls.find(p => p.recordKey === key);
                     
                     if (saved) {
                         setIcForm(saved.data);
                     } else {
-                        // Smart Auto-Calculation based on live database info
-                        const emp = employees.find(e => e.id.toString() === icEmpId.toString());
+                        const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                         if (emp) {
-                            const att = attendance.filter(a => a.empId.toString() === icEmpId.toString() && a.date >= icDateStart && a.date <= icDateEnd);
+                            const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && a.date >= icDateStart && a.date <= icDateEnd);
                             const days = att.reduce((sum, r) => sum + (parseFloat(r.dayEquivalent) || 0), 0);
                             const gross = days * (parseFloat(emp.rate) || 0);
                             const sss = parseFloat(emp.sssRate) || 0;
                             const misc = parseFloat(emp.miscRate) || 0;
-                            
-                            // Smart CA deduction: max allowable safely
                             const availableForCA = gross - sss - misc;
                             const caDed = availableForCA > 0 ? Math.min(parseFloat(emp.caBalance) || 0, availableForCA) : 0;
 
-                            setIcForm({
-                                days_worked: days,
-                                bonus: 0,
-                                sss: sss,
-                                misc_deductions: misc,
-                                cash_advance: caDed
-                            });
+                            setIcForm({ days_worked: days, bonus: 0, sss: sss, misc_deductions: misc, cash_advance: caDed });
                         }
                     }
                 }
             }, [icEmpId, icDateStart, icDateEnd, interactivePayrolls, employees, attendance]);
 
-            // --- SMART CALCULATIONS (EXACT MATH FROM SCREENSHOT) ---
-            // Formula: GROSS (AMT) - SSS - MISC - CA DEDUCTION (C.A.) = NET (SALARY)
+            // --- SMART CALCULATIONS WITH NORMALIZED ID ---
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
-                    const empAtt = attendance.filter(a => a.empId.toString() === emp.id.toString() && a.date.startsWith(selectedMonth));
+                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && a.date.startsWith(selectedMonth));
                     const days = empAtt.reduce((sum, r) => sum + (parseFloat(r.dayEquivalent) || 0), 0);
                     const gross = days * (parseFloat(emp.rate) || 0);
                     
@@ -427,23 +413,12 @@
                     const caBalance = parseFloat(emp.caBalance) || 0;
                     const availableForCA = gross - sss - misc;
                     
-                    // The 'C.A.' column in the table represents the CA deduction taken *this month* to wipe debt
                     let caDed = 0;
-                    if (caBalance > 0 && availableForCA > 0) {
-                        caDed = Math.min(caBalance, availableForCA);
-                    }
+                    if (caBalance > 0 && availableForCA > 0) caDed = Math.min(caBalance, availableForCA);
 
                     const net = gross - sss - misc - caDed;
                     
-                    return { 
-                        ...emp, 
-                        days, 
-                        gross,     // -> Mapped to 'AMT' in UI
-                        caDed,     // -> Mapped to 'C.A.' in UI
-                        sss,       // -> Mapped to 'SSS' in UI
-                        misc,      // -> Mapped to 'MISC' in UI 
-                        net        // -> Mapped to 'SALARY' in UI
-                    };
+                    return { ...emp, days, gross, caDed, sss, misc, net };
                 });
             }, [employees, attendance, selectedMonth]);
 
@@ -454,13 +429,13 @@
                 return { count: employees.length, present, totalCA, alerts: payrollSummary.filter(p => p.net < 0).length };
             }, [employees, attendance, payrollSummary]);
 
-            // --- DASHBOARD SEARCH LOGIC ---
+            // DASHBOARD SEARCH
             let searchedEmp = null;
             let searchedDays = 0, searchedGross = 0, searchedCaDed = 0, searchedMisc = 0;
             if (dashSearchEmpId) {
-                searchedEmp = employees.find(e => e.id.toString() === dashSearchEmpId);
+                searchedEmp = employees.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
                 if (searchedEmp && dashSearchStart && dashSearchEnd) {
-                    const att = attendance.filter(a => a.empId.toString() === searchedEmp.id.toString() && a.date >= dashSearchStart && a.date <= dashSearchEnd);
+                    const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(searchedEmp.id) && a.date >= dashSearchStart && a.date <= dashSearchEnd);
                     searchedDays = att.reduce((sum, r) => sum + (parseFloat(r.dayEquivalent) || 0), 0);
                     searchedGross = searchedDays * (parseFloat(searchedEmp.rate) || 0);
                     
@@ -473,21 +448,13 @@
             }
 
             // --- CLOUD HANDLERS ---
-            const handleLogout = async () => {
-                if (window.fb) {
-                    await window.fb.signOut(window.fb.auth);
-                }
-            };
+            const handleLogout = async () => { if (window.fb) await window.fb.signOut(window.fb.auth); };
 
             const logAdminAccess = async (adminName) => {
                 if (!user || !window.fb) return;
                 const { db, appId, addDoc, collection } = window.fb;
                 try {
-                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'audit_logs'), {
-                        action: 'System Unlocked',
-                        adminName: adminName,
-                        timestamp: Date.now()
-                    });
+                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'audit_logs'), { action: 'System Unlocked', adminName: adminName, timestamp: Date.now() });
                 } catch (err) { console.error("Audit log failed", err); }
             };
 
@@ -495,22 +462,20 @@
                 e.preventDefault();
                 if (!user || !window.fb || !isAdmin) return;
                 const { db, appId, doc, setDoc, updateDoc } = window.fb;
-                const bId = newEmpForm.biometricId.trim();
+                
+                // NORMALIZE AT CREATION
+                const bId = normalizeId(newEmpForm.biometricId);
                 if (!bId) return alert("Biometric ID is required.");
                 
                 try {
                     const newDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'employees', bId);
                     
                     const payload = {
-                        firstName: newEmpForm.firstName,
-                        lastName: newEmpForm.lastName,
+                        firstName: newEmpForm.firstName, lastName: newEmpForm.lastName,
                         name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim(),
-                        position: newEmpForm.position,
-                        dailyRate: parseFloat(newEmpForm.dailyRate) || 0,
-                        contactNumber: newEmpForm.contactNumber || '',
-                        sssNumber: newEmpForm.sssNumber || '',
-                        sssRate: parseFloat(newEmpForm.sssRate) || 0,
-                        miscRate: parseFloat(newEmpForm.miscRate) || 0,
+                        position: newEmpForm.position, dailyRate: parseFloat(newEmpForm.dailyRate) || 0,
+                        contactNumber: newEmpForm.contactNumber || '', sssNumber: newEmpForm.sssNumber || '',
+                        sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0,
                         status: newEmpForm.status || 'active'
                     };
 
@@ -518,17 +483,11 @@
                         await updateDoc(newDocRef, payload);
                         alert("Profile successfully updated.");
                     } else {
-                        await setDoc(newDocRef, {
-                            ...payload,
-                            employeeId: bId,
-                            caBalance: 0,
-                            createdAt: Date.now()
-                        });
+                        await setDoc(newDocRef, { ...payload, employeeId: bId, caBalance: 0, createdAt: Date.now() });
                         alert("New staff member saved.");
                     }
 
-                    setShowAddEmp(false);
-                    setIsEditing(false);
+                    setShowAddEmp(false); setIsEditing(false);
                     setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
                 } catch (err) { alert("Error: " + err.message); }
             };
@@ -537,12 +496,12 @@
                 if (!user || !isAdmin || !newCa.empId || !newCa.amount || !newCa.date) return;
                 const { db, appId, addDoc, doc, updateDoc, collection } = window.fb;
                 const amt = parseFloat(newCa.amount);
-                const emp = employees.find(e => e.id.toString() === newCa.empId.toString());
+                const emp = employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId));
                 try {
                     await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'cash_advances'), {
-                        empId: newCa.empId, amount: amt, date: newCa.date, reason: newCa.reason
+                        empId: normalizeId(newCa.empId), amount: amt, date: newCa.date, reason: newCa.reason
                     });
-                    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', newCa.empId), {
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', normalizeId(newCa.empId)), {
                         caBalance: (parseFloat(emp.caBalance) || 0) + amt
                     });
                     setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
@@ -550,112 +509,120 @@
                 } catch (err) { alert(err.message); }
             };
 
-            // SMART DATA PARSER (Handles Duplicates and Auto-Profile Creation)
+            // SMART DATA PARSER (WITH DEEP MERGING & REPAIRED LOGIC)
             const handleProcessLogs = async () => {
                 if (!user || !isAdmin || !rawInput.trim()) return;
                 const { db, appId, addDoc, doc, setDoc, collection } = window.fb;
                 const lines = rawInput.trim().split('\n');
-                let attCount = 0;
-                let errCount = 0;
-                let newStaffCount = 0;
+                let attCount = 0; let errCount = 0; let newStaffCount = 0;
                 const processedIds = new Set();
-                const processedAttKeys = new Set(); // To prevent double counting in the same batch
+                const processedAttKeys = new Set(); 
                 
                 try {
                     for (const line of lines) {
                         const rawLine = line.trim();
                         if (!rawLine) continue;
                         
-                        // Flexible splitting: Try tab separation first, fallback to spaces
                         let parts = rawLine.split(/\t+/);
-                        if (parts.length < 3) {
-                            parts = rawLine.split(/\s+/);
-                        }
+                        if (parts.length < 3) parts = rawLine.split(/\s+/);
                         parts = parts.map(x => x.trim()).filter(Boolean);
                         
                         if (parts.length < 2 || ['ID', 'NAME', 'DATE', 'EMP'].includes(parts[0].toUpperCase())) {
-                            errCount++;
-                            continue;
+                            errCount++; continue;
                         }
 
-                        // Look for a date column (YYYY-MM-DD or MM/DD/YYYY)
                         const dateRegex = /\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/;
                         const dateIndex = parts.findIndex(col => dateRegex.test(col));
                         
-                        let cleanId = '';
+                        let rawCleanId = '';
                         let rawName = '';
                         let isoDate = null;
                         let timeRaw = '';
                         
                         if (dateIndex > 0) {
-                            // Date found: Biometric Log format (ID Name ... Date Time)
-                            cleanId = String(parts[0]).replace(/[\/\\]/g, '-');
+                            rawCleanId = String(parts[0]).replace(/[\/\\]/g, '-');
                             rawName = parts.slice(1, dateIndex).join(' ');
-                            const dateStr = parts[dateIndex];
                             
+                            // Safe date parsing to handle times attached or 2 digit years
+                            let dateStr = parts[dateIndex].split(' ')[0]; 
                             if (parts.length > dateIndex + 1 && /\d{1,2}:\d{2}/.test(parts[dateIndex + 1])) {
                                 timeRaw = parts[dateIndex + 1];
                             }
                             
                             const dParts = dateStr.split(/[\/\-]/);
-                            if (dParts[0].length === 4) {
-                                isoDate = `${dParts[0]}-${dParts[1].padStart(2,'0')}-${dParts[2].padStart(2,'0')}`;
-                            } else {
-                                isoDate = `${dParts[2]}-${dParts[0].padStart(2,'0')}-${dParts[1].padStart(2,'0')}`;
+                            if (dParts.length >= 3) {
+                                let year, month, day;
+                                if (dParts[0].length === 4) {
+                                    year = dParts[0]; month = dParts[1]; day = dParts[2];
+                                } else {
+                                    year = dParts[2]; month = dParts[0]; day = dParts[1];
+                                    if (year.length === 2) year = '20' + year; 
+                                }
+                                isoDate = `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
                             }
                         } else {
-                            // No date found: List of Names/Payroll format. 
                             if (/^\d+$/.test(parts[0])) {
-                                cleanId = parts[0];
-                                rawName = parts.slice(1, 3).join(' '); 
+                                rawCleanId = parts[0]; rawName = parts.slice(1, 3).join(' '); 
                             } else {
                                 rawName = parts.slice(0, 2).join(' '); 
-                                cleanId = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                rawCleanId = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
                             }
                         }
 
-                        if (!cleanId || !rawName) {
-                            errCount++;
-                            continue;
+                        if (!rawCleanId || !rawName) { errCount++; continue; }
+
+                        // 1. STRIP LEADING ZEROS & STANDARDIZE ID
+                        let finalEmpId = normalizeId(rawCleanId);
+                        
+                        // 2. CHECK BY ID FIRST
+                        let matchedEmp = employees.find(e => normalizeId(e.id) === finalEmpId);
+                        
+                        // 3. FUZZY MATCH BY NAME IF ID FAILS (To prevent duplicating existing manual adds)
+                        if (!matchedEmp) {
+                            const rawNorm = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                            if (rawNorm.length > 2) {
+                                matchedEmp = employees.find(e => {
+                                    const eNorm = (e.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    const eFirst = (e.firstName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    const eLast = (e.lastName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    
+                                    return (eNorm && eNorm === rawNorm) || 
+                                           (eNorm.includes(rawNorm)) || (rawNorm.includes(eNorm)) ||
+                                           (eFirst && eLast && rawNorm.includes(eFirst) && rawNorm.includes(eLast));
+                                });
+                            }
                         }
 
-                        // Auto-sync / create new employee if missing
-                        if (!employees.some(e => e.id.toString() === cleanId) && !processedIds.has(cleanId)) {
-                            processedIds.add(cleanId);
+                        // If matched by either ID or Name, FORCE the app to use the existing ID
+                        if (matchedEmp) {
+                            finalEmpId = matchedEmp.id;
+                        } else if (!processedIds.has(finalEmpId)) {
+                            // AUTO-CREATE NEW (Using the normalized ID to prevent future issues)
+                            processedIds.add(finalEmpId);
                             const nameParts = rawName.split(' ');
                             
-                            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', cleanId), {
-                                employeeId: cleanId,
+                            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', finalEmpId), {
+                                employeeId: finalEmpId,
                                 firstName: nameParts[0] || '',
                                 lastName: nameParts.slice(1).join(' ') || '',
-                                name: rawName,
-                                position: 'Imported Profile',
-                                dailyRate: 0,
-                                contactNumber: '',
-                                sssNumber: '',
-                                sssRate: 0,
-                                miscRate: 0,
-                                caBalance: 0,
-                                status: 'active',
-                                createdAt: Date.now()
+                                name: rawName, position: 'Imported Profile',
+                                dailyRate: 0, contactNumber: '', sssNumber: '',
+                                sssRate: 0, miscRate: 0, caBalance: 0,
+                                status: 'active', createdAt: Date.now()
                             });
                             newStaffCount++;
                         }
 
-                        // SMART DEDUPLICATION: Don't add if employee already clocked in on this specific date
+                        // DEDUPLICATE ATTENDANCE (Using standard finalized ID)
                         if (isoDate) {
-                            const attKey = `${cleanId}_${isoDate}`;
-                            const isDuplicateDB = attendance.some(a => a.empId.toString() === cleanId && a.date === isoDate);
+                            const attKey = `${finalEmpId}_${isoDate}`;
+                            const isDuplicateDB = attendance.some(a => normalizeId(a.empId) === finalEmpId && a.date === isoDate);
                             
                             if (!isDuplicateDB && !processedAttKeys.has(attKey)) {
                                 processedAttKeys.add(attKey);
                                 await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'attendance'), {
-                                    empId: cleanId, 
-                                    empName: rawName, 
-                                    date: isoDate, 
-                                    firstIn: timeRaw || '00:00', 
-                                    dayEquivalent: 1, 
-                                    remarks: 'Normalized'
+                                    empId: finalEmpId, empName: rawName, date: isoDate, 
+                                    firstIn: timeRaw || '00:00', dayEquivalent: 1, remarks: 'Normalized'
                                 });
                                 attCount++;
                             }
@@ -663,18 +630,16 @@
                     }
                     setRawInput('');
                     alert(`Import Complete!\n\nAuto-synced Profiles: ${newStaffCount}\nNew Attendance Days Added: ${attCount}\n${errCount > 0 ? "(Skipped " + errCount + " headers/invalid lines)" : ""}`);
-                } catch (err) {
-                    alert("Error parsing logs: " + err.message);
-                }
+                } catch (err) { alert("Error parsing logs: " + err.message); }
             };
 
             const handleSavePayslip = async () => {
                 if (!user || !isAdmin || !icEmpId) return;
                 const { db, appId, doc, setDoc } = window.fb;
-                const key = `${icEmpId}_${icDateStart}_${icDateEnd}`;
+                const key = `${normalizeId(icEmpId)}_${icDateStart}_${icDateEnd}`;
                 try {
                     await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'payroll_entries', key), {
-                        recordKey: key, empId: icEmpId, startDate: icDateStart, endDate: icDateEnd, data: icForm, updatedAt: Date.now()
+                        recordKey: key, empId: normalizeId(icEmpId), startDate: icDateStart, endDate: icDateEnd, data: icForm, updatedAt: Date.now()
                     });
                     alert("Payslip saved to cloud database.");
                 } catch (err) { alert(err.message); }
@@ -691,22 +656,18 @@
                 a.click();
             };
 
-            // NEW RESTORE BACKUP LOGIC
             const handleImportBackup = (event) => {
                 const file = event.target.files[0];
                 if (!file || !user || !isAdmin) return;
 
                 setIsRestoring(true);
                 const reader = new FileReader();
-                
                 reader.onload = async (e) => {
                     try {
                         const data = JSON.parse(e.target.result);
                         const { db, appId, doc, setDoc } = window.fb;
-
                         let totalRestored = 0;
 
-                        // Helper function to safely inject items into collections based on their original ID
                         const restoreCollection = async (collectionName, items) => {
                             if (!items || !Array.isArray(items)) return;
                             for (const item of items) {
@@ -718,7 +679,6 @@
                             }
                         };
 
-                        // Process all arrays found in the JSON
                         await restoreCollection('employees', data.employees);
                         await restoreCollection('attendance', data.attendance);
                         await restoreCollection('cash_advances', data.cashAdvances);
@@ -727,75 +687,49 @@
                         setIsRestoring(false);
                         alert(`Restore Complete!\nSuccessfully imported and recovered ${totalRestored} database records.`);
                     } catch (err) {
-                        setIsRestoring(false);
-                        alert("Error parsing or restoring backup: " + err.message);
+                        setIsRestoring(false); alert("Error parsing or restoring backup: " + err.message);
                     }
                 };
-                
                 reader.readAsText(file);
-                event.target.value = ''; // reset the input so you can upload the same file again if needed
+                event.target.value = ''; 
             };
 
             const handleEditClick = () => {
                 if(!isAdmin) return;
                 setNewEmpForm({
-                    biometricId: viewProfile.id,
-                    firstName: viewProfile.firstName || '',
-                    lastName: viewProfile.lastName || '',
-                    position: viewProfile.position || '',
-                    dailyRate: viewProfile.rate || '',
-                    contactNumber: viewProfile.contactNumber || '',
-                    sssNumber: viewProfile.sssNumber || '',
-                    sssRate: viewProfile.sssRate || '',
-                    miscRate: viewProfile.miscRate || '',
-                    status: viewProfile.status || 'active'
+                    biometricId: viewProfile.id, firstName: viewProfile.firstName || '',
+                    lastName: viewProfile.lastName || '', position: viewProfile.position || '',
+                    dailyRate: viewProfile.rate || '', contactNumber: viewProfile.contactNumber || '',
+                    sssNumber: viewProfile.sssNumber || '', sssRate: viewProfile.sssRate || '',
+                    miscRate: viewProfile.miscRate || '', status: viewProfile.status || 'active'
                 });
-                setIsEditing(true);
-                setViewProfile(null);
-                setShowAddEmp(true);
+                setIsEditing(true); setViewProfile(null); setShowAddEmp(true);
             };
 
             if (!isReady) return <div className="h-screen bg-blue-900 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />Checking Cloud Identity...</div>;
             if (!user) return <LoginScreen />;
 
-            // --- SMART CURRENCY FORMATTER (Removes unnecessary .00 decimals automatically) ---
             const formatMoney = (v) => {
                 const num = Number(v || 0);
-                return num % 1 === 0 
-                    ? num.toLocaleString('en-US') 
-                    : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
-            // Cash Advance List Filtering
-            const displayCAs = newCa.empId 
-                ? cashAdvances.filter(ca => ca.empId.toString() === newCa.empId.toString()) 
-                : cashAdvances;
+            const displayCAs = newCa.empId ? cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)) : cashAdvances;
 
             return (
                 <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden relative">
                     
                     {showAdminPin && (
-                        <AdminPinModal 
-                            onClose={() => setShowAdminPin(false)} 
-                            onUnlock={(name) => {
-                                setUserRole(name);
-                                setCurrentAdminName(name);
-                                setShowAdminPin(false);
-                                logAdminAccess(name);
-                            }} 
-                        />
+                        <AdminPinModal onClose={() => setShowAdminPin(false)} onUnlock={(name) => { setUserRole(name); setCurrentAdminName(name); setShowAdminPin(false); logAdminAccess(name); }} />
                     )}
 
-                    {/* RESTORE LOADING OVERLAY */}
                     {isRestoring && (
                         <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-50 font-sans flex-col text-white">
                             <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mb-6" />
                             <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2>
-                            <p className="text-sm font-bold text-blue-300 mt-2">Injecting records safely. Please do not close the window.</p>
                         </div>
                     )}
 
-                    {/* SIDEBAR OVERLAY FOR MOBILE */}
                     {isSidebarOpen && window.innerWidth < 1024 && (
                         <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)} />
                     )}
@@ -804,22 +738,15 @@
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} flex-shrink-0 shadow-2xl`}>
                         <div className="p-6 border-b border-blue-800 flex items-center justify-between">
                             <div className="font-black text-xl tracking-tighter flex items-center shrink-0">
-                                <span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3 shadow-lg">
-                                    <LayoutDashboard />
-                                </span> 
+                                <span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3 shadow-lg"><LayoutDashboard /></span> 
                                 {isSidebarOpen ? 'STONE GRILL' : ''}
                             </div>
-                            {isSidebarOpen && window.innerWidth < 1024 && (
-                                <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-white/10 rounded-lg">
-                                    <X />
-                                </button>
-                            )}
+                            {isSidebarOpen && window.innerWidth < 1024 && <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-white/10 rounded-lg"><X /></button>}
                         </div>
                         <nav className="flex-1 py-8 space-y-2 overflow-y-auto custom-scrollbar">
                             <NavItem icon={<LayoutDashboard />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => switchTab('dashboard')} open={isSidebarOpen} />
                             <NavItem icon={<Users />} label="Staff Directory" active={activeTab === 'employees'} onClick={() => switchTab('employees')} open={isSidebarOpen} />
                             <NavItem icon={<Clock />} label="Attendance" active={activeTab === 'attendance'} onClick={() => switchTab('attendance')} open={isSidebarOpen} />
-                            
                             <NavItem icon={<FileText />} label="Cloud Payslips" active={activeTab === 'interactive-card'} onClick={() => switchTab('interactive-card')} open={isSidebarOpen} />
                             <NavItem icon={<Banknote />} label="Cash Advance" active={activeTab === 'ca'} onClick={() => switchTab('ca')} open={isSidebarOpen} />
                             <NavItem icon={<Calculator />} label="Payroll Report" active={activeTab === 'payroll'} onClick={() => switchTab('payroll')} open={isSidebarOpen} />
@@ -855,13 +782,7 @@
                     <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
                         
                         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
-                            <button 
-                                onClick={() => setSidebarOpen(!isSidebarOpen)} 
-                                className="text-gray-400 hover:text-blue-900 transition-colors"
-                            >
-                                <Menu className="w-6 h-6" />
-                            </button>
-
+                            <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-blue-900 transition-colors"><Menu className="w-6 h-6" /></button>
                             <div className="flex items-center gap-4">
                                 {!isPrivileged && <span className="px-3 py-1 bg-stone-100 text-stone-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-stone-200">Staff Mode</span>}
                                 {isPrivileged && <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">Access Level: {currentAdminName}</span>}
@@ -877,7 +798,6 @@
                                         <div className={`grid grid-cols-1 ${isPrivileged ? 'md:grid-cols-4' : 'md:grid-cols-2'} gap-6`}>
                                             <StatCard title="Active Staff" value={stats.count} icon={<Users />} color="bg-blue-50 text-blue-700" />
                                             <StatCard title="Clocked In Today" value={stats.present} icon={<Clock />} color="bg-emerald-50 text-emerald-700" />
-                                            
                                             {isPrivileged && (
                                                 <>
                                                     <StatCard title="Total CA" value={`₱${formatMoney(stats.totalCA)}`} icon={<Banknote />} color="bg-amber-50 text-amber-700" />
@@ -886,7 +806,6 @@
                                             )}
                                         </div>
 
-                                        {/* PRIVILEGED ONLY: DASHBOARD QUICK LOOKUP */}
                                         {isPrivileged && (
                                             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mt-6 animate-slide-up">
                                                 <h3 className="font-black text-blue-900 uppercase tracking-widest mb-6 flex items-center gap-2">
@@ -982,11 +901,10 @@
 
                                 {activeTab === 'attendance' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full min-h-0">
-                                        {/* ADMIN ONLY: IMPORT LOGS */}
                                         {isAdmin && (
                                             <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col shadow-xl animate-slide-up">
                                                 <h3 className="font-black text-blue-900 uppercase tracking-widest mb-2">Smart Import Logs</h3>
-                                                <p className="text-[11px] text-slate-400 mb-6 font-medium leading-relaxed">Paste your raw biometric tab data or Excel rows. <strong className="text-blue-500">Unknown IDs will auto-create new staff profiles. Duplicates are strictly ignored automatically.</strong></p>
+                                                <p className="text-[11px] text-slate-400 mb-6 font-medium leading-relaxed">Paste your raw biometric tab data or Excel rows. <strong className="text-blue-500">Normalizes IDs intelligently (e.g. "007" merges securely to "7").</strong></p>
                                                 <textarea 
                                                     className="w-full flex-1 p-4 text-xs font-mono border rounded-2xl mb-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none bg-slate-50/50 custom-scrollbar" 
                                                     placeholder="ID	Name	Dept.	Time	Device ID..." 
@@ -1009,7 +927,7 @@
                                                             <tr key={i} className="border-b hover:bg-slate-50 transition-colors">
                                                                 <td className="p-3 text-slate-400 font-mono">{a.date}</td>
                                                                 <td className="p-3 font-black uppercase tracking-tighter text-slate-700">
-                                                                    {employees.find(e => e.id.toString() === a.empId.toString())?.name || a.empName || `ID:${a.empId}`}
+                                                                    {employees.find(e => normalizeId(e.id) === normalizeId(a.empId))?.name || a.empName || `ID:${a.empId}`}
                                                                 </td>
                                                                 <td className="p-3 text-right text-blue-600 font-black font-mono">{a.firstIn}</td>
                                                             </tr>
@@ -1058,9 +976,9 @@
                                             {icEmpId ? (
                                                 <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative rounded-sm" id="interactive-print-section">
                                                     <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYROLL</div></div>
-                                                    <h2 className="text-2xl font-black border-b-4 border-red-500 mb-2 uppercase tracking-tighter leading-none pb-2">{employees.find(e => e.id.toString() === icEmpId.toString())?.name}</h2>
+                                                    <h2 className="text-2xl font-black border-b-4 border-red-500 mb-2 uppercase tracking-tighter leading-none pb-2">{employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.name}</h2>
                                                     <div className="flex justify-between items-end mb-8 text-sm font-bold text-slate-500">
-                                                        <span className="uppercase tracking-widest">{employees.find(e => e.id.toString() === icEmpId.toString())?.position}</span>
+                                                        <span className="uppercase tracking-widest">{employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.position}</span>
                                                         <span className="text-slate-900 font-black text-xl">DAYS {icForm.days_worked}</span>
                                                     </div>
                                                     <div className="flex text-center mb-2 font-black text-[10px] tracking-widest">
@@ -1069,7 +987,7 @@
                                                     </div>
                                                     <div className="flex h-36 border-b border-slate-100">
                                                         <div className="flex-1 p-3 text-xs space-y-2 border-r border-slate-100 font-mono">
-                                                            <div className="flex justify-between opacity-60"><span>Basic:</span><span>₱{formatMoney(icForm.days_worked * (employees.find(e => e.id.toString() === icEmpId.toString())?.rate || 0))}</span></div>
+                                                            <div className="flex justify-between opacity-60"><span>Basic:</span><span>₱{formatMoney(icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0))}</span></div>
                                                             <div className="flex justify-between font-black text-emerald-600 italic"><span>Bonus:</span><span>{icForm.bonus > 0 ? formatMoney(icForm.bonus) : '--'}</span></div>
                                                         </div>
                                                         <div className="flex-1 p-3 text-xs space-y-2 font-mono text-rose-600 font-bold">
@@ -1080,7 +998,7 @@
                                                     </div>
                                                     <div className="flex justify-between items-center mt-8">
                                                         <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">TOTAL NET</span>
-                                                        <span className="text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter">₱{formatMoney((icForm.days_worked * (employees.find(e => e.id.toString() === icEmpId.toString())?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions))}</span>
+                                                        <span className="text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter">₱{formatMoney((icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions))}</span>
                                                     </div>
                                                     <button onClick={() => window.print()} className="mt-10 w-full bg-slate-800 hover:bg-black text-white py-3 rounded-full font-black uppercase tracking-widest text-[10px] print-hidden flex items-center justify-center gap-3 transition-all"><Printer className="w-4 h-4"/> Print Card</button>
                                                 </div>
@@ -1103,11 +1021,10 @@
                                                     </select>
                                                 </div>
 
-                                                {/* DYNAMIC RECENT ADVANCES & BALANCE */}
                                                 {newCa.empId && (() => {
-                                                    const caEmp = employees.find(e => e.id.toString() === newCa.empId.toString());
+                                                    const caEmp = employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId));
                                                     if (!caEmp) return null;
-                                                    const recentCAs = cashAdvances.filter(ca => ca.empId.toString() === newCa.empId.toString()).sort((a,b) => b.date.localeCompare(a.date)).slice(0,3);
+                                                    const recentCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)).sort((a,b) => b.date.localeCompare(a.date)).slice(0,3);
                                                     return (
                                                         <div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 mb-4 animate-slide-up">
                                                             <div className="flex justify-between items-center mb-3">
@@ -1152,7 +1069,7 @@
                                         </div>
                                         <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col">
                                             <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px] tracking-widest">
-                                                {newCa.empId ? `Advance History: ${employees.find(e => e.id.toString() === newCa.empId.toString())?.name}` : 'Recent Archive (All)'}
+                                                {newCa.empId ? `Advance History: ${employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId))?.name}` : 'Recent Archive (All)'}
                                             </div>
                                             <div className="overflow-y-auto max-h-[500px] custom-scrollbar">
                                                 <table className="w-full text-sm">
@@ -1162,7 +1079,7 @@
                                                             displayCAs.sort((a,b)=>b.date.localeCompare(a.date)).map(ca => (
                                                             <tr key={ca.id} className="hover:bg-slate-50/50 transition-colors">
                                                                 <td className="p-4 text-slate-400 font-mono text-xs">{ca.date}</td>
-                                                                <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => e.id.toString() === ca.empId.toString())?.name || ca.empId}</td>
+                                                                <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => normalizeId(e.id) === normalizeId(ca.empId))?.name || ca.empId}</td>
                                                                 <td className="p-4 text-right font-black text-red-600 font-mono">₱{formatMoney(ca.amount)}</td>
                                                             </tr>
                                                         ))}
@@ -1281,7 +1198,7 @@
                                                         {attendance.filter(a => a.date >= reportDates.start && a.date <= reportDates.end).map((a, i) => (
                                                             <tr key={i} className="hover:bg-slate-50 transition-colors">
                                                                 <td className="p-4 font-mono text-slate-500">{a.date}</td>
-                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e => e.id.toString() === a.empId.toString())?.name || a.empName || a.empId}</td>
+                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e => normalizeId(e.id) === normalizeId(a.empId))?.name || a.empName || a.empId}</td>
                                                                 <td className="p-4 text-blue-600 font-black">{a.firstIn}</td>
                                                                 <td className="p-4 text-center font-bold text-slate-900">{a.dayEquivalent}</td>
                                                                 <td className="p-4"><span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase border ${a.remarks === 'Normalized' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>{a.remarks}</span></td>
@@ -1296,16 +1213,12 @@
 
                                 {activeTab === 'settings' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        
                                         <div className="space-y-6">
-                                            {/* Backup Section */}
                                             <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
                                                 <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Backup</h3>
                                                 <p className="text-sm text-slate-400 mb-8 font-medium">Download a complete snapshot of your restaurant database for manual archival.</p>
                                                 <button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3"><Download /> Download JSON</button>
                                             </div>
-
-                                            {/* Restore Section */}
                                             <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 animate-slide-up">
                                                 <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Restore</h3>
                                                 <p className="text-sm text-slate-400 mb-8 font-medium">Upload a previously downloaded JSON backup file to recover your data.</p>
@@ -1316,7 +1229,6 @@
                                             </div>
                                         </div>
 
-                                        {/* Security Audit Logs */}
                                         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-full min-h-[350px] animate-slide-up">
                                             <div className="p-6 bg-slate-900 text-white border-b flex justify-between items-center">
                                                 <h3 className="font-black uppercase tracking-widest text-xs">Security Audit Logs</h3>
@@ -1382,7 +1294,7 @@
                         </div>
                     )}
 
-                    {/* LEDGER PROFILE MODAL (Admin/User View) */}
+                    {/* LEDGER PROFILE MODAL */}
                     {viewProfile && isPrivileged && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1406,7 +1318,7 @@
                                     </div>
                                     <div className="grid grid-cols-2 gap-6 text-center">
                                         <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase tracking-widest mb-2">Total C.A. Due</p><p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(viewProfile.caBalance)}</p></div>
-                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm"><p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Attendance Count</p><p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => a.empId.toString() === viewProfile.id.toString()).length}</p></div>
+                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm"><p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Attendance Count</p><p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(viewProfile.id)).length}</p></div>
                                     </div>
                                 </div>
                             </div>
@@ -1440,3 +1352,5 @@
     </script>
 </body>
 </html>
+
+```
