@@ -976,9 +976,11 @@ function getField(row, possibleNames) {
 
   return "";
 }
-
 /* -----------------------------
    DATE HELPERS
+   Loyverse format locked:
+   DD/MM/YYYY HH:mm
+   Example: 28/03/2026 17:07
 ----------------------------- */
 function getDateObject(row) {
   return parseLoyverseDate(getRawDate(row));
@@ -1018,64 +1020,31 @@ function parseLoyverseDate(value) {
     .trim();
 
   /*
-    Loyverse sample:
-    4/26/26 8:27 PM
+    Expected Loyverse format:
+    28/03/2026 17:07
 
-    This parser treats it as:
-    Month / Day / Year
-    April 26, 2026
+    Meaning:
+    28 = day
+    03 = month
+    2026 = year
+    17:07 = 24-hour time
   */
   const match = clean.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i
+    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/
   );
 
   if (!match) return null;
 
-  let first = Number(match[1]);
-  let second = Number(match[2]);
+  const day = Number(match[1]);
+  const month = Number(match[2]) - 1;
   let year = Number(match[3]);
 
   if (year < 100) {
     year += 2000;
   }
 
-  let month;
-  let day;
-
-  /*
-    Auto-detect:
-    If second number is above 12, format is clearly Month/Day/Year.
-    Example: 4/26/26 = April 26, 2026
-  */
-  if (second > 12) {
-    month = first - 1;
-    day = second;
-  }
-
-  /*
-    If first number is above 12, format is clearly Day/Month/Year.
-    Example: 26/4/26 = April 26, 2026
-  */
-  else if (first > 12) {
-    month = second - 1;
-    day = first;
-  }
-
-  /*
-    If both are 12 or below, use Loyverse style Month/Day/Year.
-    Example: 4/5/26 = April 5, 2026
-  */
-  else {
-    month = first - 1;
-    day = second;
-  }
-
-  let hour = Number(match[4] || 0);
-  let minute = Number(match[5] || 0);
-  let ampm = (match[6] || "").toUpperCase();
-
-  if (ampm === "PM" && hour < 12) hour += 12;
-  if (ampm === "AM" && hour === 12) hour = 0;
+  const hour = Number(match[4] || 0);
+  const minute = Number(match[5] || 0);
 
   return new Date(year, month, day, hour, minute);
 }
