@@ -74,7 +74,7 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        // --- GLOBAL ID NORMALIZATION ENGINE ---
+        // --- CRASH-PROOF ID NORMALIZATION ---
         const normalizeId = (id) => {
             if (id === undefined || id === null) return '';
             const strId = String(id).trim();
@@ -275,8 +275,7 @@
             const [showAddEmp, setShowAddEmp] = useState(false);
             const [rawInput, setRawInput] = useState('');
             
-            // C.A. Toggle State
-            const [caType, setCaType] = useState('advance'); // 'advance' or 'payment'
+            const [caType, setCaType] = useState('advance');
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             const [viewProfile, setViewProfile] = useState(null);
             
@@ -303,19 +302,26 @@
                 if (window.innerWidth < 1024) setSidebarOpen(false);
             };
 
-            // --- FIREBASE SYNC ---
+            // --- CRASH-PROOF FIREBASE SYNC ---
             useEffect(() => {
-                const initFirebase = async () => {
-                    if (window.fb) {
-                        const { auth, onAuthStateChanged } = window.fb;
-                        onAuthStateChanged(auth, (u) => {
-                            setUser(u);
-                            setIsReady(true);
-                            if(!u) { setUserRole('Staff'); setCurrentAdminName(''); }
+                let isMounted = true;
+                const checkFb = setInterval(() => {
+                    if (window.fb && window.fb.auth && isMounted) {
+                        clearInterval(checkFb);
+                        window.fb.onAuthStateChanged(window.fb.auth, (u) => {
+                            if(isMounted) {
+                                setUser(u);
+                                setIsReady(true);
+                                if(!u) { setUserRole('Staff'); setCurrentAdminName(''); }
+                            }
                         });
                     }
+                }, 100);
+
+                return () => {
+                    isMounted = false;
+                    clearInterval(checkFb);
                 };
-                initFirebase();
             }, []);
 
             useEffect(() => {
@@ -340,7 +346,7 @@
                             status: data.status || 'active',
                             caBalance: data.caBalance || 0
                         };
-                    }).sort((a,b)=>a.name.localeCompare(b.name)));
+                    }).sort((a,b)=> (a.name || '').localeCompare(b.name || '')));
                 });
                 const unsubAtt = onSnapshot(userPath('attendance'), (snap) => setAttendance(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
                 const unsubCA = onSnapshot(userPath('cash_advances'), (snap) => setCashAdvances(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -350,23 +356,20 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); unsubLogs(); };
             }, [user]);
 
-            // --- SMART CALCULATIONS (WITH FIX FOR "44 DAYS" BUG) ---
+            // --- SMART CALCULATIONS (STRICT DAY CAPPING) ---
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
-                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && a.date.startsWith(selectedMonth));
+                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
                     
-                    // Strict Day Capping Logic: Group by unique calendar date so it NEVER exceeds the month's days.
                     const uniqueDates = new Set(empAtt.map(a => a.date));
                     let days = 0;
                     uniqueDates.forEach(date => {
                         const dayRecords = empAtt.filter(a => a.date === date);
-                        // Take the highest calculated equivalent for that day (0.5 or 1.0)
                         const maxDay = Math.max(...dayRecords.map(r => parseFloat(r.dayEquivalent) || 0));
-                        days += Math.min(maxDay, 1); // Absolutely cap at 1.0 per calendar date
+                        days += Math.min(maxDay, 1);
                     });
 
                     const gross = days * (parseFloat(emp.rate) || 0);
-                    
                     const sss = parseFloat(emp.sssRate) || 0;
                     const misc = parseFloat(emp.miscRate) || 0;
                     
@@ -378,7 +381,7 @@
 
                     const net = gross - sss - misc - caDed;
                     
-                    return { ...emp, days, gross, caDed, sss, misc, net };
+                    return { ...emp, days, gross, caDed, sss, misc, net, caBalance };
                 });
             }, [employees, attendance, selectedMonth]);
 
@@ -395,7 +398,6 @@
                         if (emp) {
                             const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && a.date >= icDateStart && a.date <= icDateEnd);
                             
-                            // Day capping logic
                             const uniqueDates = new Set(att.map(a => a.date));
                             let calcDays = 0;
                             uniqueDates.forEach(date => {
@@ -424,7 +426,6 @@
                 return { count: employees.length, present: uniquePresent, totalCA, alerts: payrollSummary.filter(p => p.net < 0).length };
             }, [employees, attendance, payrollSummary]);
 
-            // DASHBOARD SEARCH
             let searchedEmp = null;
             let searchedDays = 0, searchedGross = 0, searchedCaDed = 0, searchedMisc = 0;
             if (dashSearchEmpId) {
@@ -499,7 +500,9 @@
                 if (!user || !isAdmin || !newCa.empId || !newCa.amount || !newCa.date) return;
                 const { db, appId, addDoc, doc, updateDoc, collection } = window.fb;
                 
-                let amt = parseFloat(newCa.amount);
+                let amt = parseFloat(newCa.amount) || 0;
+                if(amt === 0) return alert("Please enter a valid amount greater than 0.");
+
                 if (caType === 'payment') {
                     amt = -Math.abs(amt);
                 } else {
@@ -523,7 +526,7 @@
                 } catch (err) { alert(err.message); }
             };
 
-            // SMART DATA PARSER (Strict ID Matching & Time Diff Rule Engine)
+            // SMART DATA PARSER
             const handleProcessLogs = async () => {
                 if (!user || !isAdmin || !rawInput.trim()) return;
                 const { db, appId, addDoc, doc, setDoc, collection, updateDoc } = window.fb;
@@ -534,7 +537,6 @@
                 const processedIds = new Set();
                 
                 try {
-                    // Step 1: Parse logs into pools per ID + Date
                     for (const line of lines) {
                         const rawLine = line.trim();
                         if (!rawLine) continue;
@@ -547,7 +549,7 @@
                             errCount++; continue;
                         }
 
-                        const dateRegex = /\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/;
+                        const dateRegex = /\d{1,4}[/-]\d{1,2}[/-]\d{1,4}/;
                         const dateIndex = parts.findIndex(col => dateRegex.test(col));
                         
                         let rawCleanId = ''; let rawName = ''; let isoDate = null;
@@ -582,7 +584,6 @@
                         const finalEmpId = normalizeId(rawCleanId);
                         let matchedEmp = employees.find(e => normalizeId(e.id) === finalEmpId);
                         
-                        // Strict ID creation protection
                         if (!matchedEmp && !processedIds.has(finalEmpId)) {
                             processedIds.add(finalEmpId);
                             const nameParts = rawName.split(' ');
@@ -604,17 +605,15 @@
                             parsedData[key] = { finalEmpId, rawName, isoDate, times: new Set() };
                         }
                         
-                        // Extract ALL timestamps from the line to build punch list
                         const allTimes = rawLine.match(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g) || [];
                         allTimes.forEach(t => {
-                            const parts = t.split(':');
-                            const hh = parts[0].padStart(2, '0');
-                            const mm = parts[1];
+                            const tParts = t.split(':');
+                            const hh = tParts[0].padStart(2, '0');
+                            const mm = tParts[1];
                             parsedData[key].times.add(`${hh}:${mm}`);
                         });
                     }
 
-                    // Step 2: Apply Time Logic & Update Database
                     for (const key in parsedData) {
                         const data = parsedData[key];
                         const existingRecord = attendance.find(a => normalizeId(a.empId) === data.finalEmpId && a.date === data.isoDate);
@@ -633,19 +632,17 @@
                         let firstIn = sortedTimes[0] || '00:00';
                         let lastOut = sortedTimes[sortedTimes.length - 1] || '00:00';
 
-                        // TIME ENGINE RULE
                         if (sortedTimes.length === 0) {
-                            dayEquivalent = 1; // Legacy fallback
+                            dayEquivalent = 1; 
                             remarks = 'Normalized (No Time)';
                         } else if (sortedTimes.length === 1) {
-                            dayEquivalent = 0.5; // 1 punch counted as halfday
+                            dayEquivalent = 0.5; 
                             remarks = '1 Punch (Halfday)';
                         } else {
                             const t1 = new Date(`1970-01-01T${firstIn}:00Z`);
                             const t2 = new Date(`1970-01-01T${lastOut}:00Z`);
                             const hoursDiff = (t2.getTime() - t1.getTime()) / 3600000;
                             
-                            // below 5 hrs time in to timeout consider half day
                             if (hoursDiff < 5) {
                                 dayEquivalent = 0.5;
                                 remarks = '< 5hrs (Halfday)';
@@ -656,13 +653,11 @@
                         }
 
                         if (existingRecord) {
-                            // Update existing memory
                             await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'attendance', existingRecord.id), {
                                 firstIn, lastOut, dayEquivalent, remarks, punches: sortedTimes
                             });
                             updatedAttCount++;
                         } else {
-                            // Add new
                             await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'attendance'), {
                                 empId: data.finalEmpId, empName: data.rawName, date: data.isoDate,
                                 firstIn, lastOut, dayEquivalent, remarks, punches: sortedTimes
@@ -752,8 +747,10 @@
             if (!isReady) return <div className="h-screen bg-blue-900 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />Checking Cloud Identity...</div>;
             if (!user) return <LoginScreen />;
 
+            // Crash-proof formatter
             const formatMoney = (v) => {
                 const num = Number(v || 0);
+                if (isNaN(num)) return "0";
                 return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
@@ -890,7 +887,7 @@
                                                             <div className="col-span-2 md:col-span-1 mt-6 md:mt-0">
                                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Remaining CA Bal.</p>
                                                                 <p className={`text-4xl font-black font-mono tracking-tighter ${searchedEmp.caBalance < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                                                    {searchedEmp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(searchedEmp.caBalance))}
+                                                                    {searchedEmp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(searchedEmp.caBalance || 0))}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -943,7 +940,7 @@
                                                                 <td className="p-4 text-[#5f6880] font-black">{row.id}</td>
                                                                 <td className="p-4 font-black text-slate-800 uppercase tracking-tighter">{row.name}</td>
                                                                 {isPrivileged && <td className="p-4 text-center font-bold text-slate-800">{row.days > 0 ? row.days : ''}</td>}
-                                                                {isPrivileged && <td className="p-4 text-right font-black text-[#d73f4e]">{row.caBalance > 0 ? formatMoney(row.caBalance) : ''}</td>}
+                                                                {isPrivileged && <td className="p-4 text-right font-black text-[#d73f4e]">{row.caBalance !== 0 ? formatMoney(row.caBalance) : ''}</td>}
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.gross > 0 ? formatMoney(row.gross) : ''}</td>}
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.misc > 0 ? formatMoney(row.misc) : ''}</td>}
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.sss > 0 ? formatMoney(row.sss) : ''}</td>}
@@ -981,7 +978,7 @@
                                             <div className="overflow-y-auto flex-1 custom-scrollbar min-h-[400px]">
                                                 <table className="w-full text-xs">
                                                     <tbody>
-                                                        {attendance.sort((a,b)=>b.date.localeCompare(a.date)).slice(0, 100).map((a, i) => {
+                                                        {attendance.sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0, 100).map((a, i) => {
                                                             const boundEmp = employees.find(e => normalizeId(e.id) === normalizeId(a.empId));
                                                             return (
                                                                 <tr key={i} className="border-b hover:bg-slate-50 transition-colors">
@@ -1097,14 +1094,13 @@
                                                     const caEmp = employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId));
                                                     if (!caEmp) return null;
                                                     
-                                                    // Dynamic styling: Red if negative, Slate/Black if positive (debt)
                                                     const isNegative = caEmp.caBalance < 0;
                                                     
                                                     return (
                                                         <div className="bg-rose-50/30 p-6 rounded-2xl border border-rose-100/50 mb-4 flex justify-between items-center animate-slide-up">
                                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Balance</span>
                                                             <span className={`text-2xl font-black font-mono tracking-tighter ${isNegative ? 'text-red-600' : 'text-slate-800'}`}>
-                                                                {isNegative ? '-' : ''}₱{formatMoney(Math.abs(caEmp.caBalance))}
+                                                                {isNegative ? '-' : ''}₱{formatMoney(Math.abs(caEmp.caBalance || 0))}
                                                             </span>
                                                         </div>
                                                     );
@@ -1138,7 +1134,7 @@
 
                                             {/* Recent Transactions Moved Below Button */}
                                             {newCa.empId && (() => {
-                                                const recentCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)).sort((a,b) => b.date.localeCompare(a.date)).slice(0,3);
+                                                const recentCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)).sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0,3);
                                                 if(recentCAs.length === 0) return null;
                                                 return (
                                                     <div className="space-y-2 mt-6 pt-6 border-t border-gray-100">
@@ -1150,7 +1146,7 @@
                                                                     <span className="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">{rc.type === 'payment' ? 'Payment' : 'Advance'}</span>
                                                                 </div>
                                                                 <span className={rc.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                                                                    {rc.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(rc.amount))}
+                                                                    {rc.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(rc.amount || 0))}
                                                                 </span>
                                                             </div>
                                                         ))}
@@ -1168,12 +1164,12 @@
                                                     <thead className="bg-white text-[10px] text-slate-400 uppercase border-b sticky top-0"><tr><th className="p-4 text-left">Date</th><th className="p-4 text-left">Name</th><th className="p-4 text-right">Value</th></tr></thead>
                                                     <tbody className="divide-y divide-gray-50">
                                                         {displayCAs.length === 0 ? <tr><td colSpan="3" className="p-16 text-center text-slate-300 italic">{newCa.empId ? "No entries found for this employee." : "No entries on cloud ledger."}</td></tr> :
-                                                            displayCAs.sort((a,b)=>b.date.localeCompare(a.date)).map(ca => (
+                                                            displayCAs.sort((a,b) => (b.date || '').localeCompare(a.date || '')).map(ca => (
                                                             <tr key={ca.id} className="hover:bg-slate-50/50 transition-colors">
                                                                 <td className="p-4 text-slate-400 font-mono text-xs">{ca.date}</td>
                                                                 <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => normalizeId(e.id) === normalizeId(ca.empId))?.name || ca.empId}</td>
                                                                 <td className={`p-4 text-right font-black font-mono ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                                    {ca.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(ca.amount))}
+                                                                    {ca.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(ca.amount || 0))}
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -1219,7 +1215,7 @@
                                                             <td className="py-3 px-2 text-slate-600 uppercase text-[10px] font-bold tracking-widest">{row.position || '--'}</td>
                                                             <td className="py-3 px-2 text-center text-slate-700 font-mono font-medium">{row.rate > 0 ? formatMoney(row.rate) : '--'}</td>
                                                             <td className="py-3 px-2 text-center font-bold text-slate-900">{row.days > 0 ? row.days : ''}</td>
-                                                            <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.caDed > 0 ? formatMoney(row.caDed) : ''}</td>
+                                                            <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.caBalance > 0 ? formatMoney(row.caBalance) : ''}</td>
                                                             <td className="py-3 px-2 text-right font-black text-slate-900 font-mono text-base">{row.net > 0 ? formatMoney(row.net) : ''}</td>
                                                             <td className="py-3 px-2"><div className="w-full h-8 border-b border-dashed border-gray-300"></div></td>
                                                         </tr>
@@ -1339,7 +1335,7 @@
                                                     {auditLogs.length === 0 ? (
                                                         <p className="text-center text-slate-400 italic mt-10 text-sm">No admin logins recorded yet.</p>
                                                     ) : (
-                                                        auditLogs.sort((a,b) => b.timestamp - a.timestamp).map(log => (
+                                                        auditLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).map(log => (
                                                             <div key={log.id} className="flex justify-between items-center text-sm border-b border-gray-100 pb-3">
                                                                 <div>
                                                                     <p className="font-black text-slate-800 uppercase tracking-tight">{log.adminName}</p>
