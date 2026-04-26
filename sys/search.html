@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stone Grill Pay In / Payout Search</title>
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4eee7;
+    color: #2b211c;
+  }
+
+  header {
+    background: #2b211c;
+    color: white;
+    padding: 18px;
+    text-align: center;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 21px;
+  }
+
+  header p {
+    margin: 7px 0 0;
+    font-size: 14px;
+    opacity: 0.85;
+  }
+
+  .app {
+    max-width: 1150px;
+    margin: auto;
+    padding: 14px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    border: 0;
+    padding: 14px 10px;
+    border-radius: 14px;
+    background: #dfd2c4;
+    color: #2b211c;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .tab-btn.active {
+    background: #b84a2f;
+    color: white;
+  }
+
+  .card {
+    background: white;
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 350px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid #cdbfb4;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  button.action {
+    border: 0;
+    padding: 11px 14px;
+    border-radius: 12px;
+    background: #2b211c;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  button.clear {
+    background: #8b1f1f;
+  }
+
+  button.active-mode {
+    background: #b84a2f;
+  }
+
+  .hint {
+    font-size: 13px;
+    color: #6c5f56;
+    line-height: 1.5;
+  }
+
+  .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .filter-box label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #5a4c43;
+  }
+
+  select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #cdbfb4;
+    background: #fffaf5;
+    font-size: 14px;
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-box {
+    width: 100%;
+    padding: 16px 18px;
+    font-size: 18px;
+    border-radius: 999px;
+    border: 1px solid #cdbfb4;
+    outline: none;
+  }
+
+  .suggestions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 56px;
+    background: white;
+    border: 1px solid #ddd0c6;
+    border-radius: 14px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.13);
+    overflow: hidden;
+    z-index: 20;
+    display: none;
+  }
+
+  .suggestion-item {
+    padding: 13px 16px;
+    border-bottom: 1px solid #f0e6df;
+    cursor: pointer;
+    font-size: 15px;
+  }
+
+  .suggestion-item:hover {
+    background: #fff3ea;
+  }
+
+  .suggestion-item:last-child {
+    border-bottom: 0;
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
+  }
+
+  .summary-card {
+    background: #faf5f0;
+    padding: 13px;
+    border-radius: 14px;
+    border: 1px solid #ecded4;
+  }
+
+  .summary-card span {
+    font-size: 13px;
+    color: #6c5f56;
+  }
+
+  .summary-card strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 21px;
+  }
+
+  .results {
+    margin-top: 12px;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+    background: white;
+  }
+
+  th {
+    background: #2b211c;
+    color: white;
+    padding: 11px;
+    text-align: left;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 11px;
+    border-bottom: 1px solid #eee2da;
+    font-size: 14px;
+    vertical-align: top;
+  }
+
+  tr:hover td {
+    background: #fff8f2;
+  }
+
+  .amount {
+    font-weight: bold;
+    color: #b84a2f;
+    white-space: nowrap;
+  }
+
+  .comment {
+    font-weight: bold;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 28px;
+    color: #777;
+    background: #fffaf6;
+    border-radius: 14px;
+  }
+
+  @media (min-width: 701px) {
+    .suggestions {
+      display: none !important;
+    }
+  }
+
+  @media (max-width: 700px) {
+    header h1 {
+      font-size: 18px;
+    }
+
+    .app {
+      padding: 10px;
+    }
+
+    .card {
+      padding: 13px;
+      border-radius: 16px;
+    }
+
+    .filter-row {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .search-box {
+      font-size: 16px;
+      padding: 15px 17px;
+    }
+
+    .summary {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .summary-card strong {
+      font-size: 18px;
+    }
+
+    table {
+      min-width: 580px;
+    }
+
+    th, td {
+      font-size: 12px;
+      padding: 9px;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Stone Grill Pay In / Payout Search</h1>
+  <p>Paste Loyverse data, filter by employee/date, then search comments.</p>
+</header>
+
+<div class="app">
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('pasteTab', this)">1. Paste Data</button>
+    <button class="tab-btn" onclick="openTab('searchTab', this)">2. Search</button>
+  </div>
+
+  <!-- PASTE TAB -->
+  <section id="pasteTab" class="tab-content active">
+    <div class="card">
+      <h2>Paste Loyverse Data</h2>
+
+      <textarea id="dataInput" placeholder="Paste your Loyverse table here including headers.
+
+Example:
+Date	Store	POS	Shift number	Type	Employee	Comment	Amount
+4/26/26 8:27 PM	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	C.a caloy	4000.00
+4/26/26 4:31 PM	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Icetea 1dzn	255.00"></textarea>
+
+      <div class="actions">
+        <button class="action" onclick="saveData()">Save Data</button>
+        <button class="action clear" onclick="clearData()">Clear Data</button>
+      </div>
+
+      <p class="hint">
+        Keep the first row headers. This version expects your Loyverse style:
+        Date, Store, POS, Shift number, Type, Employee, Comment, Amount.
+      </p>
+    </div>
+  </section>
+
+  <!-- SEARCH TAB -->
+  <section id="searchTab" class="tab-content">
+    <div class="card">
+
+      <div class="filter-row">
+        <div class="filter-box">
+          <label for="employeeFilter">Employee Filter</label>
+          <select id="employeeFilter" onchange="searchData()">
+            <option value="">All employees</option>
+          </select>
+        </div>
+
+        <div class="filter-box">
+          <label for="dateFilter">Date Filter</label>
+          <select id="dateFilter" onchange="searchData()">
+            <option value="">All dates</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <input
+          id="searchInput"
+          class="search-box"
+          type="text"
+          placeholder="Search comment, example: manok, caloy, icetea..."
+          autocomplete="off"
+          oninput="handleSearchTyping()"
+          onfocus="showSuggestions()"
+        />
+        <div id="suggestions" class="suggestions"></div>
+      </div>
+
+      <div class="actions">
+        <button id="groupButton" class="action" onclick="toggleGroupView()">Grouped by Comment: OFF</button>
+        <button class="action" onclick="showAll()">Show All</button>
+      </div>
+
+      <div class="summary">
+        <div class="summary-card">
+          <span>Records</span>
+          <strong id="recordCount">0</strong>
+        </div>
+
+        <div class="summary-card">
+          <span>Total Pay In</span>
+          <strong id="totalPayIn">₱0.00</strong>
+        </div>
+
+        <div class="summary-card">
+          <span>Total Payout</span>
+          <strong id="totalPayout">₱0.00</strong>
+        </div>
+
+        <div class="summary-card">
+          <span>Net</span>
+          <strong id="netMovement">₱0.00</strong>
+        </div>
+      </div>
+
+      <div id="results" class="results">
+        <div class="empty">No data loaded yet.</div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<script>
+let parsedData = [];
+let headers = [];
+let groupView = false;
+
+/* -----------------------------
+   TAB SWITCHING
+----------------------------- */
+function openTab(tabId, button) {
+  document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+
+  document.getElementById(tabId).classList.add("active");
+  button.classList.add("active");
+
+  if (tabId === "searchTab") {
+    loadData();
+    buildFilters();
+    searchData();
+  }
+}
+
+/* -----------------------------
+   SAVE DATA
+----------------------------- */
+function saveData() {
+  const raw = document.getElementById("dataInput").value.trim();
+
+  if (!raw) {
+    alert("Please paste Loyverse data first.");
+    return;
+  }
+
+  try {
+    localStorage.setItem("stonegrill_loyverse_payout_data", raw);
+  } catch (e) {
+    console.warn("localStorage may not work in this editor preview.");
+  }
+
+  parsedData = parseTableData(raw);
+  buildFilters();
+  searchData();
+
+  alert("Data loaded. Go to Search tab.");
+}
+
+/* -----------------------------
+   CLEAR DATA
+----------------------------- */
+function clearData() {
+  if (!confirm("Clear all saved data?")) return;
+
+  try {
+    localStorage.removeItem("stonegrill_loyverse_payout_data");
+  } catch (e) {}
+
+  document.getElementById("dataInput").value = "";
+  document.getElementById("searchInput").value = "";
+
+  parsedData = [];
+  headers = [];
+
+  resetFilters();
+  renderResults([]);
+  updateSummary([]);
+  hideSuggestions();
+}
+
+/* -----------------------------
+   LOAD DATA
+----------------------------- */
+function loadData() {
+  let raw = document.getElementById("dataInput").value.trim();
+
+  if (!raw) {
+    try {
+      raw = localStorage.getItem("stonegrill_loyverse_payout_data") || "";
+    } catch (e) {
+      raw = "";
+    }
+  }
+
+  document.getElementById("dataInput").value = raw;
+
+  if (!raw) {
+    parsedData = [];
+    headers = [];
+    return;
+  }
+
+  parsedData = parseTableData(raw);
+}
+
+/* -----------------------------
+   PARSE TAB OR CSV DATA
+----------------------------- */
+function parseTableData(raw) {
+  const lines = raw
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const delimiter = lines[0].includes("\t") ? "\t" : ",";
+
+  headers = splitLine(lines[0], delimiter).map(h => h.trim());
+
+  return lines.slice(1).map(line => {
+    const values = splitLine(line, delimiter);
+    const row = {};
+
+    headers.forEach((header, index) => {
+      row[header] = values[index] ? values[index].trim() : "";
+    });
+
+    return row;
+  });
+}
+
+/* -----------------------------
+   SPLIT CSV / TAB LINE
+----------------------------- */
+function splitLine(line, delimiter) {
+  const result = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === delimiter && !insideQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current);
+  return result;
+}
+
+/* -----------------------------
+   BUILD FILTERS
+----------------------------- */
+function buildFilters() {
+  const employeeSelect = document.getElementById("employeeFilter");
+  const dateSelect = document.getElementById("dateFilter");
+
+  const currentEmployee = employeeSelect.value;
+  const currentDate = dateSelect.value;
+
+  const employees = new Set();
+  const dates = new Map();
+
+  parsedData.forEach(row => {
+    const employee = getEmployee(row);
+    if (employee) employees.add(employee);
+
+    const dateKey = getDateKey(row);
+    const dateLabel = getDateLabel(row);
+
+    if (dateKey && dateLabel) {
+      dates.set(dateKey, dateLabel);
+    }
+  });
+
+  employeeSelect.innerHTML = `<option value="">All employees</option>`;
+  Array.from(employees).sort().forEach(employee => {
+    employeeSelect.innerHTML += `<option value="${escapeHtml(employee)}">${escapeHtml(employee)}</option>`;
+  });
+
+  dateSelect.innerHTML = `<option value="">All dates</option>`;
+  Array.from(dates.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .forEach(([key, label]) => {
+      dateSelect.innerHTML += `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`;
+    });
+
+  employeeSelect.value = currentEmployee;
+  dateSelect.value = currentDate;
+}
+
+/* -----------------------------
+   RESET FILTERS
+----------------------------- */
+function resetFilters() {
+  document.getElementById("employeeFilter").innerHTML = `<option value="">All employees</option>`;
+  document.getElementById("dateFilter").innerHTML = `<option value="">All dates</option>`;
+}
+
+/* -----------------------------
+   HANDLE SEARCH TYPING
+----------------------------- */
+function handleSearchTyping() {
+  searchData();
+  showSuggestions();
+}
+
+/* -----------------------------
+   SEARCH DATA
+----------------------------- */
+function searchData() {
+  loadData();
+
+  const query = normalizeText(document.getElementById("searchInput").value.trim());
+  const selectedEmployee = document.getElementById("employeeFilter").value;
+  const selectedDate = document.getElementById("dateFilter").value;
+
+  let rows = parsedData.filter(row => {
+    const employee = getEmployee(row);
+    const dateKey = getDateKey(row);
+    const comment = normalizeText(getComment(row));
+
+    const employeeMatch = !selectedEmployee || employee === selectedEmployee;
+    const dateMatch = !selectedDate || dateKey === selectedDate;
+
+    let searchMatch = true;
+    if (query) {
+      const words = query.split(" ").filter(Boolean);
+      searchMatch = words.every(word => comment.includes(word));
+    }
+
+    return employeeMatch && dateMatch && searchMatch;
+  });
+
+  renderResults(rows);
+  updateSummary(rows);
+}
+
+/* -----------------------------
+   SHOW ALL
+----------------------------- */
+function showAll() {
+  document.getElementById("searchInput").value = "";
+  document.getElementById("employeeFilter").value = "";
+  document.getElementById("dateFilter").value = "";
+  hideSuggestions();
+  searchData();
+}
+
+/* -----------------------------
+   MOBILE SUGGESTIONS - MAX 4
+----------------------------- */
+function showSuggestions() {
+  const box = document.getElementById("suggestions");
+
+  if (window.innerWidth > 700) {
+    hideSuggestions();
+    return;
+  }
+
+  const queryRaw = document.getElementById("searchInput").value.trim();
+  const query = normalizeText(queryRaw);
+
+  if (!query) {
+    hideSuggestions();
+    return;
+  }
+
+  const selectedEmployee = document.getElementById("employeeFilter").value;
+  const selectedDate = document.getElementById("dateFilter").value;
+
+  const suggestions = [];
+  const seen = new Set();
+
+  parsedData.forEach(row => {
+    const employee = getEmployee(row);
+    const dateKey = getDateKey(row);
+    const comment = getComment(row);
+    const normalComment = normalizeText(comment);
+
+    const employeeMatch = !selectedEmployee || employee === selectedEmployee;
+    const dateMatch = !selectedDate || dateKey === selectedDate;
+
+    if (
+      employeeMatch &&
+      dateMatch &&
+      normalComment.includes(query) &&
+      !seen.has(normalComment)
+    ) {
+      seen.add(normalComment);
+      suggestions.push(comment);
+    }
+  });
+
+  const limited = suggestions.slice(0, 4);
+
+  if (!limited.length) {
+    hideSuggestions();
+    return;
+  }
+
+  box.innerHTML = limited.map(item => {
+    return `<div class="suggestion-item" onclick="selectSuggestion('${escapeForJs(item)}')">${escapeHtml(item)}</div>`;
+  }).join("");
+
+  box.style.display = "block";
+}
+
+/* -----------------------------
+   SELECT SUGGESTION
+----------------------------- */
+function selectSuggestion(value) {
+  document.getElementById("searchInput").value = value;
+  hideSuggestions();
+  searchData();
+}
+
+/* -----------------------------
+   HIDE SUGGESTIONS
+----------------------------- */
+function hideSuggestions() {
+  const box = document.getElementById("suggestions");
+  box.style.display = "none";
+  box.innerHTML = "";
+}
+
+document.addEventListener("click", function(event) {
+  const searchWrap = document.querySelector(".search-wrap");
+  if (searchWrap && !searchWrap.contains(event.target)) {
+    hideSuggestions();
+  }
+});
+
+/* -----------------------------
+   GROUP TOGGLE
+----------------------------- */
+function toggleGroupView() {
+  groupView = !groupView;
+
+  const button = document.getElementById("groupButton");
+
+  if (groupView) {
+    button.textContent = "Grouped by Comment: ON";
+    button.classList.add("active-mode");
+  } else {
+    button.textContent = "Grouped by Comment: OFF";
+    button.classList.remove("active-mode");
+  }
+
+  searchData();
+}
+
+/* -----------------------------
+   RENDER RESULTS
+----------------------------- */
+function renderResults(rows) {
+  if (groupView) {
+    renderGroupedTable(rows);
+  } else {
+    renderNormalTable(rows);
+  }
+}
+
+/* -----------------------------
+   NORMAL TABLE
+----------------------------- */
+function renderNormalTable(rows) {
+  const results = document.getElementById("results");
+  const selectedEmployee = document.getElementById("employeeFilter").value;
+
+  if (!parsedData.length || !headers.length) {
+    results.innerHTML = `<div class="empty">No data loaded yet.</div>`;
+    return;
+  }
+
+  if (!rows.length) {
+    results.innerHTML = `<div class="empty">No matching records found.</div>`;
+    return;
+  }
+
+  const showEmployeeColumn = !selectedEmployee;
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          ${showEmployeeColumn ? "<th>Employee</th>" : ""}
+          <th>Comment</th>
+          <th>Amount</th>
+          <th>Shift</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  rows.forEach(row => {
+    const date = getDateLabel(row);
+    const employee = getEmployee(row);
+    const comment = getComment(row);
+    const amount = getAmount(row);
+    const shift = getShift(row);
+
+    html += `
+      <tr>
+        <td>${escapeHtml(date)}</td>
+        ${showEmployeeColumn ? `<td>${escapeHtml(employee)}</td>` : ""}
+        <td class="comment">${escapeHtml(comment)}</td>
+        <td class="amount">${formatPeso(amount)}</td>
+        <td>${escapeHtml(shift)}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  results.innerHTML = html;
+}
+
+/* -----------------------------
+   GROUPED TABLE
+----------------------------- */
+function renderGroupedTable(rows) {
+  const results = document.getElementById("results");
+
+  if (!parsedData.length || !headers.length) {
+    results.innerHTML = `<div class="empty">No data loaded yet.</div>`;
+    return;
+  }
+
+  if (!rows.length) {
+    results.innerHTML = `<div class="empty">No matching records found.</div>`;
+    return;
+  }
+
+  const groups = {};
+
+  rows.forEach(row => {
+    const comment = getComment(row) || "No comment";
+    const key = normalizeText(comment);
+    const amount = getAmount(row);
+
+    if (!groups[key]) {
+      groups[key] = {
+        comment,
+        total: 0,
+        count: 0,
+        details: []
+      };
+    }
+
+    groups[key].total += amount;
+    groups[key].count += 1;
+    groups[key].details.push(`${getDateLabel(row)} - ${formatPeso(amount)} - ${getEmployee(row)}`);
+  });
+
+  const sortedGroups = Object.values(groups).sort((a, b) => b.total - a.total);
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Comment</th>
+          <th>Total</th>
+          <th>Entries</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  sortedGroups.forEach(group => {
+    html += `
+      <tr>
+        <td class="comment">${escapeHtml(group.comment)}</td>
+        <td class="amount">${formatPeso(group.total)}</td>
+        <td>${group.count}</td>
+        <td>${escapeHtml(group.details.join(" | "))}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  results.innerHTML = html;
+}
+
+/* -----------------------------
+   SUMMARY
+----------------------------- */
+function updateSummary(rows) {
+  let payIn = 0;
+  let payout = 0;
+
+  rows.forEach(row => {
+    const type = normalizeText(getField(row, ["type"]));
+    const amount = getAmount(row);
+
+    if (
+      type.includes("payin") ||
+      type.includes("pay in") ||
+      type.includes("cash in")
+    ) {
+      payIn += amount;
+    }
+
+    if (
+      type.includes("payout") ||
+      type.includes("pay out") ||
+      type.includes("cash out")
+    ) {
+      payout += amount;
+    }
+  });
+
+  document.getElementById("recordCount").textContent = rows.length;
+  document.getElementById("totalPayIn").textContent = formatPeso(payIn);
+  document.getElementById("totalPayout").textContent = formatPeso(payout);
+  document.getElementById("netMovement").textContent = formatPeso(payIn - payout);
+}
+
+/* -----------------------------
+   FIELD HELPERS
+----------------------------- */
+function getEmployee(row) {
+  return getField(row, ["employee", "cashier", "staff", "user"]);
+}
+
+function getComment(row) {
+  return getField(row, ["comment", "reason", "notes", "note", "description"]);
+}
+
+function getShift(row) {
+  return getField(row, ["shift number", "shift"]);
+}
+
+function getRawDate(row) {
+  return getField(row, ["date", "date/time", "created at", "created", "time"]);
+}
+
+function getAmount(row) {
+  const amount = getField(row, ["amount", "total", "cash", "money"]);
+  return parseMoney(amount);
+}
+
+function getField(row, possibleNames) {
+  const keys = Object.keys(row);
+
+  for (const name of possibleNames) {
+    const found = keys.find(key => normalizeText(key) === normalizeText(name));
+    if (found && row[found]) return row[found];
+  }
+
+  for (const name of possibleNames) {
+    const found = keys.find(key => normalizeText(key).includes(normalizeText(name)));
+    if (found && row[found]) return row[found];
+  }
+
+  return "";
+}
+
+/* -----------------------------
+   DATE HELPERS
+----------------------------- */
+function getDateObject(row) {
+  return parseLoyverseDate(getRawDate(row));
+}
+
+function getDateKey(row) {
+  const date = getDateObject(row);
+
+  if (!date) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDateLabel(row) {
+  const date = getDateObject(row);
+
+  if (!date) return getRawDate(row);
+
+  return date.toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
+function parseLoyverseDate(value) {
+  if (!value) return null;
+
+  const clean = String(value)
+    .replace(/\u202f/g, " ")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  /*
+    Loyverse sample:
+    4/26/26 8:27 PM
+
+    This parser treats it as:
+    Month / Day / Year
+    April 26, 2026
+  */
+  const match = clean.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i
+  );
+
+  if (!match) return null;
+
+  let first = Number(match[1]);
+  let second = Number(match[2]);
+  let year = Number(match[3]);
+
+  if (year < 100) {
+    year += 2000;
+  }
+
+  let month;
+  let day;
+
+  /*
+    Auto-detect:
+    If second number is above 12, format is clearly Month/Day/Year.
+    Example: 4/26/26 = April 26, 2026
+  */
+  if (second > 12) {
+    month = first - 1;
+    day = second;
+  }
+
+  /*
+    If first number is above 12, format is clearly Day/Month/Year.
+    Example: 26/4/26 = April 26, 2026
+  */
+  else if (first > 12) {
+    month = second - 1;
+    day = first;
+  }
+
+  /*
+    If both are 12 or below, use Loyverse style Month/Day/Year.
+    Example: 4/5/26 = April 5, 2026
+  */
+  else {
+    month = first - 1;
+    day = second;
+  }
+
+  let hour = Number(match[4] || 0);
+  let minute = Number(match[5] || 0);
+  let ampm = (match[6] || "").toUpperCase();
+
+  if (ampm === "PM" && hour < 12) hour += 12;
+  if (ampm === "AM" && hour === 12) hour = 0;
+
+  return new Date(year, month, day, hour, minute);
+}
+
+/* -----------------------------
+   MONEY PARSER
+----------------------------- */
+function parseMoney(value) {
+  if (!value) return 0;
+
+  return Number(
+    String(value)
+      .replace(/[₱,\s]/g, "")
+      .replace(/[^\d.-]/g, "")
+  ) || 0;
+}
+
+/* -----------------------------
+   FORMAT PESO
+----------------------------- */
+function formatPeso(amount) {
+  return "₱" + Number(amount || 0).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+/* -----------------------------
+   TEXT NORMALIZER
+----------------------------- */
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\u202f/g, " ")
+    .replace(/\u00a0/g, " ")
+    .replace(/[^\w\sñÑ.-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/* -----------------------------
+   HTML ESCAPE
+----------------------------- */
+function escapeHtml(text) {
+  return String(text || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* -----------------------------
+   JS STRING ESCAPE
+----------------------------- */
+function escapeForJs(text) {
+  return String(text || "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'")
+    .replaceAll('"', "&quot;");
+}
+
+/* -----------------------------
+   AUTO LOAD
+----------------------------- */
+window.addEventListener("load", () => {
+  loadData();
+  buildFilters();
+});
+</script>
+
+</body>
+</html>
