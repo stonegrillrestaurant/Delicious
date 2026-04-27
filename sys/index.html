@@ -29,9 +29,10 @@
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, FacebookAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // THE CORRECT CONFIG FOR stone-grill-payroll
         const firebaseConfig = {
             apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
-            authDomain: "stone-grill-firebaseapp.com",
+            authDomain: "stone-grill-payroll.firebaseapp.com",
             projectId: "stone-grill-payroll",
             storageBucket: "stone-grill-payroll.firebasestorage.app",
             messagingSenderId: "255528914541",
@@ -237,7 +238,7 @@
             );
         }
 
-                // --- MISSING UI COMPONENTS ---
+        // --- MISSING UI COMPONENTS ---
         function NavItem({ icon, label, active, onClick, open }) {
             return (
                 <button onClick={onClick} className={`w-full flex items-center px-6 py-3.5 transition-all duration-300 ${active ? 'bg-[#386df2] text-white border-l-4 border-white shadow-lg' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white border-l-4 border-transparent'}`}>
@@ -378,7 +379,7 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); unsubLogs(); };
             }, [user]);
 
-            // --- SMART CALCULATIONS (STRICT DAY CAPPING) ---
+            // --- SMART CALCULATIONS ---
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
@@ -485,10 +486,11 @@
                 } catch (err) { console.error("Audit log failed", err); }
             };
 
+            // THE FIXED PROFILE SYNC (Merge: true is added here)
             const handleAddStaff = async (e) => {
                 e.preventDefault();
                 if (!user || !window.fb || !isAdmin) return;
-                const { db, appId, doc, setDoc, updateDoc } = window.fb;
+                const { db, appId, doc, setDoc } = window.fb;
                 
                 const bId = normalizeId(newEmpForm.biometricId);
                 if (!bId) return alert("Biometric ID is required.");
@@ -497,23 +499,24 @@
                     const newDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'employees', bId);
                     
                     const payload = {
-                        firstName: newEmpForm.firstName, lastName: newEmpForm.lastName,
+                        firstName: newEmpForm.firstName, 
+                        lastName: newEmpForm.lastName,
                         name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim(),
-                        position: newEmpForm.position, dailyRate: parseFloat(newEmpForm.dailyRate) || 0,
-                        contactNumber: newEmpForm.contactNumber || '', sssNumber: newEmpForm.sssNumber || '',
-                        sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0,
+                        position: newEmpForm.position, 
+                        dailyRate: parseFloat(newEmpForm.dailyRate) || 0,
+                        contactNumber: newEmpForm.contactNumber || '', 
+                        sssNumber: newEmpForm.sssNumber || '',
+                        sssRate: parseFloat(newEmpForm.sssRate) || 0, 
+                        miscRate: parseFloat(newEmpForm.miscRate) || 0,
                         status: newEmpForm.status || 'active'
                     };
 
-                    if (isEditing) {
-                        await updateDoc(newDocRef, payload);
-                        alert("Profile successfully updated.");
-                    } else {
-                        await setDoc(newDocRef, { ...payload, employeeId: bId, caBalance: 0, createdAt: Date.now() });
-                        alert("New staff member saved.");
-                    }
+                    await setDoc(newDocRef, payload, { merge: true });
+                    
+                    alert(isEditing ? "Profile successfully updated." : "New staff member saved.");
 
-                    setShowAddEmp(false); setIsEditing(false);
+                    setShowAddEmp(false); 
+                    setIsEditing(false);
                     setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
                 } catch (err) { alert("Error: " + err.message); }
             };
@@ -548,149 +551,68 @@
                 } catch (err) { alert(err.message); }
             };
 
-            // SMART DATA PARSER
+            // THE FIXED PARSER (Uniform Log version with Regex extraction and Merge)
             const handleProcessLogs = async () => {
                 if (!user || !isAdmin || !rawInput.trim()) return;
-                const { db, appId, addDoc, doc, setDoc, collection, updateDoc } = window.fb;
+                const { db, appId, doc, setDoc } = window.fb;
+                
                 const lines = rawInput.trim().split('\n');
-                let errCount = 0; let newStaffCount = 0; let updatedAttCount = 0;
-                
-                const parsedData = {}; 
-                const processedIds = new Set();
-                
-                try {
-                    for (const line of lines) {
-                        const rawLine = line.trim();
-                        if (!rawLine) continue;
-                        
-                        let parts = rawLine.split(/\t+/);
-                        if (parts.length < 3) parts = rawLine.split(/\s+/);
-                        parts = parts.map(x => x.trim()).filter(Boolean);
-                        
-                        if (parts.length < 2 || ['ID', 'NAME', 'DATE', 'EMP'].includes(parts[0].toUpperCase())) {
-                            errCount++; continue;
-                        }
+                let updatedAttCount = 0;
+                const attendanceMap = {}; 
 
-                        const dateRegex = /\d{1,4}[/-]\d{1,2}[/-]\d{1,4}/;
-                        const dateIndex = parts.findIndex(col => dateRegex.test(col));
-                        
-                        let rawCleanId = ''; let rawName = ''; let isoDate = null;
-                        
-                        if (dateIndex > 0) {
-                            rawCleanId = String(parts[0]).replace(/[\/\\]/g, '-');
-                            rawName = parts.slice(1, dateIndex).join(' ');
-                            
-                            let dateStr = parts[dateIndex].split(' ')[0]; 
-                            const dParts = dateStr.split(/[\/\-]/);
-                            if (dParts.length >= 3) {
-                                let year, month, day;
-                                if (dParts[0].length === 4) {
-                                    year = dParts[0]; month = dParts[1]; day = dParts[2];
-                                } else {
-                                    year = dParts[2]; month = dParts[0]; day = dParts[1];
-                                    if (year.length === 2) year = '20' + year; 
-                                }
-                                isoDate = `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
-                            }
-                        } else {
-                            if (/^\d+$/.test(parts[0])) {
-                                rawCleanId = parts[0]; rawName = parts.slice(1, 3).join(' '); 
-                            } else {
-                                rawName = parts.slice(0, 2).join(' '); 
-                                rawCleanId = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                            }
-                        }
+                for (const line of lines) {
+                    const rawLine = line.trim();
+                    if (!rawLine || rawLine.toUpperCase().startsWith('ID')) continue;
 
-                        if (!rawCleanId || !rawName || !isoDate) { errCount++; continue; }
+                    // SPLIT BY TAB OR MULTIPLE SPACES
+                    const columns = rawLine.split(/\t+| {2,}/).map(c => c.trim()).filter(Boolean);
+                    if (columns.length < 3) continue;
 
-                        const finalEmpId = normalizeId(rawCleanId);
-                        let matchedEmp = employees.find(e => normalizeId(e.id) === finalEmpId);
-                        
-                        if (!matchedEmp && !processedIds.has(finalEmpId)) {
-                            processedIds.add(finalEmpId);
-                            const nameParts = rawName.split(' ');
-                            
-                            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', finalEmpId), {
-                                employeeId: finalEmpId,
-                                firstName: nameParts[0] || '',
-                                lastName: nameParts.slice(1).join(' ') || '',
-                                name: rawName, position: 'Unassigned',
-                                dailyRate: 0, contactNumber: '', sssNumber: '',
-                                sssRate: 0, miscRate: 0, caBalance: 0,
-                                status: 'active', createdAt: Date.now()
-                            });
-                            newStaffCount++;
-                        }
+                    const finalEmpId = normalizeId(columns[0]); 
+                    const rawName = columns[1];                 
 
-                        const key = `${finalEmpId}_${isoDate}`;
-                        if (!parsedData[key]) {
-                            parsedData[key] = { finalEmpId, rawName, isoDate, times: new Set() };
-                        }
-                        
-                        const allTimes = rawLine.match(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g) || [];
-                        allTimes.forEach(t => {
-                            const tParts = t.split(':');
-                            const hh = tParts[0].padStart(2, '0');
-                            const mm = tParts[1];
-                            parsedData[key].times.add(`${hh}:${mm}`);
-                        });
+                    const dateMatch = rawLine.match(/(\d{2}\/\d{2}\/\d{4})/);
+                    const timeMatch = rawLine.match(/(\d{2}:\d{2}:\d{2})/);
+                    if (!dateMatch || !timeMatch) continue;
+
+                    const [m, d, y] = dateMatch[1].split('/');
+                    const isoDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    const timeHHmm = timeMatch[1].substring(0, 5); 
+
+                    // SYNC PROFILE SAFELY
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', finalEmpId), {
+                        employeeId: finalEmpId,
+                        name: rawName,
+                        status: 'active'
+                    }, { merge: true });
+
+                    const key = `${finalEmpId}_${isoDate}`;
+                    if (!attendanceMap[key]) {
+                        attendanceMap[key] = { id: finalEmpId, name: rawName, date: isoDate, punches: [] };
                     }
+                    attendanceMap[key].punches.push(timeHHmm);
+                }
 
-                    for (const key in parsedData) {
-                        const data = parsedData[key];
-                        const existingRecord = attendance.find(a => normalizeId(a.empId) === data.finalEmpId && a.date === data.isoDate);
-                        
-                        const allTimes = new Set(data.times);
-                        if (existingRecord) {
-                            if (existingRecord.punches) existingRecord.punches.forEach(t => allTimes.add(t));
-                            if (existingRecord.firstIn && existingRecord.firstIn !== '00:00') allTimes.add(existingRecord.firstIn);
-                            if (existingRecord.lastOut && existingRecord.lastOut !== '00:00') allTimes.add(existingRecord.lastOut);
-                        }
-                        
-                        const sortedTimes = Array.from(allTimes).sort();
-                        
-                        let dayEquivalent = 0;
-                        let remarks = '';
-                        let firstIn = sortedTimes[0] || '00:00';
-                        let lastOut = sortedTimes[sortedTimes.length - 1] || '00:00';
+                for (const key in attendanceMap) {
+                    const record = attendanceMap[key];
+                    const sorted = record.punches.sort();
+                    const firstIn = sorted[0];
+                    const lastOut = sorted.length > 1 ? sorted[sorted.length - 1] : "00:00";
 
-                        if (sortedTimes.length === 0) {
-                            dayEquivalent = 1; 
-                            remarks = 'Normalized (No Time)';
-                        } else if (sortedTimes.length === 1) {
-                            dayEquivalent = 0.5; 
-                            remarks = '1 Punch (Halfday)';
-                        } else {
-                            const t1 = new Date(`1970-01-01T${firstIn}:00Z`);
-                            const t2 = new Date(`1970-01-01T${lastOut}:00Z`);
-                            const hoursDiff = (t2.getTime() - t1.getTime()) / 3600000;
-                            
-                            if (hoursDiff < 5) {
-                                dayEquivalent = 0.5;
-                                remarks = '< 5hrs (Halfday)';
-                            } else {
-                                dayEquivalent = 1.0;
-                                remarks = 'Full Day';
-                            }
-                        }
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'attendance', key), {
+                        empId: record.id,
+                        empName: record.name,
+                        date: record.date,
+                        firstIn,
+                        lastOut,
+                        dayEquivalent: sorted.length > 1 ? 1 : 0.5,
+                        remarks: sorted.length > 1 ? "Full Day" : "Half Day"
+                    }, { merge: true });
+                    updatedAttCount++;
+                }
 
-                        if (existingRecord) {
-                            await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'attendance', existingRecord.id), {
-                                firstIn, lastOut, dayEquivalent, remarks, punches: sortedTimes
-                            });
-                            updatedAttCount++;
-                        } else {
-                            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'attendance'), {
-                                empId: data.finalEmpId, empName: data.rawName, date: data.isoDate,
-                                firstIn, lastOut, dayEquivalent, remarks, punches: sortedTimes
-                            });
-                            updatedAttCount++;
-                        }
-                    }
-
-                    setRawInput('');
-                    alert(`Import Complete!\n\nNew Profiles Created: ${newStaffCount}\nAttendance Days Calculated & Stored: ${updatedAttCount}\n${errCount > 0 ? "(Skipped " + errCount + " headers/invalid lines)" : ""}`);
-                } catch (err) { alert("Error parsing logs: " + err.message); }
+                setRawInput('');
+                alert(`Stone Grill Cloud Sync Complete!\nProcessed ${updatedAttCount} employee days.`);
             };
 
             const handleSavePayslip = async () => {
@@ -922,7 +844,6 @@
                                     </>
                                 )}
 
-                                {/* REDESIGNED EMPLOYEES TAB (DATABASE MASTERLIST) STRICTLY FROM SCREENSHOT */}
                                 {activeTab === 'employees' && (
                                     <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
                                         <div className="p-6 border-b flex justify-between items-center bg-white">
@@ -981,7 +902,7 @@
                                         {isAdmin && (
                                             <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col shadow-xl animate-slide-up">
                                                 <h3 className="font-black text-blue-900 uppercase tracking-widest mb-2">Smart Import Logs</h3>
-                                                <p className="text-[11px] text-slate-400 mb-6 font-medium leading-relaxed">Paste your raw biometric tab data. <strong className="text-blue-500">Strictly evaluates &lt;5hrs as Halfday. Ignored multiple middle punches safely.</strong></p>
+                                                <p className="text-[11px] text-slate-400 mb-6 font-medium leading-relaxed">Paste your raw biometric tab data. <strong className="text-blue-500">Strictly evaluates &lt;5hrs as Halfday.</strong></p>
                                                 <textarea 
                                                     className="w-full flex-1 p-4 text-xs font-mono border rounded-2xl mb-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none bg-slate-50/50 custom-scrollbar" 
                                                     placeholder="ID	Name	Dept.	Time	Device ID..." 
@@ -1056,7 +977,7 @@
                                             {icEmpId ? (
                                                 <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative rounded-sm" id="interactive-print-section">
                                                     <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYROLL</div></div>
-                                                    <h2 className="text-2xl font-black border-b-4 border-red-500 mb-2 uppercase tracking-tighter leading-none pb-2">{employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.name}</h2>
+                                                    <h2 className="text-2xl font-black border-b-4 border-red-50 mb-2 uppercase tracking-tighter leading-none pb-2">{employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.name}</h2>
                                                     <div className="flex justify-between items-end mb-8 text-sm font-bold text-slate-500">
                                                         <span className="uppercase tracking-widest">{employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.position}</span>
                                                         <span className="text-slate-900 font-black text-xl">DAYS {icForm.days_worked}</span>
@@ -1092,7 +1013,6 @@
                                         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl flex flex-col relative">
                                             <h2 className="font-black text-blue-900 uppercase tracking-widest flex items-center gap-2 mb-6"><Banknote className="text-amber-500"/> Issue Entry</h2>
                                             
-                                            {/* CA vs Payment Switch */}
                                             <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
                                                 <button type="button" onClick={() => setCaType('advance')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${caType === 'advance' ? 'bg-white shadow text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}>
                                                     Cash Advance
@@ -1111,7 +1031,6 @@
                                                     </select>
                                                 </div>
 
-                                                {/* Current Balance Box */}
                                                 {newCa.empId && (() => {
                                                     const caEmp = employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId));
                                                     if (!caEmp) return null;
@@ -1154,7 +1073,6 @@
                                                 )}
                                             </div>
 
-                                            {/* Recent Transactions Moved Below Button */}
                                             {newCa.empId && (() => {
                                                 const recentCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)).sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0,3);
                                                 if(recentCAs.length === 0) return null;
@@ -1202,7 +1120,6 @@
                                     </div>
                                 )}
 
-                                {/* PAYROLL REPORT TAB REDESIGNED STRICTLY BASED ON THE IMAGE UPLOADED */}
                                 {activeTab === 'payroll' && (
                                     <div className="bg-white w-full h-full p-2 lg:p-8">
                                         <div className="flex justify-between items-center mb-8 print-hidden">
