@@ -289,6 +289,7 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); unsubLogs(); };
             }, [user]);
 
+            // UPDATED PAYROLL SUMMARY BLOCK HERE
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
@@ -299,6 +300,14 @@
                         const maxDay = Math.max(...dayRecords.map(r => parseFloat(r.dayEquivalent) || 0));
                         days += Math.min(maxDay, 1);
                     });
+
+                    // NEW: Calculate Cash Advances strictly for the selected month
+                    const empCAsThisMonth = cashAdvances.filter(ca => 
+                        normalizeId(ca.empId) === normalizeId(emp.id) && 
+                        (ca.date || '').startsWith(selectedMonth)
+                    );
+                    const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
+
                     const gross = days * (parseFloat(emp.rate) || 0);
                     const sss = parseFloat(emp.sssRate) || 0;
                     const misc = parseFloat(emp.miscRate) || 0;
@@ -306,9 +315,10 @@
                     const availableForCA = gross - sss - misc;
                     let caDed = 0; if (caBalance > 0 && availableForCA > 0) caDed = Math.min(caBalance, availableForCA);
                     const net = gross - sss - misc - caDed;
-                    return { ...emp, days, gross, caDed, sss, misc, net, caBalance };
+                    
+                    return { ...emp, days, gross, caDed, sss, misc, net, caBalance, monthlyCA };
                 });
-            }, [employees, attendance, selectedMonth]);
+            }, [employees, attendance, cashAdvances, selectedMonth]); 
 
             useEffect(() => {
                 if (icEmpId && icDateStart && icDateEnd) {
@@ -585,7 +595,10 @@
                                                                 <td className="p-4 text-[#5f6880] font-black">{row.id}</td>
                                                                 <td className="p-4 font-black text-slate-800 uppercase tracking-tighter">{row.name}</td>
                                                                 {isPrivileged && <td className="p-4 text-center font-bold text-slate-800">{row.days > 0 ? row.days : ''}</td>}
-                                                                {isPrivileged && <td className="p-4 text-right font-black text-[#d73f4e]">{row.caBalance !== 0 ? formatMoney(row.caBalance) : ''}</td>}
+                                                                
+                                                                {/* UPDATED: Displays Monthly CA instead of Lifetime Balance */}
+                                                                {isPrivileged && <td className="p-4 text-right font-black text-[#d73f4e]">{row.monthlyCA !== 0 ? formatMoney(row.monthlyCA) : ''}</td>}
+                                                                
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.gross > 0 ? formatMoney(row.gross) : ''}</td>}
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.misc > 0 ? formatMoney(row.misc) : ''}</td>}
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.sss > 0 ? formatMoney(row.sss) : ''}</td>}
@@ -682,7 +695,6 @@
                                                         <span className="text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter">₱{formatMoney((icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions))}</span>
                                                     </div>
                                                     
-                                                    {/* NEW CASH ADVANCE BREAKDOWN FOR PAYSLIP */}
                                                     {(() => {
                                                         const empCAs = cashAdvances
                                                             .filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && ca.date >= icDateStart && ca.date <= icDateEnd)
@@ -791,7 +803,10 @@
                                                             <td className="py-3 px-2 text-slate-600 uppercase text-[10px] font-bold tracking-widest">{row.position || '--'}</td>
                                                             <td className="py-3 px-2 text-center text-slate-700 font-mono font-medium">{row.rate > 0 ? formatMoney(row.rate) : '--'}</td>
                                                             <td className="py-3 px-2 text-center font-bold text-slate-900">{row.days > 0 ? row.days : ''}</td>
-                                                            <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.caBalance > 0 ? formatMoney(row.caBalance) : ''}</td>
+                                                            
+                                                            {/* UPDATED: Displays Monthly CA instead of Lifetime Balance */}
+                                                            <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.monthlyCA !== 0 ? formatMoney(row.monthlyCA) : ''}</td>
+                                                            
                                                             <td className="py-3 px-2 text-right font-black text-slate-900 font-mono text-base">{row.net > 0 ? formatMoney(row.net) : ''}</td>
                                                             <td className="py-3 px-2"><div className="w-full h-8 border-b border-dashed border-gray-300"></div></td>
                                                         </tr>
@@ -943,7 +958,6 @@
                                         <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm"><p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Attendance Count</p><p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(viewProfile.id)).length}</p></div>
                                     </div>
                                     
-                                    {/* NEW CASH ADVANCE HISTORY FOR PROFILE */}
                                     <div className="mt-6">
                                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Transaction History</h4>
                                         <div className="max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 rounded-2xl border border-slate-100">
