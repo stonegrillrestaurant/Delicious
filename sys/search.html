@@ -289,7 +289,6 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); unsubLogs(); };
             }, [user]);
 
-            // UPDATED PAYROLL SUMMARY BLOCK HERE
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
@@ -301,7 +300,6 @@
                         days += Math.min(maxDay, 1);
                     });
 
-                    // NEW: Calculate Cash Advances strictly for the selected month
                     const empCAsThisMonth = cashAdvances.filter(ca => 
                         normalizeId(ca.empId) === normalizeId(emp.id) && 
                         (ca.date || '').startsWith(selectedMonth)
@@ -355,22 +353,41 @@
                 return { count: employees.length, present: uniquePresent, totalCA, alerts: payrollSummary.filter(p => p.net < 0).length };
             }, [employees, attendance, payrollSummary]);
 
-            let searchedEmp = null; let searchedDays = 0, searchedGross = 0, searchedCaDed = 0, searchedMisc = 0;
+            // --- REVISED DASHBOARD EMPLOYEE QUICK LOOKUP LOGIC ---
+            let searchedEmp = null; 
+            let searchedDays = 0, searchedGross = 0, searchedCaDed = 0, searchedMisc = 0, searchedRangeCA = 0, searchedNet = 0;
+            
             if (dashSearchEmpId) {
                 searchedEmp = employees.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
                 if (searchedEmp && dashSearchStart && dashSearchEnd) {
+                    // 1. Calculate Attendance Days for range
                     const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(searchedEmp.id) && a.date >= dashSearchStart && a.date <= dashSearchEnd);
-                    const uniqueDates = new Set(att.map(a => a.date)); let calcDays = 0;
+                    const uniqueDates = new Set(att.map(a => a.date)); 
+                    let calcDays = 0;
                     uniqueDates.forEach(date => {
                         const dayRecords = att.filter(a => a.date === date);
                         const maxDay = Math.max(...dayRecords.map(r => parseFloat(r.dayEquivalent) || 0));
                         calcDays += Math.min(maxDay, 1);
                     });
-                    searchedDays = calcDays; searchedGross = searchedDays * (parseFloat(searchedEmp.rate) || 0);
-                    const sss = parseFloat(searchedEmp.sssRate) || 0; const misc = parseFloat(searchedEmp.miscRate) || 0;
+                    searchedDays = calcDays; 
+                    
+                    // 2. Calculate Gross Earnings
+                    searchedGross = searchedDays * (parseFloat(searchedEmp.rate) || 0);
+                    
+                    // 3. Calculate Deductions & Net Pay
+                    const sss = parseFloat(searchedEmp.sssRate) || 0; 
+                    const misc = parseFloat(searchedEmp.miscRate) || 0;
                     const availableForCA = searchedGross - sss - misc;
                     searchedCaDed = availableForCA > 0 ? Math.min(parseFloat(searchedEmp.caBalance) || 0, availableForCA) : 0;
                     searchedMisc = sss + misc; 
+                    searchedNet = searchedGross - searchedMisc - searchedCaDed;
+                    
+                    // 4. Calculate New Cash Advances ONLY within this date range
+                    const empCAsInRange = cashAdvances.filter(ca => 
+                        normalizeId(ca.empId) === normalizeId(searchedEmp.id) && 
+                        ca.date >= dashSearchStart && ca.date <= dashSearchEnd
+                    );
+                    searchedRangeCA = empCAsInRange.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
                 }
             }
 
@@ -559,16 +576,44 @@
                                                     <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Date Range (Start)</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={dashSearchStart} onChange={e => setDashSearchStart(e.target.value)} /></div>
                                                     <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Date Range (End)</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={dashSearchEnd} onChange={e => setDashSearchEnd(e.target.value)} /></div>
                                                 </div>
+                                                
+                                                {/* ---- NEW REDESIGNED QUICK LOOKUP BOX ---- */}
                                                 {searchedEmp ? (
-                                                    <div className="bg-white rounded-3xl p-8 border border-blue-100 shadow-lg animate-slide-up mt-6">
-                                                        <div className="text-center mb-10"><h2 className="text-4xl md:text-5xl font-black text-[#48538b] tracking-tight mb-2">{searchedEmp.name}</h2><p className="text-lg md:text-xl text-[#858ca7] font-medium">{searchedEmp.position || 'Staff'}</p></div>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
-                                                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Days Present</p><p className="text-4xl font-black text-[#4d976f] font-mono tracking-tighter">{searchedDays}</p></div>
-                                                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Deduction</p><p className="text-4xl font-black text-[#d73f4e] font-mono tracking-tighter">₱{formatMoney(searchedCaDed + searchedMisc)}</p></div>
-                                                            <div className="col-span-2 md:col-span-1 mt-6 md:mt-0"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Remaining CA Bal.</p><p className={`text-4xl font-black font-mono tracking-tighter ${searchedEmp.caBalance < 0 ? 'text-red-600' : 'text-slate-400'}`}>{searchedEmp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(searchedEmp.caBalance || 0))}</p></div>
+                                                    <div className="bg-white rounded-3xl p-6 md:p-8 border border-blue-100 shadow-lg animate-slide-up mt-6">
+                                                        <div className="text-center mb-8">
+                                                            <h2 className="text-3xl md:text-5xl font-black text-[#48538b] tracking-tight mb-2">{searchedEmp.name}</h2>
+                                                            <p className="text-sm md:text-lg text-[#858ca7] font-medium uppercase tracking-widest">{searchedEmp.position || 'Staff'}</p>
+                                                        </div>
+                                                        
+                                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Days Present</p>
+                                                                <p className="text-2xl font-black text-[#4d976f] font-mono tracking-tighter">{searchedDays}</p>
+                                                            </div>
+                                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gross Earned</p>
+                                                                <p className="text-2xl font-black text-blue-600 font-mono tracking-tighter">₱{formatMoney(searchedGross)}</p>
+                                                            </div>
+                                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">C.A. (This Range)</p>
+                                                                <p className="text-2xl font-black text-amber-500 font-mono tracking-tighter">₱{formatMoney(searchedRangeCA)}</p>
+                                                            </div>
+                                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Est. Net Pay</p>
+                                                                <p className="text-2xl font-black text-slate-800 font-mono tracking-tighter">₱{formatMoney(searchedNet)}</p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="mt-6 border-t border-slate-100 pt-6 text-center">
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Remaining CA Bal.</p>
+                                                            <p className={`text-4xl font-black font-mono tracking-tighter ${searchedEmp.caBalance < 0 ? 'text-red-600' : 'text-slate-300'}`}>
+                                                                {searchedEmp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(searchedEmp.caBalance || 0))}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 ) : <div className="text-center py-10 text-slate-400 italic text-sm border-t border-dashed bg-slate-50/50 rounded-b-3xl">Select an employee to instantly view their performance and financial status.</div>}
+                                                {/* ----------------------------------------- */}
+
                                             </div>
                                         )}
                                     </>
@@ -596,7 +641,7 @@
                                                                 <td className="p-4 font-black text-slate-800 uppercase tracking-tighter">{row.name}</td>
                                                                 {isPrivileged && <td className="p-4 text-center font-bold text-slate-800">{row.days > 0 ? row.days : ''}</td>}
                                                                 
-                                                                {/* UPDATED: Displays Monthly CA instead of Lifetime Balance */}
+                                                                {/* Displays Monthly CA instead of Lifetime Balance */}
                                                                 {isPrivileged && <td className="p-4 text-right font-black text-[#d73f4e]">{row.monthlyCA !== 0 ? formatMoney(row.monthlyCA) : ''}</td>}
                                                                 
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.gross > 0 ? formatMoney(row.gross) : ''}</td>}
@@ -804,7 +849,7 @@
                                                             <td className="py-3 px-2 text-center text-slate-700 font-mono font-medium">{row.rate > 0 ? formatMoney(row.rate) : '--'}</td>
                                                             <td className="py-3 px-2 text-center font-bold text-slate-900">{row.days > 0 ? row.days : ''}</td>
                                                             
-                                                            {/* UPDATED: Displays Monthly CA instead of Lifetime Balance */}
+                                                            {/* Displays Monthly CA instead of Lifetime Balance */}
                                                             <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.monthlyCA !== 0 ? formatMoney(row.monthlyCA) : ''}</td>
                                                             
                                                             <td className="py-3 px-2 text-right font-black text-slate-900 font-mono text-base">{row.net > 0 ? formatMoney(row.net) : ''}</td>
