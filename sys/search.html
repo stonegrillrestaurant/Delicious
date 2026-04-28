@@ -344,7 +344,7 @@
 
 Expected format:
 Date	Store	POS	Shift number	Type	Employee	Comment	Amount
-28/03/2026 17:07	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Manok	3500.00"></textarea>
+04/08/2027 17:07	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Manok	3500.00"></textarea>
 
       <div class="actions">
         <button class="action" onclick="saveData()">Save Data</button>
@@ -352,8 +352,9 @@ Date	Store	POS	Shift number	Type	Employee	Comment	Amount
       </div>
 
       <p class="hint">
-        Keep the first row headers. This version is locked for Loyverse date format:
-        <strong>DD/MM/YYYY HH:mm</strong>, example: <strong>28/03/2026 17:07</strong>.
+        Keep the first row headers. This version can read Loyverse date format:
+        <strong>MM/DD/YYYY HH:mm</strong> or <strong>DD/MM/YYYY HH:mm</strong>.
+        Example: <strong>04/08/2027 17:07</strong>.
       </p>
     </div>
   </section>
@@ -986,9 +987,9 @@ function getField(row, possibleNames) {
 
 /* -----------------------------
    DATE HELPERS
-   Loyverse format locked:
+   This supports both:
+   MM/DD/YYYY HH:mm
    DD/MM/YYYY HH:mm
-   Example: 28/03/2026 17:07
 ----------------------------- */
 function getDateObject(row) {
   return parseLoyverseDate(getRawDate(row));
@@ -1018,6 +1019,9 @@ function getDateLabel(row) {
   });
 }
 
+/* -----------------------------
+   FIXED LOYVERSE DATE PARSER
+----------------------------- */
 function parseLoyverseDate(value) {
   if (!value) return null;
 
@@ -1033,8 +1037,33 @@ function parseLoyverseDate(value) {
 
   if (!match) return null;
 
-  const day = Number(match[1]);
-  const month = Number(match[2]) - 1;
+  const firstNumber = Number(match[1]);
+  const secondNumber = Number(match[2]);
+
+  let day;
+  let month;
+
+  /*
+    If first number is above 12, it cannot be a month.
+    Example: 28/03/2026 = Mar 28, 2026.
+
+    If second number is above 12, the first number is the month.
+    Example: 04/28/2026 = Apr 28, 2026.
+
+    If both are 12 or below, Loyverse often behaves like MM/DD/YYYY.
+    Example: 04/08/2027 = Apr 8, 2027.
+  */
+  if (firstNumber > 12) {
+    day = firstNumber;
+    month = secondNumber - 1;
+  } else if (secondNumber > 12) {
+    month = firstNumber - 1;
+    day = secondNumber;
+  } else {
+    month = firstNumber - 1;
+    day = secondNumber;
+  }
+
   let year = Number(match[3]);
 
   if (year < 100) {
@@ -1044,7 +1073,17 @@ function parseLoyverseDate(value) {
   const hour = Number(match[4] || 0);
   const minute = Number(match[5] || 0);
 
-  return new Date(year, month, day, hour, minute);
+  const date = new Date(year, month, day, hour, minute);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
 }
 
 /* -----------------------------
