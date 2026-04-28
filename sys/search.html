@@ -986,7 +986,7 @@ function getField(row, possibleNames) {
 
 /* -----------------------------
    DATE HELPERS
-   Loyverse format locked:
+   Locked for Loyverse:
    DD/MM/YYYY HH:mm
    Example: 28/03/2026 17:07
 ----------------------------- */
@@ -996,26 +996,21 @@ function getDateObject(row) {
 
 function getDateKey(row) {
   const date = getDateObject(row);
-
   if (!date) return "";
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.year;
+  const month = String(date.month).padStart(2, "0");
+  const day = String(date.day).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
 
 function getDateLabel(row) {
   const date = getDateObject(row);
-
   if (!date) return getRawDate(row);
 
-  return date.toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${monthNames[date.month - 1]} ${date.day}, ${date.year}`;
 }
 
 function parseLoyverseDate(value) {
@@ -1027,24 +1022,23 @@ function parseLoyverseDate(value) {
     .replace(/\s+/g, " ")
     .trim();
 
-  const match = clean.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/
-  );
+  const match = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
 
   if (!match) return null;
 
-  const day = Number(match[1]);
-  const month = Number(match[2]) - 1;
+  let day = Number(match[1]);
+  let month = Number(match[2]);
   let year = Number(match[3]);
 
-  if (year < 100) {
-    year += 2000;
-  }
+  if (year < 100) year += 2000;
 
-  const hour = Number(match[4] || 0);
-  const minute = Number(match[5] || 0);
-
-  return new Date(year, month, day, hour, minute);
+  return {
+    day,
+    month,
+    year,
+    hour: Number(match[4] || 0),
+    minute: Number(match[5] || 0)
+  };
 }
 
 /* -----------------------------
