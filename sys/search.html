@@ -1,1303 +1,992 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-<title>Stone Grill Payout Search</title>
-
-<link rel="manifest" href="/sys/search-manifest.json">
-<link rel="apple-touch-icon" href="/sys/search.png">
-<meta name="theme-color" content="#b84a2f">
-
-<style>
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f4eee7;
-    color: #2b211c;
-  }
-
-  header {
-    background: #2b211c;
-    color: white;
-    padding: 18px;
-    text-align: center;
-  }
-
-  header h1 {
-    margin: 0;
-    font-size: 21px;
-  }
-
-  header p {
-    margin: 7px 0 0;
-    font-size: 14px;
-    opacity: 0.85;
-  }
-
-  .app {
-    max-width: 1150px;
-    margin: auto;
-    padding: 14px;
-  }
-
-  .tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .tab-btn {
-    flex: 1;
-    border: 0;
-    padding: 14px 10px;
-    border-radius: 14px;
-    background: #dfd2c4;
-    color: #2b211c;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-
-  .tab-btn.active {
-    background: #b84a2f;
-    color: white;
-  }
-
-  .card {
-    background: white;
-    border-radius: 18px;
-    padding: 16px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-  }
-
-  .tab-content {
-    display: none;
-  }
-
-  .tab-content.active {
-    display: block;
-  }
-
-  textarea {
-    width: 100%;
-    min-height: 350px;
-    padding: 14px;
-    border-radius: 14px;
-    border: 1px solid #cdbfb4;
-    font-size: 14px;
-    line-height: 1.5;
-    resize: vertical;
-  }
-
-  .actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-  }
-
-  button.action {
-    border: 0;
-    padding: 11px 14px;
-    border-radius: 12px;
-    background: #2b211c;
-    color: white;
-    cursor: pointer;
-    font-weight: bold;
-  }
-
-  button.clear {
-    background: #8b1f1f;
-  }
-
-  button.print {
-    background: #24613b;
-  }
-
-  button.active-mode {
-    background: #b84a2f;
-  }
-
-  .hint {
-    font-size: 13px;
-    color: #6c5f56;
-    line-height: 1.5;
-  }
-
-  .filter-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-
-  .filter-box label {
-    display: block;
-    font-size: 13px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #5a4c43;
-  }
-
-  select {
-    width: 100%;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid #cdbfb4;
-    background: #fffaf5;
-    font-size: 14px;
-  }
-
-  .search-wrap {
-    position: relative;
-  }
-
-  .search-box {
-    width: 100%;
-    padding: 16px 18px;
-    font-size: 18px;
-    border-radius: 999px;
-    border: 1px solid #cdbfb4;
-    outline: none;
-  }
-
-  .suggestions {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 56px;
-    background: white;
-    border: 1px solid #ddd0c6;
-    border-radius: 14px;
-    box-shadow: 0 12px 25px rgba(0,0,0,0.13);
-    overflow: hidden;
-    z-index: 20;
-    display: none;
-  }
-
-  .suggestion-item {
-    padding: 13px 16px;
-    border-bottom: 1px solid #f0e6df;
-    cursor: pointer;
-    font-size: 15px;
-  }
-
-  .suggestion-item:hover {
-    background: #fff3ea;
-  }
-
-  .suggestion-item:last-child {
-    border-bottom: 0;
-  }
-
-  .summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 10px;
-    margin: 15px 0;
-  }
-
-  .summary-card {
-    background: #faf5f0;
-    padding: 13px;
-    border-radius: 14px;
-    border: 1px solid #ecded4;
-  }
-
-  .summary-card span {
-    font-size: 13px;
-    color: #6c5f56;
-  }
-
-  .summary-card strong {
-    display: block;
-    margin-top: 5px;
-    font-size: 21px;
-  }
-
-  .results {
-    margin-top: 12px;
-    overflow-x: auto;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 650px;
-    background: white;
-  }
-
-  th {
-    background: #2b211c;
-    color: white;
-    padding: 11px;
-    text-align: left;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  td {
-    padding: 11px;
-    border-bottom: 1px solid #eee2da;
-    font-size: 14px;
-    vertical-align: top;
-  }
-
-  tr:hover td {
-    background: #fff8f2;
-  }
-
-  .amount {
-    font-weight: bold;
-    color: #b84a2f;
-    white-space: nowrap;
-  }
-
-  .comment {
-    font-weight: bold;
-  }
-
-  .empty {
-    text-align: center;
-    padding: 28px;
-    color: #777;
-    background: #fffaf6;
-    border-radius: 14px;
-  }
-
-  @media (min-width: 701px) {
-    .suggestions {
-      display: none !important;
-    }
-  }
-
-  @media (max-width: 700px) {
-    header h1 {
-      font-size: 18px;
-    }
-
-    .app {
-      padding: 10px;
-    }
-
-    .card {
-      padding: 13px;
-      border-radius: 16px;
-    }
-
-    .filter-row {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
-    .search-box {
-      font-size: 16px;
-      padding: 15px 17px;
-    }
-
-    .summary {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .summary-card strong {
-      font-size: 18px;
-    }
-
-    table {
-      min-width: 580px;
-    }
-
-    th, td {
-      font-size: 12px;
-      padding: 9px;
-    }
-  }
-</style>
-</head>
-
-<body>
-
-<header>
-  <h1>Stone Grill Payout Search</h1>
-  <p>Paste Loyverse data, filter by employee/date, search comments, and print results.</p>
-</header>
-
-<div class="app">
-
-  <div class="tabs">
-    <button class="tab-btn active" onclick="openTab('pasteTab', this)">1. Paste Data</button>
-    <button class="tab-btn" onclick="openTab('searchTab', this)">2. Search</button>
-  </div>
-
-  <!-- PASTE TAB -->
-  <section id="pasteTab" class="tab-content active">
-    <div class="card">
-      <h2>Paste Loyverse Data</h2>
-
-      <textarea id="dataInput" placeholder="Paste your Loyverse table here including headers.
-
-Expected format:
-Date	Store	POS	Shift number	Type	Employee	Comment	Amount
-04/08/2027 17:07	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Manok	3500.00"></textarea>
-
-      <div class="actions">
-        <button class="action" onclick="saveData()">Save Data</button>
-        <button class="action clear" onclick="clearData()">Clear Data</button>
-      </div>
-
-      <p class="hint">
-        Keep the first row headers. This version can read Loyverse date format:
-        <strong>MM/DD/YYYY HH:mm</strong> or <strong>DD/MM/YYYY HH:mm</strong>.
-        Example: <strong>04/08/2027 17:07</strong>.
-      </p>
-    </div>
-  </section>
-
-  <!-- SEARCH TAB -->
-  <section id="searchTab" class="tab-content">
-    <div class="card">
-
-      <div class="filter-row">
-        <div class="filter-box">
-          <label for="employeeFilter">Employee Filter</label>
-          <select id="employeeFilter" onchange="searchData()">
-            <option value="">All employees</option>
-          </select>
-        </div>
-
-        <div class="filter-box">
-          <label for="dateFilter">Date Filter</label>
-          <select id="dateFilter" onchange="searchData()">
-            <option value="">All dates</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="search-wrap">
-        <input
-          id="searchInput"
-          class="search-box"
-          type="text"
-          placeholder="Search comment, example: manok, caloy, icetea..."
-          autocomplete="off"
-          oninput="handleSearchTyping()"
-          onfocus="showSuggestions()"
-        />
-        <div id="suggestions" class="suggestions"></div>
-      </div>
-
-      <div class="actions">
-        <button id="groupButton" class="action" onclick="toggleGroupView()">Grouped by Comment: OFF</button>
-        <button class="action" onclick="showAll()">Show All</button>
-        <button class="action print" onclick="printResults()">Print Results</button>
-      </div>
-
-      <div class="summary">
-        <div class="summary-card">
-          <span>Records</span>
-          <strong id="recordCount">0</strong>
-        </div>
-
-        <div class="summary-card">
-          <span>Total Pay In</span>
-          <strong id="totalPayIn">₱0.00</strong>
-        </div>
-
-        <div class="summary-card">
-          <span>Total Payout</span>
-          <strong id="totalPayout">₱0.00</strong>
-        </div>
-
-        <div class="summary-card">
-          <span>Net</span>
-          <strong id="netMovement">₱0.00</strong>
-        </div>
-      </div>
-
-      <div id="results" class="results">
-        <div class="empty">No data loaded yet.</div>
-      </div>
-
-    </div>
-  </section>
-
-</div>
-
-<script>
-let parsedData = [];
-let headers = [];
-let groupView = false;
-
-/* -----------------------------
-   TAB SWITCHING
------------------------------ */
-function openTab(tabId, button) {
-  document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-
-  document.getElementById(tabId).classList.add("active");
-  button.classList.add("active");
-
-  if (tabId === "searchTab") {
-    loadData();
-    buildFilters();
-    searchData();
-  }
-}
-
-/* -----------------------------
-   SAVE DATA
------------------------------ */
-function saveData() {
-  const raw = document.getElementById("dataInput").value.trim();
-
-  if (!raw) {
-    alert("Please paste Loyverse data first.");
-    return;
-  }
-
-  try {
-    localStorage.setItem("stonegrill_loyverse_payout_data", raw);
-  } catch (e) {
-    console.warn("localStorage may not work in this editor preview.");
-  }
-
-  parsedData = parseTableData(raw);
-  buildFilters();
-  searchData();
-
-  alert("Data loaded. Go to Search tab.");
-}
-
-/* -----------------------------
-   CLEAR DATA
------------------------------ */
-function clearData() {
-  if (!confirm("Clear all saved data?")) return;
-
-  try {
-    localStorage.removeItem("stonegrill_loyverse_payout_data");
-  } catch (e) {}
-
-  document.getElementById("dataInput").value = "";
-  document.getElementById("searchInput").value = "";
-
-  parsedData = [];
-  headers = [];
-
-  resetFilters();
-  renderResults([]);
-  updateSummary([]);
-  hideSuggestions();
-}
-
-/* -----------------------------
-   LOAD DATA
------------------------------ */
-function loadData() {
-  let raw = document.getElementById("dataInput").value.trim();
-
-  if (!raw) {
-    try {
-      raw = localStorage.getItem("stonegrill_loyverse_payout_data") || "";
-    } catch (e) {
-      raw = "";
-    }
-  }
-
-  document.getElementById("dataInput").value = raw;
-
-  if (!raw) {
-    parsedData = [];
-    headers = [];
-    return;
-  }
-
-  parsedData = parseTableData(raw);
-}
-
-/* -----------------------------
-   PARSE TAB OR CSV DATA
------------------------------ */
-function parseTableData(raw) {
-  const lines = raw
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
-
-  if (lines.length < 2) {
-    return [];
-  }
-
-  const delimiter = lines[0].includes("\t") ? "\t" : ",";
-
-  headers = splitLine(lines[0], delimiter).map(h => h.trim());
-
-  return lines.slice(1).map(line => {
-    const values = splitLine(line, delimiter);
-    const row = {};
-
-    headers.forEach((header, index) => {
-      row[header] = values[index] ? values[index].trim() : "";
-    });
-
-    return row;
-  });
-}
-
-/* -----------------------------
-   SPLIT CSV / TAB LINE
------------------------------ */
-function splitLine(line, delimiter) {
-  const result = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      insideQuotes = !insideQuotes;
-    } else if (char === delimiter && !insideQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  result.push(current);
-  return result;
-}
-
-/* -----------------------------
-   BUILD FILTERS
------------------------------ */
-function buildFilters() {
-  const employeeSelect = document.getElementById("employeeFilter");
-  const dateSelect = document.getElementById("dateFilter");
-
-  const currentEmployee = employeeSelect.value;
-  const currentDate = dateSelect.value;
-
-  const employees = new Set();
-  const dates = new Map();
-
-  parsedData.forEach(row => {
-    const employee = getEmployee(row);
-    if (employee) employees.add(employee);
-
-    const dateKey = getDateKey(row);
-    const dateLabel = getDateLabel(row);
-
-    if (dateKey && dateLabel) {
-      dates.set(dateKey, dateLabel);
-    }
-  });
-
-  employeeSelect.innerHTML = `<option value="">All employees</option>`;
-  Array.from(employees).sort().forEach(employee => {
-    employeeSelect.innerHTML += `<option value="${escapeHtml(employee)}">${escapeHtml(employee)}</option>`;
-  });
-
-  dateSelect.innerHTML = `<option value="">All dates</option>`;
-  Array.from(dates.entries())
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .forEach(([key, label]) => {
-      dateSelect.innerHTML += `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`;
-    });
-
-  employeeSelect.value = currentEmployee;
-  dateSelect.value = currentDate;
-}
-
-/* -----------------------------
-   RESET FILTERS
------------------------------ */
-function resetFilters() {
-  document.getElementById("employeeFilter").innerHTML = `<option value="">All employees</option>`;
-  document.getElementById("dateFilter").innerHTML = `<option value="">All dates</option>`;
-}
-
-/* -----------------------------
-   HANDLE SEARCH TYPING
------------------------------ */
-function handleSearchTyping() {
-  searchData();
-  showSuggestions();
-}
-
-/* -----------------------------
-   SEARCH DATA
------------------------------ */
-function searchData() {
-  loadData();
-
-  const query = normalizeText(document.getElementById("searchInput").value.trim());
-  const selectedEmployee = document.getElementById("employeeFilter").value;
-  const selectedDate = document.getElementById("dateFilter").value;
-
-  let rows = parsedData.filter(row => {
-    const employee = getEmployee(row);
-    const dateKey = getDateKey(row);
-    const comment = normalizeText(getComment(row));
-
-    const employeeMatch = !selectedEmployee || employee === selectedEmployee;
-    const dateMatch = !selectedDate || dateKey === selectedDate;
-
-    let searchMatch = true;
-    if (query) {
-      const words = query.split(" ").filter(Boolean);
-      searchMatch = words.every(word => comment.includes(word));
-    }
-
-    return employeeMatch && dateMatch && searchMatch;
-  });
-
-  renderResults(rows);
-  updateSummary(rows);
-}
-
-/* -----------------------------
-   SHOW ALL
------------------------------ */
-function showAll() {
-  document.getElementById("searchInput").value = "";
-  document.getElementById("employeeFilter").value = "";
-  document.getElementById("dateFilter").value = "";
-  hideSuggestions();
-  searchData();
-}
-
-/* -----------------------------
-   MOBILE SUGGESTIONS - MAX 4
------------------------------ */
-function showSuggestions() {
-  const box = document.getElementById("suggestions");
-
-  if (window.innerWidth > 700) {
-    hideSuggestions();
-    return;
-  }
-
-  const queryRaw = document.getElementById("searchInput").value.trim();
-  const query = normalizeText(queryRaw);
-
-  if (!query) {
-    hideSuggestions();
-    return;
-  }
-
-  const selectedEmployee = document.getElementById("employeeFilter").value;
-  const selectedDate = document.getElementById("dateFilter").value;
-
-  const suggestions = [];
-  const seen = new Set();
-
-  parsedData.forEach(row => {
-    const employee = getEmployee(row);
-    const dateKey = getDateKey(row);
-    const comment = getComment(row);
-    const normalComment = normalizeText(comment);
-
-    const employeeMatch = !selectedEmployee || employee === selectedEmployee;
-    const dateMatch = !selectedDate || dateKey === selectedDate;
-
-    if (
-      employeeMatch &&
-      dateMatch &&
-      normalComment.includes(query) &&
-      !seen.has(normalComment)
-    ) {
-      seen.add(normalComment);
-      suggestions.push(comment);
-    }
-  });
-
-  const limited = suggestions.slice(0, 4);
-
-  if (!limited.length) {
-    hideSuggestions();
-    return;
-  }
-
-  box.innerHTML = limited.map(item => {
-    return `<div class="suggestion-item" onclick="selectSuggestion('${escapeForJs(item)}')">${escapeHtml(item)}</div>`;
-  }).join("");
-
-  box.style.display = "block";
-}
-
-/* -----------------------------
-   SELECT SUGGESTION
------------------------------ */
-function selectSuggestion(value) {
-  document.getElementById("searchInput").value = value;
-  hideSuggestions();
-  searchData();
-}
-
-/* -----------------------------
-   HIDE SUGGESTIONS
------------------------------ */
-function hideSuggestions() {
-  const box = document.getElementById("suggestions");
-  box.style.display = "none";
-  box.innerHTML = "";
-}
-
-document.addEventListener("click", function(event) {
-  const searchWrap = document.querySelector(".search-wrap");
-  if (searchWrap && !searchWrap.contains(event.target)) {
-    hideSuggestions();
-  }
-});
-
-/* -----------------------------
-   GROUP TOGGLE
------------------------------ */
-function toggleGroupView() {
-  groupView = !groupView;
-
-  const button = document.getElementById("groupButton");
-
-  if (groupView) {
-    button.textContent = "Grouped by Comment: ON";
-    button.classList.add("active-mode");
-  } else {
-    button.textContent = "Grouped by Comment: OFF";
-    button.classList.remove("active-mode");
-  }
-
-  searchData();
-}
-
-/* -----------------------------
-   RENDER RESULTS
------------------------------ */
-function renderResults(rows) {
-  if (groupView) {
-    renderGroupedTable(rows);
-  } else {
-    renderNormalTable(rows);
-  }
-}
-
-/* -----------------------------
-   NORMAL TABLE
------------------------------ */
-function renderNormalTable(rows) {
-  const results = document.getElementById("results");
-  const selectedEmployee = document.getElementById("employeeFilter").value;
-
-  if (!parsedData.length || !headers.length) {
-    results.innerHTML = `<div class="empty">No data loaded yet.</div>`;
-    return;
-  }
-
-  if (!rows.length) {
-    results.innerHTML = `<div class="empty">No matching records found.</div>`;
-    return;
-  }
-
-  const showEmployeeColumn = !selectedEmployee;
-
-  let html = `
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          ${showEmployeeColumn ? "<th>Employee</th>" : ""}
-          <th>Comment</th>
-          <th>Amount</th>
-          <th>Shift</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  rows.forEach(row => {
-    const date = getDateLabel(row);
-    const employee = getEmployee(row);
-    const comment = getComment(row);
-    const amount = getAmount(row);
-    const shift = getShift(row);
-
-    html += `
-      <tr>
-        <td>${escapeHtml(date)}</td>
-        ${showEmployeeColumn ? `<td>${escapeHtml(employee)}</td>` : ""}
-        <td class="comment">${escapeHtml(comment)}</td>
-        <td class="amount">${formatPeso(amount)}</td>
-        <td>${escapeHtml(shift)}</td>
-      </tr>
-    `;
-  });
-
-  html += `</tbody></table>`;
-  results.innerHTML = html;
-}
-
-/* -----------------------------
-   GROUPED TABLE
------------------------------ */
-function renderGroupedTable(rows) {
-  const results = document.getElementById("results");
-
-  if (!parsedData.length || !headers.length) {
-    results.innerHTML = `<div class="empty">No data loaded yet.</div>`;
-    return;
-  }
-
-  if (!rows.length) {
-    results.innerHTML = `<div class="empty">No matching records found.</div>`;
-    return;
-  }
-
-  const groups = {};
-
-  rows.forEach(row => {
-    const comment = getComment(row) || "No comment";
-    const key = normalizeText(comment);
-    const amount = getAmount(row);
-
-    if (!groups[key]) {
-      groups[key] = {
-        comment,
-        total: 0,
-        count: 0,
-        details: []
-      };
-    }
-
-    groups[key].total += amount;
-    groups[key].count += 1;
-    groups[key].details.push(`${getDateLabel(row)} - ${formatPeso(amount)} - ${getEmployee(row)}`);
-  });
-
-  const sortedGroups = Object.values(groups).sort((a, b) => b.total - a.total);
-
-  let html = `
-    <table>
-      <thead>
-        <tr>
-          <th>Comment</th>
-          <th>Total</th>
-          <th>Entries</th>
-          <th>Details</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  sortedGroups.forEach(group => {
-    html += `
-      <tr>
-        <td class="comment">${escapeHtml(group.comment)}</td>
-        <td class="amount">${formatPeso(group.total)}</td>
-        <td>${group.count}</td>
-        <td>${escapeHtml(group.details.join(" | "))}</td>
-      </tr>
-    `;
-  });
-
-  html += `</tbody></table>`;
-  results.innerHTML = html;
-}
-
-/* -----------------------------
-   SUMMARY
------------------------------ */
-function updateSummary(rows) {
-  let payIn = 0;
-  let payout = 0;
-
-  rows.forEach(row => {
-    const type = normalizeText(getField(row, ["type"]));
-    const amount = getAmount(row);
-
-    if (
-      type.includes("payin") ||
-      type.includes("pay in") ||
-      type.includes("cash in")
-    ) {
-      payIn += amount;
-    }
-
-    if (
-      type.includes("payout") ||
-      type.includes("pay out") ||
-      type.includes("cash out")
-    ) {
-      payout += amount;
-    }
-  });
-
-  document.getElementById("recordCount").textContent = rows.length;
-  document.getElementById("totalPayIn").textContent = formatPeso(payIn);
-  document.getElementById("totalPayout").textContent = formatPeso(payout);
-  document.getElementById("netMovement").textContent = formatPeso(payIn - payout);
-}
-
-/* -----------------------------
-   FIELD HELPERS
------------------------------ */
-function getEmployee(row) {
-  return getField(row, ["employee", "cashier", "staff", "user"]);
-}
-
-function getComment(row) {
-  return getField(row, ["comment", "reason", "notes", "note", "description"]);
-}
-
-function getShift(row) {
-  return getField(row, ["shift number", "shift"]);
-}
-
-function getRawDate(row) {
-  return getField(row, ["date", "date/time", "created at", "created", "time"]);
-}
-
-function getAmount(row) {
-  const amount = getField(row, ["amount", "total", "cash", "money"]);
-  return parseMoney(amount);
-}
-
-function getField(row, possibleNames) {
-  const keys = Object.keys(row);
-
-  for (const name of possibleNames) {
-    const found = keys.find(key => normalizeText(key) === normalizeText(name));
-    if (found && row[found]) return row[found];
-  }
-
-  for (const name of possibleNames) {
-    const found = keys.find(key => normalizeText(key).includes(normalizeText(name)));
-    if (found && row[found]) return row[found];
-  }
-
-  return "";
-}
-
-/* -----------------------------
-   DATE HELPERS
-   This supports both:
-   MM/DD/YYYY HH:mm
-   DD/MM/YYYY HH:mm
------------------------------ */
-function getDateObject(row) {
-  return parseLoyverseDate(getRawDate(row));
-}
-
-function getDateKey(row) {
-  const date = getDateObject(row);
-
-  if (!date) return "";
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function getDateLabel(row) {
-  const date = getDateObject(row);
-
-  if (!date) return getRawDate(row);
-
-  return date.toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
-}
-
-/* -----------------------------
-   FIXED LOYVERSE DATE PARSER
------------------------------ */
-function parseLoyverseDate(value) {
-  if (!value) return null;
-
-  const clean = String(value)
-    .replace(/\u202f/g, " ")
-    .replace(/\u00a0/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const match = clean.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/
-  );
-
-  if (!match) return null;
-
-  const firstNumber = Number(match[1]);
-  const secondNumber = Number(match[2]);
-
-  let day;
-  let month;
-
-  /*
-    If first number is above 12, it cannot be a month.
-    Example: 28/03/2026 = Mar 28, 2026.
-
-    If second number is above 12, the first number is the month.
-    Example: 04/28/2026 = Apr 28, 2026.
-
-    If both are 12 or below, Loyverse often behaves like MM/DD/YYYY.
-    Example: 04/08/2027 = Apr 8, 2027.
-  */
-  if (firstNumber > 12) {
-    day = firstNumber;
-    month = secondNumber - 1;
-  } else if (secondNumber > 12) {
-    month = firstNumber - 1;
-    day = secondNumber;
-  } else {
-    month = firstNumber - 1;
-    day = secondNumber;
-  }
-
-  let year = Number(match[3]);
-
-  if (year < 100) {
-    year += 2000;
-  }
-
-  const hour = Number(match[4] || 0);
-  const minute = Number(match[5] || 0);
-
-  const date = new Date(year, month, day, hour, minute);
-
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month ||
-    date.getDate() !== day
-  ) {
-    return null;
-  }
-
-  return date;
-}
-
-/* -----------------------------
-   MONEY PARSER
------------------------------ */
-function parseMoney(value) {
-  if (!value) return 0;
-
-  return Number(
-    String(value)
-      .replace(/[₱,\s]/g, "")
-      .replace(/[^\d.-]/g, "")
-  ) || 0;
-}
-
-/* -----------------------------
-   FORMAT PESO
------------------------------ */
-function formatPeso(amount) {
-  return "₱" + Number(amount || 0).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-}
-
-/* -----------------------------
-   TEXT NORMALIZER
------------------------------ */
-function normalizeText(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/\u202f/g, " ")
-    .replace(/\u00a0/g, " ")
-    .replace(/[^\w\sñÑ.-]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/* -----------------------------
-   HTML ESCAPE
------------------------------ */
-function escapeHtml(text) {
-  return String(text || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-/* -----------------------------
-   JS STRING ESCAPE
------------------------------ */
-function escapeForJs(text) {
-  return String(text || "")
-    .replaceAll("\\", "\\\\")
-    .replaceAll("'", "\\'")
-    .replaceAll('"', "&quot;");
-}
-
-/* -----------------------------
-   PRINT CURRENT RESULTS
------------------------------ */
-function printResults() {
-  searchData();
-
-  const results = document.getElementById("results").innerHTML;
-  const recordCount = document.getElementById("recordCount").textContent;
-  const totalPayIn = document.getElementById("totalPayIn").textContent;
-  const totalPayout = document.getElementById("totalPayout").textContent;
-  const netMovement = document.getElementById("netMovement").textContent;
-
-  const employee = document.getElementById("employeeFilter").value || "All employees";
-
-  const dateSelect = document.getElementById("dateFilter");
-  const dateLabel = dateSelect.options[dateSelect.selectedIndex]?.text || "All dates";
-
-  const search = document.getElementById("searchInput").value || "No search keyword";
-
-  const printWindow = window.open("", "_blank");
-
-  if (!printWindow) {
-    alert("Popup blocked. Please allow popups for this page to print.");
-    return;
-  }
-
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Stone Grill Payout Search Print</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          padding: 20px;
-          color: #222;
-        }
-
-        h1 {
-          font-size: 22px;
-          margin-bottom: 4px;
-        }
-
-        .meta {
-          font-size: 13px;
-          margin-bottom: 16px;
-          color: #555;
-          line-height: 1.5;
-        }
-
-        .summary {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 8px;
-          margin-bottom: 16px;
-        }
-
-        .summary div {
-          border: 1px solid #ccc;
-          padding: 10px;
-          border-radius: 8px;
-          font-size: 13px;
-        }
-
-        .summary strong {
-          display: block;
-          font-size: 17px;
-          margin-top: 4px;
-        }
-
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 12px;
-        }
-
-        th {
-          background: #2b211c;
-          color: white;
-          padding: 8px;
-          text-align: left;
-        }
-
-        td {
-          border-bottom: 1px solid #ddd;
-          padding: 8px;
-          vertical-align: top;
-        }
-
-        .amount {
-          font-weight: bold;
-        }
-
-        .comment {
-          font-weight: bold;
-        }
-
-        .empty {
-          padding: 20px;
-          border: 1px solid #ddd;
-          text-align: center;
-          color: #777;
-        }
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stone Grill Payroll - Smart Cloud Suite</title>
+    
+    <link rel="icon" type="image/png" href="/sys/icon.png">
+    <link rel="apple-touch-icon" href="/sys/icon.png">
+
+    <link rel="manifest" href="/sys/manifest.json">
+    <meta name="theme-color" content="#7a2e13">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, FacebookAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
+            authDomain: "stone-grill-payroll.firebaseapp.com",
+            projectId: "stone-grill-payroll",
+            storageBucket: "stone-grill-payroll.firebasestorage.app",
+            messagingSenderId: "255528914541",
+            appId: "1:255528914541:web:d58d9731a29d27fc253964"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "stone-grill-v1";
+
+        window.fb = { db, auth, appId, signInWithEmailAndPassword, signOut, onAuthStateChanged, FacebookAuthProvider, signInWithPopup, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
         @media print {
-          body {
-            padding: 10px;
-          }
-
-          .summary {
-            grid-template-columns: repeat(2, 1fr);
-          }
+            body * { visibility: hidden; }
+            #print-section, #print-section * { visibility: visible; }
+            #print-section { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; margin: 0; padding: 0;}
+            #interactive-print-section, #interactive-print-section * { visibility: visible; }
+            #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+            .print-hidden { display: none !important; }
+            .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
         }
-      </style>
-    </head>
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
 
-    <body>
-      <h1>Stone Grill Payout Search Results</h1>
+    <div id="root"></div>
 
-      <div class="meta">
-        Employee: ${escapeHtml(employee)}<br>
-        Date: ${escapeHtml(dateLabel)}<br>
-        Search: ${escapeHtml(search)}<br>
-        Printed: ${escapeHtml(new Date().toLocaleString("en-PH"))}
-      </div>
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
 
-      <div class="summary">
-        <div>Records<strong>${escapeHtml(recordCount)}</strong></div>
-        <div>Total Pay In<strong>${escapeHtml(totalPayIn)}</strong></div>
-        <div>Total Payout<strong>${escapeHtml(totalPayout)}</strong></div>
-        <div>Net<strong>${escapeHtml(netMovement)}</strong></div>
-      </div>
+        const normalizeId = (id) => {
+            if (id === undefined || id === null) return '';
+            const strId = String(id).trim();
+            if (/^\d+$/.test(strId)) return parseInt(strId, 10).toString();
+            return strId.toLowerCase();
+        };
 
-      ${results}
-    </body>
-    </html>
-  `);
+        const Icon = ({ d, className = "w-5 h-5", children }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {d && <path d={d} />}
+                {children}
+            </svg>
+        );
+        const LayoutDashboard = (p) => <Icon {...p}><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></Icon>;
+        const Users = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
+        const Clock = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
+        const Banknote = (p) => <Icon {...p}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></Icon>;
+        const Calculator = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"/></Icon>;
+        const FileText = (p) => <Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></Icon>;
+        const CalendarDays = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></Icon>;
+        const FileSpreadsheet = (p) => <Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></Icon>;
+        const Settings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+        const Lock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Icon>;
+        const Unlock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></Icon>;
+        const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
+        const Menu = (p) => <Icon {...p}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></Icon>;
+        const Printer = (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>;
+        const AlertCircle = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>;
+        const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
+        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+        const Upload = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Icon>;
+        const Edit = (p) => <Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
+        const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
 
-  printWindow.document.close();
-  printWindow.focus();
+        function LoginScreen() {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState(false);
+            const [loading, setLoading] = useState(false);
 
-  setTimeout(() => {
-    printWindow.print();
-  }, 300);
-}
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setError(false); setLoading(true);
+                try {
+                    const { auth, signInWithEmailAndPassword } = window.fb;
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (err) { setError(true); setLoading(false); }
+            };
 
-/* -----------------------------
-   AUTO LOAD
------------------------------ */
-window.addEventListener("load", () => {
-  loadData();
-  buildFilters();
-});
-</script>
+            const handleFacebookLogin = async () => {
+                setError(false); setLoading(true);
+                try {
+                    const { auth, FacebookAuthProvider, signInWithPopup } = window.fb;
+                    const provider = new FacebookAuthProvider();
+                    await signInWithPopup(auth, provider);
+                } catch (err) { setError(true); setLoading(false); }
+            };
 
+            return (
+                <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50 font-sans overflow-y-auto">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up my-auto">
+                        <div className="bg-blue-100 p-4 rounded-full mb-6 text-blue-700"><Lock /></div>
+                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest text-center">System Login</h2>
+                        <p className="text-xs text-slate-400 mb-8 text-center font-bold">Connect to Cloud Database</p>
+                        <form onSubmit={handleLogin} className="w-full space-y-4 mb-6">
+                            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Email Address</label><input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                            <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Password</label><input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                            {error && <p className="text-red-500 text-xs font-bold uppercase tracking-wider text-center animate-pulse pt-2">Authentication Failed</p>}
+                            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-black uppercase tracking-widest transition-colors shadow-lg disabled:opacity-50 mt-2">{loading ? 'Connecting...' : 'Secure Login'}</button>
+                        </form>
+                        <div className="flex items-center w-full mb-6"><hr className="flex-1 border-slate-200" /><span className="px-3 text-[10px] text-slate-400 font-black uppercase tracking-widest">OR</span><hr className="flex-1 border-slate-200" /></div>
+                        <button type="button" onClick={handleFacebookLogin} disabled={loading} className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white h-14 rounded-2xl font-black uppercase tracking-widest transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook Login
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        function AdminPinModal({ onUnlock, onClose }) {
+            const [pin, setPin] = useState('');
+            const [error, setError] = useState(false);
+            const allowedPins = { '2558': 'Admin', '1234': 'User' };
+
+            const handlePress = (num) => {
+                if (pin.length < 4 && !error) {
+                    const next = pin + num; setPin(next);
+                    if (next.length === 4) {
+                        if (allowedPins[next]) onUnlock(allowedPins[next]); 
+                        else { setError(true); setTimeout(() => { setPin(''); setError(false); }, 700); }
+                    }
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-blue-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-sans animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up relative">
+                        <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800"><X /></button>
+                        <div className="bg-blue-100 p-4 rounded-full mb-6 text-blue-700"><Unlock /></div>
+                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest">System Unlock</h2>
+                        <p className="text-[10px] text-slate-400 mb-8 font-black uppercase tracking-widest text-center">Enter PIN to access extended features</p>
+                        <div className={`flex space-x-6 mb-12 ${error ? 'animate-bounce text-red-500' : ''}`}>
+                            {[...Array(4)].map((_, i) => <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${pin.length > i ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-gray-300'}`} />)}
+                        </div>
+                        <div className="grid grid-cols-3 gap-6 w-full">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, 'del'].map((num, i) => (
+                                num === 'del' ? <button key={i} onClick={() => setPin(pin.slice(0, -1))} className="h-14 rounded-2xl bg-gray-50 flex items-center justify-center text-red-400 font-bold uppercase text-[10px] hover:bg-red-50 transition-colors">del</button>
+                                : num === '' ? <div key={i} /> 
+                                : <button key={i} onClick={() => handlePress(num.toString())} className="h-14 rounded-2xl bg-gray-50 text-2xl font-black text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">{num}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function NavItem({ icon, label, active, onClick, open }) {
+            return (
+                <button onClick={onClick} className={`w-full flex items-center px-6 py-3.5 transition-all duration-300 ${active ? 'bg-[#386df2] text-white border-l-4 border-white shadow-lg' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white border-l-4 border-transparent'}`}>
+                    <span className="shrink-0">{icon}</span>{open && <span className="ml-4 text-[11px] font-black uppercase tracking-widest whitespace-nowrap">{label}</span>}
+                </button>
+            );
+        }
+
+        function StatCard({ title, value, icon, color }) {
+            return (
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex items-center gap-6 animate-slide-up hover:shadow-2xl transition-all transform hover:-translate-y-1">
+                    <div className={`p-4 rounded-2xl ${color}`}>{icon}</div>
+                    <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</p><p className="text-3xl font-black text-slate-800 tracking-tighter">{value}</p></div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [isReady, setIsReady] = useState(false);
+            const [isRestoring, setIsRestoring] = useState(false);
+            const [userRole, setUserRole] = useState('Staff'); 
+            const [showAdminPin, setShowAdminPin] = useState(false);
+            const [currentAdminName, setCurrentAdminName] = useState(''); 
+
+            const isAdmin = userRole === 'Admin';
+            const isPrivileged = userRole === 'Admin' || userRole === 'User';
+
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+
+            const [employees, setEmployees] = useState([]);
+            const [attendance, setAttendance] = useState([]);
+            const [cashAdvances, setCashAdvances] = useState([]);
+            const [interactivePayrolls, setInteractivePayrolls] = useState([]);
+            const [auditLogs, setAuditLogs] = useState([]);
+
+            const monthOptions = useMemo(() => {
+                const options = []; const d = new Date();
+                for (let i = 0; i < 12; i++) {
+                    options.push({ value: d.toISOString().slice(0, 7), label: d.toLocaleString('default', { month: 'long', year: 'numeric' }) });
+                    d.setMonth(d.getMonth() - 1);
+                }
+                return options;
+            }, []);
+
+            const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+            const [showAddEmp, setShowAddEmp] = useState(false);
+            const [rawInput, setRawInput] = useState('');
+            
+            const [caType, setCaType] = useState('advance');
+            const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
+            const [viewProfile, setViewProfile] = useState(null);
+            
+            const defaultDate = new Date();
+            const [reportDates, setReportDates] = useState({ 
+                start: new Date(defaultDate.getFullYear(), defaultDate.getMonth(), 1).toISOString().slice(0, 10), 
+                end: new Date(defaultDate.getFullYear(), defaultDate.getMonth() + 1, 0).toISOString().slice(0, 10) 
+            });
+            
+            const [icEmpId, setIcEmpId] = useState('');
+            const [icDateStart, setIcDateStart] = useState(() => new Date(defaultDate.getFullYear(), defaultDate.getMonth(), 1).toISOString().slice(0, 10));
+            const [icDateEnd, setIcDateEnd] = useState(() => new Date(defaultDate.getFullYear(), defaultDate.getMonth() + 1, 0).toISOString().slice(0, 10));
+            const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
+
+            const [dashSearchEmpId, setDashSearchEmpId] = useState('');
+            const [dashSearchStart, setDashSearchStart] = useState(reportDates.start);
+            const [dashSearchEnd, setDashSearchEnd] = useState(reportDates.end);
+            const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
+            const [isEditing, setIsEditing] = useState(false);
+
+            const switchTab = (tab) => { setActiveTab(tab); if (window.innerWidth < 1024) setSidebarOpen(false); };
+
+            useEffect(() => {
+                let isMounted = true;
+                const checkFb = setInterval(() => {
+                    if (window.fb && window.fb.auth && isMounted) {
+                        clearInterval(checkFb);
+                        window.fb.onAuthStateChanged(window.fb.auth, (u) => {
+                            if(isMounted) { setUser(u); setIsReady(true); if(!u) { setUserRole('Staff'); setCurrentAdminName(''); } }
+                        });
+                    }
+                }, 100);
+                return () => { isMounted = false; clearInterval(checkFb); };
+            }, []);
+
+            useEffect(() => {
+                if (!user || !window.fb) return;
+                const { db, appId, onSnapshot, collection } = window.fb;
+                const userPath = (name) => collection(db, 'artifacts', appId, 'users', user.uid, name);
+
+                const unsubEmps = onSnapshot(userPath('employees'), (snap) => {
+                    setEmployees(snap.docs.map(d => {
+                        const data = d.data();
+                        return { id: d.id, name: data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim() || d.id, firstName: data.firstName || '', lastName: data.lastName || '', position: data.position || '', rate: data.dailyRate || 0, contactNumber: data.contactNumber || '', sssNumber: data.sssNumber || '', sssRate: data.sssRate || 0, miscRate: data.miscRate || 0, status: data.status || 'active', caBalance: data.caBalance || 0 };
+                    }).sort((a,b)=> (a.name || '').localeCompare(b.name || '')));
+                });
+                const unsubAtt = onSnapshot(userPath('attendance'), (snap) => setAttendance(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubCA = onSnapshot(userPath('cash_advances'), (snap) => setCashAdvances(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubIP = onSnapshot(userPath('payroll_entries'), (snap) => setInteractivePayrolls(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubLogs = onSnapshot(userPath('audit_logs'), (snap) => setAuditLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                
+                return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); unsubLogs(); };
+            }, [user]);
+
+            const payrollSummary = useMemo(() => {
+                return employees.map(emp => {
+                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
+                    const uniqueDates = new Set(empAtt.map(a => a.date));
+                    let days = 0;
+                    uniqueDates.forEach(date => {
+                        const dayRecords = empAtt.filter(a => a.date === date);
+                        const maxDay = Math.max(...dayRecords.map(r => parseFloat(r.dayEquivalent) || 0));
+                        days += Math.min(maxDay, 1);
+                    });
+                    const gross = days * (parseFloat(emp.rate) || 0);
+                    const sss = parseFloat(emp.sssRate) || 0;
+                    const misc = parseFloat(emp.miscRate) || 0;
+                    const caBalance = parseFloat(emp.caBalance) || 0;
+                    const availableForCA = gross - sss - misc;
+                    let caDed = 0; if (caBalance > 0 && availableForCA > 0) caDed = Math.min(caBalance, availableForCA);
+                    const net = gross - sss - misc - caDed;
+                    return { ...emp, days, gross, caDed, sss, misc, net, caBalance };
+                });
+            }, [employees, attendance, selectedMonth]);
+
+            useEffect(() => {
+                if (icEmpId && icDateStart && icDateEnd) {
+                    const key = `${normalizeId(icEmpId)}_${icDateStart}_${icDateEnd}`;
+                    const saved = interactivePayrolls.find(p => p.recordKey === key);
+                    if (saved) setIcForm(saved.data);
+                    else {
+                        const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
+                        if (emp) {
+                            const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && a.date >= icDateStart && a.date <= icDateEnd);
+                            const uniqueDates = new Set(att.map(a => a.date));
+                            let calcDays = 0;
+                            uniqueDates.forEach(date => {
+                                const dayRecords = att.filter(a => a.date === date);
+                                const maxDay = Math.max(...dayRecords.map(r => parseFloat(r.dayEquivalent) || 0));
+                                calcDays += Math.min(maxDay, 1);
+                            });
+                            const days = calcDays;
+                            const gross = days * (parseFloat(emp.rate) || 0);
+                            const sss = parseFloat(emp.sssRate) || 0;
+                            const misc = parseFloat(emp.miscRate) || 0;
+                            const availableForCA = gross - sss - misc;
+                            const caDed = availableForCA > 0 ? Math.min(parseFloat(emp.caBalance) || 0, availableForCA) : 0;
+                            setIcForm({ days_worked: days, bonus: 0, sss: sss, misc_deductions: misc, cash_advance: caDed });
+                        }
+                    }
+                }
+            }, [icEmpId, icDateStart, icDateEnd, interactivePayrolls, employees, attendance]);
+
+            const stats = useMemo(() => {
+                const today = new Date().toISOString().slice(0, 10);
+                const uniquePresent = new Set(attendance.filter(a => a.date === today).map(a => normalizeId(a.empId))).size;
+                const totalCA = employees.reduce((sum, e) => sum + (parseFloat(e.caBalance) || 0), 0);
+                return { count: employees.length, present: uniquePresent, totalCA, alerts: payrollSummary.filter(p => p.net < 0).length };
+            }, [employees, attendance, payrollSummary]);
+
+            let searchedEmp = null; let searchedDays = 0, searchedGross = 0, searchedCaDed = 0, searchedMisc = 0;
+            if (dashSearchEmpId) {
+                searchedEmp = employees.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
+                if (searchedEmp && dashSearchStart && dashSearchEnd) {
+                    const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(searchedEmp.id) && a.date >= dashSearchStart && a.date <= dashSearchEnd);
+                    const uniqueDates = new Set(att.map(a => a.date)); let calcDays = 0;
+                    uniqueDates.forEach(date => {
+                        const dayRecords = att.filter(a => a.date === date);
+                        const maxDay = Math.max(...dayRecords.map(r => parseFloat(r.dayEquivalent) || 0));
+                        calcDays += Math.min(maxDay, 1);
+                    });
+                    searchedDays = calcDays; searchedGross = searchedDays * (parseFloat(searchedEmp.rate) || 0);
+                    const sss = parseFloat(searchedEmp.sssRate) || 0; const misc = parseFloat(searchedEmp.miscRate) || 0;
+                    const availableForCA = searchedGross - sss - misc;
+                    searchedCaDed = availableForCA > 0 ? Math.min(parseFloat(searchedEmp.caBalance) || 0, availableForCA) : 0;
+                    searchedMisc = sss + misc; 
+                }
+            }
+
+            const handleLogout = async () => { if (window.fb) await window.fb.signOut(window.fb.auth); };
+
+            const logAdminAccess = async (adminName) => {
+                if (!user || !window.fb) return;
+                const { db, appId, addDoc, collection } = window.fb;
+                try { await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'audit_logs'), { action: 'System Unlocked', adminName: adminName, timestamp: Date.now() }); } catch (err) { console.error(err); }
+            };
+
+            const handleAddStaff = async (e) => {
+                e.preventDefault(); if (!user || !window.fb || !isAdmin) return;
+                const { db, appId, doc, setDoc } = window.fb;
+                const bId = normalizeId(newEmpForm.biometricId);
+                if (!bId) return alert("Biometric ID is required.");
+                try {
+                    const newDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'employees', bId);
+                    const payload = { firstName: newEmpForm.firstName, lastName: newEmpForm.lastName, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim(), position: newEmpForm.position, dailyRate: parseFloat(newEmpForm.dailyRate) || 0, contactNumber: newEmpForm.contactNumber || '', sssNumber: newEmpForm.sssNumber || '', sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, status: newEmpForm.status || 'active' };
+                    await setDoc(newDocRef, payload, { merge: true });
+                    alert(isEditing ? "Profile successfully updated." : "New staff member saved.");
+                    setShowAddEmp(false); setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
+                } catch (err) { alert("Error: " + err.message); }
+            };
+
+            const handleIssueCA = async () => {
+                if (!user || !isAdmin || !newCa.empId || !newCa.amount || !newCa.date) return;
+                const { db, appId, addDoc, doc, updateDoc, collection } = window.fb;
+                let amt = parseFloat(newCa.amount) || 0;
+                if(amt === 0) return alert("Please enter a valid amount greater than 0.");
+                if (caType === 'payment') amt = -Math.abs(amt); else amt = Math.abs(amt);
+                const emp = employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId));
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'cash_advances'), { empId: normalizeId(newCa.empId), amount: amt, date: newCa.date, reason: newCa.reason, type: caType });
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', normalizeId(newCa.empId)), { caBalance: (parseFloat(emp.caBalance) || 0) + amt });
+                    setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
+                    alert(caType === 'advance' ? "Advance issued successfully." : "Payment recorded successfully.");
+                } catch (err) { alert(err.message); }
+            };
+
+            const handleProcessLogs = async () => {
+                if (!user || !isAdmin || !rawInput.trim()) return;
+                const { db, appId, doc, setDoc } = window.fb;
+                const lines = rawInput.trim().split('\n'); let updatedAttCount = 0; const attendanceMap = {}; 
+                for (const line of lines) {
+                    const rawLine = line.trim(); if (!rawLine || rawLine.toUpperCase().startsWith('ID')) continue;
+                    const columns = rawLine.split(/\t+| {2,}/).map(c => c.trim()).filter(Boolean); if (columns.length < 3) continue;
+                    const finalEmpId = normalizeId(columns[0]); const rawName = columns[1];                 
+                    const dateMatch = rawLine.match(/(\d{2}\/\d{2}\/\d{4})/); const timeMatch = rawLine.match(/(\d{2}:\d{2}:\d{2})/);
+                    if (!dateMatch || !timeMatch) continue;
+                    const [m, d, y] = dateMatch[1].split('/'); const isoDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    const timeHHmm = timeMatch[1].substring(0, 5); 
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', finalEmpId), { employeeId: finalEmpId, name: rawName, status: 'active' }, { merge: true });
+                    const key = `${finalEmpId}_${isoDate}`;
+                    if (!attendanceMap[key]) attendanceMap[key] = { id: finalEmpId, name: rawName, date: isoDate, punches: [] };
+                    attendanceMap[key].punches.push(timeHHmm);
+                }
+                for (const key in attendanceMap) {
+                    const record = attendanceMap[key]; const sorted = record.punches.sort();
+                    const firstIn = sorted[0]; const lastOut = sorted.length > 1 ? sorted[sorted.length - 1] : "00:00";
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'attendance', key), { empId: record.id, empName: record.name, date: record.date, firstIn, lastOut, dayEquivalent: sorted.length > 1 ? 1 : 0.5, remarks: sorted.length > 1 ? "Full Day" : "Half Day" }, { merge: true });
+                    updatedAttCount++;
+                }
+                setRawInput(''); alert(`Stone Grill Cloud Sync Complete!\nProcessed ${updatedAttCount} employee days.`);
+            };
+
+            const handleSavePayslip = async () => {
+                if (!user || !isAdmin || !icEmpId) return;
+                const { db, appId, doc, setDoc } = window.fb;
+                const key = `${normalizeId(icEmpId)}_${icDateStart}_${icDateEnd}`;
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), startDate: icDateStart, endDate: icDateEnd, data: icForm, updatedAt: Date.now() });
+                    alert("Payslip saved to cloud database.");
+                } catch (err) { alert(err.message); }
+            };
+
+            const handleExportBackup = () => {
+                if(!isPrivileged) return;
+                const data = { employees, attendance, cashAdvances, interactivePayrolls };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `stonegrill_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+            };
+
+            const handleImportBackup = (event) => {
+                const file = event.target.files[0]; if (!file || !user || !isAdmin) return;
+                setIsRestoring(true); const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result); const { db, appId, doc, setDoc } = window.fb; let totalRestored = 0;
+                        const restoreCollection = async (collectionName, items) => {
+                            if (!items || !Array.isArray(items)) return;
+                            for (const item of items) { const { id, ...rest } = item; if (id) { await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, collectionName, id), rest); totalRestored++; } }
+                        };
+                        await restoreCollection('employees', data.employees); await restoreCollection('attendance', data.attendance); await restoreCollection('cash_advances', data.cashAdvances); await restoreCollection('payroll_entries', data.interactivePayrolls);
+                        setIsRestoring(false); alert(`Restore Complete!\nSuccessfully imported and recovered ${totalRestored} database records.`);
+                    } catch (err) { setIsRestoring(false); alert("Error parsing or restoring backup: " + err.message); }
+                };
+                reader.readAsText(file); event.target.value = ''; 
+            };
+
+            const handleEditClick = () => {
+                if(!isAdmin) return;
+                setNewEmpForm({ biometricId: viewProfile.id, firstName: viewProfile.firstName || '', lastName: viewProfile.lastName || '', position: viewProfile.position || '', dailyRate: viewProfile.rate || '', contactNumber: viewProfile.contactNumber || '', sssNumber: viewProfile.sssNumber || '', sssRate: viewProfile.sssRate || '', miscRate: viewProfile.miscRate || '', status: viewProfile.status || 'active' });
+                setIsEditing(true); setViewProfile(null); setShowAddEmp(true);
+            };
+
+            if (!isReady) return <div className="h-screen bg-blue-900 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />Checking Cloud Identity...</div>;
+            if (!user) return <LoginScreen />;
+
+            const formatMoney = (v) => {
+                const num = Number(v || 0); if (isNaN(num)) return "0";
+                return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+
+            const displayCAs = newCa.empId ? cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)) : cashAdvances;
+
+            return (
+                <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden relative">
+                    {showAdminPin && <AdminPinModal onClose={() => setShowAdminPin(false)} onUnlock={(name) => { setUserRole(name); setCurrentAdminName(name); setShowAdminPin(false); logAdminAccess(name); }} />}
+                    {isRestoring && <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-50 font-sans flex-col text-white"><div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mb-6" /><h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2></div>}
+                    {isSidebarOpen && window.innerWidth < 1024 && <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)} />}
+
+                    <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full print-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} flex-shrink-0 shadow-2xl`}>
+                        <div className="p-6 border-b border-blue-800 flex items-center justify-between">
+                            <div className="font-black text-xl tracking-tighter flex items-center shrink-0"><span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3 shadow-lg"><LayoutDashboard /></span> {isSidebarOpen ? 'STONE GRILL' : ''}</div>
+                            {isSidebarOpen && window.innerWidth < 1024 && <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-white/10 rounded-lg"><X /></button>}
+                        </div>
+                        <nav className="flex-1 py-8 space-y-2 overflow-y-auto custom-scrollbar">
+                            <NavItem icon={<LayoutDashboard />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => switchTab('dashboard')} open={isSidebarOpen} />
+                            <NavItem icon={<Users />} label="Staff Directory" active={activeTab === 'employees'} onClick={() => switchTab('employees')} open={isSidebarOpen} />
+                            <NavItem icon={<Clock />} label="Attendance" active={activeTab === 'attendance'} onClick={() => switchTab('attendance')} open={isSidebarOpen} />
+                            <NavItem icon={<FileText />} label="Cloud Payslips" active={activeTab === 'interactive-card'} onClick={() => switchTab('interactive-card')} open={isSidebarOpen} />
+                            <NavItem icon={<Banknote />} label="Cash Advance" active={activeTab === 'ca'} onClick={() => switchTab('ca')} open={isSidebarOpen} />
+                            <NavItem icon={<Calculator />} label="Payroll Report" active={activeTab === 'payroll'} onClick={() => switchTab('payroll')} open={isSidebarOpen} />
+                            <NavItem icon={<CalendarDays />} label="Yearly Summary" active={activeTab === 'summary'} onClick={() => switchTab('summary')} open={isSidebarOpen} />
+                            <NavItem icon={<FileSpreadsheet />} label="Reports" active={activeTab === 'reports'} onClick={() => switchTab('reports')} open={isSidebarOpen} />
+                        </nav>
+                        <div className="p-4 border-t border-blue-800 space-y-2">
+                            <NavItem icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => switchTab('settings')} open={isSidebarOpen} />
+                            {isPrivileged ? (
+                                <button onClick={() => { setUserRole('Staff'); setCurrentAdminName(''); switchTab('dashboard'); }} className="w-full flex items-center px-6 py-4 transition-all duration-300 text-emerald-300 hover:bg-emerald-900/50 hover:text-white mt-2">
+                                    <span className="shrink-0"><Lock /></span>{isSidebarOpen && <span className="ml-4 text-[11px] font-black uppercase tracking-widest whitespace-nowrap">Lock System ({currentAdminName})</span>}
+                                </button>
+                            ) : (
+                                <button onClick={() => setShowAdminPin(true)} className="w-full flex items-center px-6 py-4 transition-all duration-300 text-amber-300 hover:bg-amber-900/50 hover:text-white mt-2">
+                                    <span className="shrink-0"><Unlock /></span>{isSidebarOpen && <span className="ml-4 text-[11px] font-black uppercase tracking-widest whitespace-nowrap">System Unlock</span>}
+                                </button>
+                            )}
+                            {isPrivileged && (
+                                <button onClick={handleLogout} className="w-full flex items-center px-6 py-4 transition-all duration-300 text-rose-300 hover:bg-rose-900/50 hover:text-white">
+                                    <span className="shrink-0"><LogOut /></span>{isSidebarOpen && <span className="ml-4 text-[11px] font-black uppercase tracking-widest whitespace-nowrap">Secure Logout</span>}
+                                </button>
+                            )}
+                        </div>
+                    </aside>
+
+                    <main className={`flex-1 flex flex-col h-screen overflow-hidden w-full ${activeTab === 'payroll' ? 'bg-white' : ''}`}>
+                        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 shadow-sm z-10 print-hidden">
+                            <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-blue-900 transition-colors"><Menu className="w-6 h-6" /></button>
+                            <div className="flex items-center gap-4">
+                                {!isPrivileged && <span className="px-3 py-1 bg-stone-100 text-stone-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-stone-200">Staff Mode</span>}
+                                {isPrivileged && <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">Access Level: {currentAdminName}</span>}
+                                <h1 className="text-lg font-black text-slate-800 uppercase tracking-widest">{activeTab.replace('-', ' ')}</h1>
+                            </div>
+                        </header>
+
+                        <div className={`flex-1 overflow-y-auto p-4 lg:p-8 ${activeTab === 'payroll' ? 'bg-white payroll-print-container' : 'bg-slate-50'} custom-scrollbar`} id={activeTab === 'payroll' ? 'print-section' : ''}>
+                            <div className={`max-w-7xl mx-auto h-full fade-in space-y-6 ${activeTab === 'payroll' ? 'max-w-full' : ''}`}>
+                                {activeTab === 'dashboard' && (
+                                    <>
+                                        <div className={`grid grid-cols-1 ${isPrivileged ? 'md:grid-cols-4' : 'md:grid-cols-2'} gap-6`}>
+                                            <StatCard title="Active Staff" value={stats.count} icon={<Users />} color="bg-blue-50 text-blue-700" />
+                                            <StatCard title="Clocked In Today" value={stats.present} icon={<Clock />} color="bg-emerald-50 text-emerald-700" />
+                                            {isPrivileged && (
+                                                <>
+                                                    <StatCard title="Total CA" value={`₱${formatMoney(stats.totalCA)}`} icon={<Banknote />} color="bg-amber-50 text-amber-700" />
+                                                    <StatCard title="Payroll Alerts" value={stats.alerts} icon={<AlertCircle />} color="bg-rose-50 text-rose-700" />
+                                                </>
+                                            )}
+                                        </div>
+                                        {isPrivileged && (
+                                            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mt-6 animate-slide-up">
+                                                <h3 className="font-black text-blue-900 uppercase tracking-widest mb-6 flex items-center gap-2"><Search className="w-5 h-5 text-blue-500"/> Employee Quick Lookup</h3>
+                                                <div className="flex flex-wrap gap-4 items-end mb-8">
+                                                    <div className="flex-1 min-w-[200px]"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Employee Name</label><select className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={dashSearchEmpId} onChange={e => setDashSearchEmpId(e.target.value)}><option value="">-- Select Employee --</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name} (ID: {e.id})</option>)}</select></div>
+                                                    <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Date Range (Start)</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={dashSearchStart} onChange={e => setDashSearchStart(e.target.value)} /></div>
+                                                    <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Date Range (End)</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={dashSearchEnd} onChange={e => setDashSearchEnd(e.target.value)} /></div>
+                                                </div>
+                                                {searchedEmp ? (
+                                                    <div className="bg-white rounded-3xl p-8 border border-blue-100 shadow-lg animate-slide-up mt-6">
+                                                        <div className="text-center mb-10"><h2 className="text-4xl md:text-5xl font-black text-[#48538b] tracking-tight mb-2">{searchedEmp.name}</h2><p className="text-lg md:text-xl text-[#858ca7] font-medium">{searchedEmp.position || 'Staff'}</p></div>
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
+                                                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Days Present</p><p className="text-4xl font-black text-[#4d976f] font-mono tracking-tighter">{searchedDays}</p></div>
+                                                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Deduction</p><p className="text-4xl font-black text-[#d73f4e] font-mono tracking-tighter">₱{formatMoney(searchedCaDed + searchedMisc)}</p></div>
+                                                            <div className="col-span-2 md:col-span-1 mt-6 md:mt-0"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Remaining CA Bal.</p><p className={`text-4xl font-black font-mono tracking-tighter ${searchedEmp.caBalance < 0 ? 'text-red-600' : 'text-slate-400'}`}>{searchedEmp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(searchedEmp.caBalance || 0))}</p></div>
+                                                        </div>
+                                                    </div>
+                                                ) : <div className="text-center py-10 text-slate-400 italic text-sm border-t border-dashed bg-slate-50/50 rounded-b-3xl">Select an employee to instantly view their performance and financial status.</div>}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {activeTab === 'employees' && (
+                                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                                        <div className="p-6 border-b flex justify-between items-center bg-white">
+                                            <div className="flex items-center gap-4">
+                                                <h2 className="font-black uppercase tracking-widest text-[#243c84]">Database Masterlist</h2>
+                                                {isPrivileged && <select className="border-2 border-slate-200 rounded-xl px-4 py-2 text-xs bg-white text-slate-700 font-bold outline-none shadow-sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>{monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select>}
+                                            </div>
+                                            {isAdmin && <button onClick={() => { setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' }); setShowAddEmp(true); }} className="bg-[#386df2] hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg transition-all transform active:scale-95 tracking-widest leading-tight text-center">+<br/>NEW<br/>STAFF</button>}
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm whitespace-nowrap">
+                                                <thead className="bg-[#243c84] text-white uppercase text-[11px] font-black tracking-widest">
+                                                    <tr><th className="p-4 text-left">ID</th><th className="p-4 text-left">NAME</th>{isPrivileged && <th className="p-4 text-center">DAYS</th>}{isPrivileged && <th className="p-4 text-right">C.A.</th>}{isPrivileged && <th className="p-4 text-right">GROSS</th>}{isPrivileged && <th className="p-4 text-right">MISC</th>}{isPrivileged && <th className="p-4 text-right">SSS</th>}{isPrivileged && <th className="p-4 text-right">SALARY</th>}</tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {payrollSummary.length === 0 ? <tr><td colSpan={isPrivileged ? "8" : "2"} className="p-20 text-center text-gray-400 italic">Cloud directory is empty. Add your first employee to begin.</td></tr> :
+                                                        payrollSummary.map(row => (
+                                                            <tr key={row.id} className={`border-b transition-colors ${isPrivileged ? 'hover:bg-blue-50/50 cursor-pointer' : 'hover:bg-stone-50'}`} onClick={() => isPrivileged && setViewProfile(row)}>
+                                                                <td className="p-4 text-[#5f6880] font-black">{row.id}</td>
+                                                                <td className="p-4 font-black text-slate-800 uppercase tracking-tighter">{row.name}</td>
+                                                                {isPrivileged && <td className="p-4 text-center font-bold text-slate-800">{row.days > 0 ? row.days : ''}</td>}
+                                                                {isPrivileged && <td className="p-4 text-right font-black text-[#d73f4e]">{row.caBalance !== 0 ? formatMoney(row.caBalance) : ''}</td>}
+                                                                {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.gross > 0 ? formatMoney(row.gross) : ''}</td>}
+                                                                {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.misc > 0 ? formatMoney(row.misc) : ''}</td>}
+                                                                {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.sss > 0 ? formatMoney(row.sss) : ''}</td>}
+                                                                {isPrivileged && <td className="p-4 text-right font-black text-slate-900">{row.net > 0 ? formatMoney(row.net) : ''}</td>}
+                                                            </tr>
+                                                        ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'attendance' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full min-h-0">
+                                        {isAdmin && (
+                                            <div className="bg-white p-8 rounded-3xl border border-gray-100 flex flex-col shadow-xl animate-slide-up">
+                                                <h3 className="font-black text-blue-900 uppercase tracking-widest mb-2">Smart Import Logs</h3>
+                                                <p className="text-[11px] text-slate-400 mb-6 font-medium leading-relaxed">Paste your raw biometric tab data. <strong className="text-blue-500">Strictly evaluates &lt;5hrs as Halfday.</strong></p>
+                                                <textarea className="w-full flex-1 p-4 text-xs font-mono border rounded-2xl mb-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none bg-slate-50/50 custom-scrollbar" placeholder="ID	Name	Dept.	Time	Device ID..." value={rawInput} onChange={e => setRawInput(e.target.value)} />
+                                                <button onClick={handleProcessLogs} className="w-full bg-blue-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-blue-800 transition-all transform active:scale-[0.98]">Process into Database</button>
+                                            </div>
+                                        )}
+                                        <div className={`bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col shadow-xl ${!isAdmin ? 'md:col-span-2' : ''}`}>
+                                            <div className="p-4 bg-gray-50 border-b flex justify-between items-center"><span className="font-black text-blue-900 uppercase tracking-widest text-xs">Live Feed</span><span className="bg-white px-2 py-1 rounded-lg border text-[10px] font-black text-slate-400 uppercase">{attendance.length} Total</span></div>
+                                            <div className="overflow-y-auto flex-1 custom-scrollbar min-h-[400px]">
+                                                <table className="w-full text-xs">
+                                                    <tbody>
+                                                        {attendance.sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0, 100).map((a, i) => {
+                                                            const boundEmp = employees.find(e => normalizeId(e.id) === normalizeId(a.empId));
+                                                            return (
+                                                                <tr key={i} className="border-b hover:bg-slate-50 transition-colors">
+                                                                    <td className="p-3 text-slate-400 font-mono">{a.date}</td>
+                                                                    <td className="p-3 font-black uppercase tracking-tighter text-slate-700">{boundEmp?.name || a.empName || `ID:${a.empId}`}</td>
+                                                                    <td className="p-3 text-right text-blue-600 font-black font-mono">{a.firstIn} {a.lastOut && a.lastOut !== '00:00' ? `- ${a.lastOut}` : ''}</td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                        {attendance.length === 0 && <tr><td colSpan="3" className="p-10 text-center text-stone-400 italic">No attendance records found in the database.</td></tr>}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'interactive-card' && (
+                                    <div className="flex flex-col lg:flex-row gap-8">
+                                        <div className="w-full lg:w-1/3 bg-white p-8 rounded-3xl border border-gray-100 shadow-xl space-y-6">
+                                            <h3 className="font-black text-blue-900 uppercase tracking-widest border-b pb-4">Payslip Builder</h3>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase">Auto-calculates from database automatically</p>
+                                            <div>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Target Employee</label>
+                                                <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500" value={icEmpId} onChange={e => setIcEmpId(e.target.value)}><option value="">-- Choose Member --</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Start</label><input type="date" value={icDateStart} onChange={e => setIcDateStart(e.target.value)} className="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold"/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">End</label><input type="date" value={icDateEnd} onChange={e => setIcDateEnd(e.target.value)} className="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold"/></div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Days</label><input type="number" step="0.1" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.days_worked} onChange={e => setIcForm({...icForm, days_worked: parseFloat(e.target.value) || 0})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Bonus (₱)</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.bonus} onChange={e => setIcForm({...icForm, bonus: parseFloat(e.target.value) || 0})}/></div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">CA Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-red-600" value={icForm.cash_advance} onChange={e => setIcForm({...icForm, cash_advance: parseFloat(e.target.value) || 0})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Misc Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-red-600" value={icForm.misc_deductions} onChange={e => setIcForm({...icForm, misc_deductions: parseFloat(e.target.value) || 0})}/></div>
+                                            </div>
+                                            {isAdmin ? (
+                                                <button onClick={handleSavePayslip} className="w-full bg-blue-700 text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-blue-800 transition-all tracking-widest text-xs">Save to Cloud Archive</button>
+                                            ) : <button disabled className="w-full bg-slate-300 text-white py-4 rounded-2xl font-black uppercase shadow-sm cursor-not-allowed text-xs tracking-widest">Admin Required to Save</button>}
+                                        </div>
+                                        <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
+                                            {icEmpId ? (
+                                                <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative rounded-sm" id="interactive-print-section">
+                                                    <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYROLL</div></div>
+                                                    <h2 className="text-2xl font-black border-b-4 border-red-50 mb-2 uppercase tracking-tighter leading-none pb-2">{employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.name}</h2>
+                                                    <div className="flex justify-between items-end mb-8 text-sm font-bold text-slate-500">
+                                                        <span className="uppercase tracking-widest">{employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.position}</span>
+                                                        <span className="text-slate-900 font-black text-xl">DAYS {icForm.days_worked}</span>
+                                                    </div>
+                                                    <div className="flex text-center mb-2 font-black text-[10px] tracking-widest"><div className="flex-1 bg-blue-50 py-2 border-r border-white">EARNINGS</div><div className="flex-1 bg-orange-50 py-2">DEDUCTIONS</div></div>
+                                                    <div className="flex h-36 border-b border-slate-100">
+                                                        <div className="flex-1 p-3 text-xs space-y-2 border-r border-slate-100 font-mono">
+                                                            <div className="flex justify-between opacity-60"><span>Basic:</span><span>₱{formatMoney(icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0))}</span></div>
+                                                            <div className="flex justify-between font-black text-emerald-600 italic"><span>Bonus:</span><span>{icForm.bonus > 0 ? formatMoney(icForm.bonus) : '--'}</span></div>
+                                                        </div>
+                                                        <div className="flex-1 p-3 text-xs space-y-2 font-mono text-rose-600 font-bold">
+                                                            <div className="flex justify-between"><span>C.A.:</span><span>{icForm.cash_advance > 0 ? formatMoney(icForm.cash_advance) : '--'}</span></div>
+                                                            <div className="flex justify-between text-blue-600"><span>SSS:</span><span>{icForm.sss > 0 ? formatMoney(icForm.sss) : '--'}</span></div>
+                                                            <div className="flex justify-between"><span>Misc:</span><span>{icForm.misc_deductions > 0 ? formatMoney(icForm.misc_deductions) : '--'}</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-between items-center mt-8">
+                                                        <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">TOTAL NET</span>
+                                                        <span className="text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter">₱{formatMoney((icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions))}</span>
+                                                    </div>
+                                                    
+                                                    {/* NEW CASH ADVANCE BREAKDOWN FOR PAYSLIP */}
+                                                    {(() => {
+                                                        const empCAs = cashAdvances
+                                                            .filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && ca.date >= icDateStart && ca.date <= icDateEnd)
+                                                            .sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+                                                        
+                                                        if (empCAs.length > 0) {
+                                                            return (
+                                                                <div className="mt-6 pt-4 border-t border-dashed border-slate-200">
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 text-center">Cash Advance Ledger ({new Date(icDateStart).toLocaleDateString('en-US', {month:'short', day:'numeric'})} - {new Date(icDateEnd).toLocaleDateString('en-US', {month:'short', day:'numeric'})})</p>
+                                                                    <div className="space-y-1.5 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                                        {empCAs.map(ca => (
+                                                                            <div key={ca.id} className="flex justify-between items-center text-[10px] font-mono">
+                                                                                <span className="text-slate-500">{ca.date} <span className="italic opacity-70">{ca.reason ? `(${ca.reason})` : ''}</span></span>
+                                                                                <span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+                                                                                    {ca.amount < 0 ? 'Payment' : 'Advance'}: {ca.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(ca.amount || 0))}
+                                                                                </span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
+
+                                                    <button onClick={() => window.print()} className="mt-10 w-full bg-slate-800 hover:bg-black text-white py-3 rounded-full font-black uppercase tracking-widest text-[10px] print-hidden flex items-center justify-center gap-3 transition-all"><Printer className="w-4 h-4"/> Print Card</button>
+                                                </div>
+                                            ) : <div className="py-24 text-slate-300 italic flex flex-col items-center"><FileText className="w-16 h-16 opacity-10 mb-4"/>Select employee to generate payslip</div>}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'ca' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl flex flex-col relative">
+                                            <h2 className="font-black text-blue-900 uppercase tracking-widest flex items-center gap-2 mb-6"><Banknote className="text-amber-500"/> Issue Entry</h2>
+                                            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                                                <button type="button" onClick={() => setCaType('advance')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${caType === 'advance' ? 'bg-white shadow text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}>Cash Advance</button>
+                                                <button type="button" onClick={() => setCaType('payment')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${caType === 'payment' ? 'bg-white shadow text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>Salary Paid</button>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Staff Member</label><select disabled={!isAdmin} className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60" value={newCa.empId} onChange={e => setNewCa({...newCa, empId: e.target.value})}><option value="">-- Choose Member --</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
+                                                {newCa.empId && (() => {
+                                                    const caEmp = employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId));
+                                                    if (!caEmp) return null;
+                                                    const isNegative = caEmp.caBalance < 0;
+                                                    return (
+                                                        <div className="bg-rose-50/30 p-6 rounded-2xl border border-rose-100/50 mb-4 flex justify-between items-center animate-slide-up"><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Balance</span><span className={`text-2xl font-black font-mono tracking-tighter ${isNegative ? 'text-red-600' : 'text-slate-800'}`}>{isNegative ? '-' : ''}₱{formatMoney(Math.abs(caEmp.caBalance || 0))}</span></div>
+                                                    );
+                                                })()}
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Date</label><input type="date" disabled={!isAdmin} className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60" value={newCa.date} onChange={e => setNewCa({...newCa, date: e.target.value})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Amount (₱)</label><input type="number" disabled={!isAdmin} placeholder="0.00" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60" value={newCa.amount} onChange={e => setNewCa({...newCa, amount: e.target.value})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Note</label><input type="text" disabled={!isAdmin} placeholder="Reason..." className="w-full p-3 border rounded-xl bg-slate-50 font-medium outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60" value={newCa.reason} onChange={e => setNewCa({...newCa, reason: e.target.value})}/></div>
+                                            </div>
+                                            <div className="mt-6">
+                                                {isAdmin ? <button onClick={handleIssueCA} className={`w-full text-white py-4 rounded-2xl font-black uppercase shadow-xl transition-all text-xs tracking-widest ${caType === 'payment' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'}`}>Commit to Ledger</button> : <button disabled className="w-full bg-slate-300 text-white py-4 rounded-2xl font-black uppercase shadow-sm cursor-not-allowed text-xs tracking-widest">Admin Required</button>}
+                                            </div>
+                                            {newCa.empId && (() => {
+                                                const recentCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)).sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0,3);
+                                                if(recentCAs.length === 0) return null;
+                                                return (
+                                                    <div className="space-y-2 mt-6 pt-6 border-t border-gray-100">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Recent Transactions</p>
+                                                        {recentCAs.map(rc => (
+                                                            <div key={rc.id} className="flex justify-between items-center text-xs font-bold font-mono bg-slate-50 p-3 rounded-xl"><div className="flex flex-col"><span className="text-slate-600">{rc.date}</span><span className="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">{rc.type === 'payment' ? 'Payment' : 'Advance'}</span></div><span className={rc.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}>{rc.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(rc.amount || 0))}</span></div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                        <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col">
+                                            <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px] tracking-widest">{newCa.empId ? `Ledger History: ${employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId))?.name}` : 'Recent Archive (All)'}</div>
+                                            <div className="overflow-y-auto max-h-[500px] custom-scrollbar">
+                                                <table className="w-full text-sm">
+                                                    <thead className="bg-white text-[10px] text-slate-400 uppercase border-b sticky top-0"><tr><th className="p-4 text-left">Date</th><th className="p-4 text-left">Name</th><th className="p-4 text-right">Value</th></tr></thead>
+                                                    <tbody className="divide-y divide-gray-50">
+                                                        {displayCAs.length === 0 ? <tr><td colSpan="3" className="p-16 text-center text-slate-300 italic">{newCa.empId ? "No entries found for this employee." : "No entries on cloud ledger."}</td></tr> :
+                                                            displayCAs.sort((a,b) => (b.date || '').localeCompare(a.date || '')).map(ca => (
+                                                            <tr key={ca.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="p-4 text-slate-400 font-mono text-xs">{ca.date}</td>
+                                                                <td className="p-4 font-black uppercase tracking-tighter text-slate-700">{employees.find(e => normalizeId(e.id) === normalizeId(ca.empId))?.name || ca.empId}</td>
+                                                                <td className={`p-4 text-right font-black font-mono ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(ca.amount || 0))}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'payroll' && (
+                                    <div className="bg-white w-full h-full p-2 lg:p-8">
+                                        <div className="flex justify-between items-center mb-8 print-hidden">
+                                            <div className="flex items-center gap-4"><h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Payroll List</h2><select className="border-2 border-slate-200 rounded-xl px-4 py-2 text-sm bg-white text-slate-900 font-bold outline-none" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>{monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
+                                            <button onClick={() => window.print()} className="bg-slate-900 text-white hover:bg-black px-8 py-3 rounded-xl text-xs font-black uppercase shadow-lg transition-all tracking-widest flex items-center gap-2"><Printer className="w-4 h-4"/> PRINT RECORD</button>
+                                        </div>
+                                        <div className="w-full overflow-x-auto print-overflow-visible">
+                                            <table className="w-full text-left text-sm border-collapse min-w-[800px]">
+                                                <thead><tr className="border-t-4 border-red-600 border-b-2 border-gray-900 text-slate-900"><th className="py-3 px-2 font-bold uppercase tracking-widest text-xs">ID</th><th className="py-3 px-2 font-bold uppercase tracking-widest text-xs">NAME</th><th className="py-3 px-2 font-bold uppercase tracking-widest text-xs">POSITION</th><th className="py-3 px-2 font-bold uppercase tracking-widest text-xs text-center">RATE</th><th className="py-3 px-2 font-bold uppercase tracking-widest text-xs text-center">DAYS</th><th className="py-3 px-2 font-bold uppercase tracking-widest text-xs text-right text-red-600">CA.</th><th className="py-3 px-2 font-black uppercase tracking-widest text-xs text-right">SALARY</th><th className="py-3 px-2 font-bold uppercase tracking-widest text-xs text-center">SIGNATURE</th></tr></thead>
+                                                <tbody className="divide-y divide-gray-200">
+                                                    {payrollSummary.map(row => (
+                                                        <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                                                            <td className="py-3 px-2 text-slate-500 font-mono font-medium text-xs">{row.id}</td>
+                                                            <td className="py-3 px-2 font-bold text-slate-800 uppercase tracking-tight">{row.name}</td>
+                                                            <td className="py-3 px-2 text-slate-600 uppercase text-[10px] font-bold tracking-widest">{row.position || '--'}</td>
+                                                            <td className="py-3 px-2 text-center text-slate-700 font-mono font-medium">{row.rate > 0 ? formatMoney(row.rate) : '--'}</td>
+                                                            <td className="py-3 px-2 text-center font-bold text-slate-900">{row.days > 0 ? row.days : ''}</td>
+                                                            <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.caBalance > 0 ? formatMoney(row.caBalance) : ''}</td>
+                                                            <td className="py-3 px-2 text-right font-black text-slate-900 font-mono text-base">{row.net > 0 ? formatMoney(row.net) : ''}</td>
+                                                            <td className="py-3 px-2"><div className="w-full h-8 border-b border-dashed border-gray-300"></div></td>
+                                                        </tr>
+                                                    ))}
+                                                    {payrollSummary.length === 0 && <tr><td colSpan="8" className="py-10 text-center text-slate-400 italic">No payroll data generated for this month.</td></tr>}
+                                                </tbody>
+                                                <tfoot><tr className="border-t-2 border-gray-900 font-black text-slate-900 text-lg"><td colSpan="6" className="py-5 px-2 text-right uppercase tracking-widest">TOTAL:</td><td className="py-5 px-2 text-right font-mono tracking-tighter">{formatMoney(payrollSummary.reduce((sum, row) => sum + row.net, 0))}</td><td></td></tr></tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'summary' && (
+                                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col min-h-[500px]">
+                                        <div className="p-6 border-b bg-slate-900 text-white flex justify-between items-center"><h2 className="font-black uppercase tracking-widest flex items-center gap-2"><CalendarDays className="w-5 h-5"/> Yearly Overview</h2><button onClick={handleExportBackup} className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-all"><Download className="w-4 h-4"/> Backup</button></div>
+                                        <div className="overflow-auto flex-1 custom-scrollbar">
+                                            <table className="w-full text-right text-xs border-collapse min-w-max">
+                                                <thead className="bg-slate-800 text-white sticky top-0 z-20"><tr><th className="p-4 text-left border border-slate-700 sticky left-0 bg-slate-800 font-black uppercase text-[10px] z-30">Staff Name</th>{['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].map(m => <th key={m} className="p-4 border border-slate-700 font-black">{m}</th>)}</tr></thead>
+                                                <tbody>
+                                                    {employees.map(emp => (
+                                                        <tr key={emp.id} className="border-b border-gray-100 hover:bg-blue-50/50">
+                                                            <td className="p-4 text-left border-r border-gray-100 sticky left-0 bg-white font-black uppercase text-slate-700 z-10">{emp.name}</td>
+                                                            {Array.from({length: 12}).map((_, i) => {
+                                                                const isCurrent = selectedMonth.endsWith((i+1).toString().padStart(2,'0'));
+                                                                return (
+                                                                    <td key={i} className={`p-4 font-mono font-bold border-r border-gray-50 ${isCurrent ? 'text-blue-600 bg-blue-50/30' : 'text-slate-300 italic'}`}>
+                                                                        {isCurrent ? `₱${formatMoney(payrollSummary.find(p=>p.id===emp.id)?.net)}` : '--'}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'reports' && (
+                                    <div className="flex flex-col h-full space-y-6">
+                                        <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex flex-wrap gap-6 items-center">
+                                            <div className="flex items-center gap-3"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">From</label><input type="date" value={reportDates.start} onChange={e => setReportDates({...reportDates, start: e.target.value})} className="p-2 border rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                                            <div className="flex items-center gap-3"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">To</label><input type="date" value={reportDates.end} onChange={e => setReportDates({...reportDates, end: e.target.value})} className="p-2 border rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                                            <button className="bg-blue-900 text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-lg hover:bg-black transition-all ml-auto"><Search className="w-4 h-4"/> Filter Ledger</button>
+                                        </div>
+                                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex-1 flex flex-col">
+                                            <div className="p-4 bg-gray-50 border-b flex justify-between items-center"><h3 className="font-black text-blue-900 uppercase text-xs tracking-widest">Attendance Logs</h3><button className="text-blue-600 flex items-center text-xs font-black uppercase tracking-widest hover:underline"><Download className="w-4 h-4 mr-2"/> Export CSV</button></div>
+                                            <div className="overflow-y-auto flex-1 custom-scrollbar">
+                                                <table className="w-full text-xs text-left">
+                                                    <thead className="bg-white text-[10px] text-slate-400 uppercase border-b sticky top-0"><tr><th className="p-4">Date</th><th className="p-4">Member</th><th className="p-4">Clock-In</th><th className="p-4 text-center">Day Equiv.</th><th className="p-4">Status</th></tr></thead>
+                                                    <tbody className="divide-y divide-gray-50">
+                                                        {attendance.filter(a => a.date >= reportDates.start && a.date <= reportDates.end).map((a, i) => (
+                                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                                <td className="p-4 font-mono text-slate-500">{a.date}</td>
+                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e => normalizeId(e.id) === normalizeId(a.empId))?.name || a.empName || a.empId}</td>
+                                                                <td className="p-4 text-blue-600 font-black">{a.firstIn}</td>
+                                                                <td className="p-4 text-center font-bold text-slate-900">{a.dayEquivalent}</td>
+                                                                <td className="p-4"><span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase border ${a.remarks === 'Normalized' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>{a.remarks}</span></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'settings' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-6">
+                                            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100"><h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Backup</h3><p className="text-sm text-slate-400 mb-8 font-medium">Download a complete snapshot of your restaurant database for manual archival.</p><button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3"><Download /> Download JSON</button></div>
+                                            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 animate-slide-up">
+                                                <h3 className="font-black text-slate-800 uppercase tracking-widest mb-2">Cloud Restore</h3><p className="text-sm text-slate-400 mb-8 font-medium">Upload a previously downloaded JSON backup file to recover your data.</p>
+                                                <label className={`w-full ${isAdmin ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer' : 'bg-slate-300 cursor-not-allowed'} text-white py-5 rounded-2xl font-black uppercase shadow-xl transition-all flex items-center justify-center gap-3`}><Upload /> {isAdmin ? 'Restore JSON Backup' : 'Admin Required'}<input type="file" accept=".json" className="hidden" disabled={!isAdmin} onChange={handleImportBackup} /></label>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-full min-h-[350px] animate-slide-up">
+                                            <div className="p-6 bg-slate-900 text-white border-b flex justify-between items-center"><h3 className="font-black uppercase tracking-widest text-xs">Security Audit Logs</h3><span className="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full">{auditLogs.length} Records</span></div>
+                                            <div className="overflow-y-auto flex-1 custom-scrollbar p-6">
+                                                <div className="space-y-4">
+                                                    {auditLogs.length === 0 ? <p className="text-center text-slate-400 italic mt-10 text-sm">No admin logins recorded yet.</p> :
+                                                        auditLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).map(log => (
+                                                            <div key={log.id} className="flex justify-between items-center text-sm border-b border-gray-100 pb-3">
+                                                                <div><p className="font-black text-slate-800 uppercase tracking-tight">{log.adminName}</p><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{log.action}</p></div>
+                                                                <div className="text-right text-[10px] text-slate-500 font-mono font-bold">{new Date(log.timestamp).toLocaleDateString()}<br/>{new Date(log.timestamp).toLocaleTimeString()}</div>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+
+                    {showAddEmp && isAdmin && (
+                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                            <form onSubmit={handleAddStaff} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                                <div className="p-6 border-b bg-gray-50 flex justify-between items-center"><h3 className="font-black uppercase tracking-widest text-blue-900 text-sm">{isEditing ? 'Edit Profile' : 'Onboard New Member'}</h3><button type="button" onClick={() => { setShowAddEmp(false); setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' }); }} className="text-gray-400 hover:text-slate-900"><X /></button></div>
+                                <div className="p-8 space-y-5">
+                                    <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Biometric ID (e.g. 7)</label>{!isEditing && <p className="text-[10px] text-red-500 font-bold mb-2">Must EXACTLY match the ID from the machine.</p>}<input type="text" required disabled={isEditing} placeholder="Machine ID" value={newEmpForm.biometricId || ''} onChange={e => setNewEmpForm({...newEmpForm, biometricId: e.target.value})} className={`w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold ${isEditing ? 'text-slate-400 cursor-not-allowed opacity-70' : 'text-slate-800'}`}/></div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">First Name</label><input type="text" placeholder="John" required value={newEmpForm.firstName} onChange={e => setNewEmpForm({...newEmpForm, firstName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Last Name</label><input type="text" placeholder="Doe" required value={newEmpForm.lastName} onChange={e => setNewEmpForm({...newEmpForm, lastName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Role</label><input type="text" placeholder="Staff" value={newEmpForm.position} onChange={e => setNewEmpForm({...newEmpForm, position: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 font-bold focus:ring-4 focus:ring-blue-500/10 outline-none"/></div>
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Daily (₱)</label><input type="number" placeholder="500" required value={newEmpForm.dailyRate} onChange={e => setNewEmpForm({...newEmpForm, dailyRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 font-black focus:ring-4 focus:ring-blue-500/10 outline-none"/></div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Contact Number</label><input type="text" placeholder="+639123456789" value={newEmpForm.contactNumber} onChange={e => setNewEmpForm({...newEmpForm, contactNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Status</label><select value={newEmpForm.status} onChange={e => setNewEmpForm({...newEmpForm, status: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 font-bold focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">SSS Deduction (₱)</label><input type="number" placeholder="135.00" value={newEmpForm.sssRate} onChange={e => setNewEmpForm({...newEmpForm, sssRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                                        <div><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Misc Deduction (₱)</label><input type="number" placeholder="0.00" value={newEmpForm.miscRate} onChange={e => setNewEmpForm({...newEmpForm, miscRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800"/></div>
+                                    </div>
+                                    <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest transform active:scale-[0.98] mt-2">{isEditing ? 'Update Profile' : 'Save to Cloud Ledger'}</button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {viewProfile && isPrivileged && (
+                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                                <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0"><h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6"/> Staff Cloud Ledger</h2><button onClick={() => setViewProfile(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X/></button></div>
+                                <div className="overflow-y-auto p-8 flex-1 space-y-8 custom-scrollbar">
+                                    <div className="flex justify-between border-b border-slate-100 pb-6 items-start">
+                                        <div>
+                                            <h3 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">{viewProfile.name}</h3>
+                                            <p className="text-xs text-slate-400 uppercase font-black tracking-widest mt-3">{viewProfile.position || 'Restaurant Staff'} (ID: {viewProfile.id})</p>
+                                            <div className="flex gap-2 mt-3 flex-wrap">
+                                                {viewProfile.contactNumber && <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black tracking-widest uppercase">📞 {viewProfile.contactNumber}</span>}
+                                                {viewProfile.sssRate > 0 && <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black tracking-widest uppercase">SSS: ₱{formatMoney(viewProfile.sssRate)}</span>}
+                                                {viewProfile.miscRate > 0 && <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-black tracking-widest uppercase">MISC: ₱{formatMoney(viewProfile.miscRate)}</span>}
+                                            </div>
+                                            {isAdmin && <button onClick={handleEditClick} className="mt-4 bg-slate-100 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"><Edit className="w-3.5 h-3.5"/> Edit Profile</button>}
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <span className={`px-4 py-1.5 text-[10px] font-black rounded-full uppercase border shadow-sm ${viewProfile.status === 'inactive' ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}>{viewProfile.status || 'ACTIVE'}</span>
+                                            <p className="mt-4 font-black text-blue-600 font-mono text-xl tracking-tighter uppercase">₱{formatMoney(viewProfile.rate)}/DAY</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6 text-center">
+                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase tracking-widest mb-2">Total C.A. Due</p><p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(viewProfile.caBalance)}</p></div>
+                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm"><p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Attendance Count</p><p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(viewProfile.id)).length}</p></div>
+                                    </div>
+                                    
+                                    {/* NEW CASH ADVANCE HISTORY FOR PROFILE */}
+                                    <div className="mt-6">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Transaction History</h4>
+                                        <div className="max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 rounded-2xl border border-slate-100">
+                                            <table className="w-full text-left text-xs">
+                                                <thead className="bg-slate-100/50 text-[9px] text-slate-400 uppercase tracking-widest sticky top-0">
+                                                    <tr>
+                                                        <th className="p-3 font-black">Date</th>
+                                                        <th className="p-3 font-black">Type</th>
+                                                        <th className="p-3 font-black">Note</th>
+                                                        <th className="p-3 font-black text-right">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {cashAdvances
+                                                        .filter(ca => normalizeId(ca.empId) === normalizeId(viewProfile.id))
+                                                        .sort((a,b) => (a.date || '').localeCompare(b.date || ''))
+                                                        .map(ca => (
+                                                            <tr key={ca.id} className="hover:bg-white transition-colors">
+                                                                <td className="p-3 font-mono text-slate-500">{ca.date}</td>
+                                                                <td className="p-3 font-black uppercase tracking-widest text-[9px] text-slate-600">{ca.type === 'payment' ? 'Payment' : 'Advance'}</td>
+                                                                <td className="p-3 text-slate-500 italic max-w-[120px] truncate">{ca.reason || '--'}</td>
+                                                                <td className={`p-3 text-right font-black font-mono ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                    {ca.amount < 0 ? '-' : '+'}₱{formatMoney(Math.abs(ca.amount || 0))}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(viewProfile.id)).length === 0 && (
+                                                        <tr><td colSpan="4" className="p-6 text-center text-slate-400 italic">No transactions on record.</td></tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
