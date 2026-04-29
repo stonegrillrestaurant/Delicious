@@ -794,7 +794,6 @@ function renderResults(rows) {
 ----------------------------- */
 function renderNormalTable(rows) {
   const results = document.getElementById("results");
-  const selectedEmployee = document.getElementById("employeeFilter").value;
 
   if (!parsedData.length || !headers.length) {
     results.innerHTML = `<div class="empty">No data loaded yet.</div>`;
@@ -806,17 +805,14 @@ function renderNormalTable(rows) {
     return;
   }
 
-  const showEmployeeColumn = !selectedEmployee;
-
   let html = `
     <table>
       <thead>
         <tr>
           <th>Date</th>
-          ${showEmployeeColumn ? "<th>Employee</th>" : ""}
-          <th>Comment</th>
           <th>Amount</th>
-          <th>Shift</th>
+          <th>Comment</th>
+          <th>Employee</th>
         </tr>
       </thead>
       <tbody>
@@ -824,18 +820,16 @@ function renderNormalTable(rows) {
 
   rows.forEach(row => {
     const date = getDateLabel(row);
-    const employee = getEmployee(row);
-    const comment = getComment(row);
     const amount = getAmount(row);
-    const shift = getShift(row);
+    const comment = getComment(row);
+    const employee = getEmployee(row);
 
     html += `
       <tr>
         <td>${escapeHtml(date)}</td>
-        ${showEmployeeColumn ? `<td>${escapeHtml(employee)}</td>` : ""}
-        <td class="comment">${escapeHtml(comment)}</td>
         <td class="amount">${formatPeso(amount)}</td>
-        <td>${escapeHtml(shift)}</td>
+        <td class="comment">${escapeHtml(comment)}</td>
+        <td>${escapeHtml(employee)}</td>
       </tr>
     `;
   });
