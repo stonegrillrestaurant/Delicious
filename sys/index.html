@@ -980,11 +980,20 @@
                         </div>
                     )}
 
-                    {viewProfile && isPrivileged && (
+                                        {viewProfile && isPrivileged && (() => {
+                        // Pull the pre-calculated summary for the currently selected month
+                        const vpSummary = payrollSummary.find(p => p.id === viewProfile.id) || { days: 0, gross: 0, monthlyCA: 0, sss: 0, misc: 0, net: 0, caBalance: viewProfile.caBalance };
+                        
+                        return (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                                <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0"><h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6"/> Staff Cloud Ledger</h2><button onClick={() => setViewProfile(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X/></button></div>
+                                <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0">
+                                    <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6"/> Staff Cloud Profile</h2>
+                                    <button onClick={() => setViewProfile(null)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X/></button>
+                                </div>
                                 <div className="overflow-y-auto p-8 flex-1 space-y-8 custom-scrollbar">
+                                    
+                                    {/* HEADER */}
                                     <div className="flex justify-between border-b border-slate-100 pb-6 items-start">
                                         <div>
                                             <h3 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">{viewProfile.name}</h3>
@@ -1001,11 +1010,43 @@
                                             <p className="mt-4 font-black text-blue-600 font-mono text-xl tracking-tighter uppercase">₱{formatMoney(viewProfile.rate)}/DAY</p>
                                         </div>
                                     </div>
+
+                                    {/* NEW: EARNINGS SUMMARY FOR SELECTED MONTH */}
+                                    <div>
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Earnings Snapshot (Selected Month)</h4>
+                                        <div className="grid grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Days</p>
+                                                <p className="text-xl font-black text-slate-800 font-mono">{vpSummary.days}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gross Pay</p>
+                                                <p className="text-xl font-black text-blue-600 font-mono">₱{formatMoney(vpSummary.gross)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Deducted</p>
+                                                <p className="text-xl font-black text-rose-600 font-mono">₱{formatMoney((vpSummary.sss || 0) + (vpSummary.misc || 0) + (vpSummary.caDed || 0))}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Pay</p>
+                                                <p className="text-xl font-black text-emerald-600 font-mono">₱{formatMoney(vpSummary.net)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* C.A. STATUS */}
                                     <div className="grid grid-cols-2 gap-6 text-center">
-                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase tracking-widest mb-2">Total C.A. Due</p><p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(viewProfile.caBalance)}</p></div>
-                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm"><p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Attendance Count</p><p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(viewProfile.id)).length}</p></div>
+                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm">
+                                            <p className="text-[10px] font-black text-rose-800 opacity-50 uppercase tracking-widest mb-2">Lifetime C.A. Bal.</p>
+                                            <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(vpSummary.caBalance)}</p>
+                                        </div>
+                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm">
+                                            <p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Total Attendance</p>
+                                            <p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(viewProfile.id)).length}</p>
+                                        </div>
                                     </div>
                                     
+                                    {/* TRANSACTION HISTORY */}
                                     <div className="mt-6">
                                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Transaction History</h4>
                                         <div className="max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 rounded-2xl border border-slate-100">
@@ -1033,7 +1074,7 @@
                                                             </tr>
                                                         ))}
                                                     {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(viewProfile.id)).length === 0 && (
-                                                        <tr><td colSpan="4" className="p-6 text-center text-slate-400 italic">No transactions on record.</td></tr>
+                                                        <tr><td colSpan="4" className="p-6 text-center text-slate-400 italic">No transactions on record. To sync this with the ₱{formatMoney(viewProfile.caBalance)} balance, please add a manual entry in the Cash Advance tab.</td></tr>
                                                     )}
                                                 </tbody>
                                             </table>
@@ -1042,7 +1083,8 @@
                                 </div>
                             </div>
                         </div>
-                    )}
+                        );
+                    })()}
                 </div>
             );
         }
@@ -1052,3 +1094,4 @@
     </script>
 </body>
 </html>
+
