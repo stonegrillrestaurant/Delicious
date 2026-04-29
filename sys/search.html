@@ -344,7 +344,7 @@
 
 Expected format:
 Date	Store	POS	Shift number	Type	Employee	Comment	Amount
-28/03/2026 17:07	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Manok	3500.00"></textarea>
+04/08/2027 17:07	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Manok	3500.00"></textarea>
 
       <div class="actions">
         <button class="action" onclick="saveData()">Save Data</button>
@@ -352,8 +352,9 @@ Date	Store	POS	Shift number	Type	Employee	Comment	Amount
       </div>
 
       <p class="hint">
-        Keep the first row headers. This version is locked for Loyverse date format:
-        <strong>DD/MM/YYYY HH:mm</strong>, example: <strong>28/03/2026 17:07</strong>.
+        Keep the first row headers. This version can read Loyverse date format:
+        <strong>MM/DD/YYYY HH:mm</strong> or <strong>DD/MM/YYYY HH:mm</strong>.
+        Example: <strong>04/08/2027 17:07</strong>.
       </p>
     </div>
   </section>
@@ -986,9 +987,9 @@ function getField(row, possibleNames) {
 
 /* -----------------------------
    DATE HELPERS
-   Locked for Loyverse:
+   This supports both:
+   MM/DD/YYYY HH:mm
    DD/MM/YYYY HH:mm
-   Example: 28/03/2026 17:07
 ----------------------------- */
 function getDateObject(row) {
   return parseLoyverseDate(getRawDate(row));
@@ -996,51 +997,31 @@ function getDateObject(row) {
 
 function getDateKey(row) {
   const date = getDateObject(row);
+
   if (!date) return "";
 
-  const year = date.year;
-  const month = String(date.month).padStart(2, "0");
-  const day = String(date.day).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
 
 function getDateLabel(row) {
   const date = getDateObject(row);
+
   if (!date) return getRawDate(row);
 
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${monthNames[date.month - 1]} ${date.day}, ${date.year}`;
+  return date.toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
 }
 
-function parseLoyverseDate(value) {
-  if (!value) return null;
-
-  const clean = String(value)
-    .replace(/\u202f/g, " ")
-    .replace(/\u00a0/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const match = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
-
-  if (!match) return null;
-
-  let day = Number(match[1]);
-  let month = Number(match[2]);
-  let year = Number(match[3]);
-
-  if (year < 100) year += 2000;
-
-  return {
-    day,
-    month,
-    year,
-    hour: Number(match[4] || 0),
-    minute: Number(match[5] || 0)
-  };
-}
-
+/* -----------------------------
+   FIXED LOYVERSE DATE PARSER
+----------------------------- */
 function parseLoyverseDate(value) {
   if (!value) return null;
 
@@ -1051,40 +1032,60 @@ function parseLoyverseDate(value) {
     .trim();
 
   const match = clean.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i
+    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/
   );
 
   if (!match) return null;
 
-  let first = Number(match[1]);
-  let second = Number(match[2]);
-  let year = Number(match[3]);
-
-  if (year < 100) year += 2000;
+  const firstNumber = Number(match[1]);
+  const secondNumber = Number(match[2]);
 
   let day;
   let month;
 
-  if (first > 12) {
-    day = first;
-    month = second - 1;
-  } else if (second > 12) {
-    month = first - 1;
-    day = second;
+  /*
+    If first number is above 12, it cannot be a month.
+    Example: 28/03/2026 = Mar 28, 2026.
+
+    If second number is above 12, the first number is the month.
+    Example: 04/28/2026 = Apr 28, 2026.
+
+    If both are 12 or below, Loyverse often behaves like MM/DD/YYYY.
+    Example: 04/08/2027 = Apr 8, 2027.
+  */
+  if (firstNumber > 12) {
+    day = firstNumber;
+    month = secondNumber - 1;
+  } else if (secondNumber > 12) {
+    month = firstNumber - 1;
+    day = secondNumber;
   } else {
-    day = first;
-    month = second - 1;
+    month = firstNumber - 1;
+    day = secondNumber;
   }
 
-  let hour = Number(match[4] || 0);
-  let minute = Number(match[5] || 0);
-  let ampm = (match[6] || "").toUpperCase();
+  let year = Number(match[3]);
 
-  if (ampm === "PM" && hour < 12) hour += 12;
-  if (ampm === "AM" && hour === 12) hour = 0;
+  if (year < 100) {
+    year += 2000;
+  }
 
-  return new Date(year, month, day, hour, minute);
+  const hour = Number(match[4] || 0);
+  const minute = Number(match[5] || 0);
+
+  const date = new Date(year, month, day, hour, minute);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
 }
+
 /* -----------------------------
    MONEY PARSER
 ----------------------------- */
