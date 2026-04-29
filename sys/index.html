@@ -289,6 +289,7 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); unsubLogs(); };
             }, [user]);
 
+            // --- REWRITTEN SUMMARY MATH (No Aggressive Lifetime Deductions) ---
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
@@ -300,6 +301,7 @@
                         days += Math.min(maxDay, 1);
                     });
 
+                    // ONLY calculate cash advances made this specific month
                     const empCAsThisMonth = cashAdvances.filter(ca => 
                         normalizeId(ca.empId) === normalizeId(emp.id) && 
                         (ca.date || '').startsWith(selectedMonth)
@@ -309,12 +311,12 @@
                     const gross = days * (parseFloat(emp.rate) || 0);
                     const sss = parseFloat(emp.sssRate) || 0;
                     const misc = parseFloat(emp.miscRate) || 0;
-                    const caBalance = parseFloat(emp.caBalance) || 0;
-                    const availableForCA = gross - sss - misc;
-                    let caDed = 0; if (caBalance > 0 && availableForCA > 0) caDed = Math.min(caBalance, availableForCA);
-                    const net = gross - sss - misc - caDed;
+                    const caBalance = parseFloat(emp.caBalance) || 0; // Lifetime Debt
                     
-                    return { ...emp, days, gross, caDed, sss, misc, net, caBalance, monthlyCA };
+                    // Net Salary only subtracts THIS MONTH's CA and fixed deductions.
+                    const net = gross - monthlyCA - sss - misc;
+                    
+                    return { ...emp, days, gross, sss, misc, net, caBalance, monthlyCA };
                 });
             }, [employees, attendance, cashAdvances, selectedMonth]); 
 
@@ -338,13 +340,16 @@
                             const gross = days * (parseFloat(emp.rate) || 0);
                             const sss = parseFloat(emp.sssRate) || 0;
                             const misc = parseFloat(emp.miscRate) || 0;
-                            const availableForCA = gross - sss - misc;
-                            const caDed = availableForCA > 0 ? Math.min(parseFloat(emp.caBalance) || 0, availableForCA) : 0;
-                            setIcForm({ days_worked: days, bonus: 0, sss: sss, misc_deductions: misc, cash_advance: caDed });
+                            
+                            // Auto-fill now uses Date Range CA, not aggressive lifetime CA
+                            const empCAsInRange = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && ca.date >= icDateStart && ca.date <= icDateEnd);
+                            const rangeCA = empCAsInRange.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
+                            
+                            setIcForm({ days_worked: days, bonus: 0, sss: sss, misc_deductions: misc, cash_advance: rangeCA });
                         }
                     }
                 }
-            }, [icEmpId, icDateStart, icDateEnd, interactivePayrolls, employees, attendance]);
+            }, [icEmpId, icDateStart, icDateEnd, interactivePayrolls, employees, attendance, cashAdvances]);
 
             const stats = useMemo(() => {
                 const today = new Date().toISOString().slice(0, 10);
@@ -354,7 +359,7 @@
             }, [employees, attendance, payrollSummary]);
 
             let searchedEmp = null; 
-            let searchedDays = 0, searchedGross = 0, searchedCaDed = 0, searchedMisc = 0, searchedRangeCA = 0, searchedNet = 0;
+            let searchedDays = 0, searchedGross = 0, searchedMisc = 0, searchedRangeCA = 0, searchedNet = 0;
             if (dashSearchEmpId) {
                 searchedEmp = employees.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
                 if (searchedEmp && dashSearchStart && dashSearchEnd) {
@@ -367,12 +372,12 @@
                     });
                     searchedDays = calcDays; searchedGross = searchedDays * (parseFloat(searchedEmp.rate) || 0);
                     const sss = parseFloat(searchedEmp.sssRate) || 0; const misc = parseFloat(searchedEmp.miscRate) || 0;
-                    const availableForCA = searchedGross - sss - misc;
-                    searchedCaDed = availableForCA > 0 ? Math.min(parseFloat(searchedEmp.caBalance) || 0, availableForCA) : 0;
-                    searchedMisc = sss + misc; searchedNet = searchedGross - searchedMisc - searchedCaDed;
+                    searchedMisc = sss + misc; 
                     
                     const empCAsInRange = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(searchedEmp.id) && ca.date >= dashSearchStart && ca.date <= dashSearchEnd);
                     searchedRangeCA = empCAsInRange.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
+                    
+                    searchedNet = searchedGross - searchedMisc - searchedRangeCA;
                 }
             }
 
@@ -398,7 +403,6 @@
                 } catch (err) { alert("Error: " + err.message); }
             };
 
-            // NEW: Function to permanently delete an employee
             const handleDeleteEmployee = async (empId, empName) => {
                 if (!isAdmin) return;
                 if (!window.confirm(`CRITICAL WARNING:\n\nAre you sure you want to permanently delete ${empName} (ID: ${empId})?\nThis action cannot be undone!`)) return;
@@ -410,16 +414,12 @@
                 } catch (err) { alert(err.message); }
             };
 
-            // NEW: Function to delete/revert a Cash Advance transaction
             const handleDeleteCA = async (caId, empId, amount) => {
                 if (!isAdmin) return;
                 if (!window.confirm("Delete this transaction?\n\nThis will automatically reverse it and fix the employee's total CA balance.")) return;
                 try {
                     const { db, appId, doc, deleteDoc, updateDoc } = window.fb;
-                    // Delete the record
                     await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'cash_advances', caId));
-                    
-                    // Restore the balance automatically
                     const emp = employees.find(e => normalizeId(e.id) === normalizeId(empId));
                     if (emp) {
                         await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'employees', normalizeId(empId)), {
@@ -515,7 +515,8 @@
 
             const formatMoney = (v) => {
                 const num = Number(v || 0); if (isNaN(num)) return "0";
-                return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const absNum = Math.abs(num);
+                return absNum % 1 === 0 ? absNum.toLocaleString('en-US') : absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
             const displayCAs = newCa.empId ? cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(newCa.empId)) : cashAdvances;
@@ -614,19 +615,22 @@
                                                                 <p className="text-2xl font-black text-amber-500 font-mono tracking-tighter">₱{formatMoney(searchedRangeCA)}</p>
                                                             </div>
                                                             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Est. Net Pay</p>
-                                                                <p className="text-2xl font-black text-slate-800 font-mono tracking-tighter">₱{formatMoney(searchedNet)}</p>
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Pay</p>
+                                                                <p className={`text-2xl font-black font-mono tracking-tighter ${searchedNet < 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                                                                    {searchedNet < 0 ? '-' : ''}₱{formatMoney(Math.abs(searchedNet))}
+                                                                </p>
                                                             </div>
                                                         </div>
                                                         
                                                         <div className="mt-6 border-t border-slate-100 pt-6 text-center">
                                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Remaining CA Bal.</p>
-                                                            <p className={`text-4xl font-black font-mono tracking-tighter ${searchedEmp.caBalance < 0 ? 'text-red-600' : 'text-slate-300'}`}>
+                                                            <p className={`text-4xl font-black font-mono tracking-tighter ${searchedEmp.caBalance < 0 ? 'text-rose-600' : 'text-slate-300'}`}>
                                                                 {searchedEmp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(searchedEmp.caBalance || 0))}
                                                             </p>
                                                         </div>
                                                     </div>
                                                 ) : <div className="text-center py-10 text-slate-400 italic text-sm border-t border-dashed bg-slate-50/50 rounded-b-3xl">Select an employee to instantly view their performance and financial status.</div>}
+
                                             </div>
                                         )}
                                     </>
@@ -657,7 +661,9 @@
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.gross > 0 ? formatMoney(row.gross) : ''}</td>}
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.misc > 0 ? formatMoney(row.misc) : ''}</td>}
                                                                 {isPrivileged && <td className="p-4 text-right font-bold text-slate-800">{row.sss > 0 ? formatMoney(row.sss) : ''}</td>}
-                                                                {isPrivileged && <td className="p-4 text-right font-black text-slate-900">{row.net > 0 ? formatMoney(row.net) : ''}</td>}
+                                                                
+                                                                {/* Render Net Pay in Red if negative */}
+                                                                {isPrivileged && <td className={`p-4 text-right font-black ${row.net < 0 ? 'text-rose-600' : 'text-slate-900'}`}>{row.net === 0 ? '--' : (row.net < 0 ? `-${formatMoney(Math.abs(row.net))}` : formatMoney(row.net))}</td>}
                                                             </tr>
                                                         ))}
                                                 </tbody>
@@ -747,7 +753,10 @@
                                                     </div>
                                                     <div className="flex justify-between items-center mt-8">
                                                         <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">TOTAL NET</span>
-                                                        <span className="text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter">₱{formatMoney((icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions))}</span>
+                                                        <span className={`text-3xl font-black bg-slate-100 px-6 py-3 border border-slate-200 font-mono tracking-tighter ${((icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions)) < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+                                                            {((icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions)) < 0 ? '-' : ''}
+                                                            ₱{formatMoney(Math.abs((icForm.days_worked * (employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate || 0) + icForm.bonus) - (icForm.cash_advance + icForm.sss + icForm.misc_deductions)))}
+                                                        </span>
                                                     </div>
                                                     
                                                     {(() => {
@@ -874,7 +883,8 @@
                                                             <td className="py-3 px-2 text-center text-slate-700 font-mono font-medium">{row.rate > 0 ? formatMoney(row.rate) : '--'}</td>
                                                             <td className="py-3 px-2 text-center font-bold text-slate-900">{row.days > 0 ? row.days : ''}</td>
                                                             <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.monthlyCA !== 0 ? formatMoney(row.monthlyCA) : ''}</td>
-                                                            <td className="py-3 px-2 text-right font-black text-slate-900 font-mono text-base">{row.net > 0 ? formatMoney(row.net) : ''}</td>
+                                                            
+                                                            <td className={`py-3 px-2 text-right font-black font-mono text-base ${row.net < 0 ? 'text-rose-600' : 'text-slate-900'}`}>{row.net === 0 ? '--' : (row.net < 0 ? `-${formatMoney(Math.abs(row.net))}` : formatMoney(row.net))}</td>
                                                             <td className="py-3 px-2"><div className="w-full h-8 border-b border-dashed border-gray-300"></div></td>
                                                         </tr>
                                                     ))}
@@ -1034,35 +1044,33 @@
                                     </div>
 
                                     <div>
-                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Earnings Snapshot (Selected Month)</h4>
-                                        <div className="grid grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Days</p>
-                                                <p className="text-xl font-black text-slate-800 font-mono">{vpSummary.days}</p>
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Earnings Snapshot (Selected Month: {selectedMonth})</h4>
+                                        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-center">
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Days Present</p>
+                                                <p className="text-2xl font-black text-slate-800 font-mono">{vpSummary.days}</p>
                                             </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gross Pay</p>
-                                                <p className="text-xl font-black text-blue-600 font-mono">₱{formatMoney(vpSummary.gross)}</p>
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gross Earned</p>
+                                                <p className="text-2xl font-black text-blue-600 font-mono">₱{formatMoney(vpSummary.gross)}</p>
                                             </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Deducted</p>
-                                                <p className="text-xl font-black text-rose-600 font-mono">₱{formatMoney((vpSummary.sss || 0) + (vpSummary.misc || 0) + (vpSummary.caDed || 0))}</p>
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">C.A. (This Month)</p>
+                                                <p className="text-2xl font-black text-amber-500 font-mono">₱{formatMoney(vpSummary.monthlyCA)}</p>
                                             </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Pay</p>
-                                                <p className="text-xl font-black text-emerald-600 font-mono">₱{formatMoney(vpSummary.net)}</p>
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Salary</p>
+                                                <p className={`text-2xl font-black font-mono ${vpSummary.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                    {vpSummary.net < 0 ? '-' : ''}₱{formatMoney(Math.abs(vpSummary.net))}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6 text-center">
-                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm">
-                                            <p className="text-[10px] font-black text-rose-800 opacity-50 uppercase tracking-widest mb-2">Lifetime C.A. Bal.</p>
+                                    <div className="mt-6">
+                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm flex flex-col items-center text-center">
+                                            <p className="text-[10px] font-black text-rose-800 opacity-50 uppercase tracking-widest mb-2">Total Lifetime C.A. Balance (Debt)</p>
                                             <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(vpSummary.caBalance)}</p>
-                                        </div>
-                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 shadow-sm">
-                                            <p className="text-[10px] font-black text-blue-800 opacity-50 uppercase tracking-widest mb-2">Total Attendance</p>
-                                            <p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(viewProfile.id)).length}</p>
                                         </div>
                                     </div>
                                     
