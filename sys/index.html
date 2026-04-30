@@ -396,16 +396,44 @@
                         <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar bg-slate-50" id="print-section">
                             <div className="max-w-7xl mx-auto space-y-6">
 
+                                {/* DASHBOARD TAB */}
                                 {activeTab === 'dashboard' && (
                                     <>
                                         {isAdmin && (
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                                                <StatCard title="Active Staff" value={employees.length} icon={<Users />} color="bg-blue-50 text-blue-700" />
-                                                <StatCard title="Clocked In Today" value={stats.present} icon={<Clock />} color="bg-emerald-50 text-emerald-700" />
-                                                <StatCard title="Total CA Debt" value={`₱${formatMoney(stats.totalCA)}`} icon={<Banknote />} color="bg-rose-50 text-rose-700" />
-                                            </div>
+                                            <>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                                    <StatCard title="Active Staff" value={employees.length} icon={<Users />} color="bg-blue-50 text-blue-700" />
+                                                    <StatCard title="Clocked In Today" value={stats.present} icon={<Clock />} color="bg-emerald-50 text-emerald-700" />
+                                                    <StatCard title="Total CA Debt" value={`₱${formatMoney(stats.totalCA)}`} icon={<Banknote />} color="bg-rose-50 text-rose-700" />
+                                                </div>
+                                                
+                                                <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mt-6 animate-slide-up">
+                                                    <h3 className="font-black text-blue-900 uppercase mb-6 flex items-center gap-2"><Search /> Quick Detail Lookup</h3>
+                                                    <div className="flex flex-wrap gap-4 items-end mb-8">
+                                                        <div className="flex-1 min-w-[200px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Employee Name</label><select className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchEmpId} onChange={e => setDashSearchEmpId(e.target.value)}><option value="">Select Employee</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
+                                                        <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Start</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchStart} onChange={e => setDashSearchStart(e.target.value)} /></div>
+                                                        <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">End</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchEnd} onChange={e => setDashSearchEnd(e.target.value)} /></div>
+                                                    </div>
+                                                    {quickView ? (
+                                                        <div className="bg-white rounded-3xl p-6 md:p-8 border border-blue-100 shadow-lg animate-slide-up">
+                                                            <div className="text-center mb-8"><h2 className="text-3xl font-black text-[#48538b] tracking-tight uppercase">{quickView.name}</h2></div>
+                                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                                                                <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Days Present</p><p className="text-2xl font-black text-[#4d976f] font-mono">{quickView.rangeDays}</p></div>
+                                                                <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Gross Earned</p><p className="text-2xl font-black text-blue-600 font-mono">₱{formatMoney(quickView.rangeGross)}</p></div>
+                                                                <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">C.A. (Range)</p><p className="text-2xl font-black text-amber-500 font-mono">₱{formatMoney(quickView.rangeCA)}</p></div>
+                                                                <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Take Home</p><p className={`text-2xl font-black font-mono ${quickView.rangeNet < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{quickView.rangeNet < 0 ? '-' : ''}₱{formatMoney(quickView.rangeNet)}</p></div>
+                                                            </div>
+                                                            <div className="mt-6 border-t pt-6 text-center">
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Current C.A. Debt (Lifetime)</p>
+                                                                <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(quickView.caBalance)}</p>
+                                                            </div>
+                                                        </div>
+                                                    ) : <div className="text-center py-10 text-slate-400 italic">Select an employee to view ledger.</div>}
+                                                </div>
+                                            </>
                                         )}
 
+                                        {/* For Staff: Read-Only detailed profile view */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
@@ -475,32 +503,6 @@
                                                 </div>
                                             );
                                         })()}
-
-                                        {isAdmin && (
-                                            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mt-6 animate-slide-up">
-                                                <h3 className="font-black text-blue-900 uppercase mb-6 flex items-center gap-2"><Search /> Quick Detail Lookup</h3>
-                                                <div className="flex flex-wrap gap-4 items-end mb-8">
-                                                    <div className="flex-1 min-w-[200px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Employee Name</label><select className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchEmpId} onChange={e => setDashSearchEmpId(e.target.value)}><option value="">Select Employee</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
-                                                    <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Start</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchStart} onChange={e => setDashSearchStart(e.target.value)} /></div>
-                                                    <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">End</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchEnd} onChange={e => setDashSearchEnd(e.target.value)} /></div>
-                                                </div>
-                                                {quickView ? (
-                                                    <div className="bg-white rounded-3xl p-6 md:p-8 border border-blue-100 shadow-lg animate-slide-up">
-                                                        <div className="text-center mb-8"><h2 className="text-3xl font-black text-[#48538b] tracking-tight uppercase">{quickView.name}</h2></div>
-                                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-                                                            <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Days Present</p><p className="text-2xl font-black text-[#4d976f] font-mono">{quickView.rangeDays}</p></div>
-                                                            <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Gross Earned</p><p className="text-2xl font-black text-blue-600 font-mono">₱{formatMoney(quickView.rangeGross)}</p></div>
-                                                            <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">C.A. (Range)</p><p className="text-2xl font-black text-amber-500 font-mono">₱{formatMoney(quickView.rangeCA)}</p></div>
-                                                            <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Take Home</p><p className={`text-2xl font-black font-mono ${quickView.rangeNet < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{quickView.rangeNet < 0 ? '-' : ''}₱{formatMoney(quickView.rangeNet)}</p></div>
-                                                        </div>
-                                                        <div className="mt-6 border-t pt-6 text-center">
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Current C.A. Debt (Lifetime)</p>
-                                                            <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(quickView.caBalance)}</p>
-                                                        </div>
-                                                    </div>
-                                                ) : <div className="text-center py-10 text-slate-400 italic">Select an employee to view ledger.</div>}
-                                            </div>
-                                        )}
                                     </>
                                 )}
 
