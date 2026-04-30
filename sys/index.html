@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stone Grill Payroll - Smart Cloud Suite</title>
+    
     <link rel="icon" type="image/png" href="/sys/icon.png">
     <link rel="apple-touch-icon" href="/sys/icon.png">
     <link rel="manifest" href="/sys/manifest.json">
     <meta name="theme-color" content="#7a2e13">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -15,7 +17,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -31,9 +33,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
-        const adminUid = "Wc65w9A7uYOn6E4zS9vM9S9fS9f1"; 
 
-        window.fb = { db, auth, appId, adminUid, signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+        window.fb = { db, auth, appId, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
     </script>
 
     <style>
@@ -79,13 +80,10 @@
         const Clock = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
         const Banknote = (p) => <Icon {...p}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></Icon>;
         const Calculator = (p) => <Icon {...p}><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/></Icon>;
-        const FileText = (p) => <Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></Icon>;
-        const CalendarDays = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></Icon>;
         const Settings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82"/></Icon>;
-        const Unlock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></Icon>;
+        const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
         const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
         const Menu = (p) => <Icon {...p}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></Icon>;
-        const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
 
         function NavItem({ icon, label, active, onClick, open }) {
             return (
@@ -95,34 +93,30 @@
             );
         }
 
-        function LoginScreen({ onStaffEnter }) {
+        function LoginScreen() {
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [loading, setLoading] = useState(false);
 
-            const handleAdminLogin = async (e) => {
+            const handleLogin = async (e) => {
                 e.preventDefault(); setLoading(true);
                 try {
                     await window.fb.signInWithEmailAndPassword(window.fb.auth, email, password);
-                } catch (err) { alert("Admin credentials invalid."); setLoading(false); }
+                } catch (err) { alert("Login failed."); setLoading(false); }
             };
 
             return (
-                <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50 font-sans">
+                <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up">
                         <img src="/sys/icon.png" className="w-16 h-16 mb-6" alt="Logo" />
-                        <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-widest text-center">System Login</h2>
-                        <form onSubmit={handleAdminLogin} className="w-full space-y-4 mb-6">
-                            <input type="email" placeholder="Admin Email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-4 rounded-2xl bg-slate-50 outline-none font-bold"/>
-                            <input type="password" placeholder="Password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-4 rounded-2xl bg-slate-50 outline-none font-bold"/>
-                            <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg">Admin Login</button>
+                        <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-widest">Sign In</h2>
+                        <form onSubmit={handleLogin} className="w-full space-y-4">
+                            <input type="email" placeholder="Email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-4 rounded-2xl outline-none font-bold bg-slate-50"/>
+                            <input type="password" placeholder="Password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-4 rounded-2xl outline-none font-bold bg-slate-50"/>
+                            <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                                {loading ? 'Loading...' : 'Login to Cloud'}
+                            </button>
                         </form>
-                        <div className="flex items-center w-full mb-6">
-                            <hr className="flex-1 border-slate-200" /><span className="px-3 text-[10px] text-slate-400 font-black uppercase">Staff Ledger</span><hr className="flex-1 border-slate-200" />
-                        </div>
-                        <button onClick={onStaffEnter} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl font-black uppercase shadow-lg flex items-center justify-center gap-3 transition-all">
-                            <Unlock className="w-5 h-5"/> Staff PIN Portal
-                        </button>
                     </div>
                 </div>
             );
@@ -130,41 +124,48 @@
 
         function App() {
             const [user, setUser] = useState(null);
-            const [userRole, setUserRole] = useState('Staff'); 
+            const [userRole, setUserRole] = useState('Staff'); // Admin or Staff
             const [currentBiometricId, setCurrentBiometricId] = useState(''); 
             const [isReady, setIsReady] = useState(false);
-            const [showPinGate, setShowPinGate] = useState(false);
             const [activeTab, setActiveTab] = useState('dashboard');
             const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
-            const [currentAdminName, setCurrentAdminName] = useState('');
-
+            
             const [employees, setEmployees] = useState([]);
             const [attendance, setAttendance] = useState([]);
             const [cashAdvances, setCashAdvances] = useState([]);
             const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+            const [dashSearchEmpId, setDashSearchEmpId] = useState('');
             const [viewProfile, setViewProfile] = useState(null);
-            const [showAddStaff, setShowAddStaff] = useState(false);
             const [rawInput, setRawInput] = useState('');
             const [caType, setCaType] = useState('advance');
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
-            const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
-            const [isEditing, setIsEditing] = useState(false);
 
             const isAdmin = userRole === 'Admin';
+
+            const monthOptions = useMemo(() => {
+                const options = []; const d = new Date();
+                for (let i = 0; i < 12; i++) {
+                    options.push({ value: d.toISOString().slice(0, 7), label: d.toLocaleString('default', { month: 'long', year: 'numeric' }) });
+                    d.setMonth(d.getMonth() - 1);
+                }
+                return options;
+            }, []);
 
             useEffect(() => {
                 window.fb.onAuthStateChanged(window.fb.auth, (u) => { setUser(u); setIsReady(true); if(!u) {setUserRole('Staff'); setCurrentBiometricId('');} });
             }, []);
 
+            // DYNAMIC DATA PULLING BASED ON LOGGED IN USER
             useEffect(() => {
                 if (!user) return;
-                const { db, appId, adminUid, onSnapshot, collection } = window.fb;
-                const effectiveUid = user.isAnonymous ? adminUid : user.uid;
-                const path = (n) => collection(db, 'artifacts', appId, 'users', effectiveUid, n);
-                onSnapshot(path('employees'), (s) => setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                onSnapshot(path('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                onSnapshot(path('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-            }, [user, userRole]);
+                const { db, appId, onSnapshot, collection } = window.fb;
+                const path = (n) => collection(db, 'artifacts', appId, 'users', user.uid, n);
+                
+                const unsubEmps = onSnapshot(path('employees'), (s) => setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubAtt = onSnapshot(path('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubCA = onSnapshot(path('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                return () => { unsubEmps(); unsubAtt(); unsubCA(); };
+            }, [user]);
 
             const payrollSummary = useMemo(() => {
                 const source = (!isAdmin && currentBiometricId) ? employees.filter(e => normalizeId(e.id) === normalizeId(currentBiometricId)) : employees;
@@ -180,67 +181,70 @@
                 });
             }, [employees, attendance, cashAdvances, selectedMonth, isAdmin, currentBiometricId]);
 
-            const handlePinSubmit = async (pin) => {
-                if (pin === '1234' || pin === '2558') {
-                    if (!user) await window.fb.signInAnonymously(window.fb.auth);
-                    const role = pin === '2558' ? 'Admin' : 'User';
-                    setUserRole(role); setCurrentAdminName(role); setShowPinGate(false);
-                } else alert("Invalid PIN.");
+            const handleProcessLogs = async () => {
+                if (!isAdmin || !rawInput.trim()) return;
+                const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
+                for (const line of lines) {
+                    const cols = line.split(/\t+| {2,}/).filter(Boolean); if (cols.length < 3) continue;
+                    const id = normalizeId(cols[0]); const name = cols[1];
+                    const dM = line.match(/(\d{2}\/\d{2}\/\d{4})/); const tM = line.match(/(\d{2}:\d{2}:\d{2})/);
+                    if (!dM || !tM) continue;
+                    const [m, d, y] = dM[1].split('/'); const iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                    const key = `${id}_${iso}`; if (!map[key]) map[key] = { id, name, date: iso, p: [] };
+                    map[key].p.push(tM[1].substring(0,5));
+                }
+                for (const k in map) {
+                    const r = map[k]; const s = r.p.sort();
+                    await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: s.length > 1 ? 1 : 0.5 }, { merge: true });
+                    count++;
+                }
+                setRawInput(''); alert(`Synced ${count} attendance records.`);
             };
 
             const handleIssueCA = async () => {
                 if (!isAdmin || !newCa.empId) return;
                 let amt = parseFloat(newCa.amount) || 0; if (caType === 'payment') amt = -Math.abs(amt);
-                const emp = employees.find(e => normalizeId(e.id) === normalizeId(newCa.empId));
                 await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'cash_advances'), { ...newCa, amount: amt, type: caType });
-                await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', normalizeId(newCa.empId)), { caBalance: (parseFloat(emp.caBalance) || 0) + amt });
+                await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', normalizeId(newCa.empId)), { caBalance: (parseFloat(employees.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance) || 0) + amt });
                 setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             };
 
-            const handleDeleteEmployee = async (id, name) => {
-                if (!isAdmin || !window.confirm(`Delete ${name}?`)) return;
-                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', normalizeId(id)));
-                setViewProfile(null);
-            };
-
             if (!isReady) return null;
-            if (!user && !showPinGate) return <LoginScreen onStaffEnter={() => setShowPinGate(true)} />;
+            if (!user) return <LoginScreen />;
 
-            if (showPinGate) return (
-                <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 z-[100]">
-                    <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full text-center animate-slide-up">
-                        <h2 className="text-xl font-black mb-6">ENTER PIN</h2>
-                        <input type="password" autoFocus className="w-full border-2 p-4 rounded-2xl mb-4 text-center text-4xl font-black outline-none border-slate-100 focus:border-blue-500" onKeyDown={(e) => e.key === 'Enter' && handlePinSubmit(e.target.value)} />
-                        <button onClick={() => setShowPinGate(false)} className="mt-8 text-slate-400 font-bold uppercase text-xs">Back</button>
-                    </div>
-                </div>
-            );
-
-            if (!isAdmin && !currentBiometricId) {
+            // PIN GATE
+            if (userRole === 'Staff' && !currentBiometricId) {
                 return (
                     <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center">
                         <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full animate-slide-up">
-                            <h2 className="text-xl font-black mb-2 uppercase tracking-widest">Verify ID</h2>
-                            <p className="text-xs text-slate-400 mb-8 font-bold">Input your Biometric ID to view ledger</p>
-                            <input type="number" placeholder="ID Number" className="w-full border-2 p-4 rounded-2xl mb-4 text-center text-2xl font-black outline-none border-slate-100" onKeyDown={(e) => { if(e.key === 'Enter') { const id = e.target.value; if (employees.some(emp => normalizeId(emp.id) === normalizeId(id))) setCurrentBiometricId(id); else alert("ID not found."); } }} />
+                            <h2 className="text-xl font-black text-slate-800 mb-6 uppercase">Access Verification</h2>
+                            <input type="password" placeholder="ENTER PIN (1234 or 2558)" autoFocus className="w-full border-2 p-4 rounded-2xl mb-6 text-center text-xl font-black outline-none border-slate-100" 
+                                onChange={(e) => {
+                                    if(e.target.value === '2558') { setUserRole('Admin'); setCurrentBiometricId('ADMIN'); }
+                                    if(e.target.value === '1234') { 
+                                        const id = window.prompt("Enter Biometric ID:"); 
+                                        if (employees.some(emp => normalizeId(emp.id) === normalizeId(id))) { setCurrentBiometricId(id); setUserRole('User'); } 
+                                        else if (id) alert("ID Not Found");
+                                    }
+                                }} 
+                            />
+                            <button onClick={() => window.fb.signOut(window.fb.auth)} className="text-slate-400 font-bold uppercase text-[10px]">Logout</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+                <div className="flex h-screen bg-gray-50 overflow-hidden relative font-sans">
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full print-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} shadow-2xl`}>
-                        <div className="p-6 border-b border-blue-800 flex items-center justify-between font-black text-xl">STONE GRILL</div>
-                        <nav className="flex-1 py-8 space-y-2 overflow-y-auto">
+                        <div className="p-6 border-b border-blue-800 flex items-center font-black text-xl">STONE GRILL</div>
+                        <nav className="flex-1 py-8 space-y-2 overflow-y-auto custom-scrollbar">
                             <NavItem icon={<LayoutDashboard />} label="Ledger" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} open={isSidebarOpen} />
-                            <NavItem icon={<Users />} label="Staff Directory" active={activeTab === 'employees'} onClick={() => setActiveTab('employees')} open={isSidebarOpen} />
                             {isAdmin && (
                                 <>
+                                    <NavItem icon={<Users />} label="Masterlist" active={activeTab === 'employees'} onClick={() => setActiveTab('employees')} open={isSidebarOpen} />
                                     <NavItem icon={<Clock />} label="Attendance" active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} open={isSidebarOpen} />
                                     <NavItem icon={<Banknote />} label="Cash Advance" active={activeTab === 'ca'} onClick={() => setActiveTab('ca')} open={isSidebarOpen} />
-                                    <NavItem icon={<Calculator />} label="Payroll" active={activeTab === 'payroll'} onClick={() => setActiveTab('payroll')} open={isSidebarOpen} />
-                                    <NavItem icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} open={isSidebarOpen} />
                                 </>
                             )}
                         </nav>
@@ -255,78 +259,65 @@
 
                         <div className="flex-1 overflow-y-auto p-4 lg:p-10 custom-scrollbar">
                             <div className="max-w-4xl mx-auto space-y-6">
-                                {payrollSummary.map(emp => (
+                                
+                                {activeTab === 'dashboard' && payrollSummary.map(emp => (
                                     <div key={emp.id} className="animate-slide-up space-y-6">
                                         <div className="bg-white rounded-3xl p-6 md:p-10 shadow-xl border border-blue-50 text-center">
                                             <h2 className="text-4xl lg:text-6xl font-black text-slate-800 uppercase tracking-tighter">{emp.name}</h2>
                                             <p className="text-slate-400 font-bold uppercase mt-2 mb-6">ID: {emp.id} • {emp.position}</p>
                                             
-                                            <select className="bg-slate-100 p-2 rounded-xl font-black text-xs uppercase mb-8 outline-none" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                                            <select className="bg-slate-100 p-2 rounded-xl font-black text-xs uppercase mb-8" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
                                                 {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                             </select>
 
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div className="bg-slate-50 p-6 rounded-2xl border">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days Present</p>
-                                                    <p className="text-3xl font-black">{emp.days}</p>
-                                                </div>
-                                                <div className="bg-slate-50 p-6 rounded-2xl border">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Take Home Pay</p>
-                                                    <p className={`text-3xl font-black ${emp.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{emp.net < 0 ? '-' : ''}₱{formatMoney(emp.net)}</p>
-                                                </div>
+                                                <div className="bg-slate-50 p-6 rounded-2xl border text-center"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days Present</p><p className="text-3xl font-black">{emp.days}</p></div>
+                                                <div className="bg-slate-50 p-6 rounded-2xl border text-center"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Net Salary</p><p className={`text-3xl font-black ${emp.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{emp.net < 0 ? '-' : ''}₱{formatMoney(emp.net)}</p></div>
                                             </div>
                                             
-                                            <div className="mt-6 bg-rose-50 p-8 rounded-3xl border border-rose-100">
-                                                <p className="text-[10px] font-black text-rose-800 opacity-50 uppercase mb-1">Total Lifetime Debt (C.A. Balance)</p>
+                                            <div className="mt-6 bg-rose-50 p-8 rounded-3xl border border-rose-100 text-center">
+                                                <p className="text-[10px] font-black text-rose-800 opacity-50 uppercase mb-1">Lifetime C.A. Balance</p>
                                                 <p className="text-5xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(emp.caBalance)}</p>
                                             </div>
                                         </div>
 
-                                        {/* ADDED TRANSACTION HISTORY LIST FOR STAFF DASHBOARD */}
                                         <div className="bg-white rounded-3xl p-6 shadow-lg border border-slate-100">
                                             <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest flex items-center gap-2"><Banknote className="w-4 h-4"/> Transaction history</h4>
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left text-xs">
-                                                    <thead className="bg-slate-50 font-black text-slate-400 uppercase">
-                                                        <tr><th className="p-3">Date</th><th className="p-3">Note</th><th className="p-3 text-right">Amount</th></tr>
-                                                    </thead>
-                                                    <tbody className="divide-y">
-                                                        {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).sort((a,b) => (b.date || '').localeCompare(a.date || '')).map(ca => (
-                                                            <tr key={ca.id}>
-                                                                <td className="p-3 font-mono text-slate-500">{ca.date}</td>
-                                                                <td className="p-3 italic text-slate-600">{ca.reason || 'C.A. Entry'}</td>
-                                                                <td className={`p-3 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                                    {ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                        {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).length === 0 && (
-                                                            <tr><td colSpan="3" className="p-6 text-center text-slate-300 italic">No transactions found.</td></tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                            <table className="w-full text-left text-xs">
+                                                <thead className="bg-slate-50 font-black text-slate-400 uppercase"><tr><th className="p-3">Date</th><th className="p-3">Reason</th><th className="p-3 text-right">Amount</th></tr></thead>
+                                                <tbody className="divide-y">
+                                                    {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca => (
+                                                        <tr key={ca.id}><td className="p-3 font-mono">{ca.date}</td><td className="p-3 italic">{ca.reason || '--'}</td><td className={`p-3 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₱{formatMoney(ca.amount)}</td></tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 ))}
 
+                                {isAdmin && activeTab === 'attendance' && (
+                                    <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col space-y-6">
+                                        <h3 className="font-black text-blue-900 uppercase">Biometric Sync</h3>
+                                        <textarea className="w-full h-40 p-4 border rounded-2xl bg-slate-50 text-xs font-mono" placeholder="Paste tab data here..." value={rawInput} onChange={e=>setRawInput(e.target.value)} />
+                                        <button onClick={handleProcessLogs} className="bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest">Process Into Database</button>
+                                    </div>
+                                )}
+
                                 {isAdmin && activeTab === 'employees' && (
                                     <div className="bg-white rounded-3xl shadow-xl overflow-hidden animate-slide-up">
-                                        <div className="p-6 border-b flex justify-between items-center bg-white">
-                                            <h2 className="font-black uppercase tracking-widest text-blue-900">Database Masterlist</h2>
-                                            <button onClick={() => { setIsEditing(false); setNewEmpForm({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' }); setShowAddStaff(true); }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">+ New Staff</button>
+                                        <div className="p-6 border-b flex justify-between items-center bg-[#243c84] text-white">
+                                            <h2 className="font-black uppercase tracking-widest">Database Masterlist</h2>
+                                            <select className="bg-white/10 text-white rounded-lg px-3 py-1 text-xs border-none outline-none font-bold" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>{monthOptions.map(opt => <option className="text-black" key={opt.value} value={opt.value}>{opt.label}</option>)}</select>
                                         </div>
                                         <table className="w-full text-sm text-left">
-                                            <thead className="bg-[#243c84] text-white uppercase text-[10px] font-black">
-                                                <tr><th className="p-4">Name</th><th className="p-4 text-center">Days</th><th className="p-4 text-right">Balance</th><th className="p-4 text-right">Net Salary</th></tr>
-                                            </thead>
+                                            <thead className="bg-slate-50 uppercase text-[10px] font-black"><tr><th className="p-4">Name</th><th className="p-4 text-center">Days</th><th className="p-4 text-right">Balance</th><th className="p-4 text-right">Salary</th></tr></thead>
                                             <tbody className="divide-y">
                                                 {payrollSummary.map(row => (
                                                     <tr key={row.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setViewProfile(row)}>
                                                         <td className="p-4 font-black uppercase">{row.name}</td>
                                                         <td className="p-4 text-center font-bold">{row.days}</td>
                                                         <td className="p-4 text-right font-black text-rose-600">₱{formatMoney(row.caBalance)}</td>
-                                                        <td className={`p-4 text-right font-black ${row.net < 0 ? 'text-rose-600' : 'text-slate-900'}`}>₱{formatMoney(row.net)}</td>
+                                                        <td className="p-4 text-right font-black">₱{formatMoney(row.net)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -336,57 +327,6 @@
                             </div>
                         </div>
                     </main>
-
-                    {showAddStaff && (
-                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                            <form onSubmit={(e) => { 
-                                e.preventDefault(); 
-                                const bId = normalizeId(newEmpForm.biometricId);
-                                window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', bId), { ...newEmpForm, dailyRate: parseFloat(newEmpForm.dailyRate), name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() }, { merge: true });
-                                setShowAddStaff(false); 
-                            }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 space-y-5">
-                                <h3 className="font-black uppercase text-blue-900">Add Staff</h3>
-                                <input type="text" placeholder="Machine ID" value={newEmpForm.biometricId} onChange={e=>setNewEmpForm({...newEmpForm, biometricId: e.target.value})} className="w-full border p-3 rounded-2xl outline-none font-black"/>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input type="text" placeholder="First" value={newEmpForm.firstName} onChange={e=>setNewEmpForm({...newEmpForm, firstName: e.target.value})} className="w-full border p-3 rounded-2xl outline-none font-bold"/>
-                                    <input type="text" placeholder="Last" value={newEmpForm.lastName} onChange={e=>setNewEmpForm({...newEmpForm, lastName: e.target.value})} className="w-full border p-3 rounded-2xl outline-none font-bold"/>
-                                </div>
-                                <input type="number" placeholder="Daily Rate" value={newEmpForm.dailyRate} onChange={e=>setNewEmpForm({...newEmpForm, dailyRate: e.target.value})} className="w-full border p-3 rounded-2xl outline-none font-black"/>
-                                <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase">Save</button>
-                                <button type="button" onClick={()=>setShowAddStaff(false)} className="w-full text-slate-400 font-bold uppercase text-xs">Cancel</button>
-                            </form>
-                        </div>
-                    )}
-
-                    {viewProfile && (
-                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95">
-                                <div className="bg-blue-900 text-white p-6 flex justify-between items-center"><h2 className="text-xl font-black uppercase tracking-widest"><Users /> Details</h2><button onClick={() => setViewProfile(null)}><X/></button></div>
-                                <div className="overflow-y-auto p-8 flex-1 space-y-8 custom-scrollbar">
-                                    <div className="text-center">
-                                        <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">{viewProfile.name}</h3>
-                                        <p className="text-xs text-slate-400 font-black">ID: {viewProfile.id} • {viewProfile.position}</p>
-                                        <button onClick={()=>handleDeleteEmployee(viewProfile.id, viewProfile.name)} className="mt-4 bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Delete Profile</button>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-center">
-                                        <div className="bg-white p-3 rounded-xl border"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days</p><p className="text-2xl font-black text-slate-800 font-mono">{viewProfile.days}</p></div>
-                                        <div className="bg-white p-3 rounded-xl border"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Net Salary</p><p className={`text-2xl font-black font-mono ${viewProfile.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{viewProfile.net < 0 ? '-' : ''}₱{formatMoney(viewProfile.net)}</p></div>
-                                    </div>
-                                    <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 text-center"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase mb-2">Lifetime Balance</p><p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(viewProfile.caBalance)}</p></div>
-                                    <div className="mt-6">
-                                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3">Ledger History</h4>
-                                        <table className="w-full text-left text-xs bg-slate-50 rounded-xl overflow-hidden">
-                                            <tbody>
-                                                {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(viewProfile.id)).map(ca => (
-                                                    <tr key={ca.id} className="border-b"><td className="p-3 font-mono">{ca.date}</td><td className="p-3 italic">{ca.reason || '--'}</td><td className={`p-3 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₱{formatMoney(ca.amount)}</td></tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }
