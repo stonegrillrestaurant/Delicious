@@ -90,10 +90,6 @@
         const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
         const Menu = (p) => <Icon {...p}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></Icon>;
         const Printer = (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>;
-        const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
-        const Edit = (p) => <Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
-        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
-        const Upload = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Icon>;
 
         function NavItem({ icon, label, active, onClick, open }) {
             return (
@@ -192,7 +188,6 @@
                 });
             }, []);
 
-            // Pull Data using current user's UID (so restored data is always visible here)
             useEffect(() => {
                 if (!user) return;
                 const { db, appId, onSnapshot, collection } = window.fb;
@@ -301,7 +296,6 @@
                 if (emp) await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', normalizeId(empId)), { caBalance: (parseFloat(emp.caBalance) || 0) - amt });
             };
 
-            // BACKUP / RESTORE
             const handleExportBackup = () => {
                 if(!isAdmin) return;
                 const data = { employees, attendance, cashAdvances, interactivePayrolls };
@@ -330,13 +324,14 @@
             if (!isReady) return null;
             if (!user) return <LoginScreen />;
 
-            // --- PIN GATE ---
+            // --- SECURE PIN GATE ---
             if (!userRole) {
                 return (
                     <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center">
                         <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full animate-slide-up">
                             <img src="/sys/icon.png" className="w-12 h-12 mx-auto mb-4" alt="Logo" />
                             <h2 className="text-xl font-black mb-6 uppercase tracking-widest text-slate-800">Verify Access</h2>
+                            
                             <input type="password" placeholder="Enter PIN" autoFocus className="w-full border-2 p-4 rounded-2xl mb-4 text-center text-xl font-black outline-none border-slate-100 focus:border-blue-500" 
                                 onChange={(e) => {
                                     if(e.target.value === '2558') { setUserRole('Admin'); setCurrentBiometricId('ADMIN'); }
@@ -347,7 +342,9 @@
                                     }
                                 }} 
                             />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">1234 for Staff / 2558 for Admin</p>
+                            {/* REMOVED EXPOSED PINS */}
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Enter Authorized Access PIN</p>
+                            
                             <button onClick={() => window.fb.signOut(window.fb.auth)} className="mt-8 text-rose-500 font-bold uppercase text-[10px]">Logout Entirely</button>
                         </div>
                     </div>
@@ -361,7 +358,6 @@
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full print-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} shadow-2xl`}>
                         <div className="p-6 border-b border-blue-800 flex items-center justify-between">
                             <div className="font-black text-xl flex items-center"><span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3"><LayoutDashboard /></span> {isSidebarOpen ? 'STONE GRILL' : ''}</div>
-                            {isSidebarOpen && window.innerWidth < 1024 && <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-white/10 rounded-lg"><X /></button>}
                         </div>
                         <nav className="flex-1 py-8 space-y-2 overflow-y-auto custom-scrollbar">
                             <NavItem icon={<LayoutDashboard />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} open={isSidebarOpen} />
@@ -423,7 +419,7 @@
                                                     </div>
 
                                                     <div className="bg-white rounded-3xl p-6 shadow-lg border border-slate-100">
-                                                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest flex items-center gap-2"><Banknote className="w-4 h-4"/> Your Transaction History</h4>
+                                                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest flex items-center gap-2">Your Transaction History</h4>
                                                         <table className="w-full text-left text-xs">
                                                             <thead className="bg-slate-50 font-black text-slate-400 uppercase"><tr><th className="p-3">Date</th><th className="p-3">Note</th><th className="p-3 text-right">Amount</th></tr></thead>
                                                             <tbody className="divide-y">
