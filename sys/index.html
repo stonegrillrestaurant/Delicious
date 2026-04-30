@@ -171,7 +171,6 @@
 
             const isAdmin = userRole === 'Admin';
 
-            // Auto-close sidebar on mobile when a tab is clicked
             const switchTab = (tab) => {
                 setActiveTab(tab);
                 if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -239,7 +238,6 @@
                 }
             }
 
-            // PAYSLIP AUTOFILL
             useEffect(() => {
                 if (icEmpId && icDateStart && icDateEnd) {
                     const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
@@ -330,7 +328,6 @@
             if (!isReady) return null;
             if (!user) return <LoginScreen />;
 
-            // --- SECURE PIN GATE ---
             if (!userRole) {
                 return (
                     <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center z-[100]">
@@ -360,7 +357,6 @@
                 <div className="flex h-screen bg-gray-50 overflow-hidden relative font-sans">
                     {isRestoring && <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-[100] font-sans flex-col text-white"><div className="w-16 h-16 border-4 border-t-white rounded-full animate-spin mb-6" /><h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2></div>}
 
-                    {/* NEW: MOBILE TAP-TO-CLOSE OVERLAY */}
                     {isSidebarOpen && window.innerWidth < 1024 && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-30 print-hidden" onClick={() => setSidebarOpen(false)} />
                     )}
@@ -368,7 +364,6 @@
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full print-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} shadow-2xl`}>
                         <div className="p-6 border-b border-blue-800 flex items-center justify-between">
                             <div className="font-black text-xl flex items-center"><span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3"><LayoutDashboard /></span> {isSidebarOpen ? 'STONE GRILL' : ''}</div>
-                            {/* NEW: MOBILE X BUTTON */}
                             {isSidebarOpen && window.innerWidth < 1024 && (
                                 <button onClick={() => setSidebarOpen(false)} className="p-2 bg-blue-800 rounded-lg text-white hover:bg-blue-700 transition-colors"><X className="w-4 h-4" /></button>
                             )}
@@ -401,7 +396,6 @@
                         <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar bg-slate-50" id="print-section">
                             <div className="max-w-7xl mx-auto space-y-6">
 
-                                {/* DASHBOARD TAB */}
                                 {activeTab === 'dashboard' && (
                                     <>
                                         {isAdmin && (
@@ -412,59 +406,69 @@
                                             </div>
                                         )}
 
-                                        {/* For Staff: The Exact Same View as the Profile Modal, but Read-Only */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
                                             return (
-                                                <div className="bg-white rounded-3xl shadow-xl overflow-hidden animate-slide-up max-w-3xl mx-auto border border-blue-50">
-                                                    <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0">
-                                                        <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6 inline mr-2"/> My Profile</h2>
-                                                    </div>
-                                                    <div className="p-8 space-y-8">
-                                                        <div className="flex justify-between items-end border-b pb-6">
-                                                            <div>
-                                                                <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">{emp.name}</h3>
-                                                                <p className="text-xs text-slate-400 font-black mt-1">ID: {emp.id} • {emp.position}</p>
+                                                <div className="animate-slide-up space-y-6 max-w-3xl mx-auto">
+                                                    <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden">
+                                                        <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0">
+                                                            <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6 inline mr-2"/> My Profile</h2>
+                                                        </div>
+                                                        <div className="p-8">
+                                                            <div className="flex justify-between items-end border-b pb-6 mb-8">
+                                                                <div>
+                                                                    <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">{emp.name}</h3>
+                                                                    <p className="text-xs text-slate-400 font-black mt-1">ID: {emp.id} • {emp.position}</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="font-black text-blue-600 font-mono text-2xl tracking-tighter">₱{formatMoney(emp.dailyRate || emp.rate)}/DAY</p>
+                                                                </div>
                                                             </div>
-                                                            <div className="text-right">
-                                                                <p className="font-black text-blue-600 font-mono text-2xl tracking-tighter">₱{formatMoney(emp.dailyRate || emp.rate)}/DAY</p>
+
+                                                            <div className="flex justify-between items-center bg-slate-50 p-2 rounded-xl border mb-6">
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase ml-4">Select Month</span>
+                                                                <select className="bg-white p-2 rounded-lg font-black text-xs uppercase outline-none border" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                                                                    {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                                                </select>
                                                             </div>
-                                                        </div>
 
-                                                        <div className="flex justify-between items-center bg-slate-50 p-2 rounded-xl border">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase ml-4">Select Month</span>
-                                                            <select className="bg-white p-2 rounded-lg font-black text-xs uppercase outline-none border" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
-                                                                {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                                            </select>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center">
-                                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days Present</p><p className="text-3xl font-black text-slate-800 font-mono">{emp.days}</p></div>
-                                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Net Salary</p><p className={`text-3xl font-black font-mono ${emp.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{emp.net < 0 ? '-' : ''}₱{formatMoney(emp.net)}</p></div>
-                                                        </div>
-                                                        
-                                                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 text-center">
-                                                            <p className="text-[10px] font-black text-rose-800 opacity-50 uppercase mb-2">Lifetime C.A. Balance</p>
-                                                            <p className="text-5xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(emp.caBalance)}</p>
-                                                        </div>
-                                                        
-                                                        <div className="mt-6">
-                                                            <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Transaction History</h4>
-                                                            <div className="max-h-64 overflow-y-auto custom-scrollbar bg-slate-50 border rounded-2xl">
-                                                                <table className="w-full text-left text-xs">
-                                                                    <thead className="bg-slate-100 font-black uppercase text-[9px] text-slate-400 sticky top-0"><tr><th className="p-3">Date</th><th className="p-3">Note</th><th className="p-3 text-right">Amount</th></tr></thead>
-                                                                    <tbody className="divide-y divide-slate-100">
-                                                                        {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca => (
-                                                                            <tr key={ca.id} className="hover:bg-white transition-colors">
-                                                                                <td className="p-3 font-mono text-slate-500">{ca.date}</td>
-                                                                                <td className="p-3 italic text-slate-600">{ca.reason || '--'}</td>
-                                                                                <td className={`p-3 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
-                                                                            </tr>
-                                                                        ))}
-                                                                        {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).length === 0 && <tr><td colSpan="3" className="p-6 text-center text-slate-400 italic">No transactions recorded.</td></tr>}
-                                                                    </tbody>
-                                                                </table>
+                                                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 mb-6">
+                                                                <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-left">Monthly Calculation Breakdown</h4>
+                                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
+                                                                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days</p><p className="text-2xl font-black text-slate-800 font-mono">{emp.days}</p></div>
+                                                                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Gross</p><p className="text-2xl font-black text-blue-600 font-mono">₱{formatMoney(emp.gross)}</p></div>
+                                                                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">C.A. Deduct</p><p className="text-2xl font-black text-amber-500 font-mono">₱{formatMoney(emp.monthlyCA)}</p></div>
+                                                                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">SSS & Misc</p><p className="text-2xl font-black text-rose-500 font-mono">₱{formatMoney((parseFloat(emp.sssRate)||0) + (parseFloat(emp.miscRate)||0))}</p></div>
+                                                                </div>
+                                                                <div className="bg-slate-800 p-6 rounded-2xl text-center text-white shadow-inner">
+                                                                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Net Salary (Take Home)</p>
+                                                                    <p className={`text-4xl font-black font-mono ${emp.net < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{emp.net < 0 ? '-' : ''}₱{formatMoney(emp.net)}</p>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 text-center mb-6">
+                                                                <p className="text-[10px] font-black text-rose-800 opacity-50 uppercase mb-2">Lifetime C.A. Balance</p>
+                                                                <p className="text-5xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(emp.caBalance)}</p>
+                                                            </div>
+                                                            
+                                                            <div className="mt-6">
+                                                                <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Transaction History</h4>
+                                                                <div className="max-h-64 overflow-y-auto custom-scrollbar bg-slate-50 border rounded-2xl">
+                                                                    <table className="w-full text-left text-xs">
+                                                                        <thead className="bg-slate-100 font-black uppercase text-[9px] text-slate-400 sticky top-0"><tr><th className="p-3">Date</th><th className="p-3">Note</th><th className="p-3 text-right">Amount</th></tr></thead>
+                                                                        <tbody className="divide-y divide-slate-100">
+                                                                            {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca => (
+                                                                                <tr key={ca.id} className="hover:bg-white transition-colors">
+                                                                                    <td className="p-3 font-mono text-slate-500">{ca.date}</td>
+                                                                                    <td className="p-3 italic text-slate-600">{ca.reason || '--'}</td>
+                                                                                    <td className={`p-3 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                            {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).length === 0 && <tr><td colSpan="3" className="p-6 text-center text-slate-400 italic">No transactions recorded.</td></tr>}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -472,7 +476,6 @@
                                             );
                                         })()}
 
-                                        {/* Admin Quick Lookup */}
                                         {isAdmin && (
                                             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mt-6 animate-slide-up">
                                                 <h3 className="font-black text-blue-900 uppercase mb-6 flex items-center gap-2"><Search /> Quick Detail Lookup</h3>
@@ -770,9 +773,18 @@
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center">
-                                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days Present</p><p className="text-3xl font-black text-slate-800 font-mono">{viewProfile.days}</p></div>
-                                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Net Salary</p><p className={`text-3xl font-black font-mono ${viewProfile.net < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{viewProfile.net < 0 ? '-' : ''}₱{formatMoney(viewProfile.net)}</p></div>
+                                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-left">Monthly Calculation Breakdown</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days</p><p className="text-2xl font-black text-slate-800 font-mono">{viewProfile.days}</p></div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Gross</p><p className="text-2xl font-black text-blue-600 font-mono">₱{formatMoney(viewProfile.gross)}</p></div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">C.A. Deduct</p><p className="text-2xl font-black text-amber-500 font-mono">₱{formatMoney(viewProfile.monthlyCA)}</p></div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">SSS & Misc</p><p className="text-2xl font-black text-rose-500 font-mono">₱{formatMoney((parseFloat(viewProfile.sssRate)||0) + (parseFloat(viewProfile.miscRate)||0))}</p></div>
+                                        </div>
+                                        <div className="bg-slate-800 p-6 rounded-2xl text-center text-white shadow-inner">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Net Salary (Take Home)</p>
+                                            <p className={`text-4xl font-black font-mono ${viewProfile.net < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{viewProfile.net < 0 ? '-' : ''}₱{formatMoney(viewProfile.net)}</p>
+                                        </div>
                                     </div>
                                     
                                     <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 text-center">
