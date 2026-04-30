@@ -250,7 +250,6 @@
                 }
             }, [icEmpId, icDateStart, icDateEnd, employees, attendance, cashAdvances]);
 
-            // ADDED: Surgically added function to handle editing an employee profile
             const handleEditProfile = (emp) => {
                 setNewEmpForm({
                     biometricId: emp.id,
@@ -459,20 +458,16 @@
                                                 <div className="animate-slide-up space-y-6 max-w-3xl mx-auto">
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden">
                                                         <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0">
-                                                            {/* SURGICAL ADDITION: Changed Title to STAFF CLOUD PROFILE to match screenshot */}
-                                                            <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6 inline mr-2"/> STAFF CLOUD PROFILE</h2>
+                                                            <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6 inline mr-2"/> My Profile</h2>
                                                         </div>
                                                         <div className="p-8">
                                                             <div className="flex justify-between items-end border-b pb-6 mb-8">
                                                                 <div>
-                                                                    {/* SURGICAL ADDITION: Added Active badge next to name */}
                                                                     <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-3">
                                                                         {emp.name}
                                                                         <span className="text-[10px] bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full tracking-widest uppercase shadow-sm">Active</span>
                                                                     </h3>
                                                                     <p className="text-xs text-slate-400 font-black mt-1">ID: {emp.id} • {emp.position}</p>
-                                                                    
-                                                                    {/* SURGICAL ADDITION: Show Contact and SSS details */}
                                                                     <div className="mt-3 flex gap-4 text-[10px] font-black text-slate-500 uppercase">
                                                                         {emp.contactNumber && <span>📞 {emp.contactNumber}</span>}
                                                                         {emp.sssNumber && <span>🛡️ SSS: {emp.sssNumber}</span>}
@@ -764,15 +759,12 @@
                         </div>
                     </main>
 
-                    {/* ADMIN ADD/EDIT STAFF MODAL */}
+                    {/* ADMIN ADD STAFF MODAL */}
                     {showAddStaff && isAdmin && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
                             <form onSubmit={handleAddStaffSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 space-y-5 animate-in zoom-in-95">
-                                {/* SURGICAL ADDITION: Changed Title to reflect if we are Editing or Adding */}
                                 <div className="flex justify-between items-center mb-2"><h3 className="font-black uppercase tracking-widest text-blue-900">{isEditing ? 'Edit Staff Profile' : 'Add Staff'}</h3><button type="button" onClick={()=>{setShowAddStaff(false); setIsEditing(false);}} className="text-slate-400"><X/></button></div>
-                                
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Biometric ID</label><input type="text" required value={newEmpForm.biometricId} disabled={isEditing} onChange={e=>setNewEmpForm({...newEmpForm, biometricId: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black disabled:opacity-50"/></div>
-                                
                                 <div className="grid grid-cols-2 gap-4">
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">First Name</label><input type="text" required value={newEmpForm.firstName} onChange={e=>setNewEmpForm({...newEmpForm, firstName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Last Name</label><input type="text" required value={newEmpForm.lastName} onChange={e=>setNewEmpForm({...newEmpForm, lastName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
@@ -781,13 +773,10 @@
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Role</label><input type="text" value={newEmpForm.position} onChange={e=>setNewEmpForm({...newEmpForm, position: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Daily Rate</label><input type="number" required value={newEmpForm.dailyRate} onChange={e=>setNewEmpForm({...newEmpForm, dailyRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-blue-600"/></div>
                                 </div>
-
-                                {/* SURGICAL ADDITION: Added Contact Number and SSS Number Inputs */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Contact Number</label><input type="text" placeholder="09XX..." value={newEmpForm.contactNumber} onChange={e=>setNewEmpForm({...newEmpForm, contactNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
-                                    <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">SSS Number</label><input type="text" placeholder="XX-XXXXXXX-X" value={newEmpForm.sssNumber} onChange={e=>setNewEmpForm({...newEmpForm, sssNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
+                                    <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Contact #</label><input type="text" placeholder="09XX..." value={newEmpForm.contactNumber} onChange={e=>setNewEmpForm({...newEmpForm, contactNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
+                                    <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">SSS #</label><input type="text" placeholder="XX-XXXXXXX-X" value={newEmpForm.sssNumber} onChange={e=>setNewEmpForm({...newEmpForm, sssNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
                                 </div>
-
                                 <div className="grid grid-cols-2 gap-4">
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">SSS Ded.</label><input type="number" value={newEmpForm.sssRate} onChange={e=>setNewEmpForm({...newEmpForm, sssRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-rose-600"/></div>
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Misc Ded.</label><input type="number" value={newEmpForm.miscRate} onChange={e=>setNewEmpForm({...newEmpForm, miscRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-rose-600"/></div>
@@ -805,20 +794,15 @@
                                 <div className="overflow-y-auto p-8 flex-1 space-y-8 custom-scrollbar">
                                     <div className="flex justify-between items-end border-b pb-6">
                                         <div>
-                                            {/* SURGICAL ADDITION: Added Active badge */}
                                             <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-3">
                                                 {viewProfile.name}
                                                 <span className="text-[10px] bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full tracking-widest uppercase shadow-sm">Active</span>
                                             </h3>
                                             <p className="text-xs text-slate-400 font-black mt-1">ID: {viewProfile.id} • {viewProfile.position}</p>
-                                            
-                                            {/* SURGICAL ADDITION: Show Contact and SSS Details */}
                                             <div className="mt-3 flex gap-4 text-[10px] font-black text-slate-500 uppercase">
                                                 {viewProfile.contactNumber && <span>📞 {viewProfile.contactNumber}</span>}
                                                 {viewProfile.sssNumber && <span>🛡️ SSS: {viewProfile.sssNumber}</span>}
                                             </div>
-
-                                            {/* SURGICAL ADDITION: Added Edit Profile button next to Delete */}
                                             <div className="mt-4 flex gap-2">
                                                 <button onClick={() => handleEditProfile(viewProfile)} className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-colors border border-blue-200">Edit Profile</button>
                                                 <button onClick={()=>handleDeleteEmployee(viewProfile.id, viewProfile.name)} className="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-colors border border-rose-200">Delete Profile</button>
