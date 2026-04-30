@@ -344,7 +344,7 @@
 
 Expected format:
 Date	Store	POS	Shift number	Type	Employee	Comment	Amount
-28/03/2026 17:07	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Manok	3500.00"></textarea>
+04/08/2027 17:07	Thank You !	Geje Samsung A12	224	Payout	Jhie M. Eco	Manok	3500.00"></textarea>
 
       <div class="actions">
         <button class="action" onclick="saveData()">Save Data</button>
@@ -352,8 +352,9 @@ Date	Store	POS	Shift number	Type	Employee	Comment	Amount
       </div>
 
       <p class="hint">
-        Keep the first row headers. This version is locked for Loyverse date format:
-        <strong>DD/MM/YYYY HH:mm</strong>, example: <strong>28/03/2026 17:07</strong>.
+        Keep the first row headers. This version can read Loyverse date format:
+        <strong>MM/DD/YYYY HH:mm</strong> or <strong>DD/MM/YYYY HH:mm</strong>.
+        Example: <strong>04/08/2027 17:07</strong>.
       </p>
     </div>
   </section>
@@ -793,7 +794,6 @@ function renderResults(rows) {
 ----------------------------- */
 function renderNormalTable(rows) {
   const results = document.getElementById("results");
-  const selectedEmployee = document.getElementById("employeeFilter").value;
 
   if (!parsedData.length || !headers.length) {
     results.innerHTML = `<div class="empty">No data loaded yet.</div>`;
@@ -805,17 +805,14 @@ function renderNormalTable(rows) {
     return;
   }
 
-  const showEmployeeColumn = !selectedEmployee;
-
   let html = `
     <table>
       <thead>
         <tr>
           <th>Date</th>
-          ${showEmployeeColumn ? "<th>Employee</th>" : ""}
-          <th>Comment</th>
           <th>Amount</th>
-          <th>Shift</th>
+          <th>Comment</th>
+          <th>Employee</th>
         </tr>
       </thead>
       <tbody>
@@ -823,18 +820,16 @@ function renderNormalTable(rows) {
 
   rows.forEach(row => {
     const date = getDateLabel(row);
-    const employee = getEmployee(row);
-    const comment = getComment(row);
     const amount = getAmount(row);
-    const shift = getShift(row);
+    const comment = getComment(row);
+    const employee = getEmployee(row);
 
     html += `
       <tr>
         <td>${escapeHtml(date)}</td>
-        ${showEmployeeColumn ? `<td>${escapeHtml(employee)}</td>` : ""}
-        <td class="comment">${escapeHtml(comment)}</td>
         <td class="amount">${formatPeso(amount)}</td>
-        <td>${escapeHtml(shift)}</td>
+        <td class="comment">${escapeHtml(comment)}</td>
+        <td>${escapeHtml(employee)}</td>
       </tr>
     `;
   });
@@ -986,9 +981,9 @@ function getField(row, possibleNames) {
 
 /* -----------------------------
    DATE HELPERS
-   Loyverse format locked:
+   This supports both:
+   MM/DD/YYYY HH:mm
    DD/MM/YYYY HH:mm
-   Example: 28/03/2026 17:07
 ----------------------------- */
 function getDateObject(row) {
   return parseLoyverseDate(getRawDate(row));
@@ -1018,6 +1013,9 @@ function getDateLabel(row) {
   });
 }
 
+/* -----------------------------
+   FIXED LOYVERSE DATE PARSER
+----------------------------- */
 function parseLoyverseDate(value) {
   if (!value) return null;
 
@@ -1033,8 +1031,33 @@ function parseLoyverseDate(value) {
 
   if (!match) return null;
 
-  const day = Number(match[1]);
-  const month = Number(match[2]) - 1;
+  const firstNumber = Number(match[1]);
+  const secondNumber = Number(match[2]);
+
+  let day;
+  let month;
+
+  /*
+    If first number is above 12, it cannot be a month.
+    Example: 28/03/2026 = Mar 28, 2026.
+
+    If second number is above 12, the first number is the month.
+    Example: 04/28/2026 = Apr 28, 2026.
+
+    If both are 12 or below, Loyverse often behaves like MM/DD/YYYY.
+    Example: 04/08/2027 = Apr 8, 2027.
+  */
+  if (firstNumber > 12) {
+    day = firstNumber;
+    month = secondNumber - 1;
+  } else if (secondNumber > 12) {
+    month = firstNumber - 1;
+    day = secondNumber;
+  } else {
+    month = firstNumber - 1;
+    day = secondNumber;
+  }
+
   let year = Number(match[3]);
 
   if (year < 100) {
@@ -1044,7 +1067,17 @@ function parseLoyverseDate(value) {
   const hour = Number(match[4] || 0);
   const minute = Number(match[5] || 0);
 
-  return new Date(year, month, day, hour, minute);
+  const date = new Date(year, month, day, hour, minute);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
 }
 
 /* -----------------------------
@@ -1106,7 +1139,7 @@ function escapeForJs(text) {
 }
 
 /* -----------------------------
-   PRINT CURRENT RESULTS
+   PRINT CURRENT RESULTS - COMPACT PAPER SAVING FORMAT
 ----------------------------- */
 function printResults() {
   searchData();
@@ -1136,106 +1169,147 @@ function printResults() {
     <html>
     <head>
       <title>Stone Grill Payout Search Print</title>
+
       <style>
+        @page {
+          size: auto;
+          margin: 8mm;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
         body {
           font-family: Arial, sans-serif;
-          padding: 20px;
-          color: #222;
+          color: #000;
+          padding: 0;
+          margin: 0;
+          font-size: 10px;
+          line-height: 1.25;
         }
 
         h1 {
-          font-size: 22px;
-          margin-bottom: 4px;
+          font-size: 14px;
+          margin: 0 0 3px 0;
+          text-align: center;
         }
 
         .meta {
-          font-size: 13px;
-          margin-bottom: 16px;
-          color: #555;
-          line-height: 1.5;
+          font-size: 9px;
+          margin-bottom: 5px;
+          line-height: 1.25;
+          border-bottom: 1px solid #000;
+          padding-bottom: 4px;
         }
 
-        .summary {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
+        .summary-print {
+          font-size: 9px;
+          margin-bottom: 5px;
+          padding-bottom: 4px;
+          border-bottom: 1px solid #000;
+          display: flex;
+          flex-wrap: wrap;
           gap: 8px;
-          margin-bottom: 16px;
         }
 
-        .summary div {
-          border: 1px solid #ccc;
-          padding: 10px;
-          border-radius: 8px;
-          font-size: 13px;
-        }
-
-        .summary strong {
-          display: block;
-          font-size: 17px;
-          margin-top: 4px;
+        .summary-print span {
+          white-space: nowrap;
         }
 
         table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 12px;
+          font-size: 9px;
+          table-layout: fixed;
         }
 
         th {
-          background: #2b211c;
-          color: white;
-          padding: 8px;
+          background: #fff !important;
+          color: #000 !important;
+          border-bottom: 1px solid #000;
+          padding: 3px 2px;
           text-align: left;
+          font-weight: bold;
         }
 
         td {
           border-bottom: 1px solid #ddd;
-          padding: 8px;
+          padding: 3px 2px;
           vertical-align: top;
+          word-wrap: break-word;
         }
 
         .amount {
           font-weight: bold;
+          white-space: nowrap;
+          text-align: right;
         }
 
         .comment {
-          font-weight: bold;
+          font-weight: normal;
         }
 
         .empty {
-          padding: 20px;
-          border: 1px solid #ddd;
+          padding: 10px;
+          border: 1px solid #000;
           text-align: center;
-          color: #777;
+        }
+
+        /* Compact column sizing */
+        th:nth-child(1),
+        td:nth-child(1) {
+          width: 20%;
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) {
+          width: 18%;
+          text-align: right;
+        }
+
+        th:nth-child(3),
+        td:nth-child(3) {
+          width: 42%;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) {
+          width: 20%;
         }
 
         @media print {
           body {
-            padding: 10px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
 
-          .summary {
-            grid-template-columns: repeat(2, 1fr);
+          h1 {
+            page-break-after: avoid;
+          }
+
+          tr {
+            page-break-inside: avoid;
           }
         }
       </style>
     </head>
 
     <body>
-      <h1>Stone Grill Payout Search Results</h1>
+      <h1>Stone Grill Payout Search</h1>
 
       <div class="meta">
-        Employee: ${escapeHtml(employee)}<br>
-        Date: ${escapeHtml(dateLabel)}<br>
-        Search: ${escapeHtml(search)}<br>
+        Employee: ${escapeHtml(employee)} |
+        Date: ${escapeHtml(dateLabel)} |
+        Search: ${escapeHtml(search)} |
         Printed: ${escapeHtml(new Date().toLocaleString("en-PH"))}
       </div>
 
-      <div class="summary">
-        <div>Records<strong>${escapeHtml(recordCount)}</strong></div>
-        <div>Total Pay In<strong>${escapeHtml(totalPayIn)}</strong></div>
-        <div>Total Payout<strong>${escapeHtml(totalPayout)}</strong></div>
-        <div>Net<strong>${escapeHtml(netMovement)}</strong></div>
+      <div class="summary-print">
+        <span>Records: <strong>${escapeHtml(recordCount)}</strong></span>
+        <span>Pay In: <strong>${escapeHtml(totalPayIn)}</strong></span>
+        <span>Payout: <strong>${escapeHtml(totalPayout)}</strong></span>
+        <span>Net: <strong>${escapeHtml(netMovement)}</strong></span>
       </div>
 
       ${results}

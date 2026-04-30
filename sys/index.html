@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stone Grill - Data Viewer Test</title>
+    <title>Stone Grill Payroll - V3 Stable</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #1e3a8a; --bg: #f3f4f6; --text: #1f2937;
+            --primary: #1e3a8a; --secondary: #3b82f6; --accent: #10b981;
+            --danger: #ef4444; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937;
         }
         * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
         body { background-color: var(--bg); color: var(--text); line-height: 1.5; }
@@ -19,186 +23,242 @@
         .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 300px; }
         .num-btn { background: white; border: none; padding: 20px; font-size: 1.5rem; font-weight: 600; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; }
         .num-btn:active { background: #e5e7eb; transform: scale(0.95); }
-        .btn-clear { background: #fee2e2; color: #ef4444; }
+        .btn-clear { background: #fee2e2; color: var(--danger); }
+
+        /* Main Header */
+        .header { background: var(--primary); color: white; padding: 25px 20px; border-radius: 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        .logout-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+
+        /* Profile Section (From Caloy Screenshot) */
+        .profile-card { background: white; border-radius: 30px; padding: 30px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 20px; position: relative; }
+        .status-badge { position: absolute; top: 20px; right: 20px; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; }
+        .profile-header { margin-bottom: 20px; }
+        .profile-name { font-size: 2rem; font-weight: 800; color: #1e293b; line-height: 1; }
+        .profile-sub { color: #94a3b8; font-size: 0.9rem; font-weight: 600; }
+        .rate-display { color: #2563eb; font-weight: 800; font-size: 1.3rem; float: right; margin-top: -30px; }
+        .edit-btn { display: inline-flex; align-items: center; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 12px; color: #475569; font-weight: 600; text-decoration: none; font-size: 0.85rem; margin-top: 15px; }
+
+        /* Grid Data Cards */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .stat-box { background: #f8fafc; padding: 20px; border-radius: 20px; text-align: center; border: 1px solid #f1f5f9; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: 800; margin-bottom: 8px; display: block; }
+        .stat-value { font-size: 1.4rem; font-weight: 800; color: #1e293b; }
+        .blue-text { color: #2563eb; }
+        .red-text { color: #ef4444; }
+
+        /* Net Pay Highlight */
+        .net-pay-card { background: #1e293b; padding: 25px; border-radius: 25px; margin-top: 15px; text-align: center; }
+        .net-pay-label { color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .net-pay-value { color: #4ade80; font-size: 2.2rem; font-weight: 800; margin-top: 5px; }
 
         /* History Table */
-        .header { background: var(--primary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center; font-weight: 800; }
-        .history-table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; font-size: 0.85rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .history-section { margin-top: 30px; }
+        .history-title { font-weight: 800; font-size: 0.9rem; color: #64748b; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
+        .history-table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; font-size: 0.85rem; }
         .history-table th { background: #f8fafc; padding: 12px; text-align: left; color: #94a3b8; }
         .history-table td { padding: 12px; border-top: 1px solid #f1f5f9; }
         .amount-cell { font-weight: 800; color: #ef4444; }
+
         .hidden { display: none !important; }
-        #status-msg { margin-bottom: 15px; font-size: 0.9rem; font-weight: 600; color: #0284c7; text-align: center;}
-        .debug-info { font-size: 0.7rem; color: #94a3b8; text-align: center; margin-top: 10px; word-break: break-all; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- LOGIN SCREEN -->
     <div id="login-screen">
-        <h2 style="margin-bottom: 10px;">DATA TEST</h2>
-        <p style="color: #64748b; margin-bottom: 30px;">Enter Admin PIN (2558)</p>
+        <h2 style="margin-bottom: 10px;">STONE GRILL</h2>
+        <p style="color: #64748b; margin-bottom: 30px;">Enter Access PIN</p>
         <div class="pin-display" id="pin-dots">****</div>
         <div class="numpad">
-            <button class="num-btn" id="btn-1">1</button>
-            <button class="num-btn" id="btn-2">2</button>
-            <button class="num-btn" id="btn-3">3</button>
-            <button class="num-btn" id="btn-4">4</button>
-            <button class="num-btn" id="btn-5">5</button>
-            <button class="num-btn" id="btn-6">6</button>
-            <button class="num-btn" id="btn-7">7</button>
-            <button class="num-btn" id="btn-8">8</button>
-            <button class="num-btn" id="btn-9">9</button>
-            <button class="num-btn btn-clear" id="btn-c">C</button>
-            <button class="num-btn" id="btn-0">0</button>
-            <button class="num-btn" style="background:#dcfce7; color:#166534;" id="btn-ok">OK</button>
+            <button class="num-btn" onclick="pressPin('1')">1</button>
+            <button class="num-btn" onclick="pressPin('2')">2</button>
+            <button class="num-btn" onclick="pressPin('3')">3</button>
+            <button class="num-btn" onclick="pressPin('4')">4</button>
+            <button class="num-btn" onclick="pressPin('5')">5</button>
+            <button class="num-btn" onclick="pressPin('6')">6</button>
+            <button class="num-btn" onclick="pressPin('7')">7</button>
+            <button class="num-btn" onclick="pressPin('8')">8</button>
+            <button class="num-btn" onclick="pressPin('9')">9</button>
+            <button class="num-btn btn-clear" onclick="clearPin()">C</button>
+            <button class="num-btn" onclick="pressPin('0')">0</button>
+            <button class="num-btn" style="background:#dcfce7; color:#166534;" onclick="submitPin()">OK</button>
         </div>
     </div>
 
-    <!-- MAIN DASHBOARD -->
     <div id="dashboard" class="hidden">
         <div class="header">
-            DATABASE CONNECTION TEST
+            <h1 id="view-title">STAFF PROFILE</h1>
+            <button class="logout-btn" onclick="logout()">LOGOUT</button>
         </div>
-        <div id="status-msg">Authenticating with Firebase...</div>
-        <div id="debug-uid" class="debug-info"></div>
-        
-        <table class="history-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Staff ID</th>
-                    <th>Note</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody id="history-body">
-                <tr><td colspan="4" style="text-align:center;">Waiting for login...</td></tr>
-            </tbody>
-        </table>
-        
-        <button id="btn-logout" style="width: 100%; margin-top: 20px; padding: 15px; border-radius: 10px; border: none; background: #e2e8f0; font-weight: bold; cursor: pointer;">RESTART TEST</button>
+
+        <div class="profile-card">
+            <span class="status-badge">ACTIVE</span>
+            <div class="profile-header">
+                <div class="profile-name" id="emp-name">LOADING...</div>
+                <div class="profile-sub" id="emp-role">ID: -- • Role</div>
+                <div class="rate-display" id="emp-rate">₱0/DAY</div>
+                <button id="admin-edit-btn" class="edit-btn hidden">Edit Profile</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">Days</span>
+                    <div class="stat-value" id="val-days">0</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Gross Pay</span>
+                    <div class="stat-value blue-text" id="val-gross">₱0</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Deducted</span>
+                    <div class="stat-value red-text" id="val-deduct">₱0</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Net Pay</span>
+                    <div class="stat-value" style="color:#10b981" id="val-net-grid">₱0</div>
+                </div>
+            </div>
+
+            <div class="net-pay-card">
+                <span class="net-pay-label">NET SALARY (TAKE HOME)</span>
+                <div class="net-pay-value" id="val-total-net">₱0</div>
+            </div>
+            
+            <div id="lifetime-stats" class="stats-grid">
+                 <div class="stat-box" style="background:#fff1f2">
+                    <span class="stat-label" style="color:#e11d48">Lifetime C.A. Bal.</span>
+                    <div class="stat-value red-text" id="val-lifetime-ca">₱0</div>
+                </div>
+                <div class="stat-box" style="background:#f0f9ff">
+                    <span class="stat-label" style="color:#0284c7">Total Attendance</span>
+                    <div class="stat-value blue-text" id="val-total-attn">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-title">Transaction History</div>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Note</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<script>
+    // FIREBASE CONFIG - PASTE YOUR KEYS HERE
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "stone-grill-payroll.firebaseapp.com",
+        projectId: "stone-grill-payroll",
+        storageBucket: "stone-grill-payroll.appspot.com",
+        messagingSenderId: "YOUR_ID",
+        appId: "YOUR_APP_ID"
+    };
 
-    // Setup Firebase using secure environment variables
-    let app, auth, db, appId;
-    try {
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        // Using the exact App ID from your screenshot to ensure we look in the right bucket
-        appId = 'stone-grill-v1'; 
-        
-        if (firebaseConfig) {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-        } else {
-            document.getElementById('status-msg').innerText = "Error: No Firebase config found in this environment.";
-        }
-    } catch (e) {
-        console.error("Firebase init error", e);
-    }
-
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
     let currentPin = "";
-    const pinDots = document.getElementById('pin-dots');
-    
-    function updatePinDisplay() {
-        pinDots.innerText = "*".repeat(currentPin.length) || "****";
-    }
+    let userRole = ""; // 'admin' or 'staff'
+    const ADMIN_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2"; // Found in your screenshot
 
-    // Numpad Event Listeners
-    for(let i=0; i<=9; i++) {
-        document.getElementById(`btn-${i}`).addEventListener('click', () => {
-            if (currentPin.length < 4) { currentPin += i; updatePinDisplay(); }
-        });
-    }
-    document.getElementById('btn-c').addEventListener('click', () => { currentPin = ""; updatePinDisplay(); });
-    
-    document.getElementById('btn-ok').addEventListener('click', () => {
-        if (currentPin === "2558") {
-            startTest();
-        } else {
-            alert("Please use Admin PIN 2558 for this test.");
-            currentPin = ""; updatePinDisplay();
+    function pressPin(num) {
+        if (currentPin.length < 4) {
+            currentPin += num;
+            updatePinDisplay();
         }
-    });
+    }
 
-    document.getElementById('btn-logout').addEventListener('click', () => { location.reload(); });
+    function clearPin() { currentPin = ""; updatePinDisplay(); }
+    function updatePinDisplay() { document.getElementById('pin-dots').innerText = "*".repeat(currentPin.length) || "****"; }
 
-    async function startTest() {
+    function submitPin() {
+        if (currentPin === "2558") {
+            userRole = "admin";
+            loadDashboard();
+        } else if (currentPin === "1234") {
+            userRole = "staff";
+            loadDashboard();
+        } else {
+            alert("Invalid PIN");
+            clearPin();
+        }
+    }
+
+    function loadDashboard() {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('dashboard').classList.remove('hidden');
         
-        if (!auth) return;
+        if (userRole === 'admin') {
+            document.getElementById('view-title').innerText = "ADMIN MASTERLIST";
+            document.getElementById('admin-edit-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('view-title').innerText = "STAFF CLOUD PROFILE";
+        }
+
+        fetchData();
+    }
+
+    async function fetchData() {
+        const historyBody = document.getElementById('history-body');
+        historyBody.innerHTML = "<tr><td colspan='4'>Loading transactions...</td></tr>";
 
         try {
-            // 1. Authenticate FIRST
-            document.getElementById('status-msg').innerText = "Logging in...";
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-
-            const currentUser = auth.currentUser;
-            if (!currentUser) throw new Error("Authentication failed.");
-
-            document.getElementById('debug-uid').innerText = "Current UID: " + currentUser.uid;
-
-            // 2. Fetch Data using the authenticated user's ID
-            // The Firebase security rules ONLY allow reading from your own authenticated ID path.
-            // Using the hardcoded 'TY8qdAMR...' string triggered the permissions error because 
-            // the system requires the ID in the code to exactly match your login token.
-            document.getElementById('status-msg').innerText = "Fetching cash_advances...";
+            // TARGETING THE FOLDER FROM YOUR SCREENSHOT
+            // artifacts > stone-grill-v1 > users > ADMIN_ID > cash_advances
+            const caRef = db.collection('artifacts').doc('stone-grill-v1')
+                           .collection('users').doc(ADMIN_UID)
+                           .collection('cash_advances');
             
-            const caRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cash_advances');
-            const snapshot = await getDocs(caRef);
-            
-            const historyBody = document.getElementById('history-body');
+            const snapshot = await caRef.orderBy('date', 'desc').get();
             historyBody.innerHTML = "";
 
             if (snapshot.empty) {
-                historyBody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Folder found, but it is empty for this user!</td></tr>";
-                document.getElementById('status-msg').innerText = "Connected! But no documents found.";
+                historyBody.innerHTML = "<tr><td colspan='4'>No records found.</td></tr>";
                 return;
             }
 
-            // Put data into an array so we can sort it in memory
-            let records = [];
             snapshot.forEach(doc => {
-                records.push(doc.data());
-            });
-
-            // Sort by date newest first
-            records.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
-            // Display records
-            records.forEach(data => {
+                const data = doc.data();
                 const row = `
                     <tr>
-                        <td>${data.date || 'No Date'}</td>
-                        <td>ID: ${data.empId || '?'}</td>
+                        <td>${data.date}</td>
+                        <td>C.A.</td>
                         <td>${data.reason || '-'}</td>
-                        <td class="amount-cell">₱${Number(data.amount || 0).toLocaleString()}</td>
+                        <td class="amount-cell">₱${Number(data.amount).toLocaleString()}</td>
                     </tr>
                 `;
                 historyBody.innerHTML += row;
             });
-            
-            document.getElementById('status-msg').innerText = `Success! Found ${records.length} records.`;
+
+            // Demo Data for Header (This would normally be a separate fetch to 'employees' folder)
+            document.getElementById('emp-name').innerText = "CALOY";
+            document.getElementById('emp-role').innerText = "ID: 7 • COOK";
+            document.getElementById('emp-rate').innerText = "₱650/DAY";
+            document.getElementById('val-days').innerText = "21.5";
+            document.getElementById('val-gross').innerText = "₱13,975";
+            document.getElementById('val-deduct').innerText = "₱13,975";
+            document.getElementById('val-total-net').innerText = "₱0";
+            document.getElementById('val-lifetime-ca').innerText = "₱18,000";
+            document.getElementById('val-total-attn').innerText = "268";
 
         } catch (error) {
-            console.error(error);
-            document.getElementById('status-msg').innerText = "Error: " + error.message;
-            document.getElementById('history-body').innerHTML = `<tr><td colspan='4' style='color:red;'>${error.message}</td></tr>`;
+            console.error("Error:", error);
+            historyBody.innerHTML = "<tr><td colspan='4'>Error connecting to database.</td></tr>";
         }
     }
+
+    function logout() { location.reload(); }
 </script>
 
 </body>
