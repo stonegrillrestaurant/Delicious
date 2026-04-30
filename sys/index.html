@@ -2,210 +2,264 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stone Grill Payroll - Smart Cloud Suite</title>
-    
-    <link rel="icon" type="image/png" href="/sys/icon.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
-            authDomain: "stone-grill-payroll.firebaseapp.com",
-            projectId: "stone-grill-payroll",
-            storageBucket: "stone-grill-payroll.firebasestorage.app",
-            messagingSenderId: "255528914541",
-            appId: "1:255528914541:web:d58d9731a29d27fc253964"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        window.fb = { db: getFirestore(app), auth: getAuth(app), appId: "stone-grill-v1", signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, updateDoc };
-    </script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stone Grill Payroll - V3 Stable</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        @media print { body * { visibility: hidden; } #print-section, #print-section * { visibility: visible; } .print-hidden { display: none !important; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        :root {
+            --primary: #1e3a8a; --secondary: #3b82f6; --accent: #10b981;
+            --danger: #ef4444; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937;
+        }
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg); color: var(--text); line-height: 1.5; }
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; min-height: 100vh; position: relative; }
+        
+        /* Login Screen */
+        #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+        .pin-display { font-size: 2.5rem; font-weight: 800; letter-spacing: 10px; margin-bottom: 30px; color: var(--primary); min-height: 60px; }
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 300px; }
+        .num-btn { background: white; border: none; padding: 20px; font-size: 1.5rem; font-weight: 600; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; }
+        .num-btn:active { background: #e5e7eb; transform: scale(0.95); }
+        .btn-clear { background: #fee2e2; color: var(--danger); }
+
+        /* Main Header */
+        .header { background: var(--primary); color: white; padding: 25px 20px; border-radius: 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        .logout-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+
+        /* Profile Section (From Caloy Screenshot) */
+        .profile-card { background: white; border-radius: 30px; padding: 30px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 20px; position: relative; }
+        .status-badge { position: absolute; top: 20px; right: 20px; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; }
+        .profile-header { margin-bottom: 20px; }
+        .profile-name { font-size: 2rem; font-weight: 800; color: #1e293b; line-height: 1; }
+        .profile-sub { color: #94a3b8; font-size: 0.9rem; font-weight: 600; }
+        .rate-display { color: #2563eb; font-weight: 800; font-size: 1.3rem; float: right; margin-top: -30px; }
+        .edit-btn { display: inline-flex; align-items: center; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 12px; color: #475569; font-weight: 600; text-decoration: none; font-size: 0.85rem; margin-top: 15px; }
+
+        /* Grid Data Cards */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .stat-box { background: #f8fafc; padding: 20px; border-radius: 20px; text-align: center; border: 1px solid #f1f5f9; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: 800; margin-bottom: 8px; display: block; }
+        .stat-value { font-size: 1.4rem; font-weight: 800; color: #1e293b; }
+        .blue-text { color: #2563eb; }
+        .red-text { color: #ef4444; }
+
+        /* Net Pay Highlight */
+        .net-pay-card { background: #1e293b; padding: 25px; border-radius: 25px; margin-top: 15px; text-align: center; }
+        .net-pay-label { color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .net-pay-value { color: #4ade80; font-size: 2.2rem; font-weight: 800; margin-top: 5px; }
+
+        /* History Table */
+        .history-section { margin-top: 30px; }
+        .history-title { font-weight: 800; font-size: 0.9rem; color: #64748b; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
+        .history-table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; font-size: 0.85rem; }
+        .history-table th { background: #f8fafc; padding: 12px; text-align: left; color: #94a3b8; }
+        .history-table td { padding: 12px; border-top: 1px solid #f1f5f9; }
+        .amount-cell { font-weight: 800; color: #ef4444; }
+
+        .hidden { display: none !important; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans overflow-hidden">
-    <div id="root"></div>
+<body>
 
-    <script type="text/babel">
-        const { useState, useMemo, useEffect } = React;
+<div class="container">
+    <div id="login-screen">
+        <h2 style="margin-bottom: 10px;">STONE GRILL</h2>
+        <p style="color: #64748b; margin-bottom: 30px;">Enter Access PIN</p>
+        <div class="pin-display" id="pin-dots">****</div>
+        <div class="numpad">
+            <button class="num-btn" onclick="pressPin('1')">1</button>
+            <button class="num-btn" onclick="pressPin('2')">2</button>
+            <button class="num-btn" onclick="pressPin('3')">3</button>
+            <button class="num-btn" onclick="pressPin('4')">4</button>
+            <button class="num-btn" onclick="pressPin('5')">5</button>
+            <button class="num-btn" onclick="pressPin('6')">6</button>
+            <button class="num-btn" onclick="pressPin('7')">7</button>
+            <button class="num-btn" onclick="pressPin('8')">8</button>
+            <button class="num-btn" onclick="pressPin('9')">9</button>
+            <button class="num-btn btn-clear" onclick="clearPin()">C</button>
+            <button class="num-btn" onclick="pressPin('0')">0</button>
+            <button class="num-btn" style="background:#dcfce7; color:#166534;" onclick="submitPin()">OK</button>
+        </div>
+    </div>
 
-        const normalizeId = (id) => id ? String(id).trim().toLowerCase() : '';
-        const formatMoney = (v) => { const n = Number(v||0); return isNaN(n)? "0" : Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); };
+    <div id="dashboard" class="hidden">
+        <div class="header">
+            <h1 id="view-title">STAFF PROFILE</h1>
+            <button class="logout-btn" onclick="logout()">LOGOUT</button>
+        </div>
 
-        const Icn = ({ d }) => <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>;
-        const iDash="M3 3h7v9H3z M14 3h7v5h-7z M14 12h7v9h-7z M3 16h7v5H3z"; const iUsr="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z";
-        const iClk="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"; const iMon="M2 6h20v12H2z M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z M6 12h.01 M18 12h.01";
-        const iDoc="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"; const iX="M18 6L6 18 M6 6l12 12"; const iEdit="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z";
+        <div class="profile-card">
+            <span class="status-badge">ACTIVE</span>
+            <div class="profile-header">
+                <div class="profile-name" id="emp-name">LOADING...</div>
+                <div class="profile-sub" id="emp-role">ID: -- • Role</div>
+                <div class="rate-display" id="emp-rate">₱0/DAY</div>
+                <button id="admin-edit-btn" class="edit-btn hidden">Edit Profile</button>
+            </div>
 
-        function Login() {
-            const [email, setEmail] = useState(''); const [pass, setPass] = useState(''); const [loading, setLoading] = useState(false);
-            const login = async (e) => { e.preventDefault(); setLoading(true); try { await window.fb.signInWithEmailAndPassword(window.fb.auth, email, pass); } catch(err) { alert("Login failed."); setLoading(false); } };
-            return (
-                <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50">
-                    <form onSubmit={login} className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up">
-                        <img src="/sys/icon.png" className="w-16 h-16 mb-6" alt="Logo" />
-                        <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-widest">System Login</h2>
-                        <input type="email" placeholder="Email" required value={email} onChange={e=>setEmail(e.target.value)} className="w-full border p-4 rounded-xl mb-4 font-bold bg-slate-50 outline-none"/>
-                        <input type="password" placeholder="Password" required value={pass} onChange={e=>setPass(e.target.value)} className="w-full border p-4 rounded-xl mb-6 font-bold bg-slate-50 outline-none"/>
-                        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg">Login</button>
-                    </form>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">Days</span>
+                    <div class="stat-value" id="val-days">0</div>
                 </div>
-            );
+                <div class="stat-box">
+                    <span class="stat-label">Gross Pay</span>
+                    <div class="stat-value blue-text" id="val-gross">₱0</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Deducted</span>
+                    <div class="stat-value red-text" id="val-deduct">₱0</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Net Pay</span>
+                    <div class="stat-value" style="color:#10b981" id="val-net-grid">₱0</div>
+                </div>
+            </div>
+
+            <div class="net-pay-card">
+                <span class="net-pay-label">NET SALARY (TAKE HOME)</span>
+                <div class="net-pay-value" id="val-total-net">₱0</div>
+            </div>
+            
+            <div id="lifetime-stats" class="stats-grid">
+                 <div class="stat-box" style="background:#fff1f2">
+                    <span class="stat-label" style="color:#e11d48">Lifetime C.A. Bal.</span>
+                    <div class="stat-value red-text" id="val-lifetime-ca">₱0</div>
+                </div>
+                <div class="stat-box" style="background:#f0f9ff">
+                    <span class="stat-label" style="color:#0284c7">Total Attendance</span>
+                    <div class="stat-value blue-text" id="val-total-attn">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-title">Transaction History</div>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Note</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // FIREBASE CONFIG - PASTE YOUR KEYS HERE
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "stone-grill-payroll.firebaseapp.com",
+        projectId: "stone-grill-payroll",
+        storageBucket: "stone-grill-payroll.appspot.com",
+        messagingSenderId: "YOUR_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let currentPin = "";
+    let userRole = ""; // 'admin' or 'staff'
+    const ADMIN_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2"; // Found in your screenshot
+
+    function pressPin(num) {
+        if (currentPin.length < 4) {
+            currentPin += num;
+            updatePinDisplay();
+        }
+    }
+
+    function clearPin() { currentPin = ""; updatePinDisplay(); }
+    function updatePinDisplay() { document.getElementById('pin-dots').innerText = "*".repeat(currentPin.length) || "****"; }
+
+    function submitPin() {
+        if (currentPin === "2558") {
+            userRole = "admin";
+            loadDashboard();
+        } else if (currentPin === "1234") {
+            userRole = "staff";
+            loadDashboard();
+        } else {
+            alert("Invalid PIN");
+            clearPin();
+        }
+    }
+
+    function loadDashboard() {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        
+        if (userRole === 'admin') {
+            document.getElementById('view-title').innerText = "ADMIN MASTERLIST";
+            document.getElementById('admin-edit-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('view-title').innerText = "STAFF CLOUD PROFILE";
         }
 
-        function App() {
-            const [user, setUser] = useState(null);
-            const [userRole, setUserRole] = useState(''); 
-            const [currentBiometricId, setCurrentBiometricId] = useState(''); 
-            const [isReady, setIsReady] = useState(false);
-            const [activeTab, setActiveTab] = useState('dashboard');
-            const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+        fetchData();
+    }
+
+    async function fetchData() {
+        const historyBody = document.getElementById('history-body');
+        historyBody.innerHTML = "<tr><td colspan='4'>Loading transactions...</td></tr>";
+
+        try {
+            // TARGETING THE FOLDER FROM YOUR SCREENSHOT
+            // artifacts > stone-grill-v1 > users > ADMIN_ID > cash_advances
+            const caRef = db.collection('artifacts').doc('stone-grill-v1')
+                           .collection('users').doc(ADMIN_UID)
+                           .collection('cash_advances');
             
-            const [employees, setEmployees] = useState([]);
-            const [attendance, setAttendance] = useState([]);
-            const [cashAdvances, setCashAdvances] = useState([]);
-            
-            const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
-            const [viewProfile, setViewProfile] = useState(null);
-            const [showStaffForm, setShowStaffForm] = useState(false);
-            
-            const [empForm, setEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
+            const snapshot = await caRef.orderBy('date', 'desc').get();
+            historyBody.innerHTML = "";
 
-            const isAdmin = userRole === 'Admin';
+            if (snapshot.empty) {
+                historyBody.innerHTML = "<tr><td colspan='4'>No records found.</td></tr>";
+                return;
+            }
 
-            useEffect(() => { window.fb.onAuthStateChanged(window.fb.auth, u => { setUser(u); setIsReady(true); if(!u){ setUserRole(''); setCurrentBiometricId(''); } }); }, []);
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const row = `
+                    <tr>
+                        <td>${data.date}</td>
+                        <td>C.A.</td>
+                        <td>${data.reason || '-'}</td>
+                        <td class="amount-cell">₱${Number(data.amount).toLocaleString()}</td>
+                    </tr>
+                `;
+                historyBody.innerHTML += row;
+            });
 
-            useEffect(() => {
-                if (!user) return;
-                const { db, appId, onSnapshot, collection } = window.fb;
-                const p = (n) => collection(db, 'artifacts', appId, 'users', user.uid, n);
-                onSnapshot(p('employees'), s => setEmployees(s.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || `${d.data().firstName||''} ${d.data().lastName||''}`.trim() || d.id })).sort((a,b)=>(a.name||'').localeCompare(b.name||''))));
-                onSnapshot(p('attendance'), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                onSnapshot(p('cash_advances'), s => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-            }, [user]);
+            // Demo Data for Header (This would normally be a separate fetch to 'employees' folder)
+            document.getElementById('emp-name').innerText = "CALOY";
+            document.getElementById('emp-role').innerText = "ID: 7 • COOK";
+            document.getElementById('emp-rate').innerText = "₱650/DAY";
+            document.getElementById('val-days').innerText = "21.5";
+            document.getElementById('val-gross').innerText = "₱13,975";
+            document.getElementById('val-deduct').innerText = "₱13,975";
+            document.getElementById('val-total-net').innerText = "₱0";
+            document.getElementById('val-lifetime-ca').innerText = "₱18,000";
+            document.getElementById('val-total-attn').innerText = "268";
 
-            const payrollSummary = useMemo(() => {
-                return employees.map(emp => {
-                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
-                    let days = 0; new Set(empAtt.map(a => a.date)).forEach(d => days += Math.min(Math.max(...empAtt.filter(a => a.date === d).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
-                    const empCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && (ca.date || '').startsWith(selectedMonth));
-                    const monthlyCA = empCAs.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0);
-                    const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0);
-                    const monthlyDeductions = monthlyCA + (parseFloat(emp.sssRate)||0) + (parseFloat(emp.miscRate)||0);
-                    const net = gross - monthlyDeductions;
-                    return { ...emp, days, gross, net, monthlyCA, monthlyDeductions, caBalance: parseFloat(emp.caBalance) || 0 };
-                });
-            }, [employees, attendance, cashAdvances, selectedMonth]);
+        } catch (error) {
+            console.error("Error:", error);
+            historyBody.innerHTML = "<tr><td colspan='4'>Error connecting to database.</td></tr>";
+        }
+    }
 
-            const monthOptions = useMemo(() => Array.from({length: 12}, (_, i) => {
-                const d = new Date(); d.setMonth(d.getMonth() - i);
-                return { v: d.toISOString().slice(0,7), l: d.toLocaleString('default', {month:'long', year:'numeric'}) };
-            }), []);
+    function logout() { location.reload(); }
+</script>
 
-            const saveEmployee = async (e) => {
-                e.preventDefault(); if (!isAdmin) return;
-                const bId = normalizeId(empForm.biometricId);
-                const payload = { ...empForm, dailyRate: parseFloat(empForm.dailyRate)||0, sssRate: parseFloat(empForm.sssRate)||0, miscRate: parseFloat(empForm.miscRate)||0, name: `${empForm.firstName} ${empForm.lastName}`.trim() };
-                await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', bId), payload, { merge: true });
-                setShowStaffForm(false);
-                if (viewProfile) setViewProfile({...viewProfile, ...payload});
-            };
-
-            const delEmployee = async (id) => {
-                if (!isAdmin || !confirm("Permanently delete this profile?")) return;
-                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', normalizeId(id)));
-                setViewProfile(null);
-            };
-
-            const delCA = async (caId, empId, amt) => {
-                if (!isAdmin || !confirm("Delete transaction?")) return;
-                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'cash_advances', caId));
-                const emp = employees.find(e => normalizeId(e.id) === normalizeId(empId));
-                if (emp) await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', normalizeId(empId)), { caBalance: (parseFloat(emp.caBalance) || 0) - amt });
-            };
-
-            const ProfileView = ({ profile, close }) => {
-                if (!profile) return null;
-                const totalAtt = new Set(attendance.filter(a => normalizeId(a.empId) === normalizeId(profile.id)).map(a=>a.date)).size;
-                const txHistory = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(profile.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-                
-                return (
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 border border-slate-200">
-                        <div className="bg-[#243c84] text-white p-6 flex justify-between items-center shrink-0">
-                            <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Icn d={iUsr}/> STAFF CLOUD PROFILE</h2>
-                            {close && <button onClick={close} className="hover:text-blue-300"><Icn d={iX}/></button>}
-                        </div>
-                        <div className="overflow-y-auto p-8 flex-1 space-y-8 custom-scrollbar">
-                            <div className="flex justify-between items-start border-b pb-6">
-                                <div>
-                                    <div className="flex items-center gap-3">
-                                        <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">{profile.name}</h3>
-                                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${profile.status === 'inactive' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>{profile.status || 'Active'}</span>
-                                    </div>
-                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">{profile.position || 'Staff'} (ID: {profile.id})</p>
-                                    
-                                    {isAdmin && (
-                                        <button onClick={() => { setEmpForm({...profile, biometricId: profile.id}); setShowStaffForm(true); }} className="mt-4 border-2 border-blue-100 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all">
-                                            <Icn d={iEdit}/> Edit Profile
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-2xl font-black text-blue-600 font-mono tracking-tighter">₱{formatMoney(profile.dailyRate || profile.rate)}/DAY</p>
-                                </div>
-                            </div>
-
-                            {/* THE RESTORED EARNINGS SNAPSHOT UI */}
-                            <div>
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Earnings Snapshot (Selected Month)</h4>
-                                <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm grid grid-cols-4 gap-2 text-center items-center">
-                                    <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Days</p><p className="text-2xl font-black text-slate-800">{profile.days}</p></div>
-                                    <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Gross Pay</p><p className="text-xl font-black text-blue-600 font-mono">₱{formatMoney(profile.gross)}</p></div>
-                                    <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Deducted</p><p className="text-xl font-black text-rose-600 font-mono">₱{formatMoney(profile.monthlyDeductions)}</p></div>
-                                    <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Net Pay</p><p className="text-2xl font-black text-emerald-600 font-mono">₱{formatMoney(profile.net)}</p></div>
-                                </div>
-                            </div>
-
-                            {/* THE RESTORED CA & ATTENDANCE BOXES */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-rose-50 p-6 rounded-3xl text-center border border-rose-100">
-                                    <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Lifetime C.A. Bal.</p>
-                                    <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(profile.caBalance)}</p>
-                                </div>
-                                <div className="bg-blue-50 p-6 rounded-3xl text-center border border-blue-100">
-                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Total Attendance</p>
-                                    <p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{totalAtt}</p>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Transaction History</h4>
-                                <div className="max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 border rounded-2xl">
-                                    <table className="w-full text-left text-xs">
-                                        <thead className="bg-slate-100 font-black uppercase text-[9px] text-slate-400 sticky top-0"><tr><th className="p-3">Date</th><th className="p-3">Type</th><th className="p-3">Note</th><th className="p-3 text-right">Amount</th>{isAdmin && <th className="p-3 text-center"></th>}</tr></thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {txHistory.map(ca => (
-                                                <tr key={ca.id} className="hover:bg-white transition-colors">
-                                                    <td className="p-3 font-mono text-slate-500">{ca.date}</td>
-                                                    <td className="p-3 font-black uppercase text-[9px] text-slate-400">{ca.type || 'ADVANCE'}</td>
-                                                    <td className="p-3 italic text-slate-600">{ca.reason || '--'}</td>
-                                                    <td className={`p-3 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
-                                                    {isAdmin && <td className="p-3 text-center"><button onClick={() => delCA(ca.id, ca.empId, ca.amount)} className="p-1.5 text-rose-400 hover:text-rose-600 bg-rose-50 rounded-lg"><Icn d={iX}/></button></td>}
-                                                </tr>
-                                            ))}
-                                            {txHistory.length === 0 && <tr><td colSpan={isAdmin?"5":"4"} className="p-6 text-center text-slate-400 italic">No transactions on record.</td></tr>}
+</body>
+</html>
