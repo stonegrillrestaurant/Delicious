@@ -126,7 +126,7 @@
                         <img src="/sys/icon.png" className="w-16 h-16 mb-6" alt="Logo" />
                         <h2 className="text-2xl font-black text-slate-800 mb-6 uppercase tracking-widest text-center">System Login</h2>
                         <form onSubmit={handleLogin} className="w-full space-y-4">
-                            <input type="email" placeholder="Email Address" required value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-4 rounded-2xl outline-none font-bold bg-slate-50"/>
+                            <input type="email" placeholder="Stone Grill Email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full border p-4 rounded-2xl outline-none font-bold bg-slate-50"/>
                             <input type="password" placeholder="Password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full border p-4 rounded-2xl outline-none font-bold bg-slate-50"/>
                             <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg transition-all active:scale-95">
                                 {loading ? 'Loading...' : 'Login'}
@@ -154,6 +154,7 @@
             const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
             const [viewProfile, setViewProfile] = useState(null);
             const [showAddStaff, setShowAddStaff] = useState(false);
+            const [isEditing, setIsEditing] = useState(false);
             const [rawInput, setRawInput] = useState('');
             const [caType, setCaType] = useState('advance');
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
@@ -169,6 +170,12 @@
             const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
 
             const isAdmin = userRole === 'Admin';
+
+            // Auto-close sidebar on mobile when a tab is clicked
+            const switchTab = (tab) => {
+                setActiveTab(tab);
+                if (window.innerWidth < 1024) setSidebarOpen(false);
+            };
 
             const monthOptions = useMemo(() => {
                 const options = []; const d = new Date();
@@ -271,7 +278,7 @@
                 const bId = normalizeId(newEmpForm.biometricId);
                 const payload = { ...newEmpForm, dailyRate: parseFloat(newEmpForm.dailyRate), sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() };
                 await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', user.uid, 'employees', bId), payload, { merge: true });
-                setShowAddStaff(false);
+                setShowAddStaff(false); setIsEditing(false);
             };
 
             const handleIssueCA = async () => {
@@ -326,7 +333,7 @@
             // --- SECURE PIN GATE ---
             if (!userRole) {
                 return (
-                    <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center">
+                    <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center z-[100]">
                         <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full animate-slide-up">
                             <img src="/sys/icon.png" className="w-12 h-12 mx-auto mb-4" alt="Logo" />
                             <h2 className="text-xl font-black mb-6 uppercase tracking-widest text-slate-800">Verify Access</h2>
@@ -343,7 +350,7 @@
                             />
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Enter Authorized Access PIN</p>
                             
-                            <button onClick={() => window.fb.signOut(window.fb.auth)} className="mt-8 text-rose-500 font-bold uppercase text-[10px]">Logout Entirely</button>
+                            <button onClick={() => window.fb.signOut(window.fb.auth)} className="mt-8 text-rose-500 font-bold uppercase text-[10px] hover:underline">Logout Entirely</button>
                         </div>
                     </div>
                 );
@@ -353,21 +360,30 @@
                 <div className="flex h-screen bg-gray-50 overflow-hidden relative font-sans">
                     {isRestoring && <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-[100] font-sans flex-col text-white"><div className="w-16 h-16 border-4 border-t-white rounded-full animate-spin mb-6" /><h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2></div>}
 
+                    {/* NEW: MOBILE TAP-TO-CLOSE OVERLAY */}
+                    {isSidebarOpen && window.innerWidth < 1024 && (
+                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-30 print-hidden" onClick={() => setSidebarOpen(false)} />
+                    )}
+
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full print-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} shadow-2xl`}>
                         <div className="p-6 border-b border-blue-800 flex items-center justify-between">
                             <div className="font-black text-xl flex items-center"><span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3"><LayoutDashboard /></span> {isSidebarOpen ? 'STONE GRILL' : ''}</div>
+                            {/* NEW: MOBILE X BUTTON */}
+                            {isSidebarOpen && window.innerWidth < 1024 && (
+                                <button onClick={() => setSidebarOpen(false)} className="p-2 bg-blue-800 rounded-lg text-white hover:bg-blue-700 transition-colors"><X className="w-4 h-4" /></button>
+                            )}
                         </div>
                         <nav className="flex-1 py-8 space-y-2 overflow-y-auto custom-scrollbar">
-                            <NavItem icon={<LayoutDashboard />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} open={isSidebarOpen} />
+                            <NavItem icon={<LayoutDashboard />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => switchTab('dashboard')} open={isSidebarOpen} />
                             {isAdmin && (
                                 <>
-                                    <NavItem icon={<Users />} label="Masterlist" active={activeTab === 'employees'} onClick={() => setActiveTab('employees')} open={isSidebarOpen} />
-                                    <NavItem icon={<Clock />} label="Attendance Logs" active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} open={isSidebarOpen} />
-                                    <NavItem icon={<FileText />} label="Payslip Builder" active={activeTab === 'payslips'} onClick={() => setActiveTab('payslips')} open={isSidebarOpen} />
-                                    <NavItem icon={<Banknote />} label="Cash Advance" active={activeTab === 'ca'} onClick={() => setActiveTab('ca')} open={isSidebarOpen} />
-                                    <NavItem icon={<Calculator />} label="Payroll Print" active={activeTab === 'payroll'} onClick={() => setActiveTab('payroll')} open={isSidebarOpen} />
-                                    <NavItem icon={<CalendarDays />} label="Summary" active={activeTab === 'summary'} onClick={() => setActiveTab('summary')} open={isSidebarOpen} />
-                                    <NavItem icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} open={isSidebarOpen} />
+                                    <NavItem icon={<Users />} label="Masterlist" active={activeTab === 'employees'} onClick={() => switchTab('employees')} open={isSidebarOpen} />
+                                    <NavItem icon={<Clock />} label="Attendance Logs" active={activeTab === 'attendance'} onClick={() => switchTab('attendance')} open={isSidebarOpen} />
+                                    <NavItem icon={<FileText />} label="Payslip Builder" active={activeTab === 'payslips'} onClick={() => switchTab('payslips')} open={isSidebarOpen} />
+                                    <NavItem icon={<Banknote />} label="Cash Advance" active={activeTab === 'ca'} onClick={() => switchTab('ca')} open={isSidebarOpen} />
+                                    <NavItem icon={<Calculator />} label="Payroll Print" active={activeTab === 'payroll'} onClick={() => switchTab('payroll')} open={isSidebarOpen} />
+                                    <NavItem icon={<CalendarDays />} label="Summary" active={activeTab === 'summary'} onClick={() => switchTab('summary')} open={isSidebarOpen} />
+                                    <NavItem icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => switchTab('settings')} open={isSidebarOpen} />
                                 </>
                             )}
                         </nav>
@@ -747,7 +763,7 @@
                                         <div>
                                             <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">{viewProfile.name}</h3>
                                             <p className="text-xs text-slate-400 font-black mt-1">ID: {viewProfile.id} • {viewProfile.position}</p>
-                                            <button onClick={()=>handleDeleteEmployee(viewProfile.id, viewProfile.name)} className="mt-4 bg-rose-50 text-rose-600 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-colors">Delete Profile</button>
+                                            <button onClick={()=>handleDeleteEmployee(viewProfile.id, viewProfile.name)} className="mt-4 bg-rose-50 text-rose-600 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-colors border border-rose-200">Delete Profile</button>
                                         </div>
                                         <div className="text-right">
                                             <p className="font-black text-blue-600 font-mono text-2xl tracking-tighter">₱{formatMoney(viewProfile.dailyRate || viewProfile.rate)}/DAY</p>
@@ -775,7 +791,7 @@
                                                             <td className="p-3 font-mono text-slate-500">{ca.date}</td>
                                                             <td className="p-3 italic text-slate-600">{ca.reason || '--'}</td>
                                                             <td className={`p-3 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
-                                                            <td className="p-3 text-center"><button onClick={() => handleDeleteCA(ca.id, ca.empId, ca.amount)} className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
+                                                            <td className="p-3 text-center"><button onClick={() => handleDeleteCA(ca.id, ca.empId, ca.amount)} className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"><X className="w-3 h-3"/></button></td>
                                                         </tr>
                                                     ))}
                                                     {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(viewProfile.id)).length === 0 && <tr><td colSpan="4" className="p-6 text-center text-slate-400 italic">No transactions recorded.</td></tr>}
