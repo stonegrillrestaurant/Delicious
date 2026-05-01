@@ -352,17 +352,28 @@
                             <img src="/sys/icon.png" className="w-12 h-12 mx-auto mb-4" alt="Logo" />
                             <h2 className="text-xl font-black mb-6 uppercase tracking-widest text-slate-800">Verify Access</h2>
                             
-                            <input type="password" placeholder="Enter PIN" autoFocus className="w-full border-2 p-4 rounded-2xl mb-4 text-center text-xl font-black outline-none border-slate-100 focus:border-blue-500" 
-                                onChange={(e) => {
-                                    if(e.target.value === '2558') { setUserRole('Admin'); setCurrentBiometricId('ADMIN'); }
-                                    if(e.target.value === '1234') { 
-                                        const id = window.prompt("Enter Your Machine ID:"); 
-                                        if (employees.some(emp => normalizeId(emp.id) === normalizeId(id))) { setCurrentBiometricId(id); setUserRole('Staff'); } 
-                                        else if (id) alert("ID Not Found. Ensure Admin has added your ID.");
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                const val = e.target.pin.value;
+                                if (val === '2558') {
+                                    setUserRole('Admin');
+                                    setCurrentBiometricId('ADMIN');
+                                } else {
+                                    const emp = employees.find(emp => normalizeId(emp.id) === normalizeId(val));
+                                    if (emp) {
+                                        setCurrentBiometricId(emp.id);
+                                        setUserRole('Staff');
+                                    } else {
+                                        alert("Invalid PIN or Machine ID Not Found.");
+                                        e.target.pin.value = '';
                                     }
-                                }} 
-                            />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Enter Authorized Access PIN</p>
+                                }
+                            }}>
+                                <input name="pin" type="password" placeholder="Enter PIN or Machine ID" autoFocus className="w-full border-2 p-4 rounded-2xl mb-4 text-center text-xl font-black outline-none border-slate-100 focus:border-blue-500" />
+                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 mb-4">Access System</button>
+                            </form>
+
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Enter Admin PIN or Employee ID</p>
                             
                             <button onClick={() => window.fb.signOut(window.fb.auth)} className="mt-8 text-rose-500 font-bold uppercase text-[10px] hover:underline">Logout Entirely</button>
                         </div>
