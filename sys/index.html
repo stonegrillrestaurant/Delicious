@@ -17,7 +17,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // SURGICAL ADDITION: Added FacebookAuthProvider
         import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -109,7 +108,7 @@
             );
         }
 
-        // NEW GOOGLE & FACEBOOK SIGN IN SCREEN
+        // GOOGLE & FACEBOOK SIGN IN SCREEN
         function LoginScreen() {
             const [loading, setLoading] = useState(false);
 
@@ -128,7 +127,6 @@
                 setLoading(true);
                 try {
                     const provider = new window.fb.FacebookAuthProvider();
-                    // Some Facebook accounts don't return an email by default unless you ask
                     provider.addScope('email'); 
                     await window.fb.signInWithPopup(window.fb.auth, provider);
                 } catch (err) { 
@@ -236,11 +234,12 @@
                     const fetchedEmps = s.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim() || d.id })).sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
                     setEmployees(fetchedEmps);
                     
-                    if (user.uid === MASTER_ADMIN_UID || (user.email && user.email.toLowerCase() === "YOUR_ADMIN_EMAIL_HERE")) { // Admin fallback
+                    // FIXED: Admin check explicitly allows stonegrill2014@gmail.com
+                    if (user.uid === MASTER_ADMIN_UID || (user.email && user.email.toLowerCase() === "stonegrill2014@gmail.com")) { 
                         setUserRole('Admin');
                         setCurrentBiometricId('ADMIN');
                     } else {
-                        // Match based on Google OR Facebook email
+                        // Match based on Google OR Facebook email for Staff
                         if (user.email) {
                             const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
                             if (staffMatch) {
@@ -497,7 +496,7 @@
                                             </>
                                         )}
 
-                                        {/* For Staff: Read-Only detailed profile view */}
+                                        {/* For Staff: Read-Only detailed profile view (Matches Image 2 exactly) */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
