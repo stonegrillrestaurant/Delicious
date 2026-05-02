@@ -72,6 +72,15 @@
             return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         };
 
+        const calculateHoursWorked = (start, end) => {
+            if (!start || !end || end === '00:00') return 0;
+            const [h1, m1] = start.split(':').map(Number);
+            const [h2, m2] = end.split(':').map(Number);
+            let diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+            if (diffMinutes < 0) diffMinutes += 1440; 
+            return diffMinutes / 60;
+        };
+
         const Icon = ({ d, className = "w-5 h-5", children }) => (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {d && <path d={d} />}{children}
@@ -108,7 +117,6 @@
             );
         }
 
-        // GOOGLE & FACEBOOK SIGN IN SCREEN
         function LoginScreen() {
             const [loading, setLoading] = useState(false);
 
@@ -130,7 +138,7 @@
                     provider.addScope('email'); 
                     await window.fb.signInWithPopup(window.fb.auth, provider);
                 } catch (err) { 
-                    alert("Facebook Sign In Failed.\n\nError: " + err.message + "\n\n(If you get an OAuth error, check your Meta Developer settings!)"); 
+                    alert("Facebook Sign In Failed.\n\nError: " + err.message); 
                     setLoading(false); 
                 }
             };
@@ -138,7 +146,7 @@
             return (
                 <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up">
-                        <img src="/sys/icon.png" className="w-20 h-20 mb-6" alt="Logo" />
+                        <img src="/sys/icon.png" className="w-20 h-20 mb-6" alt="Logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"/>
                         <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest text-center">Stone Grill</h2>
                         <p className="text-slate-400 text-xs font-bold mb-8 uppercase tracking-widest">Secure Cloud Payroll</p>
                         
@@ -167,10 +175,11 @@
         }
 
         function App() {
-            const MASTER_ADMIN_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2";
+            const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2";
+            const ADMIN_EMAIL = "stonegrill2014@gmail.com";
 
             const [user, setUser] = useState(null);
-            const [userRole, setUserRole] = useState(''); // 'Admin', 'Staff', or 'Unauthorized'
+            const [userRole, setUserRole] = useState(''); 
             const [currentBiometricId, setCurrentBiometricId] = useState(''); 
             const [isReady, setIsReady] = useState(false);
             const [activeTab, setActiveTab] = useState('dashboard');
@@ -228,18 +237,17 @@
                 if (!user) return;
                 const { db, appId, onSnapshot, collection } = window.fb;
                 
-                const path = (n) => collection(db, 'artifacts', appId, 'users', MASTER_ADMIN_UID, n);
+                // DATA REMAINS LOCKED TO MASTER VAULT UID
+                const path = (n) => collection(db, 'artifacts', appId, 'users', MASTER_VAULT_UID, n);
                 
                 const unsubEmps = onSnapshot(path('employees'), (s) => {
                     const fetchedEmps = s.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim() || d.id })).sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
                     setEmployees(fetchedEmps);
                     
-                    // FIXED: Admin check explicitly allows stonegrill2014@gmail.com
-                    if (user.uid === MASTER_ADMIN_UID || (user.email && user.email.toLowerCase() === "stonegrill2014@gmail.com")) { 
+                    if (user.uid === MASTER_VAULT_UID || (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase())) {
                         setUserRole('Admin');
                         setCurrentBiometricId('ADMIN');
                     } else {
-                        // Match based on Google OR Facebook email for Staff
                         if (user.email) {
                             const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
                             if (staffMatch) {
@@ -336,7 +344,14 @@
                 }
                 for (const k in map) {
                     const r = map[k]; const s = r.p.sort();
-                    await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: s.length > 1 ? 1 : 0.5 }, { merge: true });
+                    const hoursWorked = calculateHoursWorked(s[0], s[s.length-1]);
+                    
+                    let dayVal = 1.0;
+                    if (s.length === 1 || hoursWorked < 6) {
+                        dayVal = 0.5;
+                    }
+
+                    await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
                 setRawInput(''); alert(`Processed ${count} attendance records.`);
@@ -346,29 +361,29 @@
                 e.preventDefault(); if (!isAdmin) return;
                 const bId = normalizeId(newEmpForm.biometricId);
                 const payload = { ...newEmpForm, dailyRate: parseFloat(newEmpForm.dailyRate), sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() };
-                await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'employees', bId), payload, { merge: true });
+                await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', bId), payload, { merge: true });
                 setShowAddStaff(false); setIsEditing(false);
             };
 
             const handleIssueCA = async () => {
                 if (!isAdmin || !newCa.empId) return;
                 let amt = parseFloat(newCa.amount) || 0; if (caType === 'payment') amt = -Math.abs(amt);
-                await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'cash_advances'), { ...newCa, amount: amt, type: caType });
-                await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'employees', normalizeId(newCa.empId)), { caBalance: (parseFloat(employees.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance) || 0) + amt });
+                await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'cash_advances'), { ...newCa, amount: amt, type: caType });
+                await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', normalizeId(newCa.empId)), { caBalance: (parseFloat(employees.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance) || 0) + amt });
                 setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             };
 
             const handleDeleteEmployee = async (id, name) => {
                 if (!isAdmin || !window.confirm(`PERMANENTLY delete ${name}?\nThis action cannot be undone.`)) return;
-                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'employees', normalizeId(id)));
+                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', normalizeId(id)));
                 setViewProfile(null);
             };
 
             const handleDeleteCA = async (caId, empId, amt) => {
                 if (!isAdmin || !window.confirm(`Delete and reverse this transaction?`)) return;
-                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'cash_advances', caId));
+                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'cash_advances', caId));
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(empId));
-                if (emp) await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'employees', normalizeId(empId)), { caBalance: (parseFloat(emp.caBalance) || 0) - amt });
+                if (emp) await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', normalizeId(empId)), { caBalance: (parseFloat(emp.caBalance) || 0) - amt });
             };
 
             const handleExportBackup = () => {
@@ -386,7 +401,7 @@
                         const data = JSON.parse(e.target.result); const { db, appId, doc, setDoc } = window.fb;
                         const restoreCollection = async (colName, items) => {
                             if (!items || !Array.isArray(items)) return;
-                            for (const item of items) { const { id, ...rest } = item; if (id) await setDoc(doc(db, 'artifacts', appId, 'users', MASTER_ADMIN_UID, colName, id), rest, { merge: true }); }
+                            for (const item of items) { const { id, ...rest } = item; if (id) await setDoc(doc(db, 'artifacts', appId, 'users', MASTER_VAULT_UID, colName, id), rest, { merge: true }); }
                         };
                         await restoreCollection('employees', data.employees); await restoreCollection('attendance', data.attendance); await restoreCollection('cash_advances', data.cashAdvances || data.cash_advances); await restoreCollection('payroll_entries', data.interactivePayrolls);
                         alert(`Restore Complete!`);
@@ -624,7 +639,7 @@
                                                 <table className="w-full text-xs text-left">
                                                     <tbody>
                                                         {attendance.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0, 100).map((a,i)=>(
-                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{a.date}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut}</td></tr>
+                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{a.date}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut} ({a.dayEquivalent}d)</td></tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
@@ -653,7 +668,7 @@
                                             <button onClick={async () => {
                                                 if (!icEmpId) return;
                                                 const key = `${normalizeId(icEmpId)}_${icDateStart}_${icDateEnd}`;
-                                                await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_ADMIN_UID, 'payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), startDate: icDateStart, endDate: icDateEnd, data: icForm });
+                                                await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), startDate: icDateStart, endDate: icDateEnd, data: icForm });
                                                 alert("Saved to archive.");
                                             }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
                                         </div>
