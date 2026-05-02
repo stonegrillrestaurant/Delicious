@@ -17,8 +17,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // SURGICAL ADDITION: Imported GoogleAuthProvider and signInWithPopup for Google Login
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // SURGICAL ADDITION: Added FacebookAuthProvider
+        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -35,7 +35,7 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
-        window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+        window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
     </script>
 
     <style>
@@ -109,7 +109,7 @@
             );
         }
 
-        // NEW GOOGLE SIGN IN SCREEN
+        // NEW GOOGLE & FACEBOOK SIGN IN SCREEN
         function LoginScreen() {
             const [loading, setLoading] = useState(false);
 
@@ -119,7 +119,20 @@
                     const provider = new window.fb.GoogleAuthProvider();
                     await window.fb.signInWithPopup(window.fb.auth, provider);
                 } catch (err) { 
-                    alert("Sign In Cancelled or Failed: " + err.message); 
+                    alert("Google Sign In Failed: " + err.message); 
+                    setLoading(false); 
+                }
+            };
+
+            const handleFacebookLogin = async () => {
+                setLoading(true);
+                try {
+                    const provider = new window.fb.FacebookAuthProvider();
+                    // Some Facebook accounts don't return an email by default unless you ask
+                    provider.addScope('email'); 
+                    await window.fb.signInWithPopup(window.fb.auth, provider);
+                } catch (err) { 
+                    alert("Facebook Sign In Failed.\n\nError: " + err.message + "\n\n(If you get an OAuth error, check your Meta Developer settings!)"); 
                     setLoading(false); 
                 }
             };
@@ -131,21 +144,31 @@
                         <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest text-center">Stone Grill</h2>
                         <p className="text-slate-400 text-xs font-bold mb-8 uppercase tracking-widest">Secure Cloud Payroll</p>
                         
-                        <button onClick={handleGoogleLogin} disabled={loading} className="w-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:shadow-md flex items-center justify-center gap-3 h-14 rounded-2xl font-black uppercase tracking-widest shadow-sm transition-all active:scale-95">
-                            {loading ? 'Authenticating...' : (
-                                <>
-                                    <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                                    Sign In With Google
-                                </>
-                            )}
-                        </button>
+                        <div className="w-full space-y-4">
+                            <button onClick={handleGoogleLogin} disabled={loading} className="w-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:shadow-md flex items-center justify-center gap-3 h-14 rounded-2xl font-black uppercase tracking-widest shadow-sm transition-all active:scale-95">
+                                {loading ? 'Authenticating...' : (
+                                    <>
+                                        <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                                        Google
+                                    </>
+                                )}
+                            </button>
+                            
+                            <button onClick={handleFacebookLogin} disabled={loading} className="w-full bg-[#1877F2] text-white hover:bg-[#166fe5] hover:shadow-md flex items-center justify-center gap-3 h-14 rounded-2xl font-black uppercase tracking-widest shadow-sm transition-all active:scale-95">
+                                {loading ? 'Authenticating...' : (
+                                    <>
+                                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                        Facebook
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             );
         }
 
         function App() {
-            // SURGICAL ADDITION: The absolute Master Vault ID that holds ALL data
             const MASTER_ADMIN_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2";
 
             const [user, setUser] = useState(null);
@@ -207,26 +230,26 @@
                 if (!user) return;
                 const { db, appId, onSnapshot, collection } = window.fb;
                 
-                // SURGICAL ADDITION: Every user (Admin or Staff) pulls data from the MASTER VAULT
                 const path = (n) => collection(db, 'artifacts', appId, 'users', MASTER_ADMIN_UID, n);
                 
                 const unsubEmps = onSnapshot(path('employees'), (s) => {
                     const fetchedEmps = s.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim() || d.id })).sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
                     setEmployees(fetchedEmps);
                     
-                    // MAGIC ROUTING: Decide who this Google user is based on their Email
-                    if (user.uid === MASTER_ADMIN_UID) {
+                    if (user.uid === MASTER_ADMIN_UID || (user.email && user.email.toLowerCase() === "YOUR_ADMIN_EMAIL_HERE")) { // Admin fallback
                         setUserRole('Admin');
                         setCurrentBiometricId('ADMIN');
                     } else {
-                        // Look for their Google Email in the Masterlist
-                        const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
-                        if (staffMatch) {
-                            setUserRole('Staff');
-                            setCurrentBiometricId(staffMatch.id);
-                        } else {
-                            setUserRole('Unauthorized');
+                        // Match based on Google OR Facebook email
+                        if (user.email) {
+                            const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
+                            if (staffMatch) {
+                                setUserRole('Staff');
+                                setCurrentBiometricId(staffMatch.id);
+                                return;
+                            }
                         }
+                        setUserRole('Unauthorized');
                     }
                 });
                 
@@ -300,7 +323,6 @@
                 setViewProfile(null); 
             };
 
-            // SURGICAL ADDITION: Updated all Data writes to go to the MASTER_ADMIN_UID vault
             const handleProcessLogs = async () => {
                 if (!isAdmin || !rawInput.trim()) return;
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
@@ -378,19 +400,17 @@
             if (!isReady) return null;
             if (!user) return <LoginScreen />;
 
-            // Show a loading screen while the Magic Router checks the database for their email
             if (userRole === '') {
                 return <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-t-white rounded-full animate-spin mb-4"></div><p className="font-black uppercase tracking-widest text-xs">Checking Access...</p></div>;
             }
 
-            // Unauthorized Screen for random strangers or unlinked staff
             if (userRole === 'Unauthorized') {
                 return (
                     <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center z-[100]">
                         <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full animate-slide-up">
                             <X className="w-16 h-16 mx-auto mb-4 text-rose-500" />
                             <h2 className="text-xl font-black mb-2 uppercase tracking-widest text-slate-800">Access Denied</h2>
-                            <p className="text-xs text-slate-500 font-bold mb-8 leading-relaxed">The Google account <br/><span className="text-blue-600 font-black">{user.email}</span><br/> is not registered in the Masterlist. Please ask the Admin to add this email to your profile.</p>
+                            <p className="text-xs text-slate-500 font-bold mb-8 leading-relaxed">The account <br/><span className="text-blue-600 font-black">{user.email || "No Email Provided"}</span><br/> is not registered in the Masterlist. Please ask the Admin to add this email to your profile.</p>
                             <button onClick={() => window.fb.signOut(window.fb.auth)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform">Sign Out & Try Again</button>
                         </div>
                     </div>
@@ -477,7 +497,7 @@
                                             </>
                                         )}
 
-                                        {/* For Staff: Read-Only detailed profile view (Matches Image 2 exactly) */}
+                                        {/* For Staff: Read-Only detailed profile view */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
@@ -796,7 +816,7 @@
                                 
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Biometric ID</label><input type="text" required value={newEmpForm.biometricId} disabled={isEditing} onChange={e=>setNewEmpForm({...newEmpForm, biometricId: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black disabled:opacity-50"/></div>
                                 
-                                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Google Login Email</label><input type="email" placeholder="staff@gmail.com" value={newEmpForm.staffEmail} onChange={e=>setNewEmpForm({...newEmpForm, staffEmail: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold text-blue-600"/></div>
+                                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Google/Facebook Email</label><input type="email" placeholder="staff@gmail.com" value={newEmpForm.staffEmail} onChange={e=>setNewEmpForm({...newEmpForm, staffEmail: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold text-blue-600"/></div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">First Name</label><input type="text" required value={newEmpForm.firstName} onChange={e=>setNewEmpForm({...newEmpForm, firstName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
@@ -821,7 +841,7 @@
                         </div>
                     )}
 
-                    {/* ADMIN VIEW PROFILE MODAL (Matches Staff Profile exactly but adds Edit/Delete buttons) */}
+                    {/* ADMIN VIEW PROFILE MODAL */}
                     {viewProfile && isAdmin && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-4">
                             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95">
