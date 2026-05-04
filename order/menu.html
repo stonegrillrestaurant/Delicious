@@ -3,128 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kusina Express - Interactive Menu</title>
+    <title>Stone Grill Restaurant - Interactive Menu</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Custom scrollbar hiding */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* Simple animations */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes bounceIn {
             0% { transform: scale(0.9); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
-        .animate-zoom-in {
-            animation: bounceIn 0.2s ease-out forwards;
-        }
+        .animate-zoom-in { animation: bounceIn 0.2s ease-out forwards; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen relative overflow-x-hidden">
 
-    <!-- Toast Notification (Hidden by default) -->
+    <!-- Toast Notification -->
     <div id="toast" class="fixed top-6 right-6 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl font-medium transition-all duration-300 transform translate-y-[-150%] opacity-0">
         <span id="toastMessage"></span>
     </div>
 
     <!-- Header & Search Area -->
-    <header class="bg-white shadow-sm sticky top-0 z-10">
+    <header class="bg-white shadow-sm sticky top-0 z-20">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div class="flex items-center gap-3">
                     <div class="bg-orange-600 text-white p-2 rounded-lg">
                         <i data-lucide="utensils-crossed" class="w-6 h-6"></i>
                     </div>
-                    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Kusina Express</h1>
+                    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Stone Grill Restaurant</h1>
                 </div>
 
-                <!-- Search Bar -->
                 <div class="relative w-full md:w-96">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i data-lucide="search" class="h-5 w-5 text-gray-400"></i>
                     </div>
-                    <input
-                        type="text"
-                        id="searchInput"
-                        placeholder="Search for Sisig, Seafood..."
-                        class="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 sm:text-sm transition-colors"
-                    />
-                    <button 
-                        id="clearSearchBtn"
-                        class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                    >
+                    <input type="text" id="searchInput" placeholder="Search for Sisig, Seafood..." class="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 sm:text-sm transition-colors" />
+                    <button id="clearSearchBtn" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
                         <i data-lucide="x" class="h-4 w-4"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Category Tabs -->
-            <div id="categoryTabs" class="flex overflow-x-auto hide-scrollbar gap-2 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                <!-- Tabs will be injected here via JS -->
-            </div>
+            <div id="categoryTabs" class="flex overflow-x-auto hide-scrollbar gap-2 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0"></div>
         </div>
     </header>
 
     <!-- Main Content -->
     <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        
-        <!-- Results Info -->
         <div class="mb-6 flex justify-between items-end">
             <h2 id="resultsTitle" class="text-xl font-bold text-gray-800">All Menu</h2>
             <span id="resultsCount" class="text-sm text-gray-500 font-medium">0 items</span>
         </div>
 
-        <!-- Menu Grid -->
-        <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Items injected here -->
-        </div>
+        <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 
-        <!-- Empty State (Hidden by default) -->
         <div id="emptyState" class="hidden text-center py-20 bg-white rounded-2xl border border-gray-200 border-dashed">
             <i data-lucide="search" class="w-12 h-12 text-gray-300 mx-auto mb-4 block"></i>
             <h3 class="text-lg font-medium text-gray-900 mb-1">No items found</h3>
             <p class="text-gray-500">We couldn't find anything matching your search.</p>
-            <button id="clearFiltersBtn" class="mt-4 text-orange-600 font-medium hover:text-orange-700 underline">
-                Clear filters
-            </button>
+            <button id="clearFiltersBtn" class="mt-4 text-orange-600 font-medium hover:text-orange-700 underline">Clear filters</button>
         </div>
     </main>
 
-    <!-- Item Details Modal (Hidden by default) -->
+    <!-- Item Details Modal -->
     <div id="itemModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-        <!-- Backdrop -->
-        <div id="modalBackdrop" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
+        <div id="modalBackdrop" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
         
-        <!-- Modal Content -->
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col relative z-10 animate-zoom-in">
-            
-            <!-- Modal Header / Image Area -->
-            <div id="modalImageArea" class="h-48 sm:h-64 w-full relative shrink-0">
-                <button id="closeModalBtn" class="absolute top-4 left-4 bg-white/20 hover:bg-white/40 backdrop-blur-md p-2 rounded-full text-white transition-colors z-10">
+            <div id="modalImageArea" class="h-48 sm:h-64 w-full relative shrink-0 overflow-hidden bg-gray-900">
+                <button id="closeModalBtn" class="absolute top-4 left-4 bg-black/40 hover:bg-black/60 backdrop-blur-md p-2 rounded-full text-white transition-colors z-20">
                     <i data-lucide="chevron-left" class="w-6 h-6"></i>
                 </button>
-                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent text-white">
-                    <div class="flex flex-wrap gap-2 mb-2" id="modalBadges">
-                        <!-- Badges injected here -->
-                    </div>
+                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white z-10">
+                    <div class="flex flex-wrap gap-2 mb-2" id="modalBadges"></div>
                     <h2 id="modalTitle" class="text-3xl font-extrabold text-white mb-1">Item Name</h2>
                     <p id="modalPrice" class="text-2xl font-medium text-orange-400 drop-shadow-md">₱0.00</p>
                 </div>
             </div>
 
-            <!-- Modal Body - Scrollable -->
             <div class="overflow-y-auto p-6 flex-1">
-                <p id="modalDesc" class="text-gray-700 text-lg leading-relaxed mb-8">
-                    Description goes here.
-                </p>
-
+                <p id="modalDesc" class="text-gray-700 text-lg leading-relaxed mb-8">Description goes here.</p>
                 <div class="grid grid-cols-2 gap-4 mb-8">
                     <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-start gap-3">
                         <i data-lucide="clock" class="w-5 h-5 text-gray-400 shrink-0 mt-0.5"></i>
@@ -143,19 +105,13 @@
                 </div>
             </div>
 
-            <!-- Modal Footer -->
             <div class="p-4 sm:p-6 border-t border-gray-100 bg-gray-50 shrink-0 flex gap-4">
-                <button id="cancelOrderBtn" class="flex-1 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors">
-                    Back
-                </button>
-                <button id="confirmOrderBtn" class="flex-[2] px-6 py-3 bg-orange-600 text-white rounded-xl font-bold shadow-lg shadow-orange-600/30 hover:bg-orange-700 transition-colors">
-                    Add to Order
-                </button>
+                <button id="cancelOrderBtn" class="flex-1 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors">Back</button>
+                <button id="confirmOrderBtn" class="flex-[2] px-6 py-3 bg-orange-600 text-white rounded-xl font-bold shadow-lg shadow-orange-600/30 hover:bg-orange-700 transition-colors">Add to Order</button>
             </div>
         </div>
     </div>
 
-    <!-- Application Logic -->
     <script>
         // --- DATA SETUP ---
         const RAW_CATEGORIES = [
@@ -192,7 +148,8 @@
             "bbq": [ { "name": "Pork BBQ (3 sticks)", "price": 99 }, { "name": "Chicken BBQ", "price": 119 }, { "name": "Liempo", "price": 219 }, { "name": "Grilled Tuna Belly", "price": 269 } ],
             "specials": [ { "name": "Bisayang manok", "price": 399 }, { "name": "Seafood Platter", "price": 850 }, { "name": "Family Platter", "price": 850 }, { "name": "Crispy Squid Sisig", "price": 280 }, { "name": "Sinuglaw", "price": 280 }, { "name": "kalderetang kanding", "price": 300 }, { "name": "mix seafoo kare2x", "price": 340 } ],
             "refreshments": [ { "name": "Halo-Halo", "price": 129 }, { "name": "Mais con Yelo", "price": 109 }, { "name": "Buko Pandan", "price": 109 }, { "name": "avocado shake", "price": 75 }, { "name": "buko shake", "price": 95 }, { "name": "Mango shake", "price": 75 }, { "name": "Carrot shake", "price": 75 }, { "name": "Banana shake", "price": 75 }, { "name": "apple shake", "price": 75 }, { "name": "pineapple shake", "price": 75 } ],
-            "drinks": [ { "name": "Softdrinks", "price": 20 }, { "name": "Wilkins 500 ml", "price": 20 }, { "name": "Wilkins 1 L", "price": 30 }, { "name": "San Mig Light", "price": 75 }, { "name": "San Mig Apple", "price": 70 }, { "name": "San Mig Pale Pilsen", "price": 70 }, { "name": "Red Horse Stallion", "price": 80 }, { "name": "Red Horse 1 L", "price": 180 }, { "name": "San Mig Grande", "price": 150 } ],
+            // Note: I added a mock "image" attribute to Softdrinks to show you how to override spellings manually!
+            "drinks": [ { "name": "Softdrinks", "price": 20, "image": "coke-sprite-fanta.png" }, { "name": "Wilkins 500 ml", "price": 20 }, { "name": "Wilkins 1 L", "price": 30 }, { "name": "San Mig Light", "price": 75 }, { "name": "San Mig Apple", "price": 70 }, { "name": "San Mig Pale Pilsen", "price": 70 }, { "name": "Red Horse Stallion", "price": 80 }, { "name": "Red Horse 1 L", "price": 180 }, { "name": "San Mig Grande", "price": 150 } ],
             "pork": [ { "name": "Pork Sisig", "price": 260 }, { "name": "Lechon Kawali", "price": 300 }, { "name": "Crispy Pata", "price": 650 }, { "name": "Pork Adobo", "price": 260 }, { "name": "Sweet & Sour Pork", "price": 250 }, { "name": "Pork Steak", "price": 240 }, { "name": "Pork Caldereta", "price": 280 }, { "name": "Pork steak SOLO", "price": 135 } ]
         };
 
@@ -202,10 +159,33 @@
             'from-purple-400 to-fuchsia-500', 'from-pink-400 to-rose-500'
         ];
 
-        const CATEGORY_TABS = [
-            { id: 'all', label: 'All', emoji: '🍽️' },
-            ...RAW_CATEGORIES
-        ];
+        const CATEGORY_TABS = [ { id: 'all', label: 'All', emoji: '🍽️' }, ...RAW_CATEGORIES ];
+
+        // --- GITHUB PATH SETTING ---
+        const IMAGE_BASE_PATH = '/order/assets/menu-images/';
+        
+        // This array lists the order the browser will try to guess your extensions
+        const EXTENSION_GUESSES = ['.jpg', '.png', '.jpeg', '.JPG', '.PNG'];
+
+        // Creates the base path without extension: "/order/assets/menu-images/pork-sisig"
+        const generateImageBasePath = (name) => {
+            const cleanName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            return `${IMAGE_BASE_PATH}${cleanName}`;
+        };
+
+        // --- SMART FALLBACK SCRIPT ---
+        // If an image fails to load, this function tries the next extension in the list
+        window.handleImageError = function(imgElement, basePath) {
+            let attempt = parseInt(imgElement.dataset.attempt || "1"); // Starts at 1 because 0 (.jpg) already failed
+            if (attempt < EXTENSION_GUESSES.length) {
+                // Try the next extension
+                imgElement.src = basePath + EXTENSION_GUESSES[attempt];
+                imgElement.dataset.attempt = attempt + 1;
+            } else {
+                // All extensions failed, hide the image and let the colorful background show
+                imgElement.style.display = 'none';
+            }
+        };
 
         const MENU_ITEMS = [];
         let colorIndex = 0;
@@ -216,6 +196,11 @@
 
             RAW_MENU_DATA[categoryId].forEach((item, index) => {
                 const isSpicy = /(spicy|chili|inferno|hot)/i.test(item.name);
+                
+                // If you explicitly set "image: 'weird-name.PNG'" in JSON, it uses that. Otherwise, it guesses.
+                const manualImage = item.image ? `${IMAGE_BASE_PATH}${item.image}` : null;
+                const autoBasePath = manualImage ? null : generateImageBasePath(item.name);
+
                 MENU_ITEMS.push({
                     id: `${categoryId}-${index}`,
                     name: item.name,
@@ -226,18 +211,18 @@
                     spicy: isSpicy,
                     popular: index === 0,
                     prepTime: '15-20 mins',
-                    imageColor: COLORS[colorIndex % COLORS.length]
+                    imageColor: COLORS[colorIndex % COLORS.length],
+                    
+                    // Store both so we know how to render the HTML
+                    manualImage: manualImage,
+                    autoBasePath: autoBasePath
                 });
                 colorIndex++;
             });
         });
 
         // --- APP STATE ---
-        let state = {
-            searchQuery: '',
-            activeCategory: 'All',
-            selectedItem: null
-        };
+        let state = { searchQuery: '', activeCategory: 'All', selectedItem: null };
 
         // --- DOM ELEMENTS ---
         const els = {
@@ -249,7 +234,6 @@
             resultsTitle: document.getElementById('resultsTitle'),
             resultsCount: document.getElementById('resultsCount'),
             clearFiltersBtn: document.getElementById('clearFiltersBtn'),
-            // Modal elements
             itemModal: document.getElementById('itemModal'),
             modalBackdrop: document.getElementById('modalBackdrop'),
             closeModalBtn: document.getElementById('closeModalBtn'),
@@ -263,41 +247,34 @@
             modalPrepTime: document.getElementById('modalPrepTime'),
             modalSpiceLevel: document.getElementById('modalSpiceLevel'),
             modalSpiceIcon: document.getElementById('modalSpiceIcon'),
-            // Toast
             toast: document.getElementById('toast'),
             toastMessage: document.getElementById('toastMessage')
         };
 
-        // --- HELPERS ---
         const formatCurrency = (amount) => `₱${amount.toFixed(2)}`;
 
         const showToast = (message) => {
             els.toastMessage.textContent = message;
             els.toast.classList.remove('translate-y-[-150%]', 'opacity-0');
-            
-            setTimeout(() => {
-                els.toast.classList.add('translate-y-[-150%]', 'opacity-0');
-            }, 3000);
+            setTimeout(() => els.toast.classList.add('translate-y-[-150%]', 'opacity-0'), 3000);
         };
 
-        // --- RENDER FUNCTIONS ---
         const renderTabs = () => {
             els.categoryTabs.innerHTML = CATEGORY_TABS.map(category => {
                 const isActive = state.activeCategory === category.label;
-                const activeClasses = isActive 
-                    ? 'bg-orange-600 text-white shadow-md' 
-                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200';
-                
-                return `
-                    <button
-                        onclick="setCategory('${category.label}')"
-                        class="whitespace-nowrap px-4 py-2 flex items-center gap-2 rounded-full text-sm font-medium transition-all ${activeClasses}"
-                    >
-                        <span class="text-base">${category.emoji}</span>
-                        ${category.label}
-                    </button>
-                `;
+                const activeClasses = isActive ? 'bg-orange-600 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200';
+                return `<button onclick="setCategory('${category.label}')" class="whitespace-nowrap px-4 py-2 flex items-center gap-2 rounded-full text-sm font-medium transition-all ${activeClasses}"><span class="text-base">${category.emoji}</span>${category.label}</button>`;
             }).join('');
+        };
+
+        // Helper to generate the correct <img> tag depending on if it's manual or auto
+        const getImageTagHTML = (item) => {
+            if (item.manualImage) {
+                return `<img src="${item.manualImage}" alt="${item.name}" class="absolute inset-0 w-full h-full object-cover z-0" onerror="this.style.display='none'" />`;
+            } else {
+                // Starts by trying .jpg. If it fails, calls handleImageError to try .png, .JPG, etc.
+                return `<img src="${item.autoBasePath}.jpg" data-attempt="1" onerror="handleImageError(this, '${item.autoBasePath}')" alt="${item.name}" class="absolute inset-0 w-full h-full object-cover z-0" />`;
+            }
         };
 
         const renderGrid = () => {
@@ -319,32 +296,23 @@
                 els.emptyState.classList.add('hidden');
                 
                 els.menuGrid.innerHTML = filteredItems.map(item => `
-                    <div 
-                        onclick="openModal('${item.id}')"
-                        class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 transition-all cursor-pointer group flex flex-col h-full"
-                    >
+                    <div onclick="openModal('${item.id}')" class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 transition-all cursor-pointer group flex flex-col h-full">
+                        
                         <div class="h-40 w-full bg-gradient-to-br ${item.imageColor} relative overflow-hidden group-hover:scale-[1.02] transition-transform duration-300 origin-bottom">
-                            <div class="absolute top-3 left-3 flex flex-col gap-2">
-                                ${item.popular ? `
-                                    <span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-sm">
-                                        <i data-lucide="star" class="w-3 h-3 fill-current"></i> Popular
-                                    </span>
-                                ` : ''}
-                                ${item.spicy ? `
-                                    <span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-sm">
-                                        <i data-lucide="flame" class="w-3 h-3"></i> Spicy
-                                    </span>
-                                ` : ''}
+                            
+                            ${getImageTagHTML(item)}
+                            
+                            <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                                ${item.popular ? `<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-sm"><i data-lucide="star" class="w-3 h-3 fill-current"></i> Popular</span>` : ''}
+                                ${item.spicy ? `<span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-sm"><i data-lucide="flame" class="w-3 h-3"></i> Spicy</span>` : ''}
                             </div>
-                            <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
+                            <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-0"></div>
                         </div>
 
                         <div class="p-5 flex flex-col flex-1">
                             <div class="flex justify-between items-start mb-2 gap-2">
                                 <h3 class="font-bold text-lg text-gray-900 leading-tight">${item.name}</h3>
-                                <span class="font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg text-sm shrink-0">
-                                    ${formatCurrency(item.price)}
-                                </span>
+                                <span class="font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg text-sm shrink-0">${formatCurrency(item.price)}</span>
                             </div>
                             <p class="text-gray-500 text-sm line-clamp-2 mb-4 flex-1">${item.shortDesc}</p>
                             <div class="pt-4 border-t border-gray-100 flex items-center text-sm font-medium text-orange-600 group-hover:text-orange-700">
@@ -354,12 +322,9 @@
                     </div>
                 `).join('');
             }
-            
-            // Re-initialize Lucide icons for dynamically injected HTML
             lucide.createIcons();
         };
 
-        // --- ACTIONS ---
         window.setCategory = (category) => {
             state.activeCategory = category;
             renderTabs();
@@ -372,10 +337,27 @@
 
             state.selectedItem = item;
             
-            // Populate Modal
-            els.modalImageArea.className = `h-48 sm:h-64 w-full relative shrink-0 bg-gradient-to-br ${item.imageColor}`;
-            els.modalTitle.textContent = item.name;
-            els.modalPrice.textContent = formatCurrency(item.price);
+            els.modalImageArea.innerHTML = `
+                <button id="closeModalBtn" onclick="closeModal()" class="absolute top-4 left-4 bg-black/40 hover:bg-black/60 backdrop-blur-md p-2 rounded-full text-white transition-colors z-20">
+                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                </button>
+                <div class="absolute inset-0 bg-gradient-to-br ${item.imageColor} z-0"></div>
+                
+                ${item.manualImage 
+                    ? `<img src="${item.manualImage}" alt="${item.name}" class="absolute inset-0 w-full h-full object-cover opacity-60 z-0" onerror="this.style.display='none'" />`
+                    : `<img src="${item.autoBasePath}.jpg" data-attempt="1" onerror="handleImageError(this, '${item.autoBasePath}')" alt="${item.name}" class="absolute inset-0 w-full h-full object-cover opacity-60 z-0" />`
+                }
+
+                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white z-10">
+                    <div class="flex flex-wrap gap-2 mb-2" id="modalBadges">
+                        ${item.popular ? '<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded shadow-sm">Popular Choice</span>' : ''}
+                        <span class="bg-white/20 backdrop-blur-md text-white text-xs font-semibold px-2 py-1 rounded border border-white/30 uppercase tracking-wider">${item.category}</span>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-white mb-1">${item.name}</h2>
+                    <p class="text-2xl font-medium text-orange-400 drop-shadow-md">${formatCurrency(item.price)}</p>
+                </div>
+            `;
+            
             els.modalDesc.textContent = item.longDesc;
             els.modalPrepTime.textContent = item.prepTime;
             
@@ -388,37 +370,22 @@
                 els.modalSpiceIcon.classList.remove('text-red-500');
             }
 
-            // Badges
-            els.modalBadges.innerHTML = `
-                ${item.popular ? '<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded shadow-sm">Popular Choice</span>' : ''}
-                <span class="bg-white/20 backdrop-blur-md text-white text-xs font-semibold px-2 py-1 rounded border border-white/30 uppercase tracking-wider">
-                    ${item.category}
-                </span>
-            `;
-
             els.confirmOrderBtn.textContent = `Add to Order - ${formatCurrency(item.price)}`;
 
-            // Show Modal
             els.itemModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            
             lucide.createIcons();
         };
 
-        const closeModal = () => {
+        window.closeModal = () => {
             state.selectedItem = null;
             els.itemModal.classList.add('hidden');
             document.body.style.overflow = 'unset';
         };
 
-        // --- EVENT LISTENERS ---
         els.searchInput.addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
-            if (state.searchQuery) {
-                els.clearSearchBtn.classList.remove('hidden');
-            } else {
-                els.clearSearchBtn.classList.add('hidden');
-            }
+            state.searchQuery ? els.clearSearchBtn.classList.remove('hidden') : els.clearSearchBtn.classList.add('hidden');
             renderGrid();
         });
 
@@ -436,12 +403,9 @@
             setCategory('All');
         });
 
-        // Modal close triggers
         els.modalBackdrop.addEventListener('click', closeModal);
-        els.closeModalBtn.addEventListener('click', closeModal);
         els.cancelOrderBtn.addEventListener('click', closeModal);
 
-        // Add to Order Action
         els.confirmOrderBtn.addEventListener('click', () => {
             if (state.selectedItem) {
                 showToast(`Added ${state.selectedItem.name} to your order!`);
@@ -449,7 +413,6 @@
             }
         });
 
-        // --- INITIALIZE ---
         lucide.createIcons();
         renderTabs();
         renderGrid();
