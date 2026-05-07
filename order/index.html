@@ -96,6 +96,9 @@
   <!-- Minimal styles for popup + centered toast -->
   <style>
     .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
+    .gcash-qr-wrap { margin:12px auto 14px; padding:12px; max-width:280px; text-align:center; background:#fff; border-radius:14px; box-shadow:0 8px 22px rgba(0,0,0,.10); }
+    .gcash-qr-wrap img { display:block; width:100%; max-width:240px; height:auto; margin:0 auto; border-radius:8px; }
+    .gcash-qr-label { margin-top:8px; font-size:.95rem; font-weight:700; color:#123; }
     .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
     .receipt-upload-block h4 { margin:0 0 8px; font-size:1.02rem; }
     .receipt-status { margin-top:8px; font-size:.92rem; }
@@ -261,14 +264,13 @@
       <h3 id="payTitle" class="popup-title">Pay with GCash</h3>
       <div class="meta" id="payMeta">Order: <span id="payOrderId">—</span> • Total: <span id="payTotal">₱0</span></div>
 
-      <div class="row-sb">
-        <div>
-          <div class="small">Send payment to this GCash number</div>
-          <div class="gcash-number" id="gcashMobileText">+63 9XX XXX XXXX</div>
-          <div class="small" id="gcashAccountName" style="opacity:.85;">Account: Stone Grill Restaurant</div>
-        </div>
-        <button id="btnCopyNumber" class="btn">Copy</button>
+      <!-- GCash QR Payment Code -->
+      <div class="gcash-qr-wrap">
+        <img id="gcashQrImage" src="/order/assets/gcash-qr-clean.png" alt="GCash QR payment code for Stone Grill Restaurant">
+        <div class="gcash-qr-label">Scan the QR code to pay</div>
       </div>
+
+      <!-- Payment name and number removed to avoid confusion. Customers should pay by scanning the QR only. -->
 
       <!-- Standalone uploader that posts to Telegram via hidden iframe (no CORS, no Apps Script) -->
       <div class="receipt-upload-block">
@@ -302,6 +304,120 @@
   <!-- Scripts -->
   <script src="config.js?v=15"></script>
   <script src="main.js?v=16.2"></script>
+
+  <!-- ===== Google Sheets Recording Bridge =====
+       UPDATED: Sends order data to Google Sheets through Google Apps Script.
+       IMPORTANT: Replace https://script.google.com/macros/s/AKfycby7b1t1POr1Vay82IOcKegtlsQXmr5nQ4ORg3zZjiB7fo-qYbdI0VMv9Xh4MrBsy5466w/exec with your /exec Web App URL.
+       This does not remove or replace your existing Telegram order sending.
+  -->
+  <script>
+  (function(){
+    // Put your deployed Google Apps Script Web App URL here.
+    // Example: https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxx/exec
+    window.SHEET_WEB_APP_URL = window.SHEET_WEB_APP_URL || "https://script.google.com/macros/s/AKfycby7b1t1POr1Vay82IOcKegtlsQXmr5nQ4ORg3zZjiB7fo-qYbdI0VMv9Xh4MrBsy5466w/exec";
+
+    function normalizeSheetItems(orderData){
+      try {
+        if (!orderData) return "";
+        if (typeof orderData.items === "string") return orderData.items;
+        if (Array.isArray(orderData.items)) {
+          return orderData.items.map(function(item){
+            var qty = item.qty || item.quantity || 1;
+            var name = item.name || item.title || "Item";
+            var price = item.price ? " - ₱" + item.price : "";
+            return qty + "x " + name + price;
+          }).join(", ");
+        }
+        if (Array.isArray(window.cart)) {
+          return window.cart.map(function(item){
+            var qty = item.qty || item.quantity || 1;
+            var name = item.name || item.title || "Item";
+            var price = item.price ? " - ₱" + item.price : "";
+            return qty + "x " + name + price;
+          }).join(", ");
+        }
+      } catch(e) {}
+      return "";
+    }
+
+    function buildSheetPayload(orderData){
+      orderData = orderData || window.pendingOrder || {};
+
+      var selectedType = document.querySelector('input[name="orderType"]:checked');
+
+      return {
+        orderId: orderData.orderId || orderData.id || window.currentOrderId || "",
+        name: orderData.name || orderData.customerName || document.getElementById("fullName")?.value || "",
+        mobile: orderData.mobile || orderData.phone || document.getElementById("mobileNumber")?.value || "",
+        orderType: orderData.orderType || (selectedType ? selectedType.value : ""),
+        table: orderData.table || orderData.tableNumber || orderData.persons || document.getElementById("persons")?.value || "",
+        items: normalizeSheetItems(orderData),
+        total: orderData.total || orderData.totalAmount || window.currentOrderTotal || document.getElementById("cartTotal")?.textContent || "",
+        specialRequest: orderData.specialRequest || orderData.specialRequests || document.getElementById("specialRequests")?.value || "",
+        status: "TELEGRAM_SENT"
+      };
+    }
+
+    window.sendToGoogleSheets = async function(orderData){
+      if (!window.SHEET_WEB_APP_URL || window.SHEET_WEB_APP_URL.indexOf("PASTE_YOUR") !== -1) {
+        console.warn("[Google Sheets] Missing Apps Script Web App URL.");
+        return false;
+      }
+
+      var payload = buildSheetPayload(orderData);
+
+      await fetch(window.SHEET_WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(payload)
+      });
+
+      console.log("[Google Sheets] Order recording request sent", payload);
+      return true;
+    };
+
+    // Helper you can call from main.js AFTER Telegram succeeds:
+    // await window.recordOrderAfterTelegramSuccess(orderData);
+    window.recordOrderAfterTelegramSuccess = async function(orderData){
+      try {
+        await window.sendToGoogleSheets(orderData);
+        if (typeof window.showToast === "function") {
+          window.showToast("✅ Order sent to Telegram and recorded in Sheets", 3000);
+        }
+        return true;
+      } catch(err) {
+        console.error("[Google Sheets] Recording failed:", err);
+        if (typeof window.showToast === "function") {
+          window.showToast("⚠ Order sent to Telegram, but Sheets recording failed", 5000);
+        }
+        return false;
+      }
+    };
+
+    // Auto-wrap global sendToTelegram if your main.js exposes it on window.
+    // This records to Sheets only after Telegram returns success/ok.
+    setTimeout(function(){
+      if (typeof window.sendToTelegram !== "function" || window.sendToTelegram.__sheetsWrapped) return;
+
+      var originalSendToTelegram = window.sendToTelegram;
+
+      window.sendToTelegram = async function(orderData){
+        var result = await originalSendToTelegram.apply(this, arguments);
+        var success = result === true || (result && result.ok === true) || (result && result.success === true);
+
+        if (success) {
+          await window.recordOrderAfterTelegramSuccess(orderData);
+        }
+
+        return result;
+      };
+
+      window.sendToTelegram.__sheetsWrapped = true;
+      console.log("[Google Sheets] sendToTelegram wrapped successfully.");
+    }, 500);
+  })();
+  </script>
+
 
   <!-- Popup controller + Telegram upload (manual only) -->
   <script>
@@ -351,8 +467,8 @@
 
       const mobileTxt = document.getElementById('gcashMobileText');
       const acctName  = document.getElementById('gcashAccountName');
-      if (window.APP?.GCASH_MOBILE)       mobileTxt.textContent = window.APP.GCASH_MOBILE;
-      if (window.APP?.GCASH_ACCOUNT_NAME) acctName.textContent  = 'Account: ' + window.APP.GCASH_ACCOUNT_NAME;
+      if (mobileTxt && window.APP?.GCASH_MOBILE) mobileTxt.textContent = window.APP.GCASH_MOBILE;
+      if (acctName && window.APP?.GCASH_ACCOUNT_NAME) acctName.textContent = 'Account: ' + window.APP.GCASH_ACCOUNT_NAME;
 
       window.currentOrderId = orderId || '';
       window.currentOrderTotal = totalAmount || '';
