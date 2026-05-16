@@ -17,7 +17,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // FIX 1: Added signInWithRedirect and getRedirectResult to imports
+        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -34,7 +35,8 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
-        window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+        // FIX 2: Added signInWithRedirect and getRedirectResult to your window.fb object
+        window.fb = { db, auth, appId, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, FacebookAuthProvider, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
     </script>
 
     <style>
@@ -120,23 +122,25 @@
         function LoginScreen() {
             const [loading, setLoading] = useState(false);
 
+            // FIX 3: Changed signInWithPopup to signInWithRedirect for Google
             const handleGoogleLogin = async () => {
                 setLoading(true);
                 try {
                     const provider = new window.fb.GoogleAuthProvider();
-                    await window.fb.signInWithPopup(window.fb.auth, provider);
+                    await window.fb.signInWithRedirect(window.fb.auth, provider);
                 } catch (err) { 
                     alert("Google Sign In Failed: " + err.message); 
                     setLoading(false); 
                 }
             };
 
+            // FIX 4: Changed signInWithPopup to signInWithRedirect for Facebook
             const handleFacebookLogin = async () => {
                 setLoading(true);
                 try {
                     const provider = new window.fb.FacebookAuthProvider();
                     provider.addScope('email'); 
-                    await window.fb.signInWithPopup(window.fb.auth, provider);
+                    await window.fb.signInWithRedirect(window.fb.auth, provider);
                 } catch (err) { 
                     alert("Facebook Sign In Failed.\n\nError: " + err.message); 
                     setLoading(false); 
@@ -226,10 +230,17 @@
             }, []);
 
             useEffect(() => {
+                // Catch auth state updates from the redirect flow automatically
                 window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
                     setUser(u); 
                     setIsReady(true); 
                     if(!u) { setUserRole(''); setCurrentBiometricId(''); }
+                });
+
+                // Check if returning from a failed redirect
+                window.fb.getRedirectResult(window.fb.auth).catch((error) => {
+                    console.error("Redirect Error:", error.message);
+                    alert("Authentication Error: " + error.message);
                 });
             }, []);
 
@@ -511,7 +522,7 @@
                                             </>
                                         )}
 
-                                        {/* For Staff: Read-Only detailed profile view (Matches Image 2 exactly) */}
+                                        {/* For Staff: Read-Only detailed profile view */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
