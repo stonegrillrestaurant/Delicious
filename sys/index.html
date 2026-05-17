@@ -17,7 +17,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // SURGICAL ADDITION: Added signInWithEmailAndPassword back to imports
         import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -210,7 +209,8 @@
         }
 
         function App() {
-            const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2";
+            // USER'S PROVIDED UID FOR MASTER VAULT
+            const MASTER_VAULT_UID = "XqFeiAnYOjOW9VwqTLFBS8n82nM2"; 
             const ADMIN_EMAIL = "stonegrill2014@gmail.com";
 
             const [user, setUser] = useState(null);
@@ -246,6 +246,10 @@
 
             const isAdmin = userRole === 'Admin';
 
+            // Helpers to map paths to the Master Vault
+            const getVaultCol = (col) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col);
+            const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col, id);
+
             const switchTab = (tab) => {
                 setActiveTab(tab);
                 if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -270,11 +274,8 @@
 
             useEffect(() => {
                 if (!user) return;
-                const { db, appId, onSnapshot, collection } = window.fb;
                 
-                const path = (n) => collection(db, 'artifacts', appId, 'users', MASTER_VAULT_UID, n);
-                
-                const unsubEmps = onSnapshot(path('employees'), (s) => {
+                const unsubEmps = window.fb.onSnapshot(getVaultCol('employees'), (s) => {
                     const fetchedEmps = s.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim() || d.id })).sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
                     setEmployees(fetchedEmps);
                     
@@ -292,11 +293,14 @@
                         }
                         setUserRole('Unauthorized');
                     }
+                }, (err) => {
+                    console.error("Firebase Read Error:", err);
+                    alert("Database access error: " + err.message);
                 });
                 
-                const unsubAtt = onSnapshot(path('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const unsubCA = onSnapshot(path('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const unsubIP = onSnapshot(path('payroll_entries'), (s) => setInteractivePayrolls(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubAtt = window.fb.onSnapshot(getVaultCol('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubCA = window.fb.onSnapshot(getVaultCol('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubIP = window.fb.onSnapshot(getVaultCol('payroll_entries'), (s) => setInteractivePayrolls(s.docs.map(d => ({ id: d.id, ...d.data() }))));
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); };
             }, [user]);
 
@@ -385,7 +389,7 @@
                         dayVal = 0.5;
                     }
 
-                    await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
+                    await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
                 setRawInput(''); alert(`Processed ${count} attendance records.`);
@@ -395,29 +399,29 @@
                 e.preventDefault(); if (!isAdmin) return;
                 const bId = normalizeId(newEmpForm.biometricId);
                 const payload = { ...newEmpForm, dailyRate: parseFloat(newEmpForm.dailyRate), sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() };
-                await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', bId), payload, { merge: true });
+                await window.fb.setDoc(getVaultDoc('employees', bId), payload, { merge: true });
                 setShowAddStaff(false); setIsEditing(false);
             };
 
             const handleIssueCA = async () => {
                 if (!isAdmin || !newCa.empId) return;
                 let amt = parseFloat(newCa.amount) || 0; if (caType === 'payment') amt = -Math.abs(amt);
-                await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'cash_advances'), { ...newCa, amount: amt, type: caType });
-                await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', normalizeId(newCa.empId)), { caBalance: (parseFloat(employees.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance) || 0) + amt });
+                await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: amt, type: caType });
+                await window.fb.updateDoc(getVaultDoc('employees', normalizeId(newCa.empId)), { caBalance: (parseFloat(employees.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance) || 0) + amt });
                 setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             };
 
             const handleDeleteEmployee = async (id, name) => {
                 if (!isAdmin || !window.confirm(`PERMANENTLY delete ${name}?\nThis action cannot be undone.`)) return;
-                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', normalizeId(id)));
+                await window.fb.deleteDoc(getVaultDoc('employees', normalizeId(id)));
                 setViewProfile(null);
             };
 
             const handleDeleteCA = async (caId, empId, amt) => {
                 if (!isAdmin || !window.confirm(`Delete and reverse this transaction?`)) return;
-                await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'cash_advances', caId));
+                await window.fb.deleteDoc(getVaultDoc('cash_advances', caId));
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(empId));
-                if (emp) await window.fb.updateDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'employees', normalizeId(empId)), { caBalance: (parseFloat(emp.caBalance) || 0) - amt });
+                if (emp) await window.fb.updateDoc(getVaultDoc('employees', normalizeId(empId)), { caBalance: (parseFloat(emp.caBalance) || 0) - amt });
             };
 
             const handleExportBackup = () => {
@@ -432,10 +436,13 @@
                 setIsRestoring(true); const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
-                        const data = JSON.parse(e.target.result); const { db, appId, doc, setDoc } = window.fb;
+                        const data = JSON.parse(e.target.result); 
                         const restoreCollection = async (colName, items) => {
                             if (!items || !Array.isArray(items)) return;
-                            for (const item of items) { const { id, ...rest } = item; if (id) await setDoc(doc(db, 'artifacts', appId, 'users', MASTER_VAULT_UID, colName, id), rest, { merge: true }); }
+                            for (const item of items) { 
+                                const { id, ...rest } = item; 
+                                if (id) await window.fb.setDoc(getVaultDoc(colName, id), rest, { merge: true }); 
+                            }
                         };
                         await restoreCollection('employees', data.employees); await restoreCollection('attendance', data.attendance); await restoreCollection('cash_advances', data.cashAdvances || data.cash_advances); await restoreCollection('payroll_entries', data.interactivePayrolls);
                         alert(`Restore Complete!`);
@@ -545,7 +552,7 @@
                                             </>
                                         )}
 
-                                        {/* For Staff: Read-Only detailed profile view (Matches Image 2 exactly) */}
+                                        {/* For Staff: Read-Only detailed profile view */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
@@ -702,7 +709,7 @@
                                             <button onClick={async () => {
                                                 if (!icEmpId) return;
                                                 const key = `${normalizeId(icEmpId)}_${icDateStart}_${icDateEnd}`;
-                                                await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, 'payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), startDate: icDateStart, endDate: icDateEnd, data: icForm });
+                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), startDate: icDateStart, endDate: icDateEnd, data: icForm });
                                                 alert("Saved to archive.");
                                             }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
                                         </div>
