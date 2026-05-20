@@ -48,10 +48,10 @@
             #interactive-print-section, #interactive-print-section * { visibility: visible; }
             #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
             
-            /* 80mm POS Receipt Print Mode */
+            /* 58mm POS Receipt Print Mode (UPDATED WIDTH) */
             .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
             #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
-            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 80mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
+            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
             
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
@@ -384,6 +384,8 @@
                     alert("Network error: Could not lock the record. Print cancelled to protect funds.");
                     return; 
                 }
+
+                alert("IMPORTANT: When the print screen opens, make sure to select the '58mm KITCHEN PRINTER' from the list!");
 
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
                 setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
@@ -1001,25 +1003,25 @@
                             </div>
                         </div>
 
-                        {/* NEW: HIDDEN 80MM POS RECEIPT RENDERER */}
+                        {/* NEW: HIDDEN 58MM POS RECEIPT RENDERER */}
                         {receiptToPrint && (
                             <div id="pos-receipt-print" className="bg-white">
                                 <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                                    <h2 style={{ fontSize: '20px', fontWeight: '900', margin: '0 0 5px 0' }}>STONE GRILL</h2>
-                                    <p style={{ fontSize: '12px', margin: '0' }}>Cash Advance Voucher</p>
+                                    <h2 style={{ fontSize: '16px', fontWeight: '900', margin: '0 0 5px 0' }}>STONE GRILL</h2>
+                                    <p style={{ fontSize: '10px', margin: '0' }}>Cash Advance Voucher</p>
                                 </div>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Date:</strong> {new Date(receiptToPrint.dateApproved || receiptToPrint.dateRequested).toLocaleString()}</p>
-                                <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Name:</strong> {receiptToPrint.empName.toUpperCase()}</p>
+                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Date:</strong> {new Date(receiptToPrint.dateApproved || receiptToPrint.dateRequested).toLocaleString()}</p>
+                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Name:</strong> {receiptToPrint.empName.toUpperCase()}</p>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
                                 <div style={{ textAlign: 'center', margin: '15px 0' }}>
-                                    <p style={{ fontSize: '12px', margin: '0 0 5px 0' }}>AMOUNT APPROVED</p>
-                                    <h1 style={{ fontSize: '28px', fontWeight: '900', margin: '0' }}>PHP {formatMoney(receiptToPrint.amount)}</h1>
+                                    <p style={{ fontSize: '10px', margin: '0 0 5px 0' }}>AMOUNT APPROVED</p>
+                                    <h1 style={{ fontSize: '20px', fontWeight: '900', margin: '0' }}>PHP {formatMoney(receiptToPrint.amount)}</h1>
                                 </div>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <p style={{ fontSize: '10px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
+                                <p style={{ fontSize: '9px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
                                 <div style={{ marginTop: '30px' }}>
-                                    <p style={{ fontSize: '12px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '80%', margin: '0 auto' }}>Cashier Signature</p>
+                                    <p style={{ fontSize: '10px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '90%', margin: '0 auto' }}>Cashier Signature</p>
                                 </div>
                                 <div style={{ paddingBottom: '30px' }}></div>
                             </div>
