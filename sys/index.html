@@ -41,14 +41,23 @@
         .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
         @media print {
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
             #interactive-print-section, #interactive-print-section * { visibility: visible; }
             #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
+            
+            /* 80mm POS Receipt Print Mode */
+            .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
+            #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
+            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 80mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
+            
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
         }
+        #pos-receipt-print { display: none; }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -126,41 +135,29 @@
             const handleGoogleLogin = async () => {
                 setLoading(true);
                 const provider = new window.fb.GoogleAuthProvider();
-                try {
-                    await window.fb.signInWithPopup(window.fb.auth, provider);
-                } catch (err) {
-                    alert("Login Error: " + err.message);
-                    setLoading(false);
-                }
+                try { await window.fb.signInWithPopup(window.fb.auth, provider); } 
+                catch (err) { alert("Login Error: " + err.message); setLoading(false); }
             };
 
             const handleFacebookLogin = async () => {
                 setLoading(true);
                 const provider = new window.fb.FacebookAuthProvider();
                 provider.addScope('email'); 
-                try {
-                    await window.fb.signInWithPopup(window.fb.auth, provider);
-                } catch (err) {
-                    alert("Login Error: " + err.message);
-                    setLoading(false);
-                }
+                try { await window.fb.signInWithPopup(window.fb.auth, provider); } 
+                catch (err) { alert("Login Error: " + err.message); setLoading(false); }
             };
 
             const handleEmailSubmit = async (e) => {
                 e.preventDefault();
                 setLoading(true);
-                try {
-                    await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput);
-                } catch (err) {
-                    alert("Login failed. Check your email or password.");
-                    setLoading(false);
-                }
+                try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); } 
+                catch (err) { alert("Login failed. Check your email or password."); setLoading(false); }
             };
 
             return (
                 <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up">
-                        <img src="/sys/icon.png" className="w-20 h-20 mb-6" alt="Logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"/>
+                        <img src="/sys/icon.png" className="w-20 h-20 mb-6" alt="Logo" onError={(e)=>e.target.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}/>
                         <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest text-center">Stone Grill</h2>
                         <p className="text-slate-400 text-xs font-bold mb-8 uppercase tracking-widest">Secure Cloud Payroll</p>
                         
@@ -210,7 +207,6 @@
         }
 
         function App() {
-            // RESTORED: Points exactly to where your original data is saved!
             const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2"; 
             const ADMIN_EMAIL = "stonegrill2014@gmail.com";
 
@@ -225,6 +221,7 @@
             const [employees, setEmployees] = useState([]);
             const [attendance, setAttendance] = useState([]);
             const [cashAdvances, setCashAdvances] = useState([]);
+            const [caRequests, setCaRequests] = useState([]); 
             const [interactivePayrolls, setInteractivePayrolls] = useState([]);
             
             const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
@@ -245,9 +242,11 @@
             const [icDateEnd, setIcDateEnd] = useState(dashSearchEnd);
             const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
 
+            const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' });
+            const [receiptToPrint, setReceiptToPrint] = useState(null);
+
             const isAdmin = userRole === 'Admin';
 
-            // Helpers to map paths to the Master Vault
             const getVaultCol = (col) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col);
             const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col, id);
 
@@ -267,8 +266,7 @@
 
             useEffect(() => {
                 window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
-                    setUser(u); 
-                    setIsReady(true); 
+                    setUser(u); setIsReady(true); 
                     if(!u) { setUserRole(''); setCurrentBiometricId(''); }
                 });
             }, []);
@@ -286,23 +284,18 @@
                     } else {
                         if (user.email) {
                             const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
-                            if (staffMatch) {
-                                setUserRole('Staff');
-                                setCurrentBiometricId(staffMatch.id);
-                                return;
-                            }
+                            if (staffMatch) { setUserRole('Staff'); setCurrentBiometricId(staffMatch.id); return; }
                         }
                         setUserRole('Unauthorized');
                     }
-                }, (err) => {
-                    console.error("Firebase Read Error:", err);
-                    alert("Database access error: " + err.message);
-                });
+                }, (err) => alert("Database access error: " + err.message));
                 
                 const unsubAtt = window.fb.onSnapshot(getVaultCol('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
                 const unsubCA = window.fb.onSnapshot(getVaultCol('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubCAReq = window.fb.onSnapshot(getVaultCol('ca_requests'), (s) => setCaRequests(s.docs.map(d => ({ id: d.id, ...d.data() }))));
                 const unsubIP = window.fb.onSnapshot(getVaultCol('payroll_entries'), (s) => setInteractivePayrolls(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubIP(); };
+                
+                return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubCAReq(); unsubIP(); };
             }, [user]);
 
             const payrollSummary = useMemo(() => {
@@ -349,6 +342,58 @@
                     }
                 }
             }, [icEmpId, icDateStart, icDateEnd, employees, attendance, cashAdvances]);
+
+            const handleStaffSubmitCARequest = async (e) => {
+                e.preventDefault();
+                if (!currentBiometricId || !staffCaRequest.amount) return;
+                await window.fb.addDoc(getVaultCol('ca_requests'), {
+                    empId: currentBiometricId,
+                    amount: parseFloat(staffCaRequest.amount),
+                    reason: staffCaRequest.reason,
+                    dateRequested: new Date().toISOString(),
+                    status: 'Pending'
+                });
+                setStaffCaRequest({ amount: '', reason: '' });
+                alert("Request sent to Admin for approval.");
+            };
+
+            const handleApproveCARequest = async (req) => {
+                if (!isAdmin) return;
+                const today = new Date().toISOString().slice(0, 10);
+                
+                await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Approved', dateApproved: today });
+                await window.fb.addDoc(getVaultCol('cash_advances'), { empId: req.empId, amount: req.amount, reason: `Apprvd Req: ${req.reason}`, date: today, type: 'advance' });
+                
+                const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
+                if (emp) {
+                    await window.fb.updateDoc(getVaultDoc('employees', normalizeId(req.empId)), { caBalance: (parseFloat(emp.caBalance) || 0) + req.amount });
+                }
+            };
+
+            const handleRejectCARequest = async (reqId) => {
+                if (!isAdmin) return;
+                await window.fb.updateDoc(getVaultDoc('ca_requests', reqId), { status: 'Rejected' });
+            };
+
+            const handlePrintReceipt = async (req) => {
+                try {
+                    await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { 
+                        status: 'Printed' 
+                    });
+                } catch (err) {
+                    alert("Network error: Could not lock the record. Print cancelled to protect funds.");
+                    return; 
+                }
+
+                const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
+                setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
+                
+                document.body.classList.add('pos-receipt-active');
+                setTimeout(() => {
+                    window.print();
+                    document.body.classList.remove('pos-receipt-active');
+                }, 100);
+            };
 
             const handleEditProfile = (emp) => {
                 setNewEmpForm({
@@ -557,6 +602,9 @@
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
+                                            
+                                            const myRequests = caRequests.filter(r => normalizeId(r.empId) === normalizeId(emp.id)).sort((a,b)=>(b.dateRequested||'').localeCompare(a.dateRequested||''));
+
                                             return (
                                                 <div className="animate-slide-up space-y-6 max-w-3xl mx-auto">
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden">
@@ -626,6 +674,56 @@
                                                                         </tbody>
                                                                     </table>
                                                                 </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* NEW: CA Request Tool */}
+                                                    <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden mt-6">
+                                                        <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center">
+                                                            <Banknote className="w-5 h-5 mr-2" /> Request Cash Advance
+                                                        </div>
+                                                        <div className="p-6">
+                                                            <form onSubmit={handleStaffSubmitCARequest} className="flex flex-col md:flex-row gap-4 mb-6">
+                                                                <div className="flex-1">
+                                                                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Amount (₱)</label>
+                                                                    <input type="number" required min="1" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none text-emerald-700" value={staffCaRequest.amount} onChange={e=>setStaffCaRequest({...staffCaRequest, amount: e.target.value})} />
+                                                                </div>
+                                                                <div className="flex-[2]">
+                                                                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Reason / Note</label>
+                                                                    <input type="text" required className="w-full p-3 border rounded-xl bg-slate-50 font-bold outline-none" value={staffCaRequest.reason} onChange={e=>setStaffCaRequest({...staffCaRequest, reason: e.target.value})} placeholder="e.g. For groceries" />
+                                                                </div>
+                                                                <div className="flex items-end">
+                                                                    <button type="submit" className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white font-black uppercase rounded-xl hover:bg-emerald-700 active:scale-95 transition-all shadow-md">Submit Request</button>
+                                                                </div>
+                                                            </form>
+
+                                                            {/* Status Tracker */}
+                                                            <h4 className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-4">Request Status Tracker</h4>
+                                                            <div className="max-h-48 overflow-y-auto custom-scrollbar border rounded-xl">
+                                                                <table className="w-full text-left text-xs">
+                                                                    <thead className="bg-slate-100 font-black uppercase text-[9px] text-[#94a3b8] sticky top-0"><tr><th className="p-3">Date</th><th className="p-3">Amount</th><th className="p-3">Status</th><th className="p-3 text-center">POS Receipt</th></tr></thead>
+                                                                    <tbody className="divide-y divide-slate-100">
+                                                                        {myRequests.map(req => (
+                                                                            <tr key={req.id}>
+                                                                                <td className="p-3 font-mono text-slate-500">{new Date(req.dateRequested).toLocaleDateString()}</td>
+                                                                                <td className="p-3 font-black">₱{formatMoney(req.amount)}</td>
+                                                                                <td className="p-3 font-black">
+                                                                                    {req.status === 'Pending' && <span className="text-amber-500">PENDING</span>}
+                                                                                    {req.status === 'Approved' && <span className="text-emerald-600">APPROVED</span>}
+                                                                                    {req.status === 'Rejected' && <span className="text-rose-500">REJECTED</span>}
+                                                                                    {req.status === 'Printed' && <span className="text-blue-600">PRINTED / CLAIMED</span>}
+                                                                                </td>
+                                                                                <td className="p-3 text-center">
+                                                                                    {req.status === 'Approved' ? (
+                                                                                        <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-black active:scale-95"><Printer className="w-3 h-3 inline mr-1"/> Print</button>
+                                                                                    ) : <span className="text-slate-300">--</span>}
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                        {myRequests.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-slate-400 italic">No requests made yet.</td></tr>}
+                                                                    </tbody>
+                                                                </table>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -764,36 +862,70 @@
                                 )}
 
                                 {isAdmin && activeTab === 'ca' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 animate-slide-up">
-                                        <div className="bg-white p-8 rounded-3xl shadow-xl space-y-4 h-max">
-                                            <h2 className="font-black text-blue-900 uppercase">Issue Entry</h2>
-                                            <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
-                                                <button onClick={()=>setCaType('advance')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='advance'?'bg-white shadow text-blue-900':'text-slate-400'}`}>ADVANCE</button>
-                                                <button onClick={()=>setCaType('payment')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='payment'?'bg-white shadow text-emerald-600':'text-slate-400'}`}>PAYMENT</button>
+                                    <div className="flex flex-col gap-8 animate-slide-up">
+                                        
+                                        {/* NEW: ADMIN APPROVAL QUEUE */}
+                                        <div className="bg-white rounded-3xl border shadow-xl overflow-hidden">
+                                            <div className="bg-amber-500 text-white p-4 font-black uppercase tracking-widest text-xs flex justify-between items-center">
+                                                <span>Pending Cash Advance Requests</span>
+                                                <span className="bg-white text-amber-600 px-2 py-0.5 rounded-full">{caRequests.filter(r=>r.status==='Pending').length}</span>
                                             </div>
-                                            <select className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.empId} onChange={e=>setNewCa({...newCa, empId: e.target.value})}><option value="">Select Member</option>{employees.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
-                                            {newCa.empId && <div className="bg-rose-50 p-4 rounded-xl text-center"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase">Current Debt</p><p className="text-2xl font-black text-rose-600 font-mono">₱{formatMoney(employees.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance)}</p></div>}
-                                            <input type="date" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.date} onChange={e=>setNewCa({...newCa, date: e.target.value})} />
-                                            <input type="number" placeholder="Amount" className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.amount} onChange={e=>setNewCa({...newCa, amount: e.target.value})} />
-                                            <input type="text" placeholder="Note" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.reason} onChange={e=>setNewCa({...newCa, reason: e.target.value})} />
-                                            <button onClick={handleIssueCA} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase shadow-lg active:scale-95">Commit Entry</button>
-                                        </div>
-                                        <div className="md:col-span-2 bg-white rounded-3xl border shadow-xl overflow-hidden">
-                                            <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px]">Cloud Ledger history</div>
-                                            <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-                                                <table className="w-full text-xs text-left">
-                                                    <thead className="bg-white border-b text-[9px] font-black text-slate-400 uppercase sticky top-0"><tr><th className="p-4">Date</th><th className="p-4">Name</th><th className="p-4 text-right">Value</th><th className="p-4 text-center">Action</th></tr></thead>
-                                                    <tbody className="divide-y divide-gray-50">
-                                                        {cashAdvances.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca=>(
-                                                            <tr key={ca.id} className="hover:bg-slate-50 transition-colors">
-                                                                <td className="p-4 font-mono text-slate-400">{ca.date}</td>
-                                                                <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(ca.empId))?.name || ca.empId} <span className="italic text-slate-400 font-normal ml-2">{ca.reason}</span></td>
-                                                                <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
-                                                                <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id, ca.empId, ca.amount)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
-                                                            </tr>
-                                                        ))}
+                                            <div className="p-0 overflow-x-auto">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead className="bg-amber-50 font-black uppercase text-[9px] text-amber-700"><tr><th className="p-4">Employee</th><th className="p-4">Date</th><th className="p-4">Reason</th><th className="p-4">Amount</th><th className="p-4 text-right">Actions</th></tr></thead>
+                                                    <tbody className="divide-y divide-amber-100">
+                                                        {caRequests.filter(r => r.status === 'Pending').map(req => {
+                                                            const empName = employees.find(e => normalizeId(e.id) === normalizeId(req.empId))?.name || 'Unknown';
+                                                            return (
+                                                                <tr key={req.id} className="hover:bg-amber-50/50">
+                                                                    <td className="p-4 font-black uppercase text-slate-800">{empName}</td>
+                                                                    <td className="p-4 text-slate-500 font-mono">{new Date(req.dateRequested).toLocaleDateString()}</td>
+                                                                    <td className="p-4 italic text-slate-600">{req.reason}</td>
+                                                                    <td className="p-4 font-black text-rose-600 text-sm">₱{formatMoney(req.amount)}</td>
+                                                                    <td className="p-4 text-right space-x-2">
+                                                                        <button onClick={() => handleRejectCARequest(req.id)} className="px-4 py-2 border border-rose-200 text-rose-600 rounded-lg font-black uppercase text-[10px] hover:bg-rose-50">Reject</button>
+                                                                        <button onClick={() => handleApproveCARequest(req)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-black uppercase text-[10px] hover:bg-emerald-700 shadow">Approve & Deduct</button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                        {caRequests.filter(r=>r.status==='Pending').length === 0 && <tr><td colSpan="5" className="p-6 text-center text-amber-600/50 italic font-bold">No pending requests.</td></tr>}
                                                     </tbody>
                                                 </table>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                            <div className="bg-white p-8 rounded-3xl shadow-xl space-y-4 h-max">
+                                                <h2 className="font-black text-blue-900 uppercase">Issue Entry</h2>
+                                                <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
+                                                    <button onClick={()=>setCaType('advance')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='advance'?'bg-white shadow text-blue-900':'text-slate-400'}`}>ADVANCE</button>
+                                                    <button onClick={()=>setCaType('payment')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='payment'?'bg-white shadow text-emerald-600':'text-slate-400'}`}>PAYMENT</button>
+                                                </div>
+                                                <select className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.empId} onChange={e=>setNewCa({...newCa, empId: e.target.value})}><option value="">Select Member</option>{employees.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
+                                                {newCa.empId && <div className="bg-rose-50 p-4 rounded-xl text-center"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase">Current Debt</p><p className="text-2xl font-black text-rose-600 font-mono">₱{formatMoney(employees.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance)}</p></div>}
+                                                <input type="date" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.date} onChange={e=>setNewCa({...newCa, date: e.target.value})} />
+                                                <input type="number" placeholder="Amount" className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.amount} onChange={e=>setNewCa({...newCa, amount: e.target.value})} />
+                                                <input type="text" placeholder="Note" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.reason} onChange={e=>setNewCa({...newCa, reason: e.target.value})} />
+                                                <button onClick={handleIssueCA} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase shadow-lg active:scale-95">Commit Entry</button>
+                                            </div>
+                                            <div className="md:col-span-2 bg-white rounded-3xl border shadow-xl overflow-hidden">
+                                                <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px]">Cloud Ledger history</div>
+                                                <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+                                                    <table className="w-full text-xs text-left">
+                                                        <thead className="bg-white border-b text-[9px] font-black text-slate-400 uppercase sticky top-0"><tr><th className="p-4">Date</th><th className="p-4">Name</th><th className="p-4 text-right">Value</th><th className="p-4 text-center">Action</th></tr></thead>
+                                                        <tbody className="divide-y divide-gray-50">
+                                                            {cashAdvances.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca=>(
+                                                                <tr key={ca.id} className="hover:bg-slate-50 transition-colors">
+                                                                    <td className="p-4 font-mono text-slate-400">{ca.date}</td>
+                                                                    <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(ca.empId))?.name || ca.empId} <span className="italic text-slate-400 font-normal ml-2">{ca.reason}</span></td>
+                                                                    <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
+                                                                    <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id, ca.empId, ca.amount)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -868,6 +1000,30 @@
                                 )}
                             </div>
                         </div>
+
+                        {/* NEW: HIDDEN 80MM POS RECEIPT RENDERER */}
+                        {receiptToPrint && (
+                            <div id="pos-receipt-print" className="bg-white">
+                                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                                    <h2 style={{ fontSize: '20px', fontWeight: '900', margin: '0 0 5px 0' }}>STONE GRILL</h2>
+                                    <p style={{ fontSize: '12px', margin: '0' }}>Cash Advance Voucher</p>
+                                </div>
+                                <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
+                                <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Date:</strong> {new Date(receiptToPrint.dateApproved || receiptToPrint.dateRequested).toLocaleString()}</p>
+                                <p style={{ fontSize: '12px', margin: '2px 0' }}><strong>Name:</strong> {receiptToPrint.empName.toUpperCase()}</p>
+                                <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
+                                <div style={{ textAlign: 'center', margin: '15px 0' }}>
+                                    <p style={{ fontSize: '12px', margin: '0 0 5px 0' }}>AMOUNT APPROVED</p>
+                                    <h1 style={{ fontSize: '28px', fontWeight: '900', margin: '0' }}>PHP {formatMoney(receiptToPrint.amount)}</h1>
+                                </div>
+                                <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
+                                <p style={{ fontSize: '10px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
+                                <div style={{ marginTop: '30px' }}>
+                                    <p style={{ fontSize: '12px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '80%', margin: '0 auto' }}>Cashier Signature</p>
+                                </div>
+                                <div style={{ paddingBottom: '30px' }}></div>
+                            </div>
+                        )}
                     </main>
 
                     {/* ADMIN ADD/EDIT STAFF MODAL */}
