@@ -47,16 +47,9 @@
             #print-section, #print-section * { visibility: visible; }
             #interactive-print-section, #interactive-print-section * { visibility: visible; }
             #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
-            
-            /* 58mm POS Receipt Print Mode (UPDATED WIDTH) */
-            .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
-            #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
-            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
-            
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
         }
-        #pos-receipt-print { display: none; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
@@ -243,7 +236,6 @@
             const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
 
             const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' });
-            const [receiptToPrint, setReceiptToPrint] = useState(null);
 
             const isAdmin = userRole === 'Admin';
 
@@ -385,16 +377,27 @@
                     return; 
                 }
 
-                alert("IMPORTANT: When the print screen opens, make sure to select the '58mm KITCHEN PRINTER' from the list!");
-
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
-                setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
                 
-                document.body.classList.add('pos-receipt-active');
-                setTimeout(() => {
-                    window.print();
-                    document.body.classList.remove('pos-receipt-active');
-                }, 100);
+                // Format plain text for RawBT
+                const receiptText = `
+STONE GRILL
+Cash Advance Voucher
+--------------------------------
+Date: ${new Date(req.dateApproved || req.dateRequested).toLocaleString()}
+Name: ${(emp?.name || 'Unknown').toUpperCase()}
+--------------------------------
+AMOUNT APPROVED:
+PHP ${formatMoney(req.amount)}
+--------------------------------
+*** SYSTEM GENERATED ***
+Admin Verified & Deducted
+
+Cashier Signature: _______________
+
+`;
+                // Trigger the RawBT intent (bypasses browser print)
+                window.location.href = `rawbt:${encodeURIComponent(receiptText)}`;
             };
 
             const handleEditProfile = (emp) => {
@@ -748,17 +751,25 @@
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-sm text-left whitespace-nowrap">
                                                 <thead className="bg-slate-50 uppercase text-[10px] font-black text-slate-500">
-                                                    <tr><th className="p-4">Name</th><th className="p-4 text-center">Days</th><th className="p-4 text-right">CA (Mo)</th><th className="p-4 text-right">Debt Bal.</th><th className="p-4 text-right">Net Salary</th></tr>
+                                                    <tr>
+                                                        <th className="p-4">Name</th>
+                                                        <th className="p-4 text-center">Rate</th>
+                                                        <th className="p-4 text-center">Days</th>
+                                                        <th className="p-4 text-right">Gross Pay</th>
+                                                        <th className="p-4 text-right">CA (Mo)</th>
+                                                        <th className="p-4 text-right">Net Salary</th>
+                                                    </tr>
                                                 </thead>
-                                                <tbody className="divide-y">
-                                                    {payrollSummary.length === 0 ? <tr><td colSpan="5" className="p-10 text-center text-slate-400">Directory empty. Add a member.</td></tr> :
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {payrollSummary.length === 0 ? <tr><td colSpan="6" className="p-10 text-center text-slate-400">Directory empty. Add a member.</td></tr> :
                                                         payrollSummary.map(row => (
                                                         <tr key={row.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setViewProfile(row)}>
-                                                            <td className="p-4 font-black uppercase tracking-tight">{row.name}</td>
+                                                            <td className="p-4 font-black uppercase tracking-tight text-slate-800">{row.name}</td>
+                                                            <td className="p-4 text-center font-bold text-slate-400 font-mono">₱{formatMoney(row.dailyRate || row.rate)}</td>
                                                             <td className="p-4 text-center font-bold text-slate-600">{row.days}</td>
-                                                            <td className="p-4 text-right font-black text-amber-500">₱{formatMoney(row.monthlyCA)}</td>
-                                                            <td className="p-4 text-right font-black text-rose-600">₱{formatMoney(row.caBalance)}</td>
-                                                            <td className={`p-4 text-right font-black ${row.net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{row.net < 0 ? '-' : ''}₱{formatMoney(row.net)}</td>
+                                                            <td className="p-4 text-right font-black text-blue-600 font-mono">₱{formatMoney(row.gross)}</td>
+                                                            <td className="p-4 text-right font-black text-amber-500 font-mono">₱{formatMoney(row.monthlyCA)}</td>
+                                                            <td className={`p-4 text-right font-black font-mono text-base ${row.net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{row.net < 0 ? '-' : ''}₱{formatMoney(row.net)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
