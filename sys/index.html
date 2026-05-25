@@ -79,8 +79,8 @@
         };
 
         const formatMoney = (v) => {
-            const num = Number(v || 0); if (isNaN(num)) return "0.00";
-            return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const num = Number(v || 0); if (isNaN(num)) return "0";
+            return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         };
 
         const calculateHoursWorked = (start, end) => {
@@ -130,11 +130,11 @@
             
             // Check for archived interactive payrolls to fetch dynamically saved bonuses
             const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.startDate?.startsWith(selectedMonth) || p.endDate?.startsWith(selectedMonth)));
-            const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
+            const bonusAmount = emp.bonusAmount || 0;
 
             const earnings = [
                 { id: 1, label: `Basic Pay (${emp.days} Days)`, amount: basicPay },
-                ...(bonusAmount > 0 ? [{ id: 2, label: "Bonus / Incentive", amount: bonusAmount }] : [])
+                { id: 2, label: "Bonus / Incentives", amount: bonusAmount }
             ];
 
             const deductions = [
@@ -276,15 +276,15 @@
                                 </div>
 
                                 {/* NET SALARY CARD */}
-                                <div className="bg-[#1e293b] p-6 rounded-[2rem] shadow-lg text-center transform hover:scale-[1.02] transition-transform">
+                                <div className="p-6 text-center transform hover:scale-[1.02] transition-transform">
                                     <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p>
-                                    <p className={`text-4xl font-black tracking-tight ${netPay < 0 ? 'text-red-400' : 'text-[#34d399]'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(netPay)}</p>
+                                    <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(netPay)}</p>
                                 </div>
 
-                                {/* LIFETIME C.A. BALANCE CARD */}
-                                <div className="bg-[#ffe4e6] p-6 rounded-[2rem] border border-red-100 text-center">
-                                    <p className="text-[10px] font-bold text-[#e11d48]/70 tracking-[0.15em] uppercase mb-2">Lifetime C.A. Balance</p>
-                                    <p className="text-3xl font-black text-[#e11d48] tracking-tight">₱{formatMoney(emp.caBalance)}</p>
+                                {/* LIFETIME BALANCE CARD */}
+                                <div className="p-6 border-t border-gray-100 text-center">
+                                    <p className="text-[10px] font-normal text-gray-500 tracking-[0.15em] uppercase mb-2">Lifetime Balance</p>
+                                    <p className="text-3xl font-normal text-gray-700 tracking-tight">₱{formatMoney(emp.caBalance)}</p>
                                 </div>
 
                                 {/* Admin Actions (if provided) */}
@@ -534,9 +534,26 @@
                     const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && (ca.date || '').startsWith(selectedMonth));
                     const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
                     
-                    const lifetimeCaBalance = cashAdvances
+                    // Lifetime Days for Balance Calculation
+                    const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id));
+                    let lifetimeDays = 0; const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => a.date));
+                    uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
+
+                    // Lifetime Bonuses
+                    const lifetimeBonuses = interactivePayrolls
+                        .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
+                        .reduce((sum, p) => sum + (parseFloat(p.data?.bonus) || 0), 0);
+
+                    // Lifetime Gross Earnings
+                    const lifetimeGross = (lifetimeDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + lifetimeBonuses;
+
+                    // Total Cash Received
+                    const totalCashReceived = cashAdvances
                         .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
                         .reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
+
+                    // User Formula: Lifetime Balance = Overall Total Earnings - Total Cash Received
+                    const lifetimeCaBalance = lifetimeGross - totalCashReceived;
 
                     // Include bonuses safely sourced from the Payslip Builder Interactive Archives!
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.startDate?.startsWith(selectedMonth) || p.endDate?.startsWith(selectedMonth)));
@@ -545,7 +562,7 @@
                     const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0) + bonusAmount;
                     const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0);
                     
-                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance };
+                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount };
                 });
             }, [employees, attendance, cashAdvances, interactivePayrolls, selectedMonth]);
 
@@ -821,8 +838,8 @@
                                                                 <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Take Home</p><p className={`text-2xl font-black font-mono ${quickView.rangeNet < 0 ? 'text-red-500' : 'text-emerald-600'}`}>{quickView.rangeNet < 0 ? '-' : ''}₱{formatMoney(quickView.rangeNet)}</p></div>
                                                             </div>
                                                             <div className="mt-6 border-t pt-6 text-center">
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Current C.A. Debt (Lifetime)</p>
-                                                                <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(quickView.caBalance)}</p>
+                                                                <p className="text-[10px] font-normal text-slate-400 uppercase mb-2">Lifetime Balance</p>
+                                                                <p className="text-4xl font-normal text-slate-700 tracking-tighter">₱{formatMoney(quickView.caBalance)}</p>
                                                             </div>
                                                         </div>
                                                     ) : <div className="text-center py-10 text-slate-400 italic">Select an employee to view ledger.</div>}
@@ -1081,7 +1098,7 @@
                                                     <button onClick={()=>setCaType('payment')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='payment'?'bg-white shadow text-emerald-600':'text-slate-400'}`}>PAYMENT</button>
                                                 </div>
                                                 <select className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.empId} onChange={e=>setNewCa({...newCa, empId: e.target.value})}><option value="">Select Member</option>{employees.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
-                                                {newCa.empId && <div className="bg-rose-50 p-4 rounded-xl text-center"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase">Current Debt</p><p className="text-2xl font-black text-rose-600 font-mono">₱{formatMoney(payrollSummary.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance)}</p></div>}
+                                                {newCa.empId && <div className="bg-slate-50 border p-4 rounded-xl text-center"><p className="text-[10px] font-normal text-slate-500 uppercase">Lifetime Balance</p><p className="text-2xl font-normal text-slate-700">₱{formatMoney(payrollSummary.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance)}</p></div>}
                                                 <input type="date" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.date} onChange={e=>setNewCa({...newCa, date: e.target.value})} />
                                                 <input type="number" placeholder="Amount" className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.amount} onChange={e=>setNewCa({...newCa, amount: e.target.value})} />
                                                 <input type="text" placeholder="Note" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.reason} onChange={e=>setNewCa({...newCa, reason: e.target.value})} />
