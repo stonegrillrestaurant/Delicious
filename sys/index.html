@@ -48,16 +48,29 @@
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
             #interactive-print-section, #interactive-print-section * { visibility: visible; }
+            
             #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
             
-            .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
-            #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
-            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
+            /* Print View States */
+            .pos-receipt-active #print-section,
+            .pos-payslip-active #print-section { visibility: hidden; display: none !important; }
             
+            .pos-receipt-active #interactive-print-section,
+            .pos-payslip-active #interactive-print-section { visibility: hidden; display: none !important; }
+
+            /* Hidden elements for POS Print are isolated here */
+            #pos-receipt-print, #pos-receipt-print * { visibility: hidden; }
+            .pos-receipt-active #pos-receipt-print, .pos-receipt-active #pos-receipt-print * { visibility: visible; }
+            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 1mm; font-family: monospace; color: black; display: block !important; }
+            
+            #pos-payslip-print, #pos-payslip-print * { visibility: hidden; }
+            .pos-payslip-active #pos-payslip-print, .pos-payslip-active #pos-payslip-print * { visibility: visible; }
+            #pos-payslip-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 1mm; font-family: monospace; color: black; display: block !important; }
+
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
         }
-        #pos-receipt-print { display: none; }
+        #pos-receipt-print, #pos-payslip-print { display: none; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
@@ -70,6 +83,8 @@
 
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
+
+        const LOCAL_PRINTER_IP = "192.168.254.250";
 
         const normalizeId = (id) => {
             if (!id) return '';
@@ -107,18 +122,19 @@
         const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
         const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
         const Menu = (p) => <Icon {...p}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></Icon>;
-        const Printer = (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>;
+        const PrinterIcon = (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>;
         const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
+        const Network = (p) => <Icon {...p}><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></Icon>;
         
         const UserIcon = (p) => <Icon {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Icon>;
         const ChevronRight = (p) => <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>;
         const HistoryIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></Icon>;
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
-        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
 
         // --- DIGITAL PAYSLIP WIDGET COMPONENT ---
-        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
+        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, onPrintPOS, isAdmin }) {
             const [activeTab, setActiveTab] = useState('payslip');
 
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
@@ -284,6 +300,19 @@
                                     <p className={`text-3xl font-normal tracking-tight ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
                                 </div>
 
+                                {/* Admin Print POS Thermal Shortcut */}
+                                {isAdmin && onPrintPOS && (
+                                    <div className="print-hidden pt-4 border-t border-gray-100">
+                                        <button 
+                                            onClick={() => onPrintPOS(emp, selectedMonth)}
+                                            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs tracking-wider uppercase transition-colors shadow-md flex items-center justify-center gap-2"
+                                        >
+                                            <PrinterIcon className="w-4.5 h-4.5"/> Print 58mm POS Receipt
+                                        </button>
+                                        <p className="text-center text-[9px] text-gray-400 mt-2 font-mono">Mobile / iOS mode active</p>
+                                    </div>
+                                )}
+
                                 {/* Admin Actions (if provided) */}
                                 {(onEdit || onDelete) && (
                                     <div className="flex gap-3 mt-4 print-hidden">
@@ -350,7 +379,7 @@
             );
         }
 
-        function LoginScreen() {
+        function LoginScreen({ onToast }) {
             const [loading, setLoading] = useState(false);
             const [showEmailLogin, setShowEmailLogin] = useState(false);
             const [emailInput, setEmailInput] = useState('');
@@ -360,7 +389,7 @@
                 setLoading(true);
                 const provider = new window.fb.GoogleAuthProvider();
                 try { await window.fb.signInWithPopup(window.fb.auth, provider); } 
-                catch (err) { alert("Login Error: " + err.message); setLoading(false); }
+                catch (err) { onToast("Login Error: " + err.message, "error"); setLoading(false); }
             };
 
             const handleFacebookLogin = async () => {
@@ -368,14 +397,14 @@
                 const provider = new window.fb.FacebookAuthProvider();
                 provider.addScope('email'); 
                 try { await window.fb.signInWithPopup(window.fb.auth, provider); } 
-                catch (err) { alert("Login Error: " + err.message); setLoading(false); }
+                catch (err) { onToast("Login Error: " + err.message, "error"); setLoading(false); }
             };
 
             const handleEmailSubmit = async (e) => {
                 e.preventDefault();
                 setLoading(true);
                 try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); } 
-                catch (err) { alert("Login failed. Check your email or password."); setLoading(false); }
+                catch (err) { onToast("Login failed. Check your email or password.", "error"); setLoading(false); }
             };
 
             return (
@@ -441,6 +470,7 @@
             const [activeTab, setActiveTab] = useState('dashboard');
             const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
             const [isRestoring, setIsRestoring] = useState(false);
+            const [toast, setToast] = useState(null);
             
             const [employees, setEmployees] = useState([]);
             const [attendance, setAttendance] = useState([]);
@@ -466,11 +496,17 @@
 
             const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' });
             const [receiptToPrint, setReceiptToPrint] = useState(null);
+            const [payslipToPrint, setPayslipToPrint] = useState(null);
 
             const isAdmin = userRole === 'Admin';
 
             const getVaultCol = (col) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col);
             const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col, id);
+
+            const showToast = (message, type = "info") => {
+                setToast({ message, type });
+                setTimeout(() => setToast(null), 3800);
+            };
 
             const switchTab = (tab) => {
                 setActiveTab(tab);
@@ -510,7 +546,7 @@
                         }
                         setUserRole('Unauthorized');
                     }
-                }, (err) => alert("Database access error: " + err.message));
+                }, (err) => showToast("Database access error: " + err.message, "error"));
                 
                 const unsubAtt = window.fb.onSnapshot(getVaultCol('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
                 const unsubCA = window.fb.onSnapshot(getVaultCol('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -547,7 +583,7 @@
 
                     const lifetimeCaBalance = lifetimeGross - totalCashReceived;
 
-                    // Include bonuses safely sourced from the Payslip Builder Interactive Archives!
+                    // Include bonuses safely sourced from the Payslip Builder Interactive Archives
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || p.startDate?.startsWith(selectedMonth)));
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
 
@@ -594,6 +630,70 @@
                 }
             }, [icEmpId, icMonth, employees, attendance, cashAdvances, interactivePayrolls]);
 
+            // Formats and launches the dynamic 58mm thermal print routine for any payslip
+            const handlePrintPOSPayslip = (emp, monthValue) => {
+                const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(monthValue));
+                let days = 0; const uniqueDates = new Set(empAtt.map(a => a.date));
+                uniqueDates.forEach(date => days += Math.min(Math.max(...empAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
+                
+                const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && (ca.date || '').startsWith(monthValue));
+                const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
+                
+                const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === monthValue || p.startDate?.startsWith(monthValue)));
+                const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : (emp.bonusAmount || 0);
+                
+                const sssRate = parseFloat(emp.sssRate) || 0;
+                const miscRate = parseFloat(emp.miscRate) || 0;
+                const dailyRate = parseFloat(emp.dailyRate || emp.rate) || 0;
+                const basicPay = days * dailyRate;
+                const gross = basicPay + bonusAmount;
+                const totalDeductions = monthlyCA + sssRate + miscRate;
+                const net = gross - totalDeductions;
+
+                // Lifetime balance
+                const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id));
+                let lifetimeDays = 0;
+                const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => a.date));
+                uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
+
+                const lifetimeBonuses = interactivePayrolls
+                    .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
+                    .reduce((sum, p) => sum + (parseFloat(p.data?.bonus) || 0), 0);
+
+                const lifetimeGross = (lifetimeDays * dailyRate) + lifetimeBonuses;
+                const totalCashReceived = cashAdvances
+                    .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
+                    .reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
+
+                const caBalance = lifetimeGross - totalCashReceived;
+
+                setPayslipToPrint({
+                    empName: emp.name || `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+                    empId: emp.id,
+                    position: emp.position,
+                    month: monthValue,
+                    dailyRate: dailyRate,
+                    days: days,
+                    basicPay: basicPay,
+                    bonus: bonusAmount,
+                    gross: gross,
+                    cashAdvance: monthlyCA,
+                    sss: sssRate,
+                    misc: miscRate,
+                    totalDeductions: totalDeductions,
+                    net: net,
+                    caBalance: caBalance
+                });
+
+                showToast(`Generating receipt for Mobile Share / AirPrint.`, "info");
+
+                document.body.classList.add('pos-payslip-active');
+                setTimeout(() => {
+                    window.print();
+                    document.body.classList.remove('pos-payslip-active');
+                }, 300);
+            };
+
             const handleStaffSubmitCARequest = async (e) => {
                 e.preventDefault();
                 if (!currentBiometricId || !staffCaRequest.amount) return;
@@ -605,7 +705,7 @@
                     status: 'Pending'
                 });
                 setStaffCaRequest({ amount: '', reason: '' });
-                alert("Request sent to Admin for approval.");
+                showToast("Request sent to Admin for approval.", "success");
             };
 
             const handleApproveCARequest = async (req) => {
@@ -614,25 +714,27 @@
                 
                 await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Approved', dateApproved: today });
                 await window.fb.addDoc(getVaultCol('cash_advances'), { empId: req.empId, amount: req.amount, reason: `Apprvd Req: ${req.reason}`, date: today, type: 'advance' });
+                showToast("Request approved and cash advance logged.", "success");
             };
 
             const handleRejectCARequest = async (reqId) => {
                 if (!isAdmin) return;
                 await window.fb.updateDoc(getVaultDoc('ca_requests', reqId), { status: 'Rejected' });
+                showToast("Request marked as rejected.", "info");
             };
 
             const handlePrintReceipt = async (req) => {
                 try {
                     await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Printed' });
                 } catch (err) {
-                    alert("Network error: Could not lock the record. Print cancelled to protect funds.");
+                    showToast("Network error: Could not lock the record. Print cancelled to protect funds.", "error");
                     return; 
                 }
 
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
                 setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
                 
-                alert("IMPORTANT: Make sure to select the 58mm KITCHEN PRINTER from the dropdown list before printing!");
+                showToast(`Generating receipt for Mobile Share / AirPrint.`, "info");
 
                 document.body.classList.add('pos-receipt-active');
                 setTimeout(() => {
@@ -684,7 +786,8 @@
                     await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
-                setRawInput(''); alert(`Processed ${count} attendance records.`);
+                setRawInput(''); 
+                showToast(`Processed ${count} attendance records successfully.`, "success");
             };
 
             const handleAddStaffSubmit = async (e) => {
@@ -693,6 +796,7 @@
                 const payload = { ...newEmpForm, dailyRate: parseFloat(newEmpForm.dailyRate), sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() };
                 await window.fb.setDoc(getVaultDoc('employees', bId), payload, { merge: true });
                 setShowAddStaff(false); setIsEditing(false);
+                showToast("Staff profile uploaded and saved to cloud database.", "success");
             };
 
             const handleIssueCA = async () => {
@@ -702,17 +806,20 @@
                 
                 await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: amt, type: caType });
                 setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
+                showToast("Transaction successfully added to lifetime Ledger.", "success");
             };
 
             const handleDeleteEmployee = async (id, name) => {
                 if (!isAdmin || !window.confirm(`PERMANENTLY delete ${name}?\nThis action cannot be undone.`)) return;
                 await window.fb.deleteDoc(getVaultDoc('employees', normalizeId(id)));
                 setViewProfile(null);
+                showToast("Employee deleted from system.", "info");
             };
 
             const handleDeleteCA = async (caId) => {
                 if (!isAdmin || !window.confirm(`Delete and reverse this transaction?`)) return;
                 await window.fb.deleteDoc(getVaultDoc('cash_advances', caId));
+                showToast("Transaction deleted successfully.", "info");
             };
 
             const handleExportBackup = () => {
@@ -720,6 +827,7 @@
                 const data = { employees, attendance, cashAdvances, interactivePayrolls, caRequests };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `stonegrill_backup.json`; a.click();
+                showToast("Local backup database download compiled.", "success");
             };
 
             const handleImportBackup = (event) => {
@@ -736,15 +844,15 @@
                             }
                         };
                         await restoreCollection('employees', data.employees); await restoreCollection('attendance', data.attendance); await restoreCollection('cash_advances', data.cashAdvances || data.cash_advances); await restoreCollection('payroll_entries', data.interactivePayrolls); await restoreCollection('ca_requests', data.caRequests);
-                        alert(`Restore Complete!`);
-                    } catch (err) { alert("Restore Error: " + err.message); }
+                        showToast(`Restore Complete!`, "success");
+                    } catch (err) { showToast("Restore Error: " + err.message, "error"); }
                     setIsRestoring(false);
                 };
                 reader.readAsText(file); event.target.value = ''; 
             };
 
             if (!isReady) return null;
-            if (!user) return <LoginScreen />;
+            if (!user) return <LoginScreen onToast={showToast} />;
 
             if (userRole === '') {
                 return <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-t-white rounded-full animate-spin mb-4"></div><p className="font-black uppercase tracking-widest text-xs">Checking Access...</p></div>;
@@ -861,6 +969,7 @@
                                                         attendance={attendance} 
                                                         cashAdvances={cashAdvances} 
                                                         interactivePayrolls={interactivePayrolls} 
+                                                        isAdmin={isAdmin}
                                                     />
 
                                                     {/* CA Request Tool */}
@@ -900,7 +1009,7 @@
                                                                                 </td>
                                                                                 <td className="p-3 text-center">
                                                                                     {req.status === 'Approved' ? (
-                                                                                        <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-black active:scale-95"><Printer className="w-3 h-3 inline mr-1"/> Print</button>
+                                                                                        <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-black active:scale-95"><PrinterIcon className="w-3 h-3 inline mr-1"/> Print</button>
                                                                                     ) : <span className="text-slate-300">--</span>}
                                                                                 </td>
                                                                             </tr>
@@ -1003,11 +1112,11 @@
                                                 if (!icEmpId) return;
                                                 const key = `${normalizeId(icEmpId)}_${icMonth}`;
                                                 await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: icForm });
-                                                alert("Saved to archive.");
+                                                showToast("Saved to archive.", "success");
                                             }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
                                         </div>
                                         
-                                        <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
+                                        <div className="flex-1 bg-slate-200/50 p-6 md:p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
                                             {icEmpId ? (() => {
                                                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                                                 const gross = (icForm.days_worked * (parseFloat(emp?.dailyRate || emp?.rate) || 0)) + icForm.bonus;
@@ -1016,7 +1125,7 @@
                                                 const currentMonthLabel = monthOptions.find(m => m.value === icMonth)?.label || icMonth;
                                                 
                                                 return (
-                                                <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative" id="interactive-print-section">
+                                                <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-6 md:p-10 relative" id="interactive-print-section">
                                                     <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYROLL</div></div>
                                                     <h2 className="text-2xl font-black border-b-4 border-red-50 mb-2 uppercase tracking-tighter leading-none pb-2">{emp?.name}</h2>
                                                     <div className="flex justify-between items-end mb-8 text-sm font-bold text-slate-500">
@@ -1049,7 +1158,27 @@
                                                             </div>
                                                         </div>
                                                     )}
-                                                    <button onClick={() => window.print()} className="mt-10 w-full bg-slate-800 text-white py-3 rounded-full font-black uppercase text-[10px] print-hidden flex items-center justify-center gap-2 hover:bg-black"><Printer/> Print Card</button>
+                                                    
+                                                    {/* Printable format options for 58mm POS receipt printers or standard layouts */}
+                                                    <div className="mt-8 flex flex-col sm:flex-row gap-3 print-hidden">
+                                                        <button 
+                                                            onClick={() => {
+                                                                // Uses a customized wrapper body class to print only standard card layout
+                                                                document.body.classList.add('standard-card-active');
+                                                                window.print();
+                                                                document.body.classList.remove('standard-card-active');
+                                                            }} 
+                                                            className="flex-1 bg-slate-800 text-white py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-black transition-transform"
+                                                        >
+                                                            <PrinterIcon className="w-3.5 h-3.5"/> Print Standard
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handlePrintPOSPayslip(emp, icMonth)} 
+                                                            className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-emerald-700 transition-transform"
+                                                        >
+                                                            <PrinterIcon className="w-3.5 h-3.5"/> Print 58mm Thermal
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 );
                                             })() : <div className="py-24 text-slate-300 italic flex flex-col items-center"><FileText className="w-16 h-16 opacity-10 mb-4"/>Select employee to view payslip</div>}
@@ -1140,7 +1269,7 @@
                                     <div className="bg-white w-full p-4 lg:p-8 animate-slide-up">
                                         <div className="flex justify-between items-center mb-8 print-hidden">
                                             <div className="flex items-center gap-4"><h2 className="text-2xl font-black text-slate-900 uppercase">Payroll List</h2><select className="border-2 rounded-xl px-4 py-2 text-sm font-bold outline-none" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>{monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                                            <button onClick={() => window.print()} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><Printer className="w-4 h-4"/> Print</button>
+                                            <button onClick={() => window.print()} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><PrinterIcon className="w-4 h-4"/> Print</button>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left text-sm min-w-[800px]">
@@ -1192,13 +1321,36 @@
                                 )}
 
                                 {isAdmin && activeTab === 'settings' && (
-                                    <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md mx-auto mt-10 text-center animate-slide-up">
-                                        <h3 className="font-black text-2xl uppercase mb-2">Cloud Database</h3>
-                                        <p className="text-slate-400 mb-8 font-bold text-xs">Backup or Restore complete environment.</p>
-                                        <div className="space-y-4">
-                                            <button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Download Backup</button>
-                                            <div className="relative">
-                                                <label className="flex w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg cursor-pointer justify-center">Upload Restore JSON<input type="file" accept=".json" className="hidden" onChange={handleImportBackup} /></label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-slide-up">
+                                        <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center">
+                                            <div className="w-16 h-16 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mb-4 shadow-sm"><Download className="w-8 h-8"/></div>
+                                            <h3 className="font-black text-2xl uppercase mb-2">Cloud Database</h3>
+                                            <p className="text-slate-400 mb-8 font-bold text-xs">Backup or Restore complete environment.</p>
+                                            <div className="space-y-4 w-full">
+                                                <button onClick={handleExportBackup} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase shadow-lg hover:bg-black transition-colors">Download Backup</button>
+                                                <div className="relative">
+                                                    <label className="flex w-full bg-emerald-600 hover:bg-emerald-700 transition-colors text-white py-4 rounded-2xl font-black uppercase shadow-lg cursor-pointer justify-center">Upload Restore JSON<input type="file" accept=".json" className="hidden" onChange={handleImportBackup} /></label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center">
+                                            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm"><Network className="w-8 h-8"/></div>
+                                            <h3 className="font-black text-2xl uppercase mb-2 text-blue-900">Mobile Printing</h3>
+                                            <p className="text-slate-400 mb-6 font-bold text-xs px-4">How to print to your local thermal printer directly from an iPad or Mobile device.</p>
+                                            
+                                            <div className="bg-slate-50 w-full p-4 rounded-2xl border border-slate-200">
+                                                <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Target IP Address</p>
+                                                <p className="text-2xl font-black text-slate-800 font-mono tracking-widest">{LOCAL_PRINTER_IP}</p>
+                                            </div>
+
+                                            <div className="w-full text-left mt-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                                <h4 className="text-[10px] uppercase font-black text-blue-800 tracking-widest mb-2 border-b border-blue-200 pb-2">iOS / Mobile Setup</h4>
+                                                <ol className="text-xs text-blue-900 font-medium space-y-2 list-decimal list-inside">
+                                                    <li>Tap <b>Print 58mm POS Receipt</b> in the app.</li>
+                                                    <li>If your printer supports Apple AirPrint, simply select it from the print menu.</li>
+                                                    <li>If not, use the iOS <b>Share</b> button and send the receipt to a 3rd party ESC/POS App (like <i>PrintHand</i> or your printer's brand app) configured with IP: <b>{LOCAL_PRINTER_IP}</b>.</li>
+                                                </ol>
                                             </div>
                                         </div>
                                     </div>
@@ -1206,7 +1358,7 @@
                             </div>
                         </div>
 
-                        {/* HIDDEN 58MM POS RECEIPT RENDERER */}
+                        {/* HIDDEN 58MM POS RECEIPT RENDERER FOR APPROVED ADVANCES */}
                         {receiptToPrint && (
                             <div id="pos-receipt-print" className="bg-white">
                                 <div style={{ textAlign: 'center', marginBottom: '10px' }}>
@@ -1225,6 +1377,116 @@
                                 <p style={{ fontSize: '9px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
                                 <div style={{ marginTop: '30px' }}>
                                     <p style={{ fontSize: '10px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '90%', margin: '0 auto' }}>Cashier Signature</p>
+                                </div>
+                                <div style={{ paddingBottom: '30px' }}></div>
+                            </div>
+                        )}
+
+                        {/* HIDDEN 58MM POS PAYSLIP RECEIPT RENDERER */}
+                        {payslipToPrint && (
+                            <div id="pos-payslip-print" className="bg-white" style={{ fontFamily: 'monospace', color: 'black' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                                    <h2 style={{ fontSize: '15px', fontWeight: '900', margin: '0 0 3px 0', tracking: '0.05em' }}>STONE GRILL</h2>
+                                    <p style={{ fontSize: '9px', margin: '0', textTransform: 'uppercase' }}>Smart Payroll System</p>
+                                </div>
+                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                
+                                <div style={{ fontSize: '10px', lineHeight: '1.4' }}>
+                                    <p style={{ margin: '2px 0' }}><strong>Period:</strong> {monthOptions.find(m => m.value === payslipToPrint.month)?.label || payslipToPrint.month}</p>
+                                    <p style={{ margin: '2px 0' }}><strong>Employee:</strong> {payslipToPrint.empName.toUpperCase()}</p>
+                                    <p style={{ margin: '2px 0' }}><strong>Emp ID:</strong> {payslipToPrint.empId}</p>
+                                    <p style={{ margin: '2px 0' }}><strong>Position:</strong> {payslipToPrint.position}</p>
+                                    <p style={{ margin: '2px 0' }}><strong>Daily Rate:</strong> PHP {formatMoney(payslipToPrint.dailyRate)}</p>
+                                </div>
+                                
+                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                
+                                <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid black' }}>
+                                            <th style={{ textAlign: 'left', padding: '2px 0' }}>EARNINGS</th>
+                                            <th style={{ textAlign: 'right', padding: '2px 0' }}>AMOUNT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style={{ padding: '2px 0' }}>Basic ({payslipToPrint.days} Days)</td>
+                                            <td style={{ textAlign: 'right', padding: '2px 0' }}>PHP {formatMoney(payslipToPrint.basicPay)}</td>
+                                        </tr>
+                                        {payslipToPrint.bonus > 0 && (
+                                            <tr>
+                                                <td style={{ padding: '2px 0' }}>Bonus / Incentives</td>
+                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>PHP {formatMoney(payslipToPrint.bonus)}</td>
+                                            </tr>
+                                        )}
+                                        <tr style={{ borderTop: '1px dotted black', fontWeight: 'bold' }}>
+                                            <td style={{ padding: '4px 0' }}>GROSS EARNINGS</td>
+                                            <td style={{ textAlign: 'right', padding: '4px 0' }}>PHP {formatMoney(payslipToPrint.gross)}</td>
+                                        </tr>
+                                        
+                                        <tr style={{ height: '8px' }}></tr>
+                                        
+                                        <tr style={{ borderBottom: '1px solid black' }}>
+                                            <th style={{ textAlign: 'left', padding: '2px 0' }}>DEDUCTIONS</th>
+                                            <th style={{ textAlign: 'right', padding: '2px 0' }}>AMOUNT</th>
+                                        </tr>
+                                        {payslipToPrint.cashAdvance > 0 && (
+                                            <tr>
+                                                <td style={{ padding: '2px 0' }}>C.A. Deduction</td>
+                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>-PHP {formatMoney(payslipToPrint.cashAdvance)}</td>
+                                            </tr>
+                                        )}
+                                        {payslipToPrint.sss > 0 && (
+                                            <tr>
+                                                <td style={{ padding: '2px 0' }}>SSS Contribution</td>
+                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>-PHP {formatMoney(payslipToPrint.sss)}</td>
+                                            </tr>
+                                        )}
+                                        {payslipToPrint.misc > 0 && (
+                                            <tr>
+                                                <td style={{ padding: '2px 0' }}>Misc / Uniform</td>
+                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>-PHP {formatMoney(payslipToPrint.misc)}</td>
+                                            </tr>
+                                        )}
+                                        {payslipToPrint.cashAdvance === 0 && payslipToPrint.sss === 0 && payslipToPrint.misc === 0 && (
+                                            <tr>
+                                                <td colSpan="2" style={{ padding: '2px 0', fontStyle: 'italic', color: '#555' }}>No deductions active.</td>
+                                            </tr>
+                                        )}
+                                        <tr style={{ borderTop: '1px dotted black', fontWeight: 'bold' }}>
+                                            <td style={{ padding: '4px 0' }}>TOTAL DEDUCTIONS</td>
+                                            <td style={{ textAlign: 'right', padding: '4px 0' }}>-PHP {formatMoney(payslipToPrint.totalDeductions)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '6px 0', fontWeight: 'bold' }}>
+                                    <span style={{ fontSize: '10px' }}>NET TAKE HOME:</span>
+                                    <span style={{ fontSize: '13px', border: '1px solid black', padding: '2px 5px' }}>
+                                        PHP {formatMoney(payslipToPrint.net)}
+                                    </span>
+                                </div>
+                                
+                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                
+                                <div style={{ fontSize: '9px', textAlign: 'center', margin: '4px 0' }}>
+                                    <p style={{ margin: '0 0 2px 0' }}>LIFETIME CA DEBT: PHP {formatMoney(Math.abs(payslipToPrint.caBalance))}</p>
+                                    <p style={{ margin: '0', fontStyle: 'italic' }}>*** SYSTEM SECURE RUN ***</p>
+                                </div>
+                                
+                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                
+                                <div style={{ marginTop: '25px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ borderBottom: '1px solid black', width: '80%', margin: '0 auto', height: '12px' }}></div>
+                                        <p style={{ fontSize: '8px', margin: '4px 0 0 0', textTransform: 'uppercase' }}>Employee Signature</p>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ borderBottom: '1px solid black', width: '80%', margin: '0 auto', height: '12px' }}></div>
+                                        <p style={{ fontSize: '8px', margin: '4px 0 0 0', textTransform: 'uppercase' }}>Admin / Vault Officer</p>
+                                    </div>
                                 </div>
                                 <div style={{ paddingBottom: '30px' }}></div>
                             </div>
@@ -1278,7 +1540,19 @@
                                 onClose={() => setViewProfile(null)}
                                 onEdit={handleEditProfile}
                                 onDelete={handleDeleteEmployee}
+                                onPrintPOS={(emp, month) => handlePrintPOSPayslip(emp, month)}
+                                isAdmin={isAdmin}
                             />
+                        </div>
+                    )}
+
+                    {/* CUSTOM PREMIUM TOAST ALERTS */}
+                    {toast && (
+                        <div className="fixed bottom-6 right-6 z-[200] max-w-sm bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-slide-up">
+                            <div className={`p-1.5 rounded-full ${toast.type === 'error' ? 'bg-rose-500' : toast.type === 'success' ? 'bg-emerald-500' : 'bg-blue-500'}`}>
+                                {toast.type === 'error' ? <X className="w-3.5 h-3.5 text-white"/> : <Clock className="w-3.5 h-3.5 text-white"/>}
+                            </div>
+                            <p className="text-xs font-bold leading-relaxed">{toast.message}</p>
                         </div>
                     )}
                 </div>
