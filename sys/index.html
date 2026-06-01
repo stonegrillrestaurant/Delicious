@@ -45,6 +45,8 @@
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
         @media print {
+            @page { margin: 0; size: 58mm auto; }
+
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
             #interactive-print-section, #interactive-print-section * { visibility: visible; }
@@ -58,14 +60,14 @@
             .pos-receipt-active #interactive-print-section,
             .pos-payslip-active #interactive-print-section { visibility: hidden; display: none !important; }
 
-            /* Hidden elements for POS Print are isolated here */
-            #pos-receipt-print, #pos-receipt-print * { visibility: hidden; }
-            .pos-receipt-active #pos-receipt-print, .pos-receipt-active #pos-receipt-print * { visibility: visible; }
-            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 1mm; font-family: monospace; color: black; display: block !important; }
+            /* Mobile Optimized Thermal Print CSS */
+            #pos-receipt-print, #pos-payslip-print { visibility: hidden; display: none; }
             
-            #pos-payslip-print, #pos-payslip-print * { visibility: hidden; }
+            .pos-receipt-active #pos-receipt-print, .pos-receipt-active #pos-receipt-print * { visibility: visible; }
+            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 100% !important; max-width: 320px; margin: 0 auto; padding: 10px; font-family: monospace; color: black; display: block !important; }
+            
             .pos-payslip-active #pos-payslip-print, .pos-payslip-active #pos-payslip-print * { visibility: visible; }
-            #pos-payslip-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 1mm; font-family: monospace; color: black; display: block !important; }
+            #pos-payslip-print { position: absolute; left: 0; top: 0; width: 100% !important; max-width: 320px; margin: 0 auto; padding: 10px; font-family: monospace; color: black; display: block !important; }
 
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
@@ -1179,6 +1181,7 @@
                                                             <PrinterIcon className="w-3.5 h-3.5"/> Print 58mm Thermal
                                                         </button>
                                                     </div>
+                                                    <p className="text-[9px] text-center text-slate-400 mt-3 print-hidden font-bold">Network Printer IP: {LOCAL_PRINTER_IP}</p>
                                                 </div>
                                                 );
                                             })() : <div className="py-24 text-slate-300 italic flex flex-col items-center"><FileText className="w-16 h-16 opacity-10 mb-4"/>Select employee to view payslip</div>}
@@ -1361,134 +1364,134 @@
                         {/* HIDDEN 58MM POS RECEIPT RENDERER FOR APPROVED ADVANCES */}
                         {receiptToPrint && (
                             <div id="pos-receipt-print" className="bg-white">
-                                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                                    <h2 style={{ fontSize: '16px', fontWeight: '900', margin: '0 0 5px 0' }}>STONE GRILL</h2>
-                                    <p style={{ fontSize: '10px', margin: '0' }}>Cash Advance Voucher</p>
+                                <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+                                    <h2 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 6px 0' }}>STONE GRILL</h2>
+                                    <p style={{ fontSize: '14px', margin: '0' }}>Cash Advance Voucher</p>
                                 </div>
-                                <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Date:</strong> {new Date(receiptToPrint.dateApproved || receiptToPrint.dateRequested).toLocaleString()}</p>
-                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Name:</strong> {receiptToPrint.empName.toUpperCase()}</p>
-                                <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <div style={{ textAlign: 'center', margin: '15px 0' }}>
-                                    <p style={{ fontSize: '10px', margin: '0 0 5px 0' }}>AMOUNT APPROVED</p>
-                                    <h1 style={{ fontSize: '20px', fontWeight: '900', margin: '0' }}>PHP {formatMoney(receiptToPrint.amount)}</h1>
+                                <div style={{ borderBottom: '2px dashed black', margin: '14px 0' }}></div>
+                                <p style={{ fontSize: '14px', margin: '4px 0' }}><strong>Date:</strong> {new Date(receiptToPrint.dateApproved || receiptToPrint.dateRequested).toLocaleDateString()}</p>
+                                <p style={{ fontSize: '14px', margin: '4px 0' }}><strong>Name:</strong> {receiptToPrint.empName.toUpperCase()}</p>
+                                <div style={{ borderBottom: '2px dashed black', margin: '14px 0' }}></div>
+                                <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                                    <p style={{ fontSize: '14px', margin: '0 0 6px 0' }}>AMOUNT APPROVED</p>
+                                    <h1 style={{ fontSize: '28px', fontWeight: '900', margin: '0' }}>PHP {formatMoney(receiptToPrint.amount)}</h1>
                                 </div>
-                                <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <p style={{ fontSize: '9px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
-                                <div style={{ marginTop: '30px' }}>
-                                    <p style={{ fontSize: '10px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '90%', margin: '0 auto' }}>Cashier Signature</p>
+                                <div style={{ borderBottom: '2px dashed black', margin: '14px 0' }}></div>
+                                <p style={{ fontSize: '12px', textAlign: 'center', margin: '20px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
+                                <div style={{ marginTop: '40px' }}>
+                                    <p style={{ fontSize: '12px', textAlign: 'center', borderTop: '2px solid black', paddingTop: '8px', width: '90%', margin: '0 auto' }}>Cashier Signature</p>
                                 </div>
-                                <div style={{ paddingBottom: '30px' }}></div>
+                                <div style={{ paddingBottom: '40px' }}></div>
                             </div>
                         )}
 
                         {/* HIDDEN 58MM POS PAYSLIP RECEIPT RENDERER */}
                         {payslipToPrint && (
                             <div id="pos-payslip-print" className="bg-white" style={{ fontFamily: 'monospace', color: 'black' }}>
-                                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                    <h2 style={{ fontSize: '15px', fontWeight: '900', margin: '0 0 3px 0', tracking: '0.05em' }}>STONE GRILL</h2>
-                                    <p style={{ fontSize: '9px', margin: '0', textTransform: 'uppercase' }}>Smart Payroll System</p>
+                                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                                    <h2 style={{ fontSize: '22px', fontWeight: '900', margin: '0 0 4px 0', tracking: '0.05em' }}>STONE GRILL</h2>
+                                    <p style={{ fontSize: '12px', margin: '0', textTransform: 'uppercase' }}>Smart Payroll System</p>
                                 </div>
-                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                <div style={{ borderBottom: '2px dashed black', margin: '12px 0' }}></div>
                                 
-                                <div style={{ fontSize: '10px', lineHeight: '1.4' }}>
-                                    <p style={{ margin: '2px 0' }}><strong>Period:</strong> {monthOptions.find(m => m.value === payslipToPrint.month)?.label || payslipToPrint.month}</p>
-                                    <p style={{ margin: '2px 0' }}><strong>Employee:</strong> {payslipToPrint.empName.toUpperCase()}</p>
-                                    <p style={{ margin: '2px 0' }}><strong>Emp ID:</strong> {payslipToPrint.empId}</p>
-                                    <p style={{ margin: '2px 0' }}><strong>Position:</strong> {payslipToPrint.position}</p>
-                                    <p style={{ margin: '2px 0' }}><strong>Daily Rate:</strong> PHP {formatMoney(payslipToPrint.dailyRate)}</p>
+                                <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                                    <p style={{ margin: '4px 0' }}><strong>Period:</strong> {monthOptions.find(m => m.value === payslipToPrint.month)?.label || payslipToPrint.month}</p>
+                                    <p style={{ margin: '4px 0' }}><strong>Employee:</strong> {payslipToPrint.empName.toUpperCase()}</p>
+                                    <p style={{ margin: '4px 0' }}><strong>Emp ID:</strong> {payslipToPrint.empId}</p>
+                                    <p style={{ margin: '4px 0' }}><strong>Position:</strong> {payslipToPrint.position}</p>
+                                    <p style={{ margin: '4px 0' }}><strong>Daily Rate:</strong> PHP {formatMoney(payslipToPrint.dailyRate)}</p>
                                 </div>
                                 
-                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                <div style={{ borderBottom: '2px dashed black', margin: '12px 0' }}></div>
                                 
-                                <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
+                                <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={{ borderBottom: '1px solid black' }}>
-                                            <th style={{ textAlign: 'left', padding: '2px 0' }}>EARNINGS</th>
-                                            <th style={{ textAlign: 'right', padding: '2px 0' }}>AMOUNT</th>
+                                        <tr style={{ borderBottom: '2px solid black' }}>
+                                            <th style={{ textAlign: 'left', padding: '4px 0' }}>EARNINGS</th>
+                                            <th style={{ textAlign: 'right', padding: '4px 0' }}>AMOUNT</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td style={{ padding: '2px 0' }}>Basic ({payslipToPrint.days} Days)</td>
-                                            <td style={{ textAlign: 'right', padding: '2px 0' }}>PHP {formatMoney(payslipToPrint.basicPay)}</td>
+                                            <td style={{ padding: '4px 0' }}>Basic ({payslipToPrint.days} Days)</td>
+                                            <td style={{ textAlign: 'right', padding: '4px 0' }}>PHP {formatMoney(payslipToPrint.basicPay)}</td>
                                         </tr>
                                         {payslipToPrint.bonus > 0 && (
                                             <tr>
-                                                <td style={{ padding: '2px 0' }}>Bonus / Incentives</td>
-                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>PHP {formatMoney(payslipToPrint.bonus)}</td>
+                                                <td style={{ padding: '4px 0' }}>Bonus / Incentives</td>
+                                                <td style={{ textAlign: 'right', padding: '4px 0' }}>PHP {formatMoney(payslipToPrint.bonus)}</td>
                                             </tr>
                                         )}
-                                        <tr style={{ borderTop: '1px dotted black', fontWeight: 'bold' }}>
-                                            <td style={{ padding: '4px 0' }}>GROSS EARNINGS</td>
-                                            <td style={{ textAlign: 'right', padding: '4px 0' }}>PHP {formatMoney(payslipToPrint.gross)}</td>
+                                        <tr style={{ borderTop: '2px dotted black', fontWeight: 'bold' }}>
+                                            <td style={{ padding: '6px 0' }}>GROSS EARNINGS</td>
+                                            <td style={{ textAlign: 'right', padding: '6px 0' }}>PHP {formatMoney(payslipToPrint.gross)}</td>
                                         </tr>
                                         
-                                        <tr style={{ height: '8px' }}></tr>
+                                        <tr style={{ height: '12px' }}></tr>
                                         
-                                        <tr style={{ borderBottom: '1px solid black' }}>
-                                            <th style={{ textAlign: 'left', padding: '2px 0' }}>DEDUCTIONS</th>
-                                            <th style={{ textAlign: 'right', padding: '2px 0' }}>AMOUNT</th>
+                                        <tr style={{ borderBottom: '2px solid black' }}>
+                                            <th style={{ textAlign: 'left', padding: '4px 0' }}>DEDUCTIONS</th>
+                                            <th style={{ textAlign: 'right', padding: '4px 0' }}>AMOUNT</th>
                                         </tr>
                                         {payslipToPrint.cashAdvance > 0 && (
                                             <tr>
-                                                <td style={{ padding: '2px 0' }}>C.A. Deduction</td>
-                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>-PHP {formatMoney(payslipToPrint.cashAdvance)}</td>
+                                                <td style={{ padding: '4px 0' }}>C.A. Deduction</td>
+                                                <td style={{ textAlign: 'right', padding: '4px 0' }}>-PHP {formatMoney(payslipToPrint.cashAdvance)}</td>
                                             </tr>
                                         )}
                                         {payslipToPrint.sss > 0 && (
                                             <tr>
-                                                <td style={{ padding: '2px 0' }}>SSS Contribution</td>
-                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>-PHP {formatMoney(payslipToPrint.sss)}</td>
+                                                <td style={{ padding: '4px 0' }}>SSS Contribution</td>
+                                                <td style={{ textAlign: 'right', padding: '4px 0' }}>-PHP {formatMoney(payslipToPrint.sss)}</td>
                                             </tr>
                                         )}
                                         {payslipToPrint.misc > 0 && (
                                             <tr>
-                                                <td style={{ padding: '2px 0' }}>Misc / Uniform</td>
-                                                <td style={{ textAlign: 'right', padding: '2px 0' }}>-PHP {formatMoney(payslipToPrint.misc)}</td>
+                                                <td style={{ padding: '4px 0' }}>Misc / Uniform</td>
+                                                <td style={{ textAlign: 'right', padding: '4px 0' }}>-PHP {formatMoney(payslipToPrint.misc)}</td>
                                             </tr>
                                         )}
                                         {payslipToPrint.cashAdvance === 0 && payslipToPrint.sss === 0 && payslipToPrint.misc === 0 && (
                                             <tr>
-                                                <td colSpan="2" style={{ padding: '2px 0', fontStyle: 'italic', color: '#555' }}>No deductions active.</td>
+                                                <td colSpan="2" style={{ padding: '4px 0', fontStyle: 'italic', color: '#555' }}>No deductions active.</td>
                                             </tr>
                                         )}
-                                        <tr style={{ borderTop: '1px dotted black', fontWeight: 'bold' }}>
-                                            <td style={{ padding: '4px 0' }}>TOTAL DEDUCTIONS</td>
-                                            <td style={{ textAlign: 'right', padding: '4px 0' }}>-PHP {formatMoney(payslipToPrint.totalDeductions)}</td>
+                                        <tr style={{ borderTop: '2px dotted black', fontWeight: 'bold' }}>
+                                            <td style={{ padding: '6px 0' }}>TOTAL DEDUCTIONS</td>
+                                            <td style={{ textAlign: 'right', padding: '6px 0' }}>-PHP {formatMoney(payslipToPrint.totalDeductions)}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                                 
-                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                <div style={{ borderBottom: '2px dashed black', margin: '12px 0' }}></div>
                                 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '6px 0', fontWeight: 'bold' }}>
-                                    <span style={{ fontSize: '10px' }}>NET TAKE HOME:</span>
-                                    <span style={{ fontSize: '13px', border: '1px solid black', padding: '2px 5px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0', fontWeight: 'bold' }}>
+                                    <span style={{ fontSize: '14px' }}>NET TAKE HOME:</span>
+                                    <span style={{ fontSize: '18px', border: '2px solid black', padding: '4px 8px' }}>
                                         PHP {formatMoney(payslipToPrint.net)}
                                     </span>
                                 </div>
                                 
-                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                <div style={{ borderBottom: '2px dashed black', margin: '12px 0' }}></div>
                                 
-                                <div style={{ fontSize: '9px', textAlign: 'center', margin: '4px 0' }}>
-                                    <p style={{ margin: '0 0 2px 0' }}>LIFETIME CA DEBT: PHP {formatMoney(Math.abs(payslipToPrint.caBalance))}</p>
+                                <div style={{ fontSize: '12px', textAlign: 'center', margin: '6px 0' }}>
+                                    <p style={{ margin: '0 0 4px 0' }}>LIFETIME CA DEBT: PHP {formatMoney(Math.abs(payslipToPrint.caBalance))}</p>
                                     <p style={{ margin: '0', fontStyle: 'italic' }}>*** SYSTEM SECURE RUN ***</p>
                                 </div>
                                 
-                                <div style={{ borderBottom: '1px dashed black', margin: '8px 0' }}></div>
+                                <div style={{ borderBottom: '2px dashed black', margin: '12px 0' }}></div>
                                 
-                                <div style={{ marginTop: '25px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                <div style={{ marginTop: '35px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <div style={{ textAlign: 'center' }}>
-                                        <div style={{ borderBottom: '1px solid black', width: '80%', margin: '0 auto', height: '12px' }}></div>
-                                        <p style={{ fontSize: '8px', margin: '4px 0 0 0', textTransform: 'uppercase' }}>Employee Signature</p>
+                                        <div style={{ borderBottom: '2px solid black', width: '80%', margin: '0 auto', height: '16px' }}></div>
+                                        <p style={{ fontSize: '12px', margin: '6px 0 0 0', textTransform: 'uppercase' }}>Employee Signature</p>
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
-                                        <div style={{ borderBottom: '1px solid black', width: '80%', margin: '0 auto', height: '12px' }}></div>
-                                        <p style={{ fontSize: '8px', margin: '4px 0 0 0', textTransform: 'uppercase' }}>Admin / Vault Officer</p>
+                                        <div style={{ borderBottom: '2px solid black', width: '80%', margin: '0 auto', height: '16px' }}></div>
+                                        <p style={{ fontSize: '12px', margin: '6px 0 0 0', textTransform: 'uppercase' }}>Admin / Vault Officer</p>
                                     </div>
                                 </div>
-                                <div style={{ paddingBottom: '30px' }}></div>
+                                <div style={{ paddingBottom: '40px' }}></div>
                             </div>
                         )}
                     </main>
@@ -1526,7 +1529,7 @@
                         </div>
                     )}
 
-                    {/* ADMIN VIEW PROFILE MODAL (Now Uses the Digital Payslip Widget) */}
+                    {/* ADMIN VIEW PROFILE MODAL */}
                     {viewProfile && isAdmin && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[50] flex items-center justify-center p-4">
                             <PayslipWidget 
