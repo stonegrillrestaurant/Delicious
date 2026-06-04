@@ -315,6 +315,14 @@
                                             <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>
                                                 {(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}
                                             </p>
+                                            {onDelete && (
+                                                <div className="mt-2">
+                                                    <button type="button" onClick={() => {
+                                                        if (!window.confirm('Delete this ledger entry? This will remove it from the cloud ledger.')) return;
+                                                        onDelete(tx);
+                                                    }} className="text-[10px] text-rose-500 hover:text-rose-700">Delete</button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -722,6 +730,25 @@
                 await window.fb.deleteDoc(getVaultDoc('cash_advances', caId));
             };
 
+            const handleDeleteLedgerEntry = async (tx) => {
+                if (!isAdmin || !tx) return;
+                try {
+                    if (tx.isBonus) {
+                        const key = String(tx.id || '').replace(/^bonus-/, '');
+                        if (!key) return;
+                        if (!window.confirm('Delete this archived payroll bonus? This will set the archived bonus to 0.')) return;
+                        await window.fb.updateDoc(getVaultDoc('payroll_entries', key), { 'data.bonus': 0 });
+                        alert('Archived bonus removed.');
+                    } else {
+                        if (!window.confirm('Delete this ledger transaction (cash advance/payment)? This action cannot be undone.')) return;
+                        await window.fb.deleteDoc(getVaultDoc('cash_advances', tx.id));
+                        alert('Ledger transaction deleted.');
+                    }
+                } catch (err) {
+                    alert('Error deleting ledger entry: ' + (err.message || err));
+                }
+            };
+
             const handleExportBackup = () => {
                 if(!isAdmin) return;
                 const data = { employees, attendance, cashAdvances, interactivePayrolls, caRequests };
@@ -868,6 +895,7 @@
                                                         attendance={attendance} 
                                                         cashAdvances={cashAdvances} 
                                                         interactivePayrolls={interactivePayrolls} 
+                                                        onDelete={isAdmin ? handleDeleteLedgerEntry : undefined}
                                                     />
 
                                                     {/* CA Request Tool */}
