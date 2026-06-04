@@ -462,7 +462,9 @@
 
             const [icEmpId, setIcEmpId] = useState('');
             const [icMonth, setIcMonth] = useState(() => new Date().toISOString().slice(0, 7));
-            const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
+            const [icForm, setIcForm] = useState({ salary_pay: 0, days_worked: 0, bonus: 0, bonus_description: '', deduction: 0, deduction_description: '', sss: 0, cash_advance: 0, misc_deductions: 0 });
+            const [icLedgerEntries, setIcLedgerEntries] = useState([]);
+            const [icLedgerEntry, setIcLedgerEntry] = useState({ type: 'Bonus', amount: '', note: '' });
 
             const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' });
             const [receiptToPrint, setReceiptToPrint] = useState(null);
@@ -997,17 +999,103 @@
                                                 </select>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Days</label><input type="number" step="0.1" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.days_worked} onChange={e => setIcForm({...icForm, days_worked: parseFloat(e.target.value) || 0})}/></div>
-                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Bonus (₱)</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.bonus} onChange={e => setIcForm({...icForm, bonus: parseFloat(e.target.value) || 0})}/></div>
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Days Present</label>
+                                                    <input type="number" min="0" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.days_worked} onChange={e => setIcForm({...icForm, days_worked: parseFloat(e.target.value) || 0})}/>
+                                                    <p className="text-[10px] text-slate-400 mt-2">Number of days the employee was present this month.</p>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Rate / Day</label>
+                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icEmpId ? `₱${formatMoney(parseFloat((employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : 'Select an employee'}/>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Salary Paid (₱)</label>
+                                                    <input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.salary_pay} onChange={e => setIcForm({...icForm, salary_pay: parseFloat(e.target.value) || 0})}/>
+                                                    <p className="text-[10px] text-slate-400 mt-2">Enter salary paid by the employer to the employee.</p>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Earnings</label>
+                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icForm.days_worked ? `₱${formatMoney(icForm.days_worked * (parseFloat(employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : '₱0'}/>
+                                                    <p className="text-[10px] text-slate-400 mt-2">Computed from days present and rate per day.</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Bonus / Incentives (₱)</label>
+                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-emerald-600" value={`₱${formatMoney(icLedgerEntries.filter(entry => entry.amount > 0).reduce((sum, entry) => sum + entry.amount, 0))}`}/>
+                                                    <p className="text-[10px] text-slate-400 mt-2">Sum of all bonus/incentive/commission ledger entries.</p>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Deductions (₱)</label>
+                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-rose-600" value={`₱${formatMoney(icLedgerEntries.filter(entry => entry.amount < 0).reduce((sum, entry) => sum + Math.abs(entry.amount), 0))}`}/>
+                                                    <p className="text-[10px] text-slate-400 mt-2">Sum of all deduction/fine/penalty ledger entries.</p>
+                                                </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">CA Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-rose-600" value={icForm.cash_advance} onChange={e => setIcForm({...icForm, cash_advance: parseFloat(e.target.value) || 0})}/></div>
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Misc Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-rose-600" value={icForm.misc_deductions} onChange={e => setIcForm({...icForm, misc_deductions: parseFloat(e.target.value) || 0})}/></div>
                                             </div>
+                                            <div className="bg-white p-4 rounded-3xl border border-slate-200 mt-6 space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Ledger Entry</p>
+                                                        <p className="text-[10px] text-slate-400">Add multiple bonus/incentive/commission and deduction/fine/penalty items.</p>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-slate-600">{icLedgerEntries.length} Items</span>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icLedgerEntry.type} onChange={e => setIcLedgerEntry({...icLedgerEntry, type: e.target.value})}>
+                                                        <option value="Bonus">Bonus</option>
+                                                        <option value="Incentive">Incentive</option>
+                                                        <option value="Commission">Commission</option>
+                                                        <option value="Deduction">Deduction</option>
+                                                        <option value="Fine">Fine</option>
+                                                        <option value="Penalty">Penalty</option>
+                                                    </select>
+                                                    <input type="number" className="w-full p-3 border rounded-xl bg-slate-50 font-black" placeholder="Amount" value={icLedgerEntry.amount} onChange={e => setIcLedgerEntry({...icLedgerEntry, amount: e.target.value})}/>
+                                                    <input type="text" className="w-full p-3 border rounded-xl bg-slate-50 font-black" placeholder="Note" value={icLedgerEntry.note} onChange={e => setIcLedgerEntry({...icLedgerEntry, note: e.target.value})}/>
+                                                </div>
+                                                <button type="button" onClick={() => {
+                                                    const amount = parseFloat(icLedgerEntry.amount);
+                                                    if (!icEmpId || !amount) return;
+                                                    const positiveTypes = ['Bonus','Incentive','Commission'];
+                                                    const isBonus = positiveTypes.includes(icLedgerEntry.type);
+                                                    const entryAmount = isBonus ? Math.abs(amount) : -Math.abs(amount);
+                                                    setIcLedgerEntries([...icLedgerEntries, {
+                                                        id: Date.now(),
+                                                        date: new Date().toISOString().slice(0, 10),
+                                                        type: icLedgerEntry.type,
+                                                        amount: entryAmount,
+                                                        note: icLedgerEntry.note,
+                                                        status: 'Logged',
+                                                        isBonus
+                                                    }]);
+                                                    setIcLedgerEntry({ type: 'Bonus', amount: '', note: '' });
+                                                }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-black uppercase hover:bg-emerald-700">Add Ledger Item</button>
+                                                {icLedgerEntries.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        {icLedgerEntries.map(entry => (
+                                                            <div key={entry.id} className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-slate-200 bg-slate-50">
+                                                                <div className="min-w-0">
+                                                                    <p className="text-sm font-black uppercase tracking-widest">{entry.type}</p>
+                                                                    <p className="text-[10px] text-slate-500 truncate">{entry.note || 'No note'}</p>
+                                                                    <p className="text-[10px] text-slate-400">{new Date(entry.date).toLocaleDateString()}</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className={`font-black ${entry.isBonus ? 'text-emerald-600' : 'text-rose-600'}`}>{entry.isBonus ? '+' : '-'}₱{formatMoney(Math.abs(entry.amount))}</p>
+                                                                    <button type="button" onClick={() => setIcLedgerEntries(icLedgerEntries.filter(item => item.id !== entry.id))} className="text-[10px] text-slate-400 hover:text-slate-600">Remove</button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <button onClick={async () => {
                                                 if (!icEmpId) return;
                                                 const key = `${normalizeId(icEmpId)}_${icMonth}`;
-                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: icForm });
+                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries} });
                                                 alert("Saved to archive.");
                                             }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
                                         </div>
@@ -1015,34 +1103,101 @@
                                         <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
                                             {icEmpId ? (() => {
                                                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
-                                                const gross = (icForm.days_worked * (parseFloat(emp?.dailyRate || emp?.rate) || 0)) + icForm.bonus;
-                                                const net = gross - icForm.cash_advance - icForm.sss - icForm.misc_deductions;
+                                                const dailyRate = parseFloat(emp?.dailyRate || emp?.rate) || 0;
+                                                const totalEarnings = icForm.days_worked * dailyRate;
+                                                const salaryPaidAmount = parseFloat(icForm.salary_pay) || totalEarnings;
+                                                const ledgerCredit = icLedgerEntries.filter(entry => entry.amount > 0).reduce((sum, entry) => sum + entry.amount, 0);
+                                                const ledgerDebit = icLedgerEntries.filter(entry => entry.amount < 0).reduce((sum, entry) => sum + Math.abs(entry.amount), 0);
+                                                const gross = salaryPaidAmount + icForm.bonus + ledgerCredit;
+                                                const deductionTotal = (parseFloat(icForm.deduction) || 0) + icForm.cash_advance + icForm.sss + icForm.misc_deductions + ledgerDebit;
+                                                const net = gross - deductionTotal;
                                                 const rangeCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && (ca.date || '').startsWith(icMonth)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
                                                 const currentMonthLabel = monthOptions.find(m => m.value === icMonth)?.label || icMonth;
                                                 
                                                 return (
                                                 <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative" id="interactive-print-section">
-                                                    <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYROLL</div></div>
-                                                    <h2 className="text-2xl font-black border-b-4 border-red-50 mb-2 uppercase tracking-tighter leading-none pb-2">{emp?.name}</h2>
-                                                    <div className="flex justify-between items-end mb-8 text-sm font-bold text-slate-500">
-                                                        <span className="uppercase tracking-widest">{emp?.position}</span>
-                                                        <span className="text-slate-900 font-black text-xl">DAYS {icForm.days_worked}</span>
-                                                    </div>
-                                                    <div className="flex text-center mb-2 font-black text-[10px] tracking-widest"><div className="flex-1 bg-blue-50 py-2 border-r border-white">EARNINGS</div><div className="flex-1 bg-orange-50 py-2">DEDUCTIONS</div></div>
-                                                    <div className="flex h-36 border-b border-slate-100">
-                                                        <div className="flex-1 p-3 text-xs space-y-2 border-r border-slate-100 font-mono">
-                                                            <div className="flex justify-between opacity-60"><span>Basic:</span><span>₱{formatMoney(icForm.days_worked * (parseFloat(emp?.dailyRate || emp?.rate) || 0))}</span></div>
-                                                            <div className="flex justify-between font-black text-emerald-600 italic"><span>Bonus:</span><span>{icForm.bonus > 0 ? formatMoney(icForm.bonus) : '--'}</span></div>
+                                                    <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYSLIP</div></div>
+                                                    <div className="grid grid-cols-2 gap-4 mb-6 text-sm text-slate-600">
+                                                        <div>
+                                                            <p className="font-black uppercase tracking-widest text-[9px]">Employee</p>
+                                                            <p className="mt-1">{emp?.name}</p>
                                                         </div>
-                                                        <div className="flex-1 p-3 text-xs space-y-2 font-mono text-rose-600 font-bold">
-                                                            <div className="flex justify-between"><span>C.A.:</span><span>{icForm.cash_advance > 0 ? `-₱${formatMoney(icForm.cash_advance)}` : '--'}</span></div>
-                                                            <div className="flex justify-between"><span>SSS:</span><span>{icForm.sss > 0 ? `-₱${formatMoney(icForm.sss)}` : '--'}</span></div>
-                                                            <div className="flex justify-between"><span>Misc:</span><span>{icForm.misc_deductions > 0 ? `-₱${formatMoney(icForm.misc_deductions)}` : '--'}</span></div>
+                                                        <div>
+                                                            <p className="font-black uppercase tracking-widest text-[9px]">Pay Period</p>
+                                                            <p className="mt-1">{currentMonthLabel}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-black uppercase tracking-widest text-[9px]">Position</p>
+                                                            <p className="mt-1">{emp?.position}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-black uppercase tracking-widest text-[9px]">Rate / Day</p>
+                                                            <p className="mt-1">₱{formatMoney(dailyRate)}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-between items-center mt-8">
-                                                        <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">TOTAL NET</span>
-                                                        <span className={`text-3xl font-black bg-slate-100 px-6 py-3 border font-mono tracking-tighter ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(Math.abs(net))}</span>
+                                                    <div className="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Earnings</div>
+                                                    <div className="space-y-3 border border-slate-100 rounded-3xl p-4 bg-slate-50">
+                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold">
+                                                            <span>Days Present</span>
+                                                            <span>{icForm.days_worked || 0}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold">
+                                                            <span>Total Earnings</span>
+                                                            <span>₱{formatMoney(totalEarnings)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold">
+                                                            <span>Salary Paid</span>
+                                                            <span>₱{formatMoney(salaryPaidAmount)}</span>
+                                                        </div>
+                                                        {icForm.bonus > 0 && (
+                                                            <div className="flex justify-between text-xs text-emerald-600 font-semibold">
+                                                                <span>Bonus</span>
+                                                                <span>+ ₱{formatMoney(icForm.bonus)}</span>
+                                                            </div>
+                                                        )}
+                                                        {ledgerCredit > 0 && (
+                                                            <div className="flex justify-between text-xs text-emerald-600 font-semibold">
+                                                                <span>Ledger Credits</span>
+                                                                <span>+ ₱{formatMoney(ledgerCredit)}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex justify-between text-xs text-emerald-600 font-black uppercase pt-3 border-t border-slate-200">
+                                                            <span>Gross Earnings</span>
+                                                            <span>₱{formatMoney(gross)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Deductions</div>
+                                                    <div className="space-y-3 border border-slate-100 rounded-3xl p-4 bg-slate-50">
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
+                                                            <span>{icForm.deduction_description || 'Other Deduction'}</span>
+                                                            <span>{icForm.deduction > 0 ? `-₱${formatMoney(icForm.deduction)}` : '--'}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
+                                                            <span>C.A.</span>
+                                                            <span>{icForm.cash_advance > 0 ? `-₱${formatMoney(icForm.cash_advance)}` : '--'}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
+                                                            <span>SSS</span>
+                                                            <span>{icForm.sss > 0 ? `-₱${formatMoney(icForm.sss)}` : '--'}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
+                                                            <span>Misc</span>
+                                                            <span>{icForm.misc_deductions > 0 ? `-₱${formatMoney(icForm.misc_deductions)}` : '--'}</span>
+                                                        </div>
+                                                        {ledgerDebit > 0 && (
+                                                            <div className="flex justify-between text-xs text-rose-600 font-semibold">
+                                                                <span>Ledger Deductions</span>
+                                                                <span>- ₱{formatMoney(ledgerDebit)}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex justify-between text-xs text-slate-900 font-black uppercase pt-3 border-t border-slate-200">
+                                                            <span>Total Deductions</span>
+                                                            <span>-₱{formatMoney(deductionTotal)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-8 p-5 rounded-3xl bg-slate-100 border border-slate-200 text-center">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Net Pay</p>
+                                                        <p className={`text-3xl font-black ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(Math.abs(net))}</p>
                                                     </div>
                                                     {rangeCAs.length > 0 && (
                                                         <div className="mt-6 pt-4 border-t border-dashed">

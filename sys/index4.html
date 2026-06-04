@@ -462,7 +462,7 @@
 
             const [icEmpId, setIcEmpId] = useState('');
             const [icMonth, setIcMonth] = useState(() => new Date().toISOString().slice(0, 7));
-            const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
+            const [icForm, setIcForm] = useState({ salary_pay: 0, salary_description: 'Month Salary', days_worked: 0, bonus: 0, bonus_description: '', deduction: 0, deduction_description: '', sss: 0, cash_advance: 0, misc_deductions: 0 });
 
             const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' });
             const [receiptToPrint, setReceiptToPrint] = useState(null);
@@ -997,8 +997,16 @@
                                                 </select>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Days</label><input type="number" step="0.1" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.days_worked} onChange={e => setIcForm({...icForm, days_worked: parseFloat(e.target.value) || 0})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Salary Pay (₱)</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.salary_pay} onChange={e => setIcForm({...icForm, salary_pay: parseFloat(e.target.value) || 0})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Salary Description</label><input type="text" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.salary_description} onChange={e => setIcForm({...icForm, salary_description: e.target.value})}/></div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Bonus (₱)</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.bonus} onChange={e => setIcForm({...icForm, bonus: parseFloat(e.target.value) || 0})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Bonus Description</label><input type="text" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.bonus_description} onChange={e => setIcForm({...icForm, bonus_description: e.target.value})}/></div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Deduction (₱)</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-rose-600" value={icForm.deduction} onChange={e => setIcForm({...icForm, deduction: parseFloat(e.target.value) || 0})}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Deduction Description</label><input type="text" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-rose-600" value={icForm.deduction_description} onChange={e => setIcForm({...icForm, deduction_description: e.target.value})}/></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">CA Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-rose-600" value={icForm.cash_advance} onChange={e => setIcForm({...icForm, cash_advance: parseFloat(e.target.value) || 0})}/></div>
@@ -1015,8 +1023,10 @@
                                         <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
                                             {icEmpId ? (() => {
                                                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
-                                                const gross = (icForm.days_worked * (parseFloat(emp?.dailyRate || emp?.rate) || 0)) + icForm.bonus;
-                                                const net = gross - icForm.cash_advance - icForm.sss - icForm.misc_deductions;
+                                                const salaryAmount = parseFloat(icForm.salary_pay) || (icForm.days_worked * (parseFloat(emp?.dailyRate || emp?.rate) || 0));
+                                                const gross = salaryAmount + icForm.bonus;
+                                                const deductionTotal = (parseFloat(icForm.deduction) || 0) + icForm.cash_advance + icForm.sss + icForm.misc_deductions;
+                                                const net = gross - deductionTotal;
                                                 const rangeCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && (ca.date || '').startsWith(icMonth)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
                                                 const currentMonthLabel = monthOptions.find(m => m.value === icMonth)?.label || icMonth;
                                                 
@@ -1026,22 +1036,23 @@
                                                     <h2 className="text-2xl font-black border-b-4 border-red-50 mb-2 uppercase tracking-tighter leading-none pb-2">{emp?.name}</h2>
                                                     <div className="flex justify-between items-end mb-8 text-sm font-bold text-slate-500">
                                                         <span className="uppercase tracking-widest">{emp?.position}</span>
-                                                        <span className="text-slate-900 font-black text-xl">DAYS {icForm.days_worked}</span>
+                                                        <span className="text-slate-900 font-black text-xl">{currentMonthLabel}</span>
                                                     </div>
                                                     <div className="flex text-center mb-2 font-black text-[10px] tracking-widest"><div className="flex-1 bg-blue-50 py-2 border-r border-white">EARNINGS</div><div className="flex-1 bg-orange-50 py-2">DEDUCTIONS</div></div>
-                                                    <div className="flex h-36 border-b border-slate-100">
+                                                    <div className="flex h-48 border-b border-slate-100">
                                                         <div className="flex-1 p-3 text-xs space-y-2 border-r border-slate-100 font-mono">
-                                                            <div className="flex justify-between opacity-60"><span>Basic:</span><span>₱{formatMoney(icForm.days_worked * (parseFloat(emp?.dailyRate || emp?.rate) || 0))}</span></div>
-                                                            <div className="flex justify-between font-black text-emerald-600 italic"><span>Bonus:</span><span>{icForm.bonus > 0 ? formatMoney(icForm.bonus) : '--'}</span></div>
+                                                            <div className="flex justify-between opacity-60"><span>{icForm.salary_description || 'Salary'}:</span><span>₱{formatMoney(salaryAmount)}</span></div>
+                                                            <div className="flex justify-between font-black text-emerald-600 italic"><span>{icForm.bonus_description || 'Bonus'}:</span><span>{icForm.bonus > 0 ? `₱${formatMoney(icForm.bonus)}` : '--'}</span></div>
                                                         </div>
                                                         <div className="flex-1 p-3 text-xs space-y-2 font-mono text-rose-600 font-bold">
+                                                            <div className="flex justify-between"><span>{icForm.deduction_description || 'Deduction'}:</span><span>{icForm.deduction > 0 ? `-₱${formatMoney(icForm.deduction)}` : '--'}</span></div>
                                                             <div className="flex justify-between"><span>C.A.:</span><span>{icForm.cash_advance > 0 ? `-₱${formatMoney(icForm.cash_advance)}` : '--'}</span></div>
                                                             <div className="flex justify-between"><span>SSS:</span><span>{icForm.sss > 0 ? `-₱${formatMoney(icForm.sss)}` : '--'}</span></div>
                                                             <div className="flex justify-between"><span>Misc:</span><span>{icForm.misc_deductions > 0 ? `-₱${formatMoney(icForm.misc_deductions)}` : '--'}</span></div>
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-between items-center mt-8">
-                                                        <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">TOTAL NET</span>
+                                                        <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">MONTH SALARY BALANCE</span>
                                                         <span className={`text-3xl font-black bg-slate-100 px-6 py-3 border font-mono tracking-tighter ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(Math.abs(net))}</span>
                                                     </div>
                                                     {rangeCAs.length > 0 && (
