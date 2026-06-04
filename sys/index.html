@@ -77,6 +77,13 @@
             return /^\d+$/.test(strId) ? parseInt(strId, 10).toString() : strId.toLowerCase();
         };
 
+        const getMonthKey = (date) => {
+            if (!date) return '';
+            const parsed = new Date(date);
+            if (Number.isNaN(parsed.getTime())) return '';
+            return parsed.toISOString().slice(0, 7);
+        };
+
         const formatMoney = (v) => {
             const num = Number(v || 0); if (isNaN(num)) return "0";
             return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -127,7 +134,7 @@
             const basicPay = emp.days * (parseFloat(emp.dailyRate || emp.rate) || 0);
             
             // Check for archived interactive payrolls to fetch dynamically saved bonuses
-            const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || p.startDate?.startsWith(selectedMonth)));
+            const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
             const bonusAmount = emp.bonusAmount || 0;
 
             const earnings = [
@@ -470,7 +477,7 @@
 
             const [icEmpId, setIcEmpId] = useState('');
             const [icMonth, setIcMonth] = useState(() => new Date().toISOString().slice(0, 7));
-            const [icForm, setIcForm] = useState({ salary_pay: 0, days_worked: 0, bonus: 0, bonus_description: '', deduction: 0, deduction_description: '', sss: 0, cash_advance: 0, misc_deductions: 0 });
+            const [icForm, setIcForm] = useState({ salary_pay: 0, days_worked: 0, bonus: 0, bonus_description: '', deduction: 0, deduction_description: '', sss: 0, cash_advance: 0, misc_deductions: 0, carryover: 0 });
             const [icLedgerEntries, setIcLedgerEntries] = useState([]);
             const [icLedgerEntry, setIcLedgerEntry] = useState({ type: 'Bonus', amount: '', note: '' });
 
@@ -532,11 +539,11 @@
 
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
-                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
+                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(a.date) === selectedMonth);
                     let days = 0; const uniqueDates = new Set(empAtt.map(a => a.date));
                     uniqueDates.forEach(date => days += Math.min(Math.max(...empAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
                     
-                    const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && (ca.date || '').startsWith(selectedMonth));
+                    const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === selectedMonth);
                     const monthlyCA = empCAsThisMonth
                         .reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
                     
@@ -559,7 +566,7 @@
                     const lifetimeCaBalance = lifetimeGross - totalCashReceived;
 
                     // Include bonuses safely sourced from the Payslip Builder Interactive Archives!
-                    const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || p.startDate?.startsWith(selectedMonth)));
+                    const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
 
                     const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0) + bonusAmount;
@@ -580,12 +587,12 @@
             if (dashSearchEmpId) {
                 const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
                 if (emp && dashSearchMonth) {
-                    const rangeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(dashSearchMonth));
+                    const rangeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(a.date) === dashSearchMonth);
                     let rDays = 0; new Set(rangeAtt.map(a=>a.date)).forEach(d => rDays += Math.min(Math.max(...rangeAtt.filter(a=>a.date===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
                     const rCA = cashAdvances
-                        .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && (ca.date || '').startsWith(dashSearchMonth))
+                        .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === dashSearchMonth)
                         .reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
-                    const rPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === dashSearchMonth || p.startDate?.startsWith(dashSearchMonth)));
+                    const rPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === dashSearchMonth || getMonthKey(p.startDate) === dashSearchMonth));
                     const rBonus = rPayroll ? (parseFloat(rPayroll.data?.bonus) || 0) : 0;
                     const rGross = (rDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + rBonus;
                     const rNet = rGross - rCA - (parseFloat(emp.sssRate)||0) - (parseFloat(emp.miscRate)||0);
@@ -597,14 +604,24 @@
                 if (icEmpId && icMonth) {
                     const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                     if (emp) {
-                        const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && (a.date || '').startsWith(icMonth));
+                        const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && getMonthKey(a.date) === icMonth);
                         let calcDays = 0; new Set(att.map(a=>a.date)).forEach(d => calcDays += Math.min(Math.max(...att.filter(a=>a.date===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
                         const rangeCA = cashAdvances
-                            .filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && (ca.date || '').startsWith(icMonth))
+                            .filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && getMonthKey(ca.date) === icMonth)
                             .reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
-                        const saved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === icMonth || p.startDate?.startsWith(icMonth)));
+                        const saved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === icMonth || getMonthKey(p.startDate) === icMonth));
+                        const prevMonth = (() => {
+                            const [y,m] = icMonth.split('-').map(Number);
+                            const d = new Date(y, m - 1, 1);
+                            d.setMonth(d.getMonth() - 1);
+                            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                        })();
+                        const prevSaved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === prevMonth || getMonthKey(p.startDate) === prevMonth));
                         const bonus = saved ? (parseFloat(saved.data?.bonus) || 0) : 0;
-                        setIcForm({ days_worked: calcDays, bonus: bonus, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA });
+                        const carryover = saved ? (parseFloat(saved.data?.carryover) || 0) : (prevSaved ? (parseFloat(prevSaved.data?.carryover) || 0) : 0);
+                        const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: calcDays, cash_advance: rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
+                        setIcForm(baseForm);
+                        setIcLedgerEntries(saved ? (saved.data?.ledger || []) : []);
                     }
                 }
             }, [icEmpId, icMonth, employees, attendance, cashAdvances, interactivePayrolls]);
@@ -1037,12 +1054,7 @@
                                                     <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icEmpId ? `₱${formatMoney(parseFloat((employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : 'Select an employee'}/>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Salary Paid (₱)</label>
-                                                    <input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.salary_pay} onChange={e => setIcForm({...icForm, salary_pay: parseFloat(e.target.value) || 0})}/>
-                                                    <p className="text-[10px] text-slate-400 mt-2">Enter salary paid by the employer to the employee.</p>
-                                                </div>
+                                                <div className="grid grid-cols-1 gap-4">
                                                 <div>
                                                     <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Earnings</label>
                                                     <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icForm.days_worked ? `₱${formatMoney(icForm.days_worked * (parseFloat(employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : '₱0'}/>
@@ -1133,18 +1145,42 @@
                                                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                                                 const dailyRate = parseFloat(emp?.dailyRate || emp?.rate) || 0;
                                                 const totalEarnings = icForm.days_worked * dailyRate;
-                                                const salaryPaidAmount = parseFloat(icForm.salary_pay) || totalEarnings;
+                                                const salaryPaidAmount = parseFloat(icForm.salary_pay) || 0;
                                                 const ledgerCredit = icLedgerEntries.filter(entry => entry.amount > 0).reduce((sum, entry) => sum + entry.amount, 0);
                                                 const ledgerDebit = icLedgerEntries.filter(entry => entry.amount < 0).reduce((sum, entry) => sum + Math.abs(entry.amount), 0);
-                                                const gross = salaryPaidAmount + icForm.bonus + ledgerCredit;
+                                                const gross = totalEarnings + (parseFloat(icForm.bonus) || 0) + ledgerCredit;
                                                 const deductionTotal = (parseFloat(icForm.deduction) || 0) + icForm.cash_advance + icForm.sss + icForm.misc_deductions + ledgerDebit;
-                                                const net = gross - deductionTotal;
-                                                const rangeCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && (ca.date || '').startsWith(icMonth)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+                                                const net = gross - deductionTotal + (parseFloat(icForm.carryover) || 0);
+                                                const remainingBalance = net - salaryPaidAmount;
+                                                const rangeCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && getMonthKey(ca.date) === icMonth).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
                                                 const currentMonthLabel = monthOptions.find(m => m.value === icMonth)?.label || icMonth;
                                                 
                                                 return (
                                                 <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative" id="interactive-print-section">
                                                     <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYSLIP</div></div>
+                                                    <div className="absolute top-6 right-6 w-56 bg-slate-50 border border-slate-200 rounded-3xl p-4 shadow-sm">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Net Pay</p>
+                                                        <p className={`text-2xl font-black ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(Math.abs(net))}</p>
+                                                        <div className="mt-4 border-t border-slate-200 pt-3 text-[11px] text-slate-600 space-y-3">
+                                                            <div className={`flex justify-between ${parseFloat(icForm.carryover) >= 0 ? 'text-emerald-600' : 'text-rose-600'} text-[10px] font-black uppercase`}> 
+                                                                <span>Carryover</span>
+                                                                <span>{parseFloat(icForm.carryover) >= 0 ? `+ ₱${formatMoney(parseFloat(icForm.carryover) || 0)}` : `- ₱${formatMoney(Math.abs(parseFloat(icForm.carryover) || 0))}`}</span>
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Disbursed</label>
+                                                                <input type="number" inputMode="numeric" enterKeyHint="done" className="w-full p-2 border rounded-xl bg-white text-sm font-black" value={icForm.salary_pay} onChange={e => setIcForm({...icForm, salary_pay: e.target.value})} />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Carryover</label>
+                                                                <input type="number" inputMode="numeric" enterKeyHint="done" className="w-full p-2 border rounded-xl bg-white text-sm font-black" value={icForm.carryover} onChange={e => setIcForm({...icForm, carryover: e.target.value})} />
+                                                            </div>
+                                                            <button type="button" onClick={() => setIcForm({ ...icForm, salary_pay: parseFloat(icForm.salary_pay) || 0, carryover: parseFloat(icForm.carryover) || 0 })} className="mt-3 w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Update Net Pay</button>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remaining</span>
+                                                                <span className={`font-black ${remainingBalance < 0 ? 'text-red-500' : 'text-slate-900'}`}>{remainingBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(remainingBalance))}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <div className="grid grid-cols-2 gap-4 mb-6 text-sm text-slate-600">
                                                         <div>
                                                             <p className="font-black uppercase tracking-widest text-[9px]">Employee</p>
@@ -1172,10 +1208,6 @@
                                                         <div className="flex justify-between text-xs text-slate-600 font-semibold">
                                                             <span>Total Earnings</span>
                                                             <span>₱{formatMoney(totalEarnings)}</span>
-                                                        </div>
-                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold">
-                                                            <span>Salary Paid</span>
-                                                            <span>₱{formatMoney(salaryPaidAmount)}</span>
                                                         </div>
                                                         {icForm.bonus > 0 && (
                                                             <div className="flex justify-between text-xs text-emerald-600 font-semibold">
@@ -1222,10 +1254,6 @@
                                                             <span>Total Deductions</span>
                                                             <span>-₱{formatMoney(deductionTotal)}</span>
                                                         </div>
-                                                    </div>
-                                                    <div className="mt-8 p-5 rounded-3xl bg-slate-100 border border-slate-200 text-center">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Net Pay</p>
-                                                        <p className={`text-3xl font-black ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(Math.abs(net))}</p>
                                                     </div>
                                                     {rangeCAs.length > 0 && (
                                                         <div className="mt-6 pt-4 border-t border-dashed">
