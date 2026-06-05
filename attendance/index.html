@@ -90,6 +90,36 @@
 <script>
 let lastResults = [];
 
+// List of input IDs to save in localStorage
+const savedInputIds = ['startDate', 'endDate', 'searchBox', 'threshold', 'rawData'];
+
+// Load data on start
+window.addEventListener('DOMContentLoaded', () => {
+  // Restore saved fields
+  savedInputIds.forEach(id => {
+    const savedValue = localStorage.getItem('att_calc_' + id);
+    if (savedValue !== null) {
+      document.getElementById(id).value = savedValue;
+    }
+    
+    // Attach event listeners to auto-save when user types
+    document.getElementById(id).addEventListener('input', saveState);
+    document.getElementById(id).addEventListener('change', saveState);
+  });
+
+  // Automatically calculate if rawData exists
+  if (document.getElementById('rawData').value.trim() !== '') {
+    calculate();
+  }
+});
+
+// Save all fields to localStorage
+function saveState() {
+  savedInputIds.forEach(id => {
+    localStorage.setItem('att_calc_' + id, document.getElementById(id).value);
+  });
+}
+
 function parseDateTime(value){
   if(!value) return null;
   value = String(value).trim();
@@ -119,6 +149,7 @@ function parseRows(text){
   }).filter(Boolean);
 }
 function calculate(){
+  saveState(); // Ensure state is saved when calculated
   const text = document.getElementById('rawData').value;
   const startVal = document.getElementById('startDate').value;
   const endVal = document.getElementById('endDate').value;
@@ -185,7 +216,19 @@ function downloadCSV(){
   const a = document.createElement('a'); a.href=url; a.download='attendance-results.csv'; a.click(); URL.revokeObjectURL(url);
 }
 function clearAll(){
-  document.getElementById('rawData').value=''; document.getElementById('searchBox').value=''; lastResults=[]; render([]);
+  document.getElementById('rawData').value=''; 
+  document.getElementById('searchBox').value=''; 
+  document.getElementById('startDate').value=''; 
+  document.getElementById('endDate').value=''; 
+  document.getElementById('threshold').value='6';
+  
+  // Clear from localStorage
+  savedInputIds.forEach(id => {
+    localStorage.removeItem('att_calc_' + id);
+  });
+  
+  lastResults=[]; 
+  render([]);
 }
 function loadSample(){
   document.getElementById('startDate').value='2026-05-01';
@@ -201,6 +244,8 @@ function loadSample(){
 8\tRONY\tKitchen\t05/05/2026 16:29:43\t1
 8\tRONY\tKitchen\t05/06/2026 10:02:57\t1
 8\tRONY\tKitchen\t05/06/2026 20:00:57\t1`;
+  
+  saveState(); // Update localStorage with the sample data
   calculate();
 }
 </script>
