@@ -547,7 +547,7 @@
                     const monthlyCA = empCAsThisMonth
                         .reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
                     
-                    // LIFETIME BALANCE CALCULATION: Total Lifetime Earnings - Total Cash Advances / Payments Disbursed
+                    // LIFETIME BALANCE CALCULATION (UPDATED to subtract disbursed salaries)
                     const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id));
                     let lifetimeDays = 0; 
                     const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => a.date));
@@ -563,9 +563,13 @@
                         .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
                         .reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
 
-                    const lifetimeCaBalance = lifetimeGross - totalCashReceived;
+                    const totalSalaryDisbursed = interactivePayrolls
+                        .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
+                        .reduce((sum, p) => sum + (parseFloat(p.data?.salary_pay) || 0), 0);
 
-                    // Include bonuses safely sourced from the Payslip Builder Interactive Archives!
+                    const lifetimeCaBalance = lifetimeGross - totalCashReceived - totalSalaryDisbursed;
+
+                    // Include bonuses safely sourced from the Payslip Builder Interactive Archives
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
 
@@ -1480,16 +1484,15 @@
                         </div>
                     )}
 
-                    {/* ADMIN VIEW PROFILE MODAL (Now Uses the Digital Payslip Widget) */}
+                    {/* ADMIN VIEW PROFILE MODAL (Connected strictly to live dynamic stream) */}
                     {viewProfile && isAdmin && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[50] flex items-center justify-center p-4">
                             <PayslipWidget 
-                                emp={viewProfile}
+                                emp={payrollSummary.find(e => normalizeId(e.id) === normalizeId(viewProfile.id)) || viewProfile}
                                 selectedMonth={selectedMonth}
                                 monthOptions={monthOptions}
                                 setSelectedMonth={setSelectedMonth}
                                 cashAdvances={cashAdvances}
-                                attendance={attendance}
                                 interactivePayrolls={interactivePayrolls}
                                 onClose={() => setViewProfile(null)}
                                 onEdit={handleEditProfile}
