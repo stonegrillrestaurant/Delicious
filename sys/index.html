@@ -77,6 +77,19 @@
             return /^\d+$/.test(strId) ? parseInt(strId, 10).toString() : strId.toLowerCase();
         };
 
+        // NEW: Universal Date Cleaner to brutally prevent double-counting
+        const cleanDate = (dStr) => {
+            if (!dStr) return '';
+            let s = String(dStr).trim().substring(0, 10);
+            if (s.includes('/')) {
+                const parts = s.split('/');
+                if (parts.length === 3 && parts[2].length === 4) {
+                    return `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+                }
+            }
+            return s;
+        };
+
         const getMonthKey = (date) => {
             if (!date) return '';
             const parsed = new Date(date);
@@ -123,17 +136,12 @@
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
-
         // --- DIGITAL PAYSLIP WIDGET COMPONENT ---
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
             const [activeTab, setActiveTab] = useState('payslip');
-
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
-            
-            // Generate robust payload mapping DB values to the UI design
             const basicPay = emp.days * (parseFloat(emp.dailyRate || emp.rate) || 0);
             
-            // Check for archived interactive payrolls to fetch dynamically saved bonuses
             const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
             const bonusAmount = emp.bonusAmount || 0;
 
@@ -152,7 +160,6 @@
             const totalDeductions = deductions.reduce((sum, item) => sum + item.amount, 0);
             const netPay = totalEarnings - totalDeductions;
 
-            // Generate Ledger from actual DB records
             const ledger = cashAdvances
                 .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
                 .sort((a,b)=>(b.date||'').localeCompare(a.date||''))
@@ -180,8 +187,6 @@
 
             return (
                 <div className="w-full max-w-lg mx-auto bg-gray-50 flex flex-col relative shadow-2xl overflow-hidden rounded-[2.5rem] border border-gray-200 animate-slide-up">
-                    
-                    {/* Header */}
                     <div className="bg-[#1b3382] text-white px-6 pt-10 pb-6 rounded-b-[2rem] shadow-md z-10 relative shrink-0">
                         <div className="flex justify-between items-center mb-6">
                             <div className="flex items-center gap-3">
@@ -194,7 +199,6 @@
                                 </button>
                             )}
                         </div>
-
                         <div className="flex justify-between items-end gap-2">
                             <div className="flex-1">
                                 <h2 className="text-2xl font-black tracking-wide leading-tight truncate">{emp.name}</h2>
@@ -210,88 +214,41 @@
                         </div>
                     </div>
 
-                    {/* Tab Navigation */}
                     <div className="flex px-6 pt-4 pb-2 gap-4 shrink-0 bg-gray-50 z-0">
-                        <button 
-                            onClick={() => setActiveTab('payslip')}
-                            className={`flex-1 py-3 text-xs font-bold tracking-widest uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${activeTab === 'payslip' ? 'bg-white shadow-md text-[#1b3382] border border-gray-100' : 'text-gray-400 hover:bg-gray-200'}`}
-                        >
-                            <FileText className="w-4 h-4" /> Breakdown
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('transactions')}
-                            className={`flex-1 py-3 text-xs font-bold tracking-widest uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${activeTab === 'transactions' ? 'bg-white shadow-md text-[#1b3382] border border-gray-100' : 'text-gray-400 hover:bg-gray-200'}`}
-                        >
-                            <HistoryIcon className="w-4 h-4" /> Ledger
-                        </button>
+                        <button onClick={() => setActiveTab('payslip')} className={`flex-1 py-3 text-xs font-bold tracking-widest uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${activeTab === 'payslip' ? 'bg-white shadow-md text-[#1b3382] border border-gray-100' : 'text-gray-400 hover:bg-gray-200'}`}><FileText className="w-4 h-4" /> Breakdown</button>
+                        <button onClick={() => setActiveTab('transactions')} className={`flex-1 py-3 text-xs font-bold tracking-widest uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${activeTab === 'transactions' ? 'bg-white shadow-md text-[#1b3382] border border-gray-100' : 'text-gray-400 hover:bg-gray-200'}`}><HistoryIcon className="w-4 h-4" /> Ledger</button>
                     </div>
 
-                    {/* Scrollable Content Area */}
                     <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6 custom-scrollbar max-h-[60vh]">
-                    
                         {activeTab === 'payslip' ? (
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                
-                                {/* Pay Period Info */}
                                 <div className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex justify-between items-center">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">Pay Period</p>
-                                        <p className="text-xs font-bold text-gray-800 uppercase">{monthLabel}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">Rate / Day</p>
-                                        <p className="text-xs font-bold text-gray-800">₱{formatMoney(emp.dailyRate || emp.rate)}</p>
-                                    </div>
+                                    <div><p className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">Pay Period</p><p className="text-xs font-bold text-gray-800 uppercase">{monthLabel}</p></div>
+                                    <div className="text-right"><p className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">Rate / Day</p><p className="text-xs font-bold text-gray-800">₱{formatMoney(emp.dailyRate || emp.rate)}</p></div>
                                 </div>
-
-                                {/* EARNINGS SECTION */}
                                 <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
                                     <h3 className="text-xs font-black text-gray-400 tracking-[0.2em] uppercase mb-4 text-center">Gross Earnings</h3>
                                     <div className="space-y-3 mb-4">
-                                        {earnings.map(item => (
-                                            <div key={item.id} className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-600 font-medium">{item.label}</span>
-                                                <span className="font-bold text-gray-800">₱{formatMoney(item.amount)}</span>
-                                            </div>
-                                        ))}
+                                        {earnings.map(item => <div key={item.id} className="flex justify-between items-center text-sm"><span className="text-gray-600 font-medium">{item.label}</span><span className="font-bold text-gray-800">₱{formatMoney(item.amount)}</span></div>)}
                                     </div>
-                                    <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
-                                        <span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Gross</span>
-                                        <span className="text-lg font-black text-[#2563eb]">₱{formatMoney(totalEarnings)}</span>
-                                    </div>
+                                    <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center"><span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Gross</span><span className="text-lg font-black text-[#2563eb]">₱{formatMoney(totalEarnings)}</span></div>
                                 </div>
-
-                                {/* DEDUCTIONS SECTION (RED ITEMS) */}
                                 <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
                                     <h3 className="text-xs font-black text-gray-400 tracking-[0.2em] uppercase mb-4 text-center">Deductions</h3>
                                     <div className="space-y-3 mb-4">
-                                        {deductions.map(item => (
-                                            <div key={item.id} className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-600 font-medium">{item.label}</span>
-                                                <span className="font-bold text-red-500">- ₱{formatMoney(item.amount)}</span>
-                                            </div>
-                                        ))}
+                                        {deductions.map(item => <div key={item.id} className="flex justify-between items-center text-sm"><span className="text-gray-600 font-medium">{item.label}</span><span className="font-bold text-red-500">- ₱{formatMoney(item.amount)}</span></div>)}
                                         {deductions.length === 0 && <p className="text-xs text-center text-gray-400 italic">No deductions this period.</p>}
                                     </div>
-                                    <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
-                                        <span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span>
-                                        <span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span>
-                                    </div>
+                                    <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center"><span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span><span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span></div>
                                 </div>
-
-                                {/* NET SALARY CARD (TRANSPARENT BACKGROUND, CONDITIONAL RED FONT) */}
                                 <div className="p-6 text-center transform hover:scale-[1.02] transition-transform">
                                     <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p>
                                     <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(netPay)}</p>
                                 </div>
-
-                                {/* LIFETIME BALANCE CARD (NON-BOLD FONT) */}
                                 <div className="p-6 border-t border-gray-200 text-center">
                                     <p className="text-[10px] font-normal text-gray-500 tracking-[0.15em] uppercase mb-2">Lifetime Balance</p>
                                     <p className={`text-3xl font-normal tracking-tight ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
                                 </div>
-
-                                {/* Admin Actions (if provided) */}
                                 {(onEdit || onDelete) && (
                                     <div className="flex gap-3 mt-4 print-hidden">
                                         {onEdit && <button onClick={() => onEdit(emp)} className="flex-1 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-blue-50 transition-colors shadow-sm">Edit Profile</button>}
@@ -301,52 +258,27 @@
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                <div className="flex justify-between items-center mb-6 px-2">
-                                    <h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3>
-                                    <span className="text-[#1b3382] text-[10px] font-bold flex items-center bg-blue-100 px-3 py-1 rounded-full">{ledger.length} Records</span>
-                                </div>
-
+                                <div className="flex justify-between items-center mb-6 px-2"><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold flex items-center bg-blue-100 px-3 py-1 rounded-full">{ledger.length} Records</span></div>
                                 {ledger.map(tx => (
                                     <div key={tx.id} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex items-center gap-4">
-                                        <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                            <DollarSign className="w-5 h-5" />
-                                        </div>
+                                        <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><DollarSign className="w-5 h-5" /></div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-gray-800 text-sm truncate">{tx.type}</p>
-                                            <div className="flex flex-col mt-1">
-                                                <p className="text-[10px] text-gray-400 font-medium">{new Date(tx.date).toLocaleDateString()} • {tx.status}</p>
-                                                {tx.note && <p className="text-[10px] text-gray-500 italic truncate mt-0.5">"{tx.note}"</p>}
-                                            </div>
+                                            <div className="flex flex-col mt-1"><p className="text-[10px] text-gray-400 font-medium">{new Date(tx.date).toLocaleDateString()} • {tx.status}</p>{tx.note && <p className="text-[10px] text-gray-500 italic truncate mt-0.5">"{tx.note}"</p>}</div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                {(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}
-                                            </p>
-                                            {onDelete && (
-                                                <div className="mt-2">
-                                                    <button type="button" onClick={() => {
-                                                        if (!window.confirm('Delete this ledger entry? This will remove it from the cloud ledger.')) return;
-                                                        onDelete(tx);
-                                                    }} className="text-[10px] text-rose-500 hover:text-rose-700">Delete</button>
-                                                </div>
-                                            )}
+                                            <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>{(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}</p>
+                                            {onDelete && <div className="mt-2"><button type="button" onClick={() => { if (!window.confirm('Delete this ledger entry?')) return; onDelete(tx); }} className="text-[10px] text-rose-500 hover:text-rose-700">Delete</button></div>}
                                         </div>
                                     </div>
                                 ))}
-                                {ledger.length === 0 && (
-                                    <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200">
-                                        <HistoryIcon className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No Transactions Found</p>
-                                    </div>
-                                )}
+                                {ledger.length === 0 && <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200"><HistoryIcon className="w-10 h-10 mx-auto text-gray-300 mb-2" /><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No Transactions Found</p></div>}
                             </div>
                         )}
                     </div>
                 </div>
             );
         }
-
-        // --- END PAYSLIP WIDGET ---
 
         function NavItem({ icon, label, active, onClick, open }) {
             return (
@@ -371,27 +303,9 @@
             const [emailInput, setEmailInput] = useState('');
             const [passwordInput, setPasswordInput] = useState('');
 
-            const handleGoogleLogin = async () => {
-                setLoading(true);
-                const provider = new window.fb.GoogleAuthProvider();
-                try { await window.fb.signInWithPopup(window.fb.auth, provider); } 
-                catch (err) { alert("Login Error: " + err.message); setLoading(false); }
-            };
-
-            const handleFacebookLogin = async () => {
-                setLoading(true);
-                const provider = new window.fb.FacebookAuthProvider();
-                provider.addScope('email'); 
-                try { await window.fb.signInWithPopup(window.fb.auth, provider); } 
-                catch (err) { alert("Login Error: " + err.message); setLoading(false); }
-            };
-
-            const handleEmailSubmit = async (e) => {
-                e.preventDefault();
-                setLoading(true);
-                try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); } 
-                catch (err) { alert("Login failed. Check your email or password."); setLoading(false); }
-            };
+            const handleGoogleLogin = async () => { setLoading(true); try { await window.fb.signInWithPopup(window.fb.auth, new window.fb.GoogleAuthProvider()); } catch (err) { alert("Error: " + err.message); setLoading(false); } };
+            const handleFacebookLogin = async () => { setLoading(true); const p = new window.fb.FacebookAuthProvider(); p.addScope('email'); try { await window.fb.signInWithPopup(window.fb.auth, p); } catch (err) { alert("Error: " + err.message); setLoading(false); } };
+            const handleEmailSubmit = async (e) => { e.preventDefault(); setLoading(true); try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); } catch (err) { alert("Login failed."); setLoading(false); } };
 
             return (
                 <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50">
@@ -403,41 +317,19 @@
                         {!showEmailLogin ? (
                             <div className="w-full space-y-4">
                                 <button onClick={handleGoogleLogin} disabled={loading} className="w-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:shadow-md flex items-center justify-center gap-3 h-14 rounded-2xl font-black uppercase tracking-widest shadow-sm transition-all active:scale-95">
-                                    {loading ? 'Authenticating...' : (
-                                        <>
-                                            <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                                            Google
-                                        </>
-                                    )}
+                                    {loading ? 'Authenticating...' : <><svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Google</>}
                                 </button>
-                                
                                 <button onClick={handleFacebookLogin} disabled={loading} className="w-full bg-[#1877F2] text-white hover:bg-[#166fe5] hover:shadow-md flex items-center justify-center gap-3 h-14 rounded-2xl font-black uppercase tracking-widest shadow-sm transition-all active:scale-95">
-                                    {loading ? 'Authenticating...' : (
-                                        <>
-                                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                                            Facebook
-                                        </>
-                                    )}
+                                    {loading ? 'Authenticating...' : <><svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook</>}
                                 </button>
-
-                                <div className="pt-4 border-t mt-6">
-                                    <button onClick={() => setShowEmailLogin(true)} className="w-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors py-2">
-                                        Use Direct App Login instead
-                                    </button>
-                                </div>
+                                <div className="pt-4 border-t mt-6"><button onClick={() => setShowEmailLogin(true)} className="w-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors py-2">Use Direct App Login instead</button></div>
                             </div>
                         ) : (
                             <form onSubmit={handleEmailSubmit} className="w-full space-y-4 animate-fade-in">
                                 <input type="email" placeholder="Registered Email" required value={emailInput} onChange={e => setEmailInput(e.target.value)} className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none font-bold bg-slate-50 focus:border-blue-500 transition-colors"/>
                                 <input type="password" placeholder="Password" required value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none font-bold bg-slate-50 focus:border-blue-500 transition-colors"/>
-                                
-                                <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg transition-all active:scale-95">
-                                    {loading ? 'Authenticating...' : 'Sign In Direct'}
-                                </button>
-                                
-                                <button type="button" onClick={() => setShowEmailLogin(false)} className="w-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors pt-4">
-                                    Back to Google / Facebook
-                                </button>
+                                <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg transition-all active:scale-95">{loading ? 'Authenticating...' : 'Sign In Direct'}</button>
+                                <button type="button" onClick={() => setShowEmailLogin(false)} className="w-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors pt-4">Back to Google / Facebook</button>
                             </form>
                         )}
                     </div>
@@ -489,10 +381,7 @@
             const getVaultCol = (col) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col);
             const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col, id);
 
-            const switchTab = (tab) => {
-                setActiveTab(tab);
-                if (window.innerWidth < 1024) setSidebarOpen(false);
-            };
+            const switchTab = (tab) => { setActiveTab(tab); if (window.innerWidth < 1024) setSidebarOpen(false); };
 
             const monthOptions = useMemo(() => {
                 const options = []; const d = new Date();
@@ -516,10 +405,8 @@
                 const unsubEmps = window.fb.onSnapshot(getVaultCol('employees'), (s) => {
                     const fetchedEmps = s.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim() || d.id })).sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
                     setEmployees(fetchedEmps);
-                    
                     if (user.uid === MASTER_VAULT_UID || (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase())) {
-                        setUserRole('Admin');
-                        setCurrentBiometricId('ADMIN');
+                        setUserRole('Admin'); setCurrentBiometricId('ADMIN');
                     } else {
                         if (user.email) {
                             const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
@@ -537,21 +424,21 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubCAReq(); unsubIP(); };
             }, [user]);
 
+            // STRICT DATE NORMALIZATION ENGINE APPLIED IN SUMMARY
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
-                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(a.date) === selectedMonth);
-                    let days = 0; const uniqueDates = new Set(empAtt.map(a => a.date));
-                    uniqueDates.forEach(date => days += Math.min(Math.max(...empAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
+                    const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(cleanDate(a.date)) === selectedMonth);
+                    let days = 0; 
+                    const uniqueDates = new Set(empAtt.map(a => cleanDate(a.date)));
+                    uniqueDates.forEach(date => days += Math.min(Math.max(...empAtt.filter(a => cleanDate(a.date) === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
                     
                     const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === selectedMonth);
-                    const monthlyCA = empCAsThisMonth
-                        .reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
+                    const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
                     
-                    // LIFETIME BALANCE CALCULATION (UPDATED to subtract disbursed salaries)
                     const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id));
                     let lifetimeDays = 0; 
-                    const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => a.date));
-                    uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
+                    const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => cleanDate(a.date)));
+                    uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => cleanDate(a.date) === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
 
                     const lifetimeBonuses = interactivePayrolls
                         .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
@@ -562,14 +449,13 @@
                     const totalCashReceived = cashAdvances
                         .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
                         .reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
-
+                        
                     const totalSalaryDisbursed = interactivePayrolls
                         .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
                         .reduce((sum, p) => sum + (parseFloat(p.data?.salary_pay) || 0), 0);
 
                     const lifetimeCaBalance = lifetimeGross - totalCashReceived - totalSalaryDisbursed;
 
-                    // Include bonuses safely sourced from the Payslip Builder Interactive Archives
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
 
@@ -582,7 +468,7 @@
 
             const stats = useMemo(() => {
                 const today = new Date().toISOString().slice(0, 10);
-                const uniquePresent = new Set(attendance.filter(a => a.date === today).map(a => normalizeId(a.empId))).size;
+                const uniquePresent = new Set(attendance.filter(a => cleanDate(a.date) === today).map(a => normalizeId(a.empId))).size;
                 const totalCA = payrollSummary.reduce((sum, e) => sum + (parseFloat(e.caBalance) || 0), 0);
                 return { count: employees.length, present: uniquePresent, totalCA };
             }, [payrollSummary, attendance]);
@@ -591,11 +477,9 @@
             if (dashSearchEmpId) {
                 const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
                 if (emp && dashSearchMonth) {
-                    const rangeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(a.date) === dashSearchMonth);
-                    let rDays = 0; new Set(rangeAtt.map(a=>a.date)).forEach(d => rDays += Math.min(Math.max(...rangeAtt.filter(a=>a.date===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
-                    const rCA = cashAdvances
-                        .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === dashSearchMonth)
-                        .reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
+                    const rangeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(cleanDate(a.date)) === dashSearchMonth);
+                    let rDays = 0; new Set(rangeAtt.map(a=>cleanDate(a.date))).forEach(d => rDays += Math.min(Math.max(...rangeAtt.filter(a=>cleanDate(a.date)===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
+                    const rCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === dashSearchMonth).reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
                     const rPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === dashSearchMonth || getMonthKey(p.startDate) === dashSearchMonth));
                     const rBonus = rPayroll ? (parseFloat(rPayroll.data?.bonus) || 0) : 0;
                     const rGross = (rDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + rBonus;
@@ -608,119 +492,86 @@
                 if (icEmpId && icMonth) {
                     const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                     if (emp) {
-                        const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && getMonthKey(a.date) === icMonth);
-                        let calcDays = 0; new Set(att.map(a=>a.date)).forEach(d => calcDays += Math.min(Math.max(...att.filter(a=>a.date===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
-                        const rangeCA = cashAdvances
-                            .filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && getMonthKey(ca.date) === icMonth)
-                            .reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
+                        const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && getMonthKey(cleanDate(a.date)) === icMonth);
+                        let calcDays = 0; new Set(att.map(a=>cleanDate(a.date))).forEach(d => calcDays += Math.min(Math.max(...att.filter(a=>cleanDate(a.date)===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
+                        const rangeCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && getMonthKey(ca.date) === icMonth).reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
                         const saved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === icMonth || getMonthKey(p.startDate) === icMonth));
-                        const prevMonth = (() => {
-                            const [y,m] = icMonth.split('-').map(Number);
-                            const d = new Date(y, m - 1, 1);
-                            d.setMonth(d.getMonth() - 1);
-                            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                        })();
+                        const prevMonth = (() => { const [y,m] = icMonth.split('-').map(Number); const d = new Date(y, m - 1, 1); d.setMonth(d.getMonth() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })();
                         const prevSaved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === prevMonth || getMonthKey(p.startDate) === prevMonth));
                         const bonus = saved ? (parseFloat(saved.data?.bonus) || 0) : 0;
                         const carryover = saved ? (parseFloat(saved.data?.carryover) || 0) : (prevSaved ? (parseFloat(prevSaved.data?.carryover) || 0) : 0);
                         const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: calcDays, cash_advance: rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
-                        setIcForm(baseForm);
-                        setIcLedgerEntries(saved ? (saved.data?.ledger || []) : []);
+                        setIcForm(baseForm); setIcLedgerEntries(saved ? (saved.data?.ledger || []) : []);
                     }
                 }
             }, [icEmpId, icMonth, employees, attendance, cashAdvances, interactivePayrolls]);
 
             const handleStaffSubmitCARequest = async (e) => {
-                e.preventDefault();
-                if (!currentBiometricId || !staffCaRequest.amount) return;
-                await window.fb.addDoc(getVaultCol('ca_requests'), {
-                    empId: currentBiometricId,
-                    amount: parseFloat(staffCaRequest.amount),
-                    reason: staffCaRequest.reason,
-                    dateRequested: new Date().toISOString(),
-                    status: 'Pending'
-                });
-                setStaffCaRequest({ amount: '', reason: '' });
-                alert("Request sent to Admin for approval.");
+                e.preventDefault(); if (!currentBiometricId || !staffCaRequest.amount) return;
+                await window.fb.addDoc(getVaultCol('ca_requests'), { empId: currentBiometricId, amount: parseFloat(staffCaRequest.amount), reason: staffCaRequest.reason, dateRequested: new Date().toISOString(), status: 'Pending' });
+                setStaffCaRequest({ amount: '', reason: '' }); alert("Request sent to Admin for approval.");
             };
 
             const handleApproveCARequest = async (req) => {
-                if (!isAdmin) return;
-                const today = new Date().toISOString().slice(0, 10);
-                
+                if (!isAdmin) return; const today = new Date().toISOString().slice(0, 10);
                 await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Approved', dateApproved: today });
                 await window.fb.addDoc(getVaultCol('cash_advances'), { empId: req.empId, amount: req.amount, reason: `Apprvd Req: ${req.reason}`, date: today, type: 'advance' });
             };
 
-            const handleRejectCARequest = async (reqId) => {
-                if (!isAdmin) return;
-                await window.fb.updateDoc(getVaultDoc('ca_requests', reqId), { status: 'Rejected' });
-            };
+            const handleRejectCARequest = async (reqId) => { if (!isAdmin) return; await window.fb.updateDoc(getVaultDoc('ca_requests', reqId), { status: 'Rejected' }); };
 
             const handlePrintReceipt = async (req) => {
-                try {
-                    await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Printed' });
-                } catch (err) {
-                    alert("Network error: Could not lock the record. Print cancelled to protect funds.");
-                    return; 
-                }
-
+                try { await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Printed' }); } catch (err) { alert("Network error: Could not lock the record."); return; }
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
                 setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
-                
                 alert("IMPORTANT: Make sure to select the 58mm KITCHEN PRINTER from the dropdown list before printing!");
-
-                document.body.classList.add('pos-receipt-active');
-                setTimeout(() => {
-                    window.print();
-                    document.body.classList.remove('pos-receipt-active');
-                }, 300);
+                document.body.classList.add('pos-receipt-active'); setTimeout(() => { window.print(); document.body.classList.remove('pos-receipt-active'); }, 300);
             };
 
             const handleEditProfile = (emp) => {
-                setNewEmpForm({
-                    biometricId: emp.id,
-                    firstName: emp.firstName || emp.name.split(' ')[0] || '',
-                    lastName: emp.lastName || emp.name.split(' ').slice(1).join(' ') || '',
-                    position: emp.position || '',
-                    dailyRate: emp.dailyRate || emp.rate || '',
-                    staffEmail: emp.staffEmail || '',
-                    contactNumber: emp.contactNumber || '',
-                    sssNumber: emp.sssNumber || '',
-                    sssRate: emp.sssRate || '',
-                    miscRate: emp.miscRate || '',
-                    status: emp.status || 'active'
-                });
-                setIsEditing(true);
-                setShowAddStaff(true);
-                setViewProfile(null); 
+                setNewEmpForm({ biometricId: emp.id, firstName: emp.firstName || emp.name.split(' ')[0] || '', lastName: emp.lastName || emp.name.split(' ').slice(1).join(' ') || '', position: emp.position || '', dailyRate: emp.dailyRate || emp.rate || '', staffEmail: emp.staffEmail || '', contactNumber: emp.contactNumber || '', sssNumber: emp.sssNumber || '', sssRate: emp.sssRate || '', miscRate: emp.miscRate || '', status: emp.status || 'active' });
+                setIsEditing(true); setShowAddStaff(true); setViewProfile(null); 
             };
 
+            // BULLETPROOF SMART IMPORTER
             const handleProcessLogs = async () => {
                 if (!isAdmin || !rawInput.trim()) return;
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
                 for (const line of lines) {
                     const cols = line.split(/\t+| {2,}/).filter(Boolean); if (cols.length < 3) continue;
                     const id = normalizeId(cols[0]); const name = cols[1];
-                    const dM = line.match(/(\d{2}\/\d{2}\/\d{4})/); const tM = line.match(/(\d{2}:\d{2}:\d{2})/);
+                    
+                    // Match MM/DD/YYYY, DD/MM/YYYY, or YYYY-MM-DD reliably
+                    const dM = line.match(/(\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4})/); 
+                    const tM = line.match(/(\d{1,2}:\d{2}(:\d{2})?)/);
                     if (!dM || !tM) continue;
-                    const [m, d, y] = dM[1].split('/'); const iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-                    const key = `${id}_${iso}`; if (!map[key]) map[key] = { id, name, date: iso, p: [] };
-                    map[key].p.push(tM[1].substring(0,5));
+                    
+                    let iso = '';
+                    const dStr = dM[1];
+                    if (dStr.includes('/')) {
+                        const parts = dStr.split('/');
+                        if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
+                        else if (parts[0].length === 4) { iso = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; }
+                    } else if (dStr.includes('-')) {
+                        const parts = dStr.split('-');
+                        if (parts[0].length === 4) { iso = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; }
+                        else if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
+                    }
+                    if (!iso) continue;
+
+                    const timeStr = tM[1].substring(0,5);
+                    const key = `${id}_${iso}`; 
+                    if (!map[key]) map[key] = { id, name, date: iso, p: [] };
+                    map[key].p.push(timeStr);
                 }
                 for (const k in map) {
                     const r = map[k]; const s = r.p.sort();
                     const hoursWorked = calculateHoursWorked(s[0], s[s.length-1]);
-                    
-                    let dayVal = 1.0;
-                    if (s.length === 1 || hoursWorked < 6) {
-                        dayVal = 0.5;
-                    }
-
+                    let dayVal = 1.0; if (s.length === 1 || hoursWorked < 6) dayVal = 0.5;
                     await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
-                setRawInput(''); alert(`Processed ${count} attendance records.`);
+                setRawInput(''); alert(`Processed ${count} unique attendance records (Duplicates safely merged).`);
             };
 
             const handleAddStaffSubmit = async (e) => {
@@ -733,17 +584,14 @@
 
             const handleIssueCA = async () => {
                 if (!isAdmin || !newCa.empId) return;
-                let amt = parseFloat(newCa.amount) || 0; 
-                if (caType === 'payment') amt = -Math.abs(amt);
-                
+                let amt = parseFloat(newCa.amount) || 0; if (caType === 'payment') amt = -Math.abs(amt);
                 await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: amt, type: caType });
                 setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
             };
 
             const handleDeleteEmployee = async (id, name) => {
                 if (!isAdmin || !window.confirm(`PERMANENTLY delete ${name}?\nThis action cannot be undone.`)) return;
-                await window.fb.deleteDoc(getVaultDoc('employees', normalizeId(id)));
-                setViewProfile(null);
+                await window.fb.deleteDoc(getVaultDoc('employees', normalizeId(id))); setViewProfile(null);
             };
 
             const handleDeleteCA = async (caId) => {
@@ -755,19 +603,14 @@
                 if (!isAdmin || !tx) return;
                 try {
                     if (tx.isBonus) {
-                        const key = String(tx.id || '').replace(/^bonus-/, '');
-                        if (!key) return;
-                        if (!window.confirm('Delete this archived payroll bonus? This will set the archived bonus to 0.')) return;
-                        await window.fb.updateDoc(getVaultDoc('payroll_entries', key), { 'data.bonus': 0 });
-                        alert('Archived bonus removed.');
+                        const key = String(tx.id || '').replace(/^bonus-/, ''); if (!key) return;
+                        if (!window.confirm('Delete this archived bonus?')) return;
+                        await window.fb.updateDoc(getVaultDoc('payroll_entries', key), { 'data.bonus': 0 }); alert('Bonus removed.');
                     } else {
-                        if (!window.confirm('Delete this ledger transaction (cash advance/payment)? This action cannot be undone.')) return;
-                        await window.fb.deleteDoc(getVaultDoc('cash_advances', tx.id));
-                        alert('Ledger transaction deleted.');
+                        if (!window.confirm('Delete this transaction?')) return;
+                        await window.fb.deleteDoc(getVaultDoc('cash_advances', tx.id)); alert('Transaction deleted.');
                     }
-                } catch (err) {
-                    alert('Error deleting ledger entry: ' + (err.message || err));
-                }
+                } catch (err) { alert('Error deleting: ' + (err.message || err)); }
             };
 
             const handleExportBackup = () => {
@@ -785,10 +628,7 @@
                         const data = JSON.parse(e.target.result); 
                         const restoreCollection = async (colName, items) => {
                             if (!items || !Array.isArray(items)) return;
-                            for (const item of items) { 
-                                const { id, ...rest } = item; 
-                                if (id) await window.fb.setDoc(getVaultDoc(colName, id), rest, { merge: true }); 
-                            }
+                            for (const item of items) { const { id, ...rest } = item; if (id) await window.fb.setDoc(getVaultDoc(colName, id), rest, { merge: true }); }
                         };
                         await restoreCollection('employees', data.employees); await restoreCollection('attendance', data.attendance); await restoreCollection('cash_advances', data.cashAdvances || data.cash_advances); await restoreCollection('payroll_entries', data.interactivePayrolls); await restoreCollection('ca_requests', data.caRequests);
                         alert(`Restore Complete!`);
@@ -822,16 +662,12 @@
                 <div className="flex h-screen bg-gray-50 overflow-hidden relative font-sans">
                     {isRestoring && <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-[100] font-sans flex-col text-white"><div className="w-16 h-16 border-4 border-t-white rounded-full animate-spin mb-6" /><h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2></div>}
 
-                    {isSidebarOpen && window.innerWidth < 1024 && (
-                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-30 print-hidden" onClick={() => setSidebarOpen(false)} />
-                    )}
+                    {isSidebarOpen && window.innerWidth < 1024 && <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-30 print-hidden" onClick={() => setSidebarOpen(false)} />}
 
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full print-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} shadow-2xl`}>
                         <div className="p-6 border-b border-blue-800 flex items-center justify-between">
                             <div className="font-black text-xl flex items-center"><span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3"><LayoutDashboard /></span> {isSidebarOpen ? 'STONE GRILL' : ''}</div>
-                            {isSidebarOpen && window.innerWidth < 1024 && (
-                                <button onClick={() => setSidebarOpen(false)} className="p-2 bg-blue-800 rounded-lg text-white hover:bg-blue-700 transition-colors"><X className="w-4 h-4" /></button>
-                            )}
+                            {isSidebarOpen && window.innerWidth < 1024 && <button onClick={() => setSidebarOpen(false)} className="p-2 bg-blue-800 rounded-lg text-white hover:bg-blue-700 transition-colors"><X className="w-4 h-4" /></button>}
                         </div>
                         <nav className="flex-1 py-8 space-y-2 overflow-y-auto custom-scrollbar">
                             <NavItem icon={<LayoutDashboard />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => switchTab('dashboard')} open={isSidebarOpen} />
@@ -853,15 +689,12 @@
                     <main className="flex-1 flex flex-col h-screen overflow-hidden">
                         <header className="h-16 bg-white border-b flex items-center justify-between px-6 shrink-0 print-hidden">
                             <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-slate-500 hover:text-blue-900"><Menu /></button>
-                            <div className="flex items-center gap-4">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${isAdmin ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}>{userRole} Mode</span>
-                            </div>
+                            <div className="flex items-center gap-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${isAdmin ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}>{userRole} Mode</span></div>
                         </header>
 
                         <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar bg-slate-50" id="print-section">
                             <div className="max-w-7xl mx-auto space-y-6">
 
-                                {/* DASHBOARD TAB */}
                                 {activeTab === 'dashboard' && (
                                     <>
                                         {isAdmin && (
@@ -897,46 +730,21 @@
                                             </>
                                         )}
 
-                                        {/* For Staff: Interactive Payslip View & CA Request */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
-                                            
                                             const myRequests = caRequests.filter(r => normalizeId(r.empId) === normalizeId(emp.id)).sort((a,b)=>(b.dateRequested||'').localeCompare(a.dateRequested||''));
 
                                             return (
                                                 <div className="animate-slide-up space-y-6 max-w-2xl mx-auto pb-10">
-                                                    
-                                                    {/* The integrated Payslip Widget for Staff */}
-                                                    <PayslipWidget 
-                                                        emp={emp} 
-                                                        selectedMonth={selectedMonth} 
-                                                        monthOptions={monthOptions} 
-                                                        setSelectedMonth={setSelectedMonth} 
-                                                        attendance={attendance} 
-                                                        cashAdvances={cashAdvances} 
-                                                        interactivePayrolls={interactivePayrolls} 
-                                                        onDelete={isAdmin ? handleDeleteLedgerEntry : undefined}
-                                                    />
-
-                                                    {/* CA Request Tool */}
+                                                    <PayslipWidget emp={emp} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} attendance={attendance} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onDelete={isAdmin ? handleDeleteLedgerEntry : undefined} />
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden mt-6">
-                                                        <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center">
-                                                            <Banknote className="w-5 h-5 mr-2" /> Request Cash Advance
-                                                        </div>
+                                                        <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center"><Banknote className="w-5 h-5 mr-2" /> Request Cash Advance</div>
                                                         <div className="p-6">
                                                             <form onSubmit={handleStaffSubmitCARequest} className="flex flex-col md:flex-row gap-4 mb-6">
-                                                                <div className="flex-1">
-                                                                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Amount (₱)</label>
-                                                                    <input type="number" required min="1" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none text-emerald-700" value={staffCaRequest.amount} onChange={e=>setStaffCaRequest({...staffCaRequest, amount: e.target.value})} />
-                                                                </div>
-                                                                <div className="flex-[2]">
-                                                                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Reason / Note</label>
-                                                                    <input type="text" required className="w-full p-3 border rounded-xl bg-slate-50 font-bold outline-none" value={staffCaRequest.reason} onChange={e=>setStaffCaRequest({...staffCaRequest, reason: e.target.value})} placeholder="e.g. For groceries" />
-                                                                </div>
-                                                                <div className="flex items-end">
-                                                                    <button type="submit" className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white font-black uppercase rounded-xl hover:bg-emerald-700 active:scale-95 transition-all shadow-md">Submit Request</button>
-                                                                </div>
+                                                                <div className="flex-1"><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Amount (₱)</label><input type="number" required min="1" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none text-emerald-700" value={staffCaRequest.amount} onChange={e=>setStaffCaRequest({...staffCaRequest, amount: e.target.value})} /></div>
+                                                                <div className="flex-[2]"><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Reason / Note</label><input type="text" required className="w-full p-3 border rounded-xl bg-slate-50 font-bold outline-none" value={staffCaRequest.reason} onChange={e=>setStaffCaRequest({...staffCaRequest, reason: e.target.value})} placeholder="e.g. For groceries" /></div>
+                                                                <div className="flex items-end"><button type="submit" className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white font-black uppercase rounded-xl hover:bg-emerald-700 active:scale-95 transition-all shadow-md">Submit Request</button></div>
                                                             </form>
 
                                                             <h4 className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-4">Request Status Tracker</h4>
@@ -955,9 +763,7 @@
                                                                                     {req.status === 'Printed' && <span className="text-blue-600">PRINTED / CLAIMED</span>}
                                                                                 </td>
                                                                                 <td className="p-3 text-center">
-                                                                                    {req.status === 'Approved' ? (
-                                                                                        <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-black active:scale-95"><Printer className="w-3 h-3 inline mr-1"/> Print</button>
-                                                                                    ) : <span className="text-slate-300">--</span>}
+                                                                                    {req.status === 'Approved' ? <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-black active:scale-95"><Printer className="w-3 h-3 inline mr-1"/> Print</button> : <span className="text-slate-300">--</span>}
                                                                                 </td>
                                                                             </tr>
                                                                         ))}
@@ -973,7 +779,6 @@
                                     </>
                                 )}
 
-                                {/* ADMIN TABS */}
                                 {isAdmin && activeTab === 'employees' && (
                                     <div className="bg-white rounded-3xl shadow-xl overflow-hidden animate-slide-up">
                                         <div className="p-6 border-b flex justify-between items-center bg-[#243c84] text-white">
@@ -985,16 +790,7 @@
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-sm text-left whitespace-nowrap">
-                                                <thead className="bg-slate-50 uppercase text-[10px] font-black text-slate-500">
-                                                    <tr>
-                                                        <th className="p-4">Name</th>
-                                                        <th className="p-4 text-center">Rate</th>
-                                                        <th className="p-4 text-center">Days</th>
-                                                        <th className="p-4 text-right">Gross Pay</th>
-                                                        <th className="p-4 text-right">CA (Mo)</th>
-                                                        <th className="p-4 text-right">Net Salary</th>
-                                                    </tr>
-                                                </thead>
+                                                <thead className="bg-slate-50 uppercase text-[10px] font-black text-slate-500"><tr><th className="p-4">Name</th><th className="p-4 text-center">Rate</th><th className="p-4 text-center">Days</th><th className="p-4 text-right">Gross Pay</th><th className="p-4 text-right">CA (Mo)</th><th className="p-4 text-right">Net Salary</th></tr></thead>
                                                 <tbody className="divide-y divide-slate-100">
                                                     {payrollSummary.length === 0 ? <tr><td colSpan="6" className="p-10 text-center text-slate-400">Directory empty. Add a member.</td></tr> :
                                                         payrollSummary.map(row => (
@@ -1026,8 +822,8 @@
                                             <div className="overflow-y-auto flex-1 custom-scrollbar max-h-[500px]">
                                                 <table className="w-full text-xs text-left">
                                                     <tbody>
-                                                        {attendance.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0, 100).map((a,i)=>(
-                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{a.date}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut} ({a.dayEquivalent}d)</td></tr>
+                                                        {[...attendance].sort((a,b)=>(cleanDate(b.date)||'').localeCompare(cleanDate(a.date)||'')).slice(0, 100).map((a,i)=>(
+                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{cleanDate(a.date)}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut} ({a.dayEquivalent}d)</td></tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
@@ -1041,104 +837,49 @@
                                         <div className="w-full lg:w-1/3 bg-white p-8 rounded-3xl shadow-xl space-y-6">
                                             <h3 className="font-black text-blue-900 uppercase tracking-widest border-b pb-4">Payslip Builder</h3>
                                             <div><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Employee</label><select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icEmpId} onChange={e => setIcEmpId(e.target.value)}><option value="">Select Member</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
-                                            <div className="mb-4">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Month</label>
-                                                <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icMonth} onChange={e => setIcMonth(e.target.value)}>
-                                                    {monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                                </select>
-                                            </div>
+                                            <div className="mb-4"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Month</label><select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icMonth} onChange={e => setIcMonth(e.target.value)}>{monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Days Present</label>
-                                                    <input type="number" min="0" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.days_worked} onChange={e => setIcForm({...icForm, days_worked: parseFloat(e.target.value) || 0})}/>
-                                                    <p className="text-[10px] text-slate-400 mt-2">Number of days the employee was present this month.</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Rate / Day</label>
-                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icEmpId ? `₱${formatMoney(parseFloat((employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : 'Select an employee'}/>
-                                                </div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Days Present</label><input type="number" min="0" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.days_worked} onChange={e => setIcForm({...icForm, days_worked: parseFloat(e.target.value) || 0})}/><p className="text-[10px] text-slate-400 mt-2">Number of days the employee was present this month.</p></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Rate / Day</label><input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icEmpId ? `₱${formatMoney(parseFloat((employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : 'Select an employee'}/></div>
                                             </div>
                                                 <div className="grid grid-cols-1 gap-4">
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Earnings</label>
-                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icForm.days_worked ? `₱${formatMoney(icForm.days_worked * (parseFloat(employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : '₱0'}/>
-                                                    <p className="text-[10px] text-slate-400 mt-2">Computed from days present and rate per day.</p>
-                                                </div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Earnings</label><input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-slate-500" value={icForm.days_worked ? `₱${formatMoney(icForm.days_worked * (parseFloat(employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.dailyRate || employees.find(e => normalizeId(e.id) === normalizeId(icEmpId))?.rate) || 0))}` : '₱0'}/><p className="text-[10px] text-slate-400 mt-2">Computed from days present and rate per day.</p></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Bonus / Incentives (₱)</label>
-                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-emerald-600" value={`₱${formatMoney(icLedgerEntries.filter(entry => entry.amount > 0).reduce((sum, entry) => sum + entry.amount, 0))}`}/>
-                                                    <p className="text-[10px] text-slate-400 mt-2">Sum of all bonus/incentive/commission ledger entries.</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Deductions (₱)</label>
-                                                    <input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-rose-600" value={`₱${formatMoney(icLedgerEntries.filter(entry => entry.amount < 0).reduce((sum, entry) => sum + Math.abs(entry.amount), 0))}`}/>
-                                                    <p className="text-[10px] text-slate-400 mt-2">Sum of all deduction/fine/penalty ledger entries.</p>
-                                                </div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Bonus / Incentives (₱)</label><input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-emerald-600" value={`₱${formatMoney(icLedgerEntries.filter(entry => entry.amount > 0).reduce((sum, entry) => sum + entry.amount, 0))}`}/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Total Deductions (₱)</label><input type="text" readOnly className="w-full p-3 border rounded-xl font-black bg-slate-100 text-rose-600" value={`₱${formatMoney(icLedgerEntries.filter(entry => entry.amount < 0).reduce((sum, entry) => sum + Math.abs(entry.amount), 0))}`}/></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">CA Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-rose-600" value={icForm.cash_advance} onChange={e => setIcForm({...icForm, cash_advance: parseFloat(e.target.value) || 0})}/></div>
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Misc Ded.</label><input type="number" className="w-full p-3 border rounded-xl font-black bg-slate-50 text-rose-600" value={icForm.misc_deductions} onChange={e => setIcForm({...icForm, misc_deductions: parseFloat(e.target.value) || 0})}/></div>
                                             </div>
                                             <div className="bg-white p-4 rounded-3xl border border-slate-200 mt-6 space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Ledger Entry</p>
-                                                        <p className="text-[10px] text-slate-400">Add multiple bonus/incentive/commission and deduction/fine/penalty items.</p>
-                                                    </div>
-                                                    <span className="text-[10px] font-bold text-slate-600">{icLedgerEntries.length} Items</span>
-                                                </div>
+                                                <div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Ledger Entry</p><p className="text-[10px] text-slate-400">Add multiple bonuses or fines.</p></div><span className="text-[10px] font-bold text-slate-600">{icLedgerEntries.length} Items</span></div>
                                                 <div className="grid grid-cols-3 gap-3">
-                                                    <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icLedgerEntry.type} onChange={e => setIcLedgerEntry({...icLedgerEntry, type: e.target.value})}>
-                                                        <option value="Bonus">Bonus</option>
-                                                        <option value="Incentive">Incentive</option>
-                                                        <option value="Commission">Commission</option>
-                                                        <option value="Deduction">Deduction</option>
-                                                        <option value="Fine">Fine</option>
-                                                        <option value="Penalty">Penalty</option>
-                                                    </select>
+                                                    <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icLedgerEntry.type} onChange={e => setIcLedgerEntry({...icLedgerEntry, type: e.target.value})}><option value="Bonus">Bonus</option><option value="Incentive">Incentive</option><option value="Commission">Commission</option><option value="Deduction">Deduction</option><option value="Fine">Fine</option><option value="Penalty">Penalty</option></select>
                                                     <input type="number" className="w-full p-3 border rounded-xl bg-slate-50 font-black" placeholder="Amount" value={icLedgerEntry.amount} onChange={e => setIcLedgerEntry({...icLedgerEntry, amount: e.target.value})}/>
                                                     <input type="text" className="w-full p-3 border rounded-xl bg-slate-50 font-black" placeholder="Note" value={icLedgerEntry.note} onChange={e => setIcLedgerEntry({...icLedgerEntry, note: e.target.value})}/>
                                                 </div>
                                                 <button type="button" onClick={() => {
-                                                    const amount = parseFloat(icLedgerEntry.amount);
-                                                    if (!icEmpId || !amount) return;
-                                                    const positiveTypes = ['Bonus','Incentive','Commission'];
-                                                    const isBonus = positiveTypes.includes(icLedgerEntry.type);
+                                                    const amount = parseFloat(icLedgerEntry.amount); if (!icEmpId || !amount) return;
+                                                    const positiveTypes = ['Bonus','Incentive','Commission']; const isBonus = positiveTypes.includes(icLedgerEntry.type);
                                                     const entryAmount = isBonus ? Math.abs(amount) : -Math.abs(amount);
-                                                    setIcLedgerEntries([...icLedgerEntries, {
-                                                        id: Date.now(),
-                                                        date: new Date().toISOString().slice(0, 10),
-                                                        type: icLedgerEntry.type,
-                                                        amount: entryAmount,
-                                                        note: icLedgerEntry.note,
-                                                        status: 'Logged',
-                                                        isBonus
-                                                    }]);
+                                                    setIcLedgerEntries([...icLedgerEntries, { id: Date.now(), date: new Date().toISOString().slice(0, 10), type: icLedgerEntry.type, amount: entryAmount, note: icLedgerEntry.note, status: 'Logged', isBonus }]);
                                                     setIcLedgerEntry({ type: 'Bonus', amount: '', note: '' });
                                                 }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-black uppercase hover:bg-emerald-700">Add Ledger Item</button>
                                                 {icLedgerEntries.length > 0 && (
                                                     <div className="space-y-2">
                                                         {icLedgerEntries.map(entry => (
                                                             <div key={entry.id} className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-slate-200 bg-slate-50">
-                                                                <div className="min-w-0">
-                                                                    <p className="text-sm font-black uppercase tracking-widest">{entry.type}</p>
-                                                                    <p className="text-[10px] text-slate-500 truncate">{entry.note || 'No note'}</p>
-                                                                    <p className="text-[10px] text-slate-400">{new Date(entry.date).toLocaleDateString()}</p>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <p className={`font-black ${entry.isBonus ? 'text-emerald-600' : 'text-rose-600'}`}>{entry.isBonus ? '+' : '-'}₱{formatMoney(Math.abs(entry.amount))}</p>
-                                                                    <button type="button" onClick={() => setIcLedgerEntries(icLedgerEntries.filter(item => item.id !== entry.id))} className="text-[10px] text-slate-400 hover:text-slate-600">Remove</button>
-                                                                </div>
+                                                                <div className="min-w-0"><p className="text-sm font-black uppercase tracking-widest">{entry.type}</p><p className="text-[10px] text-slate-500 truncate">{entry.note || 'No note'}</p></div>
+                                                                <div className="text-right"><p className={`font-black ${entry.isBonus ? 'text-emerald-600' : 'text-rose-600'}`}>{entry.isBonus ? '+' : '-'}₱{formatMoney(Math.abs(entry.amount))}</p><button type="button" onClick={() => setIcLedgerEntries(icLedgerEntries.filter(item => item.id !== entry.id))} className="text-[10px] text-slate-400 hover:text-slate-600">Remove</button></div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 )}
                                             </div>
                                             <button onClick={async () => {
-                                                if (!icEmpId) return;
-                                                const key = `${normalizeId(icEmpId)}_${icMonth}`;
+                                                if (!icEmpId) return; const key = `${normalizeId(icEmpId)}_${icMonth}`;
                                                 await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries} });
                                                 alert("Saved to archive.");
                                             }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
@@ -1167,105 +908,42 @@
                                                         <p className={`text-2xl font-black ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(Math.abs(net))}</p>
                                                         <div className="mt-4 border-t border-slate-200 pt-3 text-[11px] text-slate-600 space-y-3">
                                                             <div className={`flex justify-between ${parseFloat(icForm.carryover) >= 0 ? 'text-emerald-600' : 'text-rose-600'} text-[10px] font-black uppercase`}> 
-                                                                <span>Carryover</span>
-                                                                <span>{parseFloat(icForm.carryover) >= 0 ? `+ ₱${formatMoney(parseFloat(icForm.carryover) || 0)}` : `- ₱${formatMoney(Math.abs(parseFloat(icForm.carryover) || 0))}`}</span>
+                                                                <span>Carryover</span><span>{parseFloat(icForm.carryover) >= 0 ? `+ ₱${formatMoney(parseFloat(icForm.carryover) || 0)}` : `- ₱${formatMoney(Math.abs(parseFloat(icForm.carryover) || 0))}`}</span>
                                                             </div>
-                                                            <div>
-                                                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Disbursed</label>
-                                                                <input type="number" inputMode="numeric" enterKeyHint="done" className="w-full p-2 border rounded-xl bg-white text-sm font-black" value={icForm.salary_pay} onChange={e => setIcForm({...icForm, salary_pay: e.target.value})} />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Carryover</label>
-                                                                <input type="number" inputMode="numeric" enterKeyHint="done" className="w-full p-2 border rounded-xl bg-white text-sm font-black" value={icForm.carryover} onChange={e => setIcForm({...icForm, carryover: e.target.value})} />
-                                                            </div>
+                                                            <div><label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Disbursed</label><input type="number" inputMode="numeric" enterKeyHint="done" className="w-full p-2 border rounded-xl bg-white text-sm font-black" value={icForm.salary_pay} onChange={e => setIcForm({...icForm, salary_pay: e.target.value})} /></div>
+                                                            <div><label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Carryover</label><input type="number" inputMode="numeric" enterKeyHint="done" className="w-full p-2 border rounded-xl bg-white text-sm font-black" value={icForm.carryover} onChange={e => setIcForm({...icForm, carryover: e.target.value})} /></div>
                                                             <button type="button" onClick={() => setIcForm({ ...icForm, salary_pay: parseFloat(icForm.salary_pay) || 0, carryover: parseFloat(icForm.carryover) || 0 })} className="mt-3 w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Update Net Pay</button>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remaining</span>
-                                                                <span className={`font-black ${remainingBalance < 0 ? 'text-red-500' : 'text-slate-900'}`}>{remainingBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(remainingBalance))}</span>
-                                                            </div>
+                                                            <div className="flex justify-between"><span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remaining</span><span className={`font-black ${remainingBalance < 0 ? 'text-red-500' : 'text-slate-900'}`}>{remainingBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(remainingBalance))}</span></div>
                                                         </div>
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-4 mb-6 text-sm text-slate-600">
-                                                        <div>
-                                                            <p className="font-black uppercase tracking-widest text-[9px]">Employee</p>
-                                                            <p className="mt-1">{emp?.name}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-black uppercase tracking-widest text-[9px]">Pay Period</p>
-                                                            <p className="mt-1">{currentMonthLabel}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-black uppercase tracking-widest text-[9px]">Position</p>
-                                                            <p className="mt-1">{emp?.position}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-black uppercase tracking-widest text-[9px]">Rate / Day</p>
-                                                            <p className="mt-1">₱{formatMoney(dailyRate)}</p>
-                                                        </div>
+                                                        <div><p className="font-black uppercase tracking-widest text-[9px]">Employee</p><p className="mt-1">{emp?.name}</p></div>
+                                                        <div><p className="font-black uppercase tracking-widest text-[9px]">Pay Period</p><p className="mt-1">{currentMonthLabel}</p></div>
+                                                        <div><p className="font-black uppercase tracking-widest text-[9px]">Position</p><p className="mt-1">{emp?.position}</p></div>
+                                                        <div><p className="font-black uppercase tracking-widest text-[9px]">Rate / Day</p><p className="mt-1">₱{formatMoney(dailyRate)}</p></div>
                                                     </div>
                                                     <div className="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Earnings</div>
                                                     <div className="space-y-3 border border-slate-100 rounded-3xl p-4 bg-slate-50">
-                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold">
-                                                            <span>Days Present</span>
-                                                            <span>{icForm.days_worked || 0}</span>
-                                                        </div>
-                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold">
-                                                            <span>Total Earnings</span>
-                                                            <span>₱{formatMoney(totalEarnings)}</span>
-                                                        </div>
-                                                        {icForm.bonus > 0 && (
-                                                            <div className="flex justify-between text-xs text-emerald-600 font-semibold">
-                                                                <span>Bonus</span>
-                                                                <span>+ ₱{formatMoney(icForm.bonus)}</span>
-                                                            </div>
-                                                        )}
-                                                        {ledgerCredit > 0 && (
-                                                            <div className="flex justify-between text-xs text-emerald-600 font-semibold">
-                                                                <span>Ledger Credits</span>
-                                                                <span>+ ₱{formatMoney(ledgerCredit)}</span>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex justify-between text-xs text-emerald-600 font-black uppercase pt-3 border-t border-slate-200">
-                                                            <span>Gross Earnings</span>
-                                                            <span>₱{formatMoney(gross)}</span>
-                                                        </div>
+                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold"><span>Days Present</span><span>{icForm.days_worked || 0}</span></div>
+                                                        <div className="flex justify-between text-xs text-slate-600 font-semibold"><span>Total Earnings</span><span>₱{formatMoney(totalEarnings)}</span></div>
+                                                        {icForm.bonus > 0 && <div className="flex justify-between text-xs text-emerald-600 font-semibold"><span>Bonus</span><span>+ ₱{formatMoney(icForm.bonus)}</span></div>}
+                                                        {ledgerCredit > 0 && <div className="flex justify-between text-xs text-emerald-600 font-semibold"><span>Ledger Credits</span><span>+ ₱{formatMoney(ledgerCredit)}</span></div>}
+                                                        <div className="flex justify-between text-xs text-emerald-600 font-black uppercase pt-3 border-t border-slate-200"><span>Gross Earnings</span><span>₱{formatMoney(gross)}</span></div>
                                                     </div>
                                                     <div className="mt-6 text-[10px] font-black uppercase tracking-widest text-slate-500">Deductions</div>
                                                     <div className="space-y-3 border border-slate-100 rounded-3xl p-4 bg-slate-50">
-                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
-                                                            <span>{icForm.deduction_description || 'Other Deduction'}</span>
-                                                            <span>{icForm.deduction > 0 ? `-₱${formatMoney(icForm.deduction)}` : '--'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
-                                                            <span>C.A.</span>
-                                                            <span>{icForm.cash_advance > 0 ? `-₱${formatMoney(icForm.cash_advance)}` : '--'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
-                                                            <span>SSS</span>
-                                                            <span>{icForm.sss > 0 ? `-₱${formatMoney(icForm.sss)}` : '--'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold">
-                                                            <span>Misc</span>
-                                                            <span>{icForm.misc_deductions > 0 ? `-₱${formatMoney(icForm.misc_deductions)}` : '--'}</span>
-                                                        </div>
-                                                        {ledgerDebit > 0 && (
-                                                            <div className="flex justify-between text-xs text-rose-600 font-semibold">
-                                                                <span>Ledger Deductions</span>
-                                                                <span>- ₱{formatMoney(ledgerDebit)}</span>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex justify-between text-xs text-slate-900 font-black uppercase pt-3 border-t border-slate-200">
-                                                            <span>Total Deductions</span>
-                                                            <span>-₱{formatMoney(deductionTotal)}</span>
-                                                        </div>
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold"><span>{icForm.deduction_description || 'Other Deduction'}</span><span>{icForm.deduction > 0 ? `-₱${formatMoney(icForm.deduction)}` : '--'}</span></div>
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold"><span>C.A.</span><span>{icForm.cash_advance > 0 ? `-₱${formatMoney(icForm.cash_advance)}` : '--'}</span></div>
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold"><span>SSS</span><span>{icForm.sss > 0 ? `-₱${formatMoney(icForm.sss)}` : '--'}</span></div>
+                                                        <div className="flex justify-between text-xs text-rose-600 font-semibold"><span>Misc</span><span>{icForm.misc_deductions > 0 ? `-₱${formatMoney(icForm.misc_deductions)}` : '--'}</span></div>
+                                                        {ledgerDebit > 0 && <div className="flex justify-between text-xs text-rose-600 font-semibold"><span>Ledger Deductions</span><span>- ₱{formatMoney(ledgerDebit)}</span></div>}
+                                                        <div className="flex justify-between text-xs text-slate-900 font-black uppercase pt-3 border-t border-slate-200"><span>Total Deductions</span><span>-₱{formatMoney(deductionTotal)}</span></div>
                                                     </div>
                                                     {rangeCAs.length > 0 && (
                                                         <div className="mt-6 pt-4 border-t border-dashed">
                                                             <p className="text-[9px] font-black text-slate-400 uppercase text-center mb-2">CA Ledger ({currentMonthLabel})</p>
                                                             <div className="space-y-1 bg-slate-50 p-3 rounded-lg border">
-                                                                {rangeCAs.map(ca => (
-                                                                    <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{ca.date}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>
-                                                                ))}
+                                                                {rangeCAs.map(ca => <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{ca.date}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>)}
                                                             </div>
                                                         </div>
                                                     )}
@@ -1280,10 +958,7 @@
                                 {isAdmin && activeTab === 'ca' && (
                                     <div className="flex flex-col gap-8 animate-slide-up">
                                         <div className="bg-white rounded-3xl border shadow-xl overflow-hidden">
-                                            <div className="bg-amber-500 text-white p-4 font-black uppercase tracking-widest text-xs flex justify-between items-center">
-                                                <span>Pending Cash Advance Requests</span>
-                                                <span className="bg-white text-amber-600 px-2 py-0.5 rounded-full">{caRequests.filter(r=>r.status==='Pending').length}</span>
-                                            </div>
+                                            <div className="bg-amber-500 text-white p-4 font-black uppercase tracking-widest text-xs flex justify-between items-center"><span>Pending Cash Advance Requests</span><span className="bg-white text-amber-600 px-2 py-0.5 rounded-full">{caRequests.filter(r=>r.status==='Pending').length}</span></div>
                                             <div className="p-0 overflow-x-auto">
                                                 <table className="w-full text-left text-xs">
                                                     <thead className="bg-amber-50 font-black uppercase text-[9px] text-amber-700"><tr><th className="p-4">Employee</th><th className="p-4">Date</th><th className="p-4">Reason</th><th className="p-4">Amount</th><th className="p-4 text-right">Actions</th></tr></thead>
@@ -1318,7 +993,6 @@
                                                 </div>
                                                 <select className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.empId} onChange={e=>setNewCa({...newCa, empId: e.target.value})}><option value="">Select Member</option>{employees.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
                                                 
-                                                {/* Issue CA - Display Lifetime Balance */}
                                                 {newCa.empId && (() => {
                                                     const currentEmp = payrollSummary.find(e=>normalizeId(e.id)===normalizeId(newCa.empId));
                                                     return (
@@ -1426,7 +1100,6 @@
                             </div>
                         </div>
 
-                        {/* HIDDEN 58MM POS RECEIPT RENDERER */}
                         {receiptToPrint && (
                             <div id="pos-receipt-print" className="bg-white">
                                 <div style={{ textAlign: 'center', marginBottom: '10px' }}>
@@ -1443,22 +1116,18 @@
                                 </div>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
                                 <p style={{ fontSize: '9px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
-                                <div style={{ marginTop: '30px' }}>
-                                    <p style={{ fontSize: '10px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '90%', margin: '0 auto' }}>Cashier Signature</p>
-                                </div>
+                                <div style={{ marginTop: '30px' }}><p style={{ fontSize: '10px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '90%', margin: '0 auto' }}>Cashier Signature</p></div>
                                 <div style={{ paddingBottom: '30px' }}></div>
                             </div>
                         )}
                     </main>
 
-                    {/* ADMIN ADD/EDIT STAFF MODAL */}
                     {showAddStaff && isAdmin && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-4">
                             <form onSubmit={handleAddStaffSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 space-y-5 animate-in zoom-in-95">
                                 <div className="flex justify-between items-center mb-2"><h3 className="font-black uppercase tracking-widest text-blue-900">{isEditing ? 'Edit Staff Profile' : 'Add Staff'}</h3><button type="button" onClick={()=>{setShowAddStaff(false); setIsEditing(false);}} className="text-slate-400"><X/></button></div>
                                 
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Biometric ID</label><input type="text" required value={newEmpForm.biometricId} disabled={isEditing} onChange={e=>setNewEmpForm({...newEmpForm, biometricId: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black disabled:opacity-50"/></div>
-                                
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Registered Email (Google/Facebook/Direct)</label><input type="email" placeholder="staff@gmail.com" value={newEmpForm.staffEmail} onChange={e=>setNewEmpForm({...newEmpForm, staffEmail: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold text-blue-600"/></div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -1484,20 +1153,9 @@
                         </div>
                     )}
 
-                    {/* ADMIN VIEW PROFILE MODAL (Connected strictly to live dynamic stream) */}
                     {viewProfile && isAdmin && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[50] flex items-center justify-center p-4">
-                            <PayslipWidget 
-                                emp={payrollSummary.find(e => normalizeId(e.id) === normalizeId(viewProfile.id)) || viewProfile}
-                                selectedMonth={selectedMonth}
-                                monthOptions={monthOptions}
-                                setSelectedMonth={setSelectedMonth}
-                                cashAdvances={cashAdvances}
-                                interactivePayrolls={interactivePayrolls}
-                                onClose={() => setViewProfile(null)}
-                                onEdit={handleEditProfile}
-                                onDelete={handleDeleteEmployee}
-                            />
+                            <PayslipWidget emp={viewProfile} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onClose={() => setViewProfile(null)} onEdit={handleEditProfile} onDelete={handleDeleteEmployee} />
                         </div>
                     )}
                 </div>
