@@ -77,7 +77,6 @@
             return /^\d+$/.test(strId) ? parseInt(strId, 10).toString() : strId.toLowerCase();
         };
 
-        // NEW: Universal Date Cleaner to brutally prevent double-counting
         const cleanDate = (dStr) => {
             if (!dStr) return '';
             let s = String(dStr).trim().substring(0, 10);
@@ -241,10 +240,27 @@
                                     </div>
                                     <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center"><span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span><span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span></div>
                                 </div>
-                                <div className="p-6 text-center transform hover:scale-[1.02] transition-transform">
+                                
+                                {/* ENHANCED NET PAY DISPLAY WITH ARCHIVE DATA */}
+                                <div className="p-6 text-center transform hover:scale-[1.02] transition-transform relative">
+                                    {savedPayroll && <span className="absolute top-0 right-4 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">Archived</span>}
                                     <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p>
-                                    <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(netPay)}</p>
+                                    <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(Math.abs(netPay))}</p>
+                                    
+                                    {savedPayroll && (
+                                        <div className="mt-6 pt-4 border-t border-dashed border-gray-200 flex justify-center gap-8 text-xs font-bold text-gray-500">
+                                            <span className="flex flex-col items-center">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Disbursed</span>
+                                                <span className="text-emerald-600 text-base font-black font-mono">₱{formatMoney(parseFloat(savedPayroll.data?.salary_pay)||0)}</span>
+                                            </span>
+                                            <span className="flex flex-col items-center">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Carryover</span>
+                                                <span className={`${parseFloat(savedPayroll.data?.carryover) < 0 ? 'text-red-500' : 'text-blue-600'} text-base font-black font-mono`}>{parseFloat(savedPayroll.data?.carryover) < 0 ? '-' : ''}₱{formatMoney(Math.abs(parseFloat(savedPayroll.data?.carryover)||0))}</span>
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
+
                                 <div className="p-6 border-t border-gray-200 text-center">
                                     <p className="text-[10px] font-normal text-gray-500 tracking-[0.15em] uppercase mb-2">Lifetime Balance</p>
                                     <p className={`text-3xl font-normal tracking-tight ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
@@ -424,7 +440,6 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubCAReq(); unsubIP(); };
             }, [user]);
 
-            // STRICT DATE NORMALIZATION ENGINE APPLIED IN SUMMARY
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(cleanDate(a.date)) === selectedMonth);
@@ -533,21 +548,16 @@
                 setIsEditing(true); setShowAddStaff(true); setViewProfile(null); 
             };
 
-            // BULLETPROOF SMART IMPORTER
             const handleProcessLogs = async () => {
                 if (!isAdmin || !rawInput.trim()) return;
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
                 for (const line of lines) {
                     const cols = line.split(/\t+| {2,}/).filter(Boolean); if (cols.length < 3) continue;
                     const id = normalizeId(cols[0]); const name = cols[1];
-                    
-                    // Match MM/DD/YYYY, DD/MM/YYYY, or YYYY-MM-DD reliably
                     const dM = line.match(/(\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4})/); 
                     const tM = line.match(/(\d{1,2}:\d{2}(:\d{2})?)/);
                     if (!dM || !tM) continue;
-                    
-                    let iso = '';
-                    const dStr = dM[1];
+                    let iso = ''; const dStr = dM[1];
                     if (dStr.includes('/')) {
                         const parts = dStr.split('/');
                         if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
@@ -558,7 +568,6 @@
                         else if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
                     }
                     if (!iso) continue;
-
                     const timeStr = tM[1].substring(0,5);
                     const key = `${id}_${iso}`; 
                     if (!map[key]) map[key] = { id, name, date: iso, p: [] };
@@ -1153,11 +1162,25 @@
                         </div>
                     )}
 
-                    {viewProfile && isAdmin && (
-                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[50] flex items-center justify-center p-4">
-                            <PayslipWidget emp={viewProfile} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onClose={() => setViewProfile(null)} onEdit={handleEditProfile} onDelete={handleDeleteEmployee} />
-                        </div>
-                    )}
+                    {/* DYNAMIC MASTERLIST POPUP FIX */}
+                    {viewProfile && isAdmin && (() => {
+                        const activeEmpData = payrollSummary.find(e => normalizeId(e.id) === normalizeId(viewProfile.id)) || viewProfile;
+                        return (
+                            <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[50] flex items-center justify-center p-4">
+                                <PayslipWidget 
+                                    emp={activeEmpData} 
+                                    selectedMonth={selectedMonth} 
+                                    monthOptions={monthOptions} 
+                                    setSelectedMonth={setSelectedMonth} 
+                                    cashAdvances={cashAdvances} 
+                                    interactivePayrolls={interactivePayrolls} 
+                                    onClose={() => setViewProfile(null)} 
+                                    onEdit={handleEditProfile} 
+                                    onDelete={handleDeleteEmployee} 
+                                />
+                            </div>
+                        );
+                    })()}
                 </div>
             );
         }
