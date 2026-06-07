@@ -241,7 +241,6 @@
                                     <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center"><span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span><span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span></div>
                                 </div>
                                 
-                                {/* ENHANCED NET PAY DISPLAY WITH ARCHIVE DATA */}
                                 <div className="p-6 text-center transform hover:scale-[1.02] transition-transform relative">
                                     {savedPayroll && <span className="absolute top-0 right-4 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">Archived</span>}
                                     <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p>
@@ -261,10 +260,18 @@
                                     )}
                                 </div>
 
-                                <div className="p-6 border-t border-gray-200 text-center">
-                                    <p className="text-[10px] font-normal text-gray-500 tracking-[0.15em] uppercase mb-2">Lifetime Balance</p>
-                                    <p className={`text-3xl font-normal tracking-tight ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
+                                {/* NEW: SPLIT FOOTER SHOWING TOTAL LIFETIME DAYS & LIFETIME BALANCE */}
+                                <div className="border-t border-gray-200 bg-gray-50 flex items-center justify-between py-6 rounded-b-[2rem] px-2">
+                                    <div className="flex-1 text-center border-r border-gray-200">
+                                        <p className="text-[9px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-1">Total Days (Lifetime)</p>
+                                        <p className="text-2xl font-black text-gray-700">{emp.lifetimeDays || 0}</p>
+                                    </div>
+                                    <div className="flex-1 text-center">
+                                        <p className="text-[9px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-1">Lifetime Balance</p>
+                                        <p className={`text-2xl font-black ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
+                                    </div>
                                 </div>
+
                                 {(onEdit || onDelete) && (
                                     <div className="flex gap-3 mt-4 print-hidden">
                                         {onEdit && <button onClick={() => onEdit(emp)} className="flex-1 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-blue-50 transition-colors shadow-sm">Edit Profile</button>}
@@ -477,7 +484,7 @@
                     const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0) + bonusAmount;
                     const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0);
                     
-                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount };
+                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount, lifetimeDays };
                 });
             }, [employees, attendance, cashAdvances, interactivePayrolls, selectedMonth]);
 
@@ -1162,7 +1169,6 @@
                         </div>
                     )}
 
-                    {/* DYNAMIC MASTERLIST POPUP FIX */}
                     {viewProfile && isAdmin && (() => {
                         const activeEmpData = payrollSummary.find(e => normalizeId(e.id) === normalizeId(viewProfile.id)) || viewProfile;
                         return (
