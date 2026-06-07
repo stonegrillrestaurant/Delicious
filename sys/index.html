@@ -241,13 +241,22 @@
                                     <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center"><span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span><span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span></div>
                                 </div>
                                 
-                                <div className="p-6 text-center transform hover:scale-[1.02] transition-transform relative">
-                                    {savedPayroll && <span className="absolute top-0 right-4 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">Archived</span>}
-                                    <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p>
-                                    <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(Math.abs(netPay))}</p>
+                                {/* NEW HIERARCHY: LIFETIME BALANCE FIRST */}
+                                <div className="p-8 mt-2 mb-4 text-center bg-[#f8fafc] rounded-[2rem] border border-blue-100 shadow-sm relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-600"></div>
+                                    <p className="text-[10px] font-black text-blue-900/50 tracking-[0.2em] uppercase mb-2">Overall Lifetime Balance</p>
+                                    <p className={`text-5xl font-black tracking-tighter ${emp.caBalance < 0 ? 'text-red-500' : 'text-[#1b3382]'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
+                                    <p className="text-[9px] font-bold text-gray-400 mt-4 uppercase tracking-widest">Total Days Worked: <span className="text-gray-700 font-black">{emp.lifetimeDays || 0}</span></p>
+                                </div>
+
+                                {/* SECONDARY: MONTHLY NET SALARY */}
+                                <div className="p-6 text-center border-t border-dashed border-gray-200 relative">
+                                    {savedPayroll && <span className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">Archived Month</span>}
+                                    <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">{monthLabel} Net Salary</p>
+                                    <p className={`text-3xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(Math.abs(netPay))}</p>
                                     
                                     {savedPayroll && (
-                                        <div className="mt-6 pt-4 border-t border-dashed border-gray-200 flex justify-center gap-8 text-xs font-bold text-gray-500">
+                                        <div className="mt-5 pt-4 flex justify-center gap-8 text-xs font-bold text-gray-500 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                                             <span className="flex flex-col items-center">
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Disbursed</span>
                                                 <span className="text-emerald-600 text-base font-black font-mono">₱{formatMoney(parseFloat(savedPayroll.data?.salary_pay)||0)}</span>
@@ -258,18 +267,6 @@
                                             </span>
                                         </div>
                                     )}
-                                </div>
-
-                                {/* NEW: SPLIT FOOTER SHOWING TOTAL LIFETIME DAYS & LIFETIME BALANCE */}
-                                <div className="border-t border-gray-200 bg-gray-50 flex items-center justify-between py-6 rounded-b-[2rem] px-2">
-                                    <div className="flex-1 text-center border-r border-gray-200">
-                                        <p className="text-[9px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-1">Total Days (Lifetime)</p>
-                                        <p className="text-2xl font-black text-gray-700">{emp.lifetimeDays || 0}</p>
-                                    </div>
-                                    <div className="flex-1 text-center">
-                                        <p className="text-[9px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-1">Lifetime Balance</p>
-                                        <p className={`text-2xl font-black ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
-                                    </div>
                                 </div>
 
                                 {(onEdit || onDelete) && (
