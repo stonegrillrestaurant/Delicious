@@ -96,6 +96,15 @@
             return parsed.toISOString().slice(0, 7);
         };
 
+        // NEW: Visual Translator to change YYYY-MM-DD into "Mar-1"
+        const formatDisplayDate = (dateStr) => {
+            if (!dateStr) return '';
+            const parsed = new Date(dateStr);
+            if (Number.isNaN(parsed.getTime())) return dateStr;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${months[parsed.getMonth()]}-${parsed.getDate()}`;
+        };
+
         const formatMoney = (v) => {
             const num = Number(v || 0); if (isNaN(num)) return "0";
             return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -135,7 +144,6 @@
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
-        // --- DIGITAL PAYSLIP WIDGET COMPONENT ---
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
             const [activeTab, setActiveTab] = useState('payslip');
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
@@ -241,7 +249,6 @@
                                     <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center"><span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span><span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span></div>
                                 </div>
                                 
-                                {/* NEW HIERARCHY: LIFETIME BALANCE FIRST */}
                                 <div className="p-8 mt-2 mb-4 text-center bg-[#f8fafc] rounded-[2rem] border border-blue-100 shadow-sm relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-600"></div>
                                     <p className="text-[10px] font-black text-blue-900/50 tracking-[0.2em] uppercase mb-2">Overall Lifetime Balance</p>
@@ -249,7 +256,6 @@
                                     <p className="text-[9px] font-bold text-gray-400 mt-4 uppercase tracking-widest">Total Days Worked: <span className="text-gray-700 font-black">{emp.lifetimeDays || 0}</span></p>
                                 </div>
 
-                                {/* SECONDARY: MONTHLY NET SALARY */}
                                 <div className="p-6 text-center border-t border-dashed border-gray-200 relative">
                                     {savedPayroll && <span className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">Archived Month</span>}
                                     <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">{monthLabel} Net Salary</p>
@@ -284,7 +290,7 @@
                                         <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><DollarSign className="w-5 h-5" /></div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-gray-800 text-sm truncate">{tx.type}</p>
-                                            <div className="flex flex-col mt-1"><p className="text-[10px] text-gray-400 font-medium">{new Date(tx.date).toLocaleDateString()} • {tx.status}</p>{tx.note && <p className="text-[10px] text-gray-500 italic truncate mt-0.5">"{tx.note}"</p>}</div>
+                                            <div className="flex flex-col mt-1"><p className="text-[10px] text-gray-400 font-medium">{formatDisplayDate(tx.date)} • {tx.status}</p>{tx.note && <p className="text-[10px] text-gray-500 italic truncate mt-0.5">"{tx.note}"</p>}</div>
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>{(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}</p>
@@ -552,6 +558,7 @@
                 setIsEditing(true); setShowAddStaff(true); setViewProfile(null); 
             };
 
+            // NEW: INTELLIGENT MATHEMATICAL DATE IMPORTER
             const handleProcessLogs = async () => {
                 if (!isAdmin || !rawInput.trim()) return;
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
@@ -561,16 +568,33 @@
                     const dM = line.match(/(\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4})/); 
                     const tM = line.match(/(\d{1,2}:\d{2}(:\d{2})?)/);
                     if (!dM || !tM) continue;
-                    let iso = ''; const dStr = dM[1];
-                    if (dStr.includes('/')) {
-                        const parts = dStr.split('/');
-                        if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
-                        else if (parts[0].length === 4) { iso = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; }
-                    } else if (dStr.includes('-')) {
-                        const parts = dStr.split('-');
-                        if (parts[0].length === 4) { iso = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; }
-                        else if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
+                    
+                    let iso = ''; 
+                    const dStr = dM[1];
+                    const parts = dStr.split(/[\/\-]/);
+                    
+                    if (parts.length === 3) {
+                        let y, m, d;
+                        if (parts[2].length === 4) { 
+                            y = parts[2];
+                            let p0 = parseInt(parts[0], 10);
+                            let p1 = parseInt(parts[1], 10);
+                            if (p0 > 12) { d = p0; m = p1; } // Math Check: First number must be Day
+                            else if (p1 > 12) { m = p0; d = p1; } // Math Check: Second number must be Day
+                            else { m = p0; d = p1; } 
+                        } else if (parts[0].length === 4) { 
+                            y = parts[0];
+                            let p1 = parseInt(parts[1], 10);
+                            let p2 = parseInt(parts[2], 10);
+                            if (p1 > 12) { d = p1; m = p2; }
+                            else if (p2 > 12) { m = p1; d = p2; }
+                            else { m = p1; d = p2; }
+                        }
+                        if (y && m && d) {
+                            iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                        }
                     }
+                    
                     if (!iso) continue;
                     const timeStr = tM[1].substring(0,5);
                     const key = `${id}_${iso}`; 
@@ -584,7 +608,7 @@
                     await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
-                setRawInput(''); alert(`Processed ${count} unique attendance records (Duplicates safely merged).`);
+                setRawInput(''); alert(`Processed ${count} unique attendance records. Invalid dates corrected automatically.`);
             };
 
             const handleAddStaffSubmit = async (e) => {
@@ -767,7 +791,7 @@
                                                                     <tbody className="divide-y divide-slate-100">
                                                                         {myRequests.map(req => (
                                                                             <tr key={req.id}>
-                                                                                <td className="p-3 font-mono text-slate-500">{new Date(req.dateRequested).toLocaleDateString()}</td>
+                                                                                <td className="p-3 font-mono text-slate-500">{formatDisplayDate(req.dateRequested)}</td>
                                                                                 <td className="p-3 font-black">₱{formatMoney(req.amount)}</td>
                                                                                 <td className="p-3 font-black">
                                                                                     {req.status === 'Pending' && <span className="text-amber-500">PENDING</span>}
@@ -836,7 +860,7 @@
                                                 <table className="w-full text-xs text-left">
                                                     <tbody>
                                                         {[...attendance].sort((a,b)=>(cleanDate(b.date)||'').localeCompare(cleanDate(a.date)||'')).slice(0, 100).map((a,i)=>(
-                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{cleanDate(a.date)}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut} ({a.dayEquivalent}d)</td></tr>
+                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{formatDisplayDate(cleanDate(a.date))}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut} ({a.dayEquivalent}d)</td></tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
@@ -956,7 +980,7 @@
                                                         <div className="mt-6 pt-4 border-t border-dashed">
                                                             <p className="text-[9px] font-black text-slate-400 uppercase text-center mb-2">CA Ledger ({currentMonthLabel})</p>
                                                             <div className="space-y-1 bg-slate-50 p-3 rounded-lg border">
-                                                                {rangeCAs.map(ca => <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{ca.date}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>)}
+                                                                {rangeCAs.map(ca => <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{formatDisplayDate(ca.date)}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>)}
                                                             </div>
                                                         </div>
                                                     )}
@@ -981,7 +1005,7 @@
                                                             return (
                                                                 <tr key={req.id} className="hover:bg-amber-50/50">
                                                                     <td className="p-4 font-black uppercase text-slate-800">{empName}</td>
-                                                                    <td className="p-4 text-slate-500 font-mono">{new Date(req.dateRequested).toLocaleDateString()}</td>
+                                                                    <td className="p-4 text-slate-500 font-mono">{formatDisplayDate(req.dateRequested)}</td>
                                                                     <td className="p-4 italic text-slate-600">{req.reason}</td>
                                                                     <td className="p-4 font-black text-rose-600 text-sm">₱{formatMoney(req.amount)}</td>
                                                                     <td className="p-4 text-right space-x-2">
@@ -1029,7 +1053,7 @@
                                                         <tbody className="divide-y divide-gray-50">
                                                             {cashAdvances.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca=>(
                                                                 <tr key={ca.id} className="hover:bg-slate-50 transition-colors">
-                                                                    <td className="p-4 font-mono text-slate-400">{ca.date}</td>
+                                                                    <td className="p-4 font-mono text-slate-400">{formatDisplayDate(ca.date)}</td>
                                                                     <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(ca.empId))?.name || ca.empId} <span className="italic text-slate-400 font-normal ml-2">{ca.reason}</span></td>
                                                                     <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-500'}`}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</td>
                                                                     <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
