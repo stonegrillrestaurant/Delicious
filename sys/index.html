@@ -915,11 +915,28 @@
                                                     </div>
                                                 )}
                                             </div>
-                                            <button onClick={async () => {
-                                                if (!icEmpId) return; const key = `${normalizeId(icEmpId)}_${icMonth}`;
-                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries} });
-                                                alert("Saved to archive.");
-                                            }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
+                                            
+                                            <div className="flex gap-3">
+                                                <button onClick={async () => {
+                                                    if (!icEmpId) return; const key = `${normalizeId(icEmpId)}_${icMonth}`;
+                                                    await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries} });
+                                                    alert("Saved to archive.");
+                                                }} className="flex-1 bg-blue-700 text-white py-4 rounded-xl font-black uppercase shadow-sm active:scale-95 transition-all">Save to Archive</button>
+                                                
+                                                {interactivePayrolls.some(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === icMonth || getMonthKey(p.startDate) === icMonth)) && (
+                                                    <button onClick={async () => {
+                                                        if (!icEmpId) return; 
+                                                        if (!window.confirm("Permanently delete this archived payslip? This will erase the disbursement record.")) return;
+                                                        const key = `${normalizeId(icEmpId)}_${icMonth}`;
+                                                        await window.fb.deleteDoc(getVaultDoc('payroll_entries', key));
+                                                        alert("Archived record deleted.");
+                                                        setIcForm({ salary_pay: 0, days_worked: 0, bonus: 0, bonus_description: '', deduction: 0, deduction_description: '', sss: 0, cash_advance: 0, misc_deductions: 0, carryover: 0 });
+                                                        setIcLedgerEntries([]);
+                                                    }} className="px-6 bg-rose-50 text-rose-600 py-4 rounded-xl font-black uppercase border border-rose-200 hover:bg-rose-100 shadow-sm active:scale-95 transition-all flex items-center justify-center">
+                                                        <X className="w-5 h-5 mr-1" /> Remove
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         
                                         <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
