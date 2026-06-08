@@ -96,7 +96,6 @@
             return parsed.toISOString().slice(0, 7);
         };
 
-        // NEW: Visual Translator to change YYYY-MM-DD into "Mar-1"
         const formatDisplayDate = (dateStr) => {
             if (!dateStr) return '';
             const parsed = new Date(dateStr);
@@ -144,6 +143,7 @@
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
+        // --- DIGITAL PAYSLIP WIDGET COMPONENT ---
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
             const [activeTab, setActiveTab] = useState('payslip');
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
@@ -558,7 +558,6 @@
                 setIsEditing(true); setShowAddStaff(true); setViewProfile(null); 
             };
 
-            // NEW: INTELLIGENT MATHEMATICAL DATE IMPORTER
             const handleProcessLogs = async () => {
                 if (!isAdmin || !rawInput.trim()) return;
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
@@ -579,8 +578,8 @@
                             y = parts[2];
                             let p0 = parseInt(parts[0], 10);
                             let p1 = parseInt(parts[1], 10);
-                            if (p0 > 12) { d = p0; m = p1; } // Math Check: First number must be Day
-                            else if (p1 > 12) { m = p0; d = p1; } // Math Check: Second number must be Day
+                            if (p0 > 12) { d = p0; m = p1; } 
+                            else if (p1 > 12) { m = p0; d = p1; } 
                             else { m = p0; d = p1; } 
                         } else if (parts[0].length === 4) { 
                             y = parts[0];
@@ -604,7 +603,8 @@
                 for (const k in map) {
                     const r = map[k]; const s = r.p.sort();
                     const hoursWorked = calculateHoursWorked(s[0], s[s.length-1]);
-                    let dayVal = 1.0; if (s.length === 1 || hoursWorked < 6) dayVal = 0.5;
+                    // RULE UPDATED TO < 7 HOURS
+                    let dayVal = 1.0; if (s.length === 1 || hoursWorked < 7) dayVal = 0.5;
                     await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
@@ -850,7 +850,7 @@
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full animate-slide-up">
                                         <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col">
                                             <h3 className="font-black text-blue-900 uppercase mb-2">Smart Import Logs</h3>
-                                            <p className="text-[10px] text-slate-400 mb-6 font-bold uppercase leading-relaxed">Automatic Rule Applied:<br/>1 Punch = 0.5d | &lt;6 hrs = 0.5d | &gt;=6 hrs = 1.0d</p>
+                                            <p className="text-[10px] text-slate-400 mb-6 font-bold uppercase leading-relaxed">Automatic Rule Applied:<br/>1 Punch = 0.5d | &lt;7 hrs = 0.5d | &gt;=7 hrs = 1.0d</p>
                                             <textarea className="w-full flex-1 p-4 text-xs font-mono border rounded-2xl mb-4 outline-none bg-slate-50 custom-scrollbar" placeholder="Paste tab-separated logs here..." value={rawInput} onChange={e=>setRawInput(e.target.value)} />
                                             <button onClick={handleProcessLogs} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg">Process Logs</button>
                                         </div>
