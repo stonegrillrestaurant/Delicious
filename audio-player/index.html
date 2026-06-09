@@ -4,9 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-  <title>Ninox Audio Player</title>
-  <meta name="description" content="Listen to Solitude Reflections by Ninox Antolihao." />
+  <title>Ninox Audio Player | Solitude Reflections</title>
+
+  <!-- UPDATED: Primary SEO -->
+  <meta name="description" content="Listen to Solitude Reflections by Ninox Antolihao—thoughtful audio reflections on truth, belief, self-knowledge, consciousness, and the human experience." />
+  <meta name="keywords" content="Ninox Audio Player, Solitude Reflections, Ninox Antolihao, philosophical reflections, spiritual reflections, audio essays, truth, belief, self knowledge" />
+  <meta name="author" content="Ninox Antolihao" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="language" content="English" />
+  <link rel="canonical" href="https://stonegrillresto.net/audio-player/" />
+
+  <!-- UPDATED: Open Graph sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Solitude Reflections" />
+  <meta property="og:title" content="Ninox Audio Player | Solitude Reflections" />
+  <meta property="og:description" content="Listen to reflective audio essays by Ninox Antolihao on truth, belief, consciousness, and the human experience." />
+  <meta property="og:url" content="https://stonegrillresto.net/reflections/audio-player/" />
+  <meta property="og:image" content="https://stonegrillresto.net/reflections/pages/knowing-self/cover.jpg" />
+  <meta property="og:image:alt" content="Solitude Reflections audio player by Ninox Antolihao" />
+
+  <!-- UPDATED: Twitter/X sharing -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Ninox Audio Player | Solitude Reflections" />
+  <meta name="twitter:description" content="Listen to reflective audio essays by Ninox Antolihao." />
+  <meta name="twitter:image" content="https://stonegrillresto.net/reflections/pages/knowing-self/cover.jpg" />
+
+  <!-- UPDATED: PWA and mobile app -->
   <meta name="theme-color" content="#111522" />
+  <meta name="application-name" content="Ninox Audio Player" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Ninox Audio" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+
+  <!-- UPDATED: Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Ninox Audio Player",
+    "url": "https://stonegrillresto.net/audio-player/",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Any",
+    "description": "A progressive web audio player for Solitude Reflections by Ninox Antolihao.",
+    "author": {
+      "@type": "Person",
+      "name": "Ninox Antolihao"
+    },
+    "image": "https://stonegrillresto.net/reflections/pages/knowing-self/cover.jpg"
+  }
+  </script>
 
   <style>
     :root {
@@ -542,6 +593,31 @@
       font-size: .9rem;
     }
 
+
+    .install-button {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid rgba(168,184,255,.24);
+      border-radius: 14px;
+      background: rgba(127,149,255,.12);
+      color: var(--text);
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .install-button.visible {
+      display: inline-flex;
+    }
+
+    .install-button:hover {
+      background: rgba(127,149,255,.18);
+    }
+
     @media (max-width: 820px) {
       body {
         padding-bottom: max(22px, env(safe-area-inset-bottom));
@@ -832,6 +908,10 @@
             <option value="2">2×</option>
           </select>
         </div>
+
+        <button id="installButton" class="install-button" type="button">
+          Install Audio Player
+        </button>
       </section>
 
       <section class="panel playlist-panel" aria-label="Playlist">
@@ -1051,6 +1131,7 @@
     const playlistElement = document.getElementById("playlist");
     const searchInput = document.getElementById("searchInput");
     const trackCount = document.getElementById("trackCount");
+    const installButton = document.getElementById("installButton");
 
     const PLAY_PATH = "M8 5v14l11-7L8 5Z";
     const PAUSE_PATH = "M7 5h4v14H7V5Zm6 0h4v14h-4V5Z";
@@ -1333,6 +1414,37 @@
         audio.currentTime = Math.max(0, audio.currentTime - 10);
       }
     });
+
+
+    // UPDATED: PWA installation and offline support
+    let deferredInstallPrompt = null;
+
+    window.addEventListener("beforeinstallprompt", event => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      installButton.classList.add("visible");
+    });
+
+    installButton.addEventListener("click", async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installButton.classList.remove("visible");
+    });
+
+    window.addEventListener("appinstalled", () => {
+      installButton.classList.remove("visible");
+      setStatus("App installed");
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(error => {
+          console.error("Service worker registration failed:", error);
+        });
+      });
+    }
 
     const savedVolume = Number(localStorage.getItem("ninox-volume"));
     if (Number.isFinite(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
