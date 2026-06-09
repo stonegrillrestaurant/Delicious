@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Ninox Audio Player</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(145deg, #eef1f5, #d9dde4);
+      color: #202124;
+    }
+
+    .player {
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.75);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+      backdrop-filter: blur(18px);
+      text-align: center;
+    }
+
+    .cover {
+      width: 220px;
+      height: 220px;
+      max-width: 80vw;
+      border-radius: 24px;
+      object-fit: cover;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
+      transition: transform 0.4s ease;
+    }
+
+    .cover.playing {
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.025);
+      }
+    }
+
+    h1 {
+      margin: 22px 0 6px;
+      font-size: 24px;
+    }
+
+    .artist {
+      margin: 0 0 24px;
+      color: #6b7280;
+      font-size: 15px;
+    }
+
+    .progress-container {
+      width: 100%;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .control-button {
+      width: 52px;
+      height: 52px;
+      border: none;
+      border-radius: 50%;
+      background: #ffffff;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .play-button {
+      width: 68px;
+      height: 68px;
+      background: #202124;
+      color: white;
+      font-size: 28px;
+    }
+
+    .volume-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 25px;
+    }
+
+    .playlist {
+      margin-top: 24px;
+      text-align: left;
+    }
+
+    .playlist h2 {
+      font-size: 17px;
+      margin-bottom: 10px;
+    }
+
+    .track {
+      width: 100%;
+      border: none;
+      padding: 13px 14px;
+      margin-bottom: 8px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.65);
+      text-align: left;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .track.active {
+      background: #202124;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="player">
+
+    <img
+      id="cover"
+      class="cover"
+      src="cover.jpg"
+      alt="Audio cover"
+    />
+
+    <h1 id="title">Knowing Yourself</h1>
+    <p id="artist" class="artist">Ninox Antolihao</p>
+
+    <audio id="audio" preload="metadata">
+      <source src="knowing-self.mp3" type="audio/mpeg" />
+    </audio>
+
+    <div class="progress-container">
+      <input
+        id="progress"
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        aria-label="Audio progress"
+      />
+
+      <div class="time-row">
+        <span id="currentTime">0:00</span>
+        <span id="duration">0:00</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button
+        id="previousButton"
+        class="control-button"
+        type="button"
+        aria-label="Previous track"
+      >
+        ⏮
+      </button>
+
+      <button
+        id="playButton"
+        class="control-button play-button"
+        type="button"
+        aria-label="Play audio"
+      >
+        ▶
+      </button>
+
+      <button
+        id="nextButton"
+        class="control-button"
+        type="button"
+        aria-label="Next track"
+      >
+        ⏭
+      </button>
+    </div>
+
+    <div class="volume-area">
+      <span>🔊</span>
+
+      <input
+        id="volume"
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        value="1"
+        aria-label="Volume"
+      />
+    </div>
+
+    <section class="playlist">
+      <h2>Playlist</h2>
+      <div id="playlist"></div>
+    </section>
+
+  </main>
+
+  <script>
+    const tracks = [
+      {
+        title: "Knowing Yourself",
+        artist: "Ninox Antolihao",
+        audio: "reflections/pages/knowing-self/knowing-self.mp3",
+        cover: "reflections/pages/knowing-self/knowing-self.jpg"
+      },
+      {
+        title: "Moments of Solitude",
+        artist: "Ninox Antolihao",
+        audio: "moments-of-solitude.mp3",
+        cover: "solitude-cover.jpg"
+      },
+      {
+        title: "The Mirror of Worship",
+        artist: "Ninox Antolihao",
+        audio: "mirror-of-worship.mp3",
+        cover: "mirror-cover.jpg"
+      }
+    ];
+
+    const audio = document.getElementById("audio");
+    const title = document.getElementById("title");
+    const artist = document.getElementById("artist");
+    const cover = document.getElementById("cover");
+
+    const playButton = document.getElementById("playButton");
+    const previousButton = document.getElementById("previousButton");
+    const nextButton = document.getElementById("nextButton");
+
+    const progress = document.getElementById("progress");
+    const volume = document.getElementById("volume");
+
+    const currentTimeDisplay = document.getElementById("currentTime");
+    const durationDisplay = document.getElementById("duration");
+    const playlistElement = document.getElementById("playlist");
+
+    let currentTrackIndex = 0;
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) {
+        return "0:00";
+      }
+
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.floor(seconds % 60)
+        .toString()
+        .padStart(2, "0");
+
+      return `${minutes}:${remainingSeconds}`;
+    }
+
+    function loadTrack(index) {
+      currentTrackIndex = index;
+
+      const track = tracks[currentTrackIndex];
+
+      title.textContent = track.title;
+      artist.textContent = track.artist;
+      cover.src = track.cover;
+      cover.alt = `${track.title} cover`;
+
+      audio.src = track.audio;
+      progress.value = 0;
+      currentTimeDisplay.textContent = "0:00";
+
+      updatePlaylist();
+    }
+
+    async function playAudio() {
+      try {
+        await audio.play();
+
+        playButton.textContent = "⏸";
+        playButton.setAttribute("aria-label", "Pause audio");
+        cover.classList.add("playing");
+      } catch (error) {
+        console.error("Audio could not play:", error);
+      }
+    }
+
+    function pauseAudio() {
+      audio.pause();
+
+      playButton.textContent = "▶";
+      playButton.setAttribute("aria-label", "Play audio");
+      cover.classList.remove("playing");
+    }
+
+    function togglePlay() {
+      if (audio.paused) {
+        playAudio();
+      } else {
+        pauseAudio();
+      }
+    }
+
+    function previousTrack() {
+      currentTrackIndex--;
+
+      if (currentTrackIndex < 0) {
+        currentTrackIndex = tracks.length - 1;
+      }
+
+      loadTrack(currentTrackIndex);
+      playAudio();
+    }
+
+    function nextTrack() {
+      currentTrackIndex++;
+
+      if (currentTrackIndex >= tracks.length) {
+        currentTrackIndex = 0;
+      }
+
+      loadTrack(currentTrackIndex);
+      playAudio();
+    }
+
+    function updatePlaylist() {
+      playlistElement.innerHTML = "";
+
+      tracks.forEach((track, index) => {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "track";
+        button.textContent = `${index + 1}. ${track.title}`;
+
+        if (index === currentTrackIndex) {
+          button.classList.add("active");
+        }
+
+        button.addEventListener("click", () => {
+          loadTrack(index);
+          playAudio();
+        });
+
+        playlistElement.appendChild(button);
+      });
+    }
+
+    playButton.addEventListener("click", togglePlay);
+    previousButton.addEventListener("click", previousTrack);
+    nextButton.addEventListener("click", nextTrack);
+
+    audio.addEventListener("loadedmetadata", () => {
+      durationDisplay.textContent = formatTime(audio.duration);
+    });
+
+    audio.addEventListener("timeupdate", () => {
+      if (!audio.duration) {
+        return;
+      }
+
+      progress.value = (audio.currentTime / audio.duration) * 100;
+      currentTimeDisplay.textContent = formatTime(audio.currentTime);
+    });
+
+    progress.addEventListener("input", () => {
+      if (!audio.duration) {
+        return;
+      }
+
+      audio.currentTime = (progress.value / 100) * audio.duration;
+    });
+
+    volume.addEventListener("input", () => {
+      audio.volume = volume.value;
+    });
+
+    audio.addEventListener("ended", nextTrack);
+
+    loadTrack(currentTrackIndex);
+  </script>
+
+</body>
+</html>
