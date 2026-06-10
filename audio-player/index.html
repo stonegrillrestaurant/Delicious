@@ -199,6 +199,26 @@
       isolation: isolate;
     }
 
+    .art-wrap {
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .art-wrap:focus-visible {
+      outline: 3px solid rgba(168, 184, 255, 0.48);
+      outline-offset: 4px;
+    }
+
+    .art-wrap:hover .cover {
+      transform: scale(1.025);
+      filter: saturate(1.06);
+    }
+
+    .art-wrap:hover .cover.playing {
+      transform: scale(1.05);
+    }
+
     .art-wrap::after {
       content: "";
       position: absolute;
@@ -841,7 +861,13 @@
 
     <main class="player-layout">
       <section class="panel now-playing" aria-label="Now playing">
-        <div class="art-wrap">
+        <a
+          id="coverLink"
+          class="art-wrap"
+          href="/reflections/pages/knowing-self/read.html"
+          aria-label="Read Knowing Yourself"
+          title="Open the written reflection"
+        >
           <img id="cover" class="cover" src="" alt="Audio cover" />
           <div class="playing-badge" id="playingBadge">
             <span class="equalizer" aria-hidden="true">
@@ -849,7 +875,7 @@
             </span>
             Playing
           </div>
-        </div>
+        </a>
 
         <div class="track-info">
           <h2 id="title">Knowing Yourself</h2>
@@ -1136,6 +1162,7 @@
     const title = document.getElementById("title");
     const artist = document.getElementById("artist");
     const cover = document.getElementById("cover");
+    const coverLink = document.getElementById("coverLink");
     const status = document.getElementById("status");
     const playingBadge = document.getElementById("playingBadge");
     const playButton = document.getElementById("playButton");
@@ -1169,6 +1196,21 @@
         : `${minutes}:${secs}`;
     }
 
+    function getReadPage(track) {
+      if (track.page) return track.page;
+
+      try {
+        const audioUrl = new URL(track.audio, window.location.origin);
+        const folderPath = audioUrl.pathname.substring(
+          0,
+          audioUrl.pathname.lastIndexOf("/") + 1
+        );
+        return `${folderPath}read.html`;
+      } catch {
+        return "/reflections/";
+      }
+    }
+
     function setRangeFill(element, valuePercent) {
       const safeValue = Math.max(0, Math.min(100, valuePercent));
       element.style.setProperty("--value", `${safeValue}%`);
@@ -1196,6 +1238,12 @@
       artist.textContent = track.artist;
       cover.src = track.cover;
       cover.alt = `${track.title} cover`;
+
+      const readPage = getReadPage(track);
+      coverLink.href = readPage;
+      coverLink.setAttribute("aria-label", `Read ${track.title}`);
+      coverLink.title = `Open the written reflection: ${track.title}`;
+
       audio.src = track.audio;
       audio.load();
 
