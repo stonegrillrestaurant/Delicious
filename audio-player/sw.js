@@ -1,4 +1,4 @@
-const CACHE_NAME = "ninox-audio-player-v1";
+const CACHE_NAME = "ninox-audio-player-v2";
 
 const APP_SHELL = [
   "./",
