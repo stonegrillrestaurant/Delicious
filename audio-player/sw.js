@@ -1,8 +1,7 @@
-const CACHE_NAME = "ninox-audio-player-v2";
+const CACHE_NAME = "ninox-audio-player-v3";
 
 const APP_SHELL = [
   "./",
-  "./index.html",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png"
@@ -33,11 +32,34 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const request = event.request;
 
-  if (request.method !== "GET") {
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+
+  if (url.origin !== self.location.origin) return;
+
+  // HTML/page uses network-first so new UI updates normally.
+  if (request.mode === "navigate" || request.destination === "document") {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          const copy = response.clone();
+
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(request, copy);
+          });
+
+          return response;
+        })
+        .catch(() =>
+          caches.match(request).then(cached => cached || caches.match("./"))
+        )
+    );
+
     return;
   }
 
-  // Audio files use network-first so playback stays current.
+  // Audio files use network-first.
   if (request.destination === "audio") {
     event.respondWith(
       fetch(request)
@@ -56,22 +78,22 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  // Other app files use cache-first.
+  // Other files use cache-first, then update when online.
   event.respondWith(
     caches.match(request).then(cachedResponse => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+      const fetchPromise = fetch(request)
+        .then(response => {
+          const copy = response.clone();
 
-      return fetch(request).then(response => {
-        const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(request, copy);
+          });
 
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(request, copy);
-        });
+          return response;
+        })
+        .catch(() => cachedResponse);
 
-        return response;
-      });
+      return cachedResponse || fetchPromise;
     })
   );
 });
