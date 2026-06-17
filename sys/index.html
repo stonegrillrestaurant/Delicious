@@ -15,11 +15,13 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script type="module">
+    <script type="text/babel" data-type="module">
+        // 1. Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // 2. Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
             authDomain: "stone-grill-payroll.firebaseapp.com",
@@ -34,31 +36,19 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
+        // Keep your window.fb mapping so the rest of your app doesn't break
         window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
-    </script>
 
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        // 3. React Application Setup
+        const { useState, useMemo, useEffect } = React;
+
+        const normalizeId = (id) => {
+            if (!id) return '';
+            const strId = String(id).trim();
+            return /^\d+$/.test(strId) ? parseInt(strId, 10).toString() : strId.toLowerCase();
+        };
         
-        @media print {
-            body * { visibility: hidden; }
-            #print-section, #print-section * { visibility: visible; }
-            #interactive-print-section, #interactive-print-section * { visibility: visible; }
-            #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
-            
-            .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
-            #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
-            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
-            
-            .print-hidden { display: none !important; }
-            .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
-        }
-        #pos-receipt-print { display: none; }
-        
+        // ... ALL of your other React code continues normally below this line!
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
