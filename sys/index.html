@@ -15,13 +15,43 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script type="text/babel" data-type="module">
-        // 1. Firebase Imports
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #print-section, #print-section * { visibility: visible; }
+            #interactive-print-section, #interactive-print-section * { visibility: visible; }
+            #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
+            
+            .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
+            #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
+            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
+            
+            .print-hidden { display: none !important; }
+            .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
+        }
+        #pos-receipt-print { display: none; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
+    <div id="root"></div>
+
+    <!-- SCRIPT 1: PURE FIREBASE (No React, No Babel) -->
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 2. Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
             authDomain: "stone-grill-payroll.firebaseapp.com",
@@ -36,28 +66,11 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
-        // Keep your window.fb mapping so the rest of your app doesn't break
+        // Expose Firebase globally so React can find it later
         window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+    </script>
 
-        // 3. React Application Setup
-        const { useState, useMemo, useEffect } = React;
-
-        const normalizeId = (id) => {
-            if (!id) return '';
-            const strId = String(id).trim();
-            return /^\d+$/.test(strId) ? parseInt(strId, 10).toString() : strId.toLowerCase();
-        };
-        
-        // ... ALL of your other React code continues normally below this line!
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
-    </style>
-</head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
-    <div id="root"></div>
-
+    <!-- SCRIPT 2: PURE REACT APP (No Imports) -->
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
@@ -66,6 +79,7 @@
             const strId = String(id).trim();
             return /^\d+$/.test(strId) ? parseInt(strId, 10).toString() : strId.toLowerCase();
         };
+
 
         const cleanDate = (dStr) => {
             if (!dStr) return '';
@@ -84,14 +98,6 @@
             const parsed = new Date(date);
             if (Number.isNaN(parsed.getTime())) return '';
             return parsed.toISOString().slice(0, 7);
-        };
-
-        const formatDisplayDate = (dateStr) => {
-            if (!dateStr) return '';
-            const parsed = new Date(dateStr);
-            if (Number.isNaN(parsed.getTime())) return dateStr;
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${months[parsed.getMonth()]}-${parsed.getDate()}`;
         };
 
         const formatMoney = (v) => {
@@ -239,20 +245,13 @@
                                     <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center"><span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span><span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span></div>
                                 </div>
                                 
-                                <div className="p-8 mt-2 mb-4 text-center bg-[#f8fafc] rounded-[2rem] border border-blue-100 shadow-sm relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-600"></div>
-                                    <p className="text-[10px] font-black text-blue-900/50 tracking-[0.2em] uppercase mb-2">Overall Lifetime Balance</p>
-                                    <p className={`text-5xl font-black tracking-tighter ${emp.caBalance < 0 ? 'text-red-500' : 'text-[#1b3382]'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
-                                    <p className="text-[9px] font-bold text-gray-400 mt-4 uppercase tracking-widest">Total Days Worked: <span className="text-gray-700 font-black">{emp.lifetimeDays || 0}</span></p>
-                                </div>
-
-                                <div className="p-6 text-center border-t border-dashed border-gray-200 relative">
-                                    {savedPayroll && <span className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">Archived Month</span>}
-                                    <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">{monthLabel} Net Salary</p>
-                                    <p className={`text-3xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(Math.abs(netPay))}</p>
+                                <div className="p-6 text-center transform hover:scale-[1.02] transition-transform relative">
+                                    {savedPayroll && <span className="absolute top-0 right-4 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">Archived</span>}
+                                    <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p>
+                                    <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(Math.abs(netPay))}</p>
                                     
                                     {savedPayroll && (
-                                        <div className="mt-5 pt-4 flex justify-center gap-8 text-xs font-bold text-gray-500 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                        <div className="mt-6 pt-4 border-t border-dashed border-gray-200 flex justify-center gap-8 text-xs font-bold text-gray-500">
                                             <span className="flex flex-col items-center">
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Disbursed</span>
                                                 <span className="text-emerald-600 text-base font-black font-mono">₱{formatMoney(parseFloat(savedPayroll.data?.salary_pay)||0)}</span>
@@ -263,6 +262,18 @@
                                             </span>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* NEW: SPLIT FOOTER SHOWING TOTAL LIFETIME DAYS & LIFETIME BALANCE */}
+                                <div className="border-t border-gray-200 bg-gray-50 flex items-center justify-between py-6 rounded-b-[2rem] px-2">
+                                    <div className="flex-1 text-center border-r border-gray-200">
+                                        <p className="text-[9px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-1">Total Days (Lifetime)</p>
+                                        <p className="text-2xl font-black text-gray-700">{emp.lifetimeDays || 0}</p>
+                                    </div>
+                                    <div className="flex-1 text-center">
+                                        <p className="text-[9px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-1">Lifetime Balance</p>
+                                        <p className={`text-2xl font-black ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
+                                    </div>
                                 </div>
 
                                 {(onEdit || onDelete) && (
@@ -280,7 +291,7 @@
                                         <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><DollarSign className="w-5 h-5" /></div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-gray-800 text-sm truncate">{tx.type}</p>
-                                            <div className="flex flex-col mt-1"><p className="text-[10px] text-gray-400 font-medium">{formatDisplayDate(tx.date)} • {tx.status}</p>{tx.note && <p className="text-[10px] text-gray-500 italic truncate mt-0.5">"{tx.note}"</p>}</div>
+                                            <div className="flex flex-col mt-1"><p className="text-[10px] text-gray-400 font-medium">{new Date(tx.date).toLocaleDateString()} • {tx.status}</p>{tx.note && <p className="text-[10px] text-gray-500 italic truncate mt-0.5">"{tx.note}"</p>}</div>
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>{(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}</p>
@@ -409,10 +420,26 @@
             }, []);
 
             useEffect(() => {
-                window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
-                    setUser(u); setIsReady(true); 
-                    if(!u) { setUserRole(''); setCurrentBiometricId(''); }
-                });
+                let timeout;
+                const initInterval = setInterval(() => {
+                    if (window && window.fb && window.fb.auth) {
+                        clearInterval(initInterval);
+                        clearTimeout(timeout);
+                        window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
+                            setUser(u); setIsReady(true); 
+                            if(!u) { setUserRole(''); setCurrentBiometricId(''); }
+                        });
+                    }
+                }, 50);
+
+                timeout = setTimeout(() => {
+                    if (!isReady) {
+                        const rootEl = document.getElementById('root');
+                        if(rootEl) rootEl.innerHTML = '<div style="height: 100vh; width: 100vw; background-color: #172554; display: flex; flex-direction: column; align-items: center; justify-content: center;"><p style="color: white; font-family: sans-serif; font-size: 14px; font-weight: bold; text-transform: uppercase;">Connection Blocked</p><p style="color: #93c5fd; font-family: sans-serif; font-size: 10px; margin-top: 10px; max-width: 300px; text-align: center;">Please ensure your network or adblocker is not blocking Google Firebase scripts.</p></div>';
+                    }
+                }, 10000);
+
+                return () => { clearInterval(initInterval); clearTimeout(timeout); };
             }, []);
 
             useEffect(() => {
@@ -557,33 +584,16 @@
                     const dM = line.match(/(\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4})/); 
                     const tM = line.match(/(\d{1,2}:\d{2}(:\d{2})?)/);
                     if (!dM || !tM) continue;
-                    
-                    let iso = ''; 
-                    const dStr = dM[1];
-                    const parts = dStr.split(/[\/\-]/);
-                    
-                    if (parts.length === 3) {
-                        let y, m, d;
-                        if (parts[2].length === 4) { 
-                            y = parts[2];
-                            let p0 = parseInt(parts[0], 10);
-                            let p1 = parseInt(parts[1], 10);
-                            if (p0 > 12) { d = p0; m = p1; } 
-                            else if (p1 > 12) { m = p0; d = p1; } 
-                            else { m = p0; d = p1; } 
-                        } else if (parts[0].length === 4) { 
-                            y = parts[0];
-                            let p1 = parseInt(parts[1], 10);
-                            let p2 = parseInt(parts[2], 10);
-                            if (p1 > 12) { d = p1; m = p2; }
-                            else if (p2 > 12) { m = p1; d = p2; }
-                            else { m = p1; d = p2; }
-                        }
-                        if (y && m && d) {
-                            iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                        }
+                    let iso = ''; const dStr = dM[1];
+                    if (dStr.includes('/')) {
+                        const parts = dStr.split('/');
+                        if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
+                        else if (parts[0].length === 4) { iso = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; }
+                    } else if (dStr.includes('-')) {
+                        const parts = dStr.split('-');
+                        if (parts[0].length === 4) { iso = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; }
+                        else if (parts[2].length === 4) { iso = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`; }
                     }
-                    
                     if (!iso) continue;
                     const timeStr = tM[1].substring(0,5);
                     const key = `${id}_${iso}`; 
@@ -593,12 +603,11 @@
                 for (const k in map) {
                     const r = map[k]; const s = r.p.sort();
                     const hoursWorked = calculateHoursWorked(s[0], s[s.length-1]);
-                    // RULE UPDATED TO < 7 HOURS
-                    let dayVal = 1.0; if (s.length === 1 || hoursWorked < 7) dayVal = 0.5;
+                    let dayVal = 1.0; if (s.length === 1 || hoursWorked < 6) dayVal = 0.5;
                     await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
-                setRawInput(''); alert(`Processed ${count} unique attendance records. Invalid dates corrected automatically.`);
+                setRawInput(''); alert(`Processed ${count} unique attendance records (Duplicates safely merged).`);
             };
 
             const handleAddStaffSubmit = async (e) => {
@@ -665,7 +674,7 @@
                 reader.readAsText(file); event.target.value = ''; 
             };
 
-            if (!isReady) return null;
+            if (!isReady) return <LoadingScreen />;
             if (!user) return <LoginScreen />;
 
             if (userRole === '') {
@@ -764,7 +773,7 @@
 
                                             return (
                                                 <div className="animate-slide-up space-y-6 max-w-2xl mx-auto pb-10">
-                                                    <PayslipWidget emp={emp} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} attendance={attendance} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onDelete={isAdmin ? handleDeleteLedgerEntry : undefined} />
+                                                    <PayslipWidget emp={emp} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} attendance={attendance} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onDeleteLedgerEntry={isAdmin ? handleDeleteLedgerEntry : undefined} />
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden mt-6">
                                                         <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center"><Banknote className="w-5 h-5 mr-2" /> Request Cash Advance</div>
                                                         <div className="p-6">
@@ -781,7 +790,7 @@
                                                                     <tbody className="divide-y divide-slate-100">
                                                                         {myRequests.map(req => (
                                                                             <tr key={req.id}>
-                                                                                <td className="p-3 font-mono text-slate-500">{formatDisplayDate(req.dateRequested)}</td>
+                                                                                <td className="p-3 font-mono text-slate-500">{new Date(req.dateRequested).toLocaleDateString()}</td>
                                                                                 <td className="p-3 font-black">₱{formatMoney(req.amount)}</td>
                                                                                 <td className="p-3 font-black">
                                                                                     {req.status === 'Pending' && <span className="text-amber-500">PENDING</span>}
@@ -987,7 +996,7 @@
                                                         <div className="mt-6 pt-4 border-t border-dashed">
                                                             <p className="text-[9px] font-black text-slate-400 uppercase text-center mb-2">CA Ledger ({currentMonthLabel})</p>
                                                             <div className="space-y-1 bg-slate-50 p-3 rounded-lg border">
-                                                                {rangeCAs.map(ca => <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{formatDisplayDate(ca.date)}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>)}
+                                                                {rangeCAs.map(ca => <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{ca.date}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>)}
                                                             </div>
                                                         </div>
                                                     )}
@@ -1012,7 +1021,7 @@
                                                             return (
                                                                 <tr key={req.id} className="hover:bg-amber-50/50">
                                                                     <td className="p-4 font-black uppercase text-slate-800">{empName}</td>
-                                                                    <td className="p-4 text-slate-500 font-mono">{formatDisplayDate(req.dateRequested)}</td>
+                                                                    <td className="p-4 text-slate-500 font-mono">{new Date(req.dateRequested).toLocaleDateString()}</td>
                                                                     <td className="p-4 italic text-slate-600">{req.reason}</td>
                                                                     <td className="p-4 font-black text-rose-600 text-sm">₱{formatMoney(req.amount)}</td>
                                                                     <td className="p-4 text-right space-x-2">
@@ -1060,7 +1069,7 @@
                                                         <tbody className="divide-y divide-gray-50">
                                                             {cashAdvances.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca=>(
                                                                 <tr key={ca.id} className="hover:bg-slate-50 transition-colors">
-                                                                    <td className="p-4 font-mono text-slate-400">{formatDisplayDate(ca.date)}</td>
+                                                                    <td className="p-4 font-mono text-slate-400">{ca.date}</td>
                                                                     <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(ca.empId))?.name || ca.empId} <span className="italic text-slate-400 font-normal ml-2">{ca.reason}</span></td>
                                                                     <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-500'}`}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</td>
                                                                     <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
