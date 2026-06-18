@@ -1,6 +1,6 @@
 // config.js  (TESTING — token visible; hide later)
 window.APP_CONFIG = {
-  TELEGRAM_BOT_TOKEN: "7538084446:AAFOnvqicd8LwjunpLbs-VzhuSkuLPTlusA",
+  TELEGRAM_BOT_TOKEN: "8890963059:AAFf9FPtWIPs3wqe6fM54wOPzasHOHUvt4U",
   TELEGRAM_CHAT_ID: "-1002531095369",
 
   // GCash number-only
