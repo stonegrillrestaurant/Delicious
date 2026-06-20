@@ -15,7 +15,6 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- SCRIPT 1: FIREBASE MODULE (Strictly separated from React) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -35,7 +34,6 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
-        // Share Firebase with the React app
         window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
     </script>
 
@@ -68,16 +66,8 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
-    <div id="root">
-        <!-- Initial Loading State -->
-        <div style="height: 100vh; width: 100vw; background-color: #172554; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="width: 50px; height: 50px; border: 4px solid #1e3a8a; border-top: 4px solid #ffffff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <p style="color: white; font-family: sans-serif; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-top: 20px;">System Starting...</p>
-        </div>
-        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
-    </div>
+    <div id="root"></div>
 
-    <!-- SCRIPT 2: REACT APPLICATION (No imports allowed here) -->
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
@@ -106,6 +96,7 @@
             return parsed.toISOString().slice(0, 7);
         };
 
+        // NEW: Visual Translator to change YYYY-MM-DD into "Mar-1"
         const formatDisplayDate = (dateStr) => {
             if (!dateStr) return '';
             const parsed = new Date(dateStr);
@@ -151,19 +142,9 @@
         const ChevronRight = (p) => <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>;
         const HistoryIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></Icon>;
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
-        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
-        function LoadingScreen() {
-            return (
-                <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white z-50">
-                    <div className="w-16 h-16 border-4 border-t-white border-blue-800 rounded-full animate-spin mb-6"></div>
-                    <h2 className="text-xl font-black uppercase tracking-widest animate-pulse">System Initializing</h2>
-                    <p className="text-xs text-blue-400 mt-2 font-bold uppercase tracking-widest">Connecting to Cloud Server...</p>
-                </div>
-            );
-        }
-
-        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDeleteEmployee, onDeleteLedgerEntry }) {
+        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
             const [activeTab, setActiveTab] = useState('payslip');
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
             const basicPay = emp.days * (parseFloat(emp.dailyRate || emp.rate) || 0);
@@ -294,10 +275,10 @@
                                     )}
                                 </div>
 
-                                {(onEdit || onDeleteEmployee) && (
+                                {(onEdit || onDelete) && (
                                     <div className="flex gap-3 mt-4 print-hidden">
                                         {onEdit && <button onClick={() => onEdit(emp)} className="flex-1 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-blue-50 transition-colors shadow-sm">Edit Profile</button>}
-                                        {onDeleteEmployee && <button onClick={() => onDeleteEmployee(emp.id, emp.name)} className="flex-1 py-3 bg-white border border-rose-200 text-rose-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-rose-50 transition-colors shadow-sm">Delete</button>}
+                                        {onDelete && <button onClick={() => onDelete(emp.id, emp.name)} className="flex-1 py-3 bg-white border border-rose-200 text-rose-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-rose-50 transition-colors shadow-sm">Delete</button>}
                                     </div>
                                 )}
                             </div>
@@ -313,7 +294,7 @@
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>{(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}</p>
-                                            {onDeleteLedgerEntry && <div className="mt-2"><button type="button" onClick={() => { if (!window.confirm('Delete this ledger entry?')) return; onDeleteLedgerEntry(tx); }} className="text-[10px] text-rose-500 hover:text-rose-700">Delete</button></div>}
+                                            {onDelete && <div className="mt-2"><button type="button" onClick={() => { if (!window.confirm('Delete this ledger entry?')) return; onDelete(tx); }} className="text-[10px] text-rose-500 hover:text-rose-700">Delete</button></div>}
                                         </div>
                                     </div>
                                 ))}
@@ -383,10 +364,9 @@
         }
 
         function App() {
-            const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2"; // payroll data folder
-            const ADMIN_UID = "xqFeiAnYOjOW9VwqTLFBS8n82nM2"; // your real admin login UID
+            const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2"; 
             const ADMIN_EMAIL = "stonegrill2014@gmail.com";
-            
+
             const [user, setUser] = useState(null);
             const [userRole, setUserRole] = useState(''); 
             const [currentBiometricId, setCurrentBiometricId] = useState(''); 
@@ -438,29 +418,11 @@
                 return options;
             }, []);
 
-            // Initializer using the safe window.fb object
             useEffect(() => {
-                let timeout;
-                const initInterval = setInterval(() => {
-                    if (window && window.fb && window.fb.auth) {
-                        clearInterval(initInterval);
-                        clearTimeout(timeout);
-                        window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
-                            setUser(u); setIsReady(true); 
-                            if(!u) { setUserRole(''); setCurrentBiometricId(''); }
-                        });
-                    }
-                }, 50);
-
-                // Fallback timeout in case of deep network failure
-                timeout = setTimeout(() => {
-                    if (!isReady) {
-                        const rootEl = document.getElementById('root');
-                        if(rootEl) rootEl.innerHTML = '<div style="height: 100vh; width: 100vw; background-color: #172554; display: flex; flex-direction: column; align-items: center; justify-content: center;"><p style="color: white; font-family: sans-serif; font-size: 14px; font-weight: bold; text-transform: uppercase;">Connection Blocked</p><p style="color: #93c5fd; font-family: sans-serif; font-size: 10px; margin-top: 10px; max-width: 300px; text-align: center;">Please ensure your network or adblocker is not blocking Google Firebase scripts.</p></div>';
-                    }
-                }, 10000);
-
-                return () => { clearInterval(initInterval); clearTimeout(timeout); };
+                window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
+                    setUser(u); setIsReady(true); 
+                    if(!u) { setUserRole(''); setCurrentBiometricId(''); }
+                });
             }, []);
 
             useEffect(() => {
@@ -596,6 +558,7 @@
                 setIsEditing(true); setShowAddStaff(true); setViewProfile(null); 
             };
 
+            // NEW: INTELLIGENT MATHEMATICAL DATE IMPORTER
             const handleProcessLogs = async () => {
                 if (!isAdmin || !rawInput.trim()) return;
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
@@ -616,8 +579,8 @@
                             y = parts[2];
                             let p0 = parseInt(parts[0], 10);
                             let p1 = parseInt(parts[1], 10);
-                            if (p0 > 12) { d = p0; m = p1; } 
-                            else if (p1 > 12) { m = p0; d = p1; } 
+                            if (p0 > 12) { d = p0; m = p1; } // Math Check: First number must be Day
+                            else if (p1 > 12) { m = p0; d = p1; } // Math Check: Second number must be Day
                             else { m = p0; d = p1; } 
                         } else if (parts[0].length === 4) { 
                             y = parts[0];
@@ -645,7 +608,7 @@
                     await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true });
                     count++;
                 }
-                setRawInput(''); alert(`Processed ${count} unique attendance records (Duplicates safely merged).`);
+                setRawInput(''); alert(`Processed ${count} unique attendance records. Invalid dates corrected automatically.`);
             };
 
             const handleAddStaffSubmit = async (e) => {
@@ -712,7 +675,7 @@
                 reader.readAsText(file); event.target.value = ''; 
             };
 
-            if (!isReady) return <LoadingScreen />;
+            if (!isReady) return null;
             if (!user) return <LoginScreen />;
 
             if (userRole === '') {
@@ -811,7 +774,7 @@
 
                                             return (
                                                 <div className="animate-slide-up space-y-6 max-w-2xl mx-auto pb-10">
-                                                    <PayslipWidget emp={emp} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} attendance={attendance} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onDeleteLedgerEntry={isAdmin ? handleDeleteLedgerEntry : undefined} />
+                                                    <PayslipWidget emp={emp} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} attendance={attendance} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onDelete={isAdmin ? handleDeleteLedgerEntry : undefined} />
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden mt-6">
                                                         <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center"><Banknote className="w-5 h-5 mr-2" /> Request Cash Advance</div>
                                                         <div className="p-6">
@@ -828,7 +791,7 @@
                                                                     <tbody className="divide-y divide-slate-100">
                                                                         {myRequests.map(req => (
                                                                             <tr key={req.id}>
-                                                                                <td className="p-3 font-mono text-slate-500">{new Date(req.dateRequested).toLocaleDateString()}</td>
+                                                                                <td className="p-3 font-mono text-slate-500">{formatDisplayDate(req.dateRequested)}</td>
                                                                                 <td className="p-3 font-black">₱{formatMoney(req.amount)}</td>
                                                                                 <td className="p-3 font-black">
                                                                                     {req.status === 'Pending' && <span className="text-amber-500">PENDING</span>}
@@ -897,7 +860,7 @@
                                                 <table className="w-full text-xs text-left">
                                                     <tbody>
                                                         {[...attendance].sort((a,b)=>(cleanDate(b.date)||'').localeCompare(cleanDate(a.date)||'')).slice(0, 100).map((a,i)=>(
-                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{cleanDate(a.date)}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut} ({a.dayEquivalent}d)</td></tr>
+                                                            <tr key={i} className="border-b hover:bg-slate-50"><td className="p-3 font-mono text-slate-400">{formatDisplayDate(cleanDate(a.date))}</td><td className="p-3 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(a.empId))?.name || a.empId}</td><td className="p-3 text-right font-black text-blue-600">{a.firstIn} - {a.lastOut} ({a.dayEquivalent}d)</td></tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
@@ -952,28 +915,11 @@
                                                     </div>
                                                 )}
                                             </div>
-                                            
-                                            <div className="flex gap-3">
-                                                <button onClick={async () => {
-                                                    if (!icEmpId) return; const key = `${normalizeId(icEmpId)}_${icMonth}`;
-                                                    await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries} });
-                                                    alert("Saved to archive.");
-                                                }} className="flex-1 bg-blue-700 text-white py-4 rounded-xl font-black uppercase shadow-sm active:scale-95 transition-all">Save to Archive</button>
-                                                
-                                                {interactivePayrolls.some(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === icMonth || getMonthKey(p.startDate) === icMonth)) && (
-                                                    <button onClick={async () => {
-                                                        if (!icEmpId) return; 
-                                                        if (!window.confirm("Permanently delete this archived payslip? This will erase the disbursement record.")) return;
-                                                        const key = `${normalizeId(icEmpId)}_${icMonth}`;
-                                                        await window.fb.deleteDoc(getVaultDoc('payroll_entries', key));
-                                                        alert("Archived record deleted.");
-                                                        setIcForm({ salary_pay: 0, days_worked: 0, bonus: 0, bonus_description: '', deduction: 0, deduction_description: '', sss: 0, cash_advance: 0, misc_deductions: 0, carryover: 0 });
-                                                        setIcLedgerEntries([]);
-                                                    }} className="px-6 bg-rose-50 text-rose-600 py-4 rounded-xl font-black uppercase border border-rose-200 hover:bg-rose-100 shadow-sm active:scale-95 transition-all flex items-center justify-center">
-                                                        <X className="w-5 h-5 mr-1" /> Remove
-                                                    </button>
-                                                )}
-                                            </div>
+                                            <button onClick={async () => {
+                                                if (!icEmpId) return; const key = `${normalizeId(icEmpId)}_${icMonth}`;
+                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries} });
+                                                alert("Saved to archive.");
+                                            }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
                                         </div>
                                         
                                         <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
@@ -1034,7 +980,7 @@
                                                         <div className="mt-6 pt-4 border-t border-dashed">
                                                             <p className="text-[9px] font-black text-slate-400 uppercase text-center mb-2">CA Ledger ({currentMonthLabel})</p>
                                                             <div className="space-y-1 bg-slate-50 p-3 rounded-lg border">
-                                                                {rangeCAs.map(ca => <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{ca.date}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>)}
+                                                                {rangeCAs.map(ca => <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{formatDisplayDate(ca.date)}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>)}
                                                             </div>
                                                         </div>
                                                     )}
@@ -1059,7 +1005,7 @@
                                                             return (
                                                                 <tr key={req.id} className="hover:bg-amber-50/50">
                                                                     <td className="p-4 font-black uppercase text-slate-800">{empName}</td>
-                                                                    <td className="p-4 text-slate-500 font-mono">{new Date(req.dateRequested).toLocaleDateString()}</td>
+                                                                    <td className="p-4 text-slate-500 font-mono">{formatDisplayDate(req.dateRequested)}</td>
                                                                     <td className="p-4 italic text-slate-600">{req.reason}</td>
                                                                     <td className="p-4 font-black text-rose-600 text-sm">₱{formatMoney(req.amount)}</td>
                                                                     <td className="p-4 text-right space-x-2">
@@ -1107,7 +1053,7 @@
                                                         <tbody className="divide-y divide-gray-50">
                                                             {cashAdvances.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca=>(
                                                                 <tr key={ca.id} className="hover:bg-slate-50 transition-colors">
-                                                                    <td className="p-4 font-mono text-slate-400">{ca.date}</td>
+                                                                    <td className="p-4 font-mono text-slate-400">{formatDisplayDate(ca.date)}</td>
                                                                     <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(ca.empId))?.name || ca.empId} <span className="italic text-slate-400 font-normal ml-2">{ca.reason}</span></td>
                                                                     <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-500'}`}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</td>
                                                                     <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
@@ -1257,8 +1203,7 @@
                                     interactivePayrolls={interactivePayrolls} 
                                     onClose={() => setViewProfile(null)} 
                                     onEdit={handleEditProfile} 
-                                    onDeleteEmployee={handleDeleteEmployee} 
-                                    onDeleteLedgerEntry={handleDeleteLedgerEntry}
+                                    onDelete={handleDeleteEmployee} 
                                 />
                             </div>
                         );
