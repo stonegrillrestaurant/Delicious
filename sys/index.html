@@ -32,7 +32,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = "stone-grill-v1";
+        const appId = "stone-grill-payroll";
 
         window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
     </script>
@@ -96,7 +96,6 @@
             return parsed.toISOString().slice(0, 7);
         };
 
-        // NEW: Visual Translator to change YYYY-MM-DD into "Mar-1"
         const formatDisplayDate = (dateStr) => {
             if (!dateStr) return '';
             const parsed = new Date(dateStr);
@@ -142,7 +141,7 @@
         const ChevronRight = (p) => <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>;
         const HistoryIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></Icon>;
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
-        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
             const [activeTab, setActiveTab] = useState('payslip');
@@ -364,6 +363,7 @@
         }
 
         function App() {
+            const [engineReady, setEngineReady] = useState(false);
             const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2"; 
             const ADMIN_EMAIL = "stonegrill2014@gmail.com";
 
@@ -407,7 +407,6 @@
             const getVaultCol = (col) => window.fb.collection(window.fb.db, col);
             const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, col, id);
 
-
             const switchTab = (tab) => { setActiveTab(tab); if (window.innerWidth < 1024) setSidebarOpen(false); };
 
             const monthOptions = useMemo(() => {
@@ -420,11 +419,23 @@
             }, []);
 
             useEffect(() => {
-                window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
-                    setUser(u); setIsReady(true); 
-                    if(!u) { setUserRole(''); setCurrentBiometricId(''); }
-                });
+                const checkEngine = setInterval(() => {
+                    if (window.fb && window.fb.auth) {
+                        setEngineReady(true);
+                        clearInterval(checkEngine);
+                    }
+                }, 50);
+                return () => clearInterval(checkEngine);
             }, []);
+
+            useEffect(() => {
+                if (engineReady) {
+                    window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
+                        setUser(u); setIsReady(true); 
+                        if(!u) { setUserRole(''); setCurrentBiometricId(''); }
+                    });
+                }
+            }, [engineReady]);
 
             useEffect(() => {
                 if (!user) return;
@@ -441,7 +452,10 @@
                         }
                         setUserRole('Unauthorized');
                     }
-                }, (err) => alert("Database access error: " + err.message));
+                }, (err) => { 
+                    alert("Database access error: " + err.message);
+                    setUserRole('Unauthorized');
+                });
                 
                 const unsubAtt = window.fb.onSnapshot(getVaultCol('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
                 const unsubCA = window.fb.onSnapshot(getVaultCol('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -675,6 +689,15 @@
                 };
                 reader.readAsText(file); event.target.value = ''; 
             };
+
+            if (!engineReady) {
+                return (
+                    <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white">
+                        <div className="w-10 h-10 border-4 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+                        <p className="font-black uppercase tracking-widest text-[10px] text-blue-200">Starting Cloud Engine...</p>
+                    </div>
+                );
+            }
 
             if (!isReady) return null;
             if (!user) return <LoginScreen />;
