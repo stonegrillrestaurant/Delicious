@@ -593,6 +593,78 @@
 
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+
+
+    /* Clean reader layout: audio first, then reader note, then article */
+    .listen-section{
+      max-width:860px;
+      margin:24px auto 0;
+    }
+
+    .listen-section .audio-card{
+      padding:22px 20px;
+    }
+
+    .listen-section .audio-title{
+      font-size:1.28rem;
+      margin-bottom:6px;
+    }
+
+    .listen-section .audio-note{
+      margin-bottom:14px;
+    }
+
+    .listen-section .track-list{
+      display:none;
+    }
+
+    .clean-audio-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .clean-audio-actions .chip-btn{
+      box-shadow:none;
+      padding:9px 12px;
+      font-size:.86rem;
+    }
+
+    .reader-note-card{
+      max-width:860px;
+      margin:18px auto 0;
+      padding:20px;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(12px);
+      -webkit-backdrop-filter:blur(12px);
+    }
+
+    .reader-note-card p{
+      margin:0;
+      color:var(--muted);
+      font-size:1rem;
+      line-height:1.7;
+    }
+
+    .content-grid.clean-reading{
+      display:block;
+      max-width:860px;
+      margin:24px auto 0;
+    }
+
+    .content-grid.clean-reading .article-card,
+    .content-grid.clean-reading .sources-card{
+      width:100%;
+    }
+
+    .content-grid.clean-reading .sources-card{
+      margin-top:24px;
+    }
+
     @media (max-width:900px){
       .hero,.content-grid{grid-template-columns:1fr}
       .hero-card{min-height:0}
@@ -680,7 +752,40 @@
       </div>
     </section>
 
-    <section class="content-grid" aria-label="Reflection content">
+    <section class="listen-section" id="listen" aria-label="Audio reflection">
+      <div class="audio-card">
+        <div class="section-label">Audio Reflection</div>
+        <h2 class="audio-title">Excommunication: When Fear Looks Like Faith</h2>
+        <p class="audio-note">Listen first, or keep the audio playing while reading the reflection.</p>
+
+        <div class="track-list" aria-hidden="true">
+          <button class="track-btn active" type="button" data-src="/reflections/pages/excom/excom.mp3" data-title="Excommunication Reflection">
+            ▶ Listen Reflection
+          </button>
+        </div>
+
+        <audio id="audioPlayer" controls preload="metadata">
+          <source src="/reflections/pages/excom/excom.mp3" type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
+
+        <div class="clean-audio-actions">
+          <button class="chip-btn" type="button" onclick="copyPageLink()">Copy Link</button>
+          <button class="chip-btn" type="button" onclick="scrollToComments()">Comments</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="reader-note-card" aria-label="Reader note">
+      <div class="section-label">Reader’s Note</div>
+      <p>
+        This is a personal reflection on fear, authority, conscience, and the social cost of exclusion.
+        It is not written to attack ordinary believers, but to question any structure that turns sincere
+        searching into shame or silence.
+      </p>
+    </section>
+
+    <section class="content-grid clean-reading" aria-label="Reflection content">
       <article class="article-card" id="reflection">
         <h2>The Social Weight of Being Cut Off</h2>
 
@@ -865,49 +970,9 @@
           the organization — but it weakens truth. Real truth should survive questioning. If an idea must be
           protected by fear, shame, and silence, then maybe the structure is afraid of the question.
         </div>
-
-        <p class="reading-note">
-          These thoughts are personal reflections — not doctrine, not official history, and not an instruction
-          to hate any religious person. This is a reflection on power, fear, conscience, and the human cost of
-          silencing sincere questions.
-        </p>
       </article>
 
-      <aside class="sidebar" aria-label="Audio and page tools">
-        <section class="audio-card" id="listen">
-          <div class="section-label">Audio Reflection</div>
-          <h2 class="audio-title">Excommunication: When Fear Looks Like Faith</h2>
-          <p class="audio-note">Upload your audio file as <strong>excom.mp3</strong> in this same folder.</p>
-
-          <div class="track-list">
-            <button class="track-btn active" type="button" data-src="/reflections/pages/excom/excom.mp3" data-title="Excommunication Reflection">
-              ▶ Listen Reflection
-            </button>
-          </div>
-
-          <audio id="audioPlayer" controls preload="metadata">
-            <source src="/reflections/pages/excom/excom.mp3" type="audio/mpeg" />
-            Your browser does not support the audio element.
-          </audio>
-
-          <div class="mini-actions">
-            <button class="chip-btn" type="button" onclick="playAudio()">Play</button>
-            <button class="chip-btn" type="button" onclick="pauseAudio()">Pause</button>
-            <button class="chip-btn" type="button" onclick="copyPageLink()">Copy Link</button>
-            <button class="chip-btn" type="button" onclick="scrollToComments()">Comments</button>
-          </div>
-        </section>
-
-        <section class="note-card">
-          <div class="section-label">Reader Note</div>
-          <p>
-            This page uses <strong>/reflections/pages/excom/</strong> as the public address.
-            Keep <strong>index.html</strong>, <strong>excom.mp3</strong>, and optional <strong>cover.jpg</strong>
-            inside that folder.
-          </p>
-        </section>
-
-        <section class="sources-card" aria-label="Sources and references">
+      <section class="sources-card" aria-label="Sources and references">
           <div class="section-label">References</div>
           <p>Historical references used for context:</p>
           <ul>
@@ -919,8 +984,7 @@
             <li><a href="https://www.britannica.com/biography/Giordano-Bruno" target="_blank" rel="noopener">Britannica — Giordano Bruno</a></li>
             <li><a href="https://newsroom.ucla.edu/releases/the-truth-about-galileo-and-his-conflict-with-the-catholic-church" target="_blank" rel="noopener">UCLA — Galileo and the Catholic Church</a></li>
           </ul>
-        </section>
-      </aside>
+      </section>
     </section>
 
     <section class="comments-card" id="commentsSection" aria-label="Comments">
