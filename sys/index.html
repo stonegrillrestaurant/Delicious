@@ -15,11 +15,12 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script> 
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script> 
 
-    <script type="module"> 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"; 
-        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; 
-        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
+    <!-- CLASSIC FIREBASE COMPAT SCRIPTS (No Imports Required - Fixes Babel/Node Error) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
+    <script> 
         const firebaseConfig = { 
             apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw", 
             authDomain: "stone-grill-payroll.firebaseapp.com", 
@@ -29,12 +30,31 @@
             appId: "1:255528914541:web:d58d9731a29d27fc253964" 
         }; 
 
-        const app = initializeApp(firebaseConfig); 
-        const auth = getAuth(app); 
-        const db = getFirestore(app); 
+        firebase.initializeApp(firebaseConfig); 
+        const auth = firebase.auth(); 
+        const db = firebase.firestore(); 
         const appId = "stone-grill-v1"; 
 
-        window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc }; 
+        // Map modular functions to the classic API so React doesn't break
+        window.fb = { 
+            db: db, 
+            auth: auth, 
+            appId: appId, 
+            signInWithPopup: (authInstance, provider) => authInstance.signInWithPopup(provider), 
+            GoogleAuthProvider: firebase.auth.GoogleAuthProvider, 
+            FacebookAuthProvider: firebase.auth.FacebookAuthProvider, 
+            signInWithEmailAndPassword: (authInstance, email, password) => authInstance.signInWithEmailAndPassword(email, password), 
+            signOut: (authInstance) => authInstance.signOut(), 
+            onAuthStateChanged: (authInstance, callback) => authInstance.onAuthStateChanged(callback), 
+            collection: (dbInstance, ...paths) => dbInstance.collection(paths.join('/')), 
+            doc: (dbInstance, ...paths) => dbInstance.doc(paths.join('/')), 
+            setDoc: (docRef, data, options) => docRef.set(data, options), 
+            addDoc: (colRef, data) => colRef.add(data), 
+            onSnapshot: (ref, onNext, onError) => ref.onSnapshot(onNext, onError), 
+            query: (ref) => ref, 
+            deleteDoc: (docRef) => docRef.delete(), 
+            updateDoc: (docRef, data) => docRef.update(data) 
+        }; 
     </script> 
 
     <style> 
@@ -569,7 +589,8 @@
                         setUserRole('Admin'); 
                         setCurrentBiometricId('ADMIN'); 
                     } else { 
-                        // Strictly match the provided email in the profile to the logged-in email
+                        // --- RESTORED STRICT PARSER ---
+                        // Safely locks employees to their own view-only profile
                         if (user.email) { 
                             const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase()); 
                             if (staffMatch) { 
@@ -579,11 +600,11 @@
                             } 
                         } 
                         
-                        // Only show unauthorized AFTER ensuring the database list has fully loaded
+                        // If not found in the masterlist, show Access Denied (Admin can use Override PIN here)
                         if (fetchedEmps.length > 0 || s.empty) {
                             setUserRole('Unauthorized'); 
                         }
-                    } 
+                    }
                 }, (err) => showToast("Database access error: " + err.message, "error")); 
                  
                 const unsubAtt = window.fb.onSnapshot(getVaultCol('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() })))); 
@@ -735,6 +756,13 @@
             const handleStaffSubmitCARequest = async (e) => { 
                 e.preventDefault(); 
                 if (!currentBiometricId || !staffCaRequest.amount) return; 
+                
+                // SECURITY GATE: Prevent unauthorized cash advance requests
+                if (prompt("Enter Security PIN to authorize Cash Advance Request:") !== "2014") {
+                    showToast("Invalid PIN. Request cancelled.", "error");
+                    return;
+                }
+
                 await window.fb.addDoc(getVaultCol('ca_requests'), { 
                     empId: currentBiometricId, 
                     amount: parseFloat(staffCaRequest.amount), 
