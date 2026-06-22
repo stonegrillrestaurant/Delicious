@@ -14,12 +14,12 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script> 
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script> 
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script> 
- 
+
     <script type="module"> 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"; 
         import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; 
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
- 
+
         const firebaseConfig = { 
             apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw", 
             authDomain: "stone-grill-payroll.firebaseapp.com", 
@@ -28,15 +28,15 @@
             messagingSenderId: "255528914541", 
             appId: "1:255528914541:web:d58d9731a29d27fc253964" 
         }; 
- 
+
         const app = initializeApp(firebaseConfig); 
         const auth = getAuth(app); 
         const db = getFirestore(app); 
         const appId = "stone-grill-v1"; 
- 
+
         window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc }; 
     </script> 
- 
+
     <style> 
         .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; } 
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } 
@@ -46,7 +46,7 @@
          
         @media print { 
             @page { margin: 0; size: 58mm auto; } 
- 
+
             body * { visibility: hidden; } 
             #print-section, #print-section * { visibility: visible; } 
             #interactive-print-section, #interactive-print-section * { visibility: visible; } 
@@ -59,7 +59,7 @@
              
             .pos-receipt-active #interactive-print-section, 
             .pos-payslip-active #interactive-print-section { visibility: hidden; display: none !important; } 
- 
+
             /* Mobile Optimized Thermal Print CSS */ 
             #pos-receipt-print, #pos-payslip-print { visibility: hidden; display: none; } 
              
@@ -68,7 +68,7 @@
              
             .pos-payslip-active #pos-payslip-print, .pos-payslip-active #pos-payslip-print * { visibility: visible; } 
             #pos-payslip-print { position: absolute; left: 0; top: 0; width: 100% !important; max-width: 320px; margin: 0 auto; padding: 10px; font-family: monospace; color: black; display: block !important; } 
- 
+
             .print-hidden { display: none !important; } 
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; } 
         } 
@@ -81,24 +81,32 @@
     </style> 
 </head> 
 <body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden"> 
-    <div id="root"></div> 
- 
+    <div id="root">
+        <!-- Native Fallback Loading Screen to prevent white screen before React boots -->
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background-color:#172554; color:white; font-family:system-ui, sans-serif;">
+            <div style="width:48px; height:48px; border:4px solid rgba(255,255,255,0.2); border-top-color:white; border-radius:50%; animation:nativeSpin 1s linear infinite; margin-bottom:20px;"></div>
+            <h2 style="font-weight:900; letter-spacing:2px; text-transform:uppercase; font-size:14px;">System Booting...</h2>
+            <p style="font-size:11px; opacity:0.6; margin-top:10px; max-width:280px; text-align:center;">If it's stuck here, check your internet or open the file in a Local Server instead of directly.</p>
+        </div>
+        <style>@keyframes nativeSpin { 100% { transform: rotate(360deg); } }</style>
+    </div> 
+
     <script type="text/babel"> 
         const { useState, useMemo, useEffect } = React; 
- 
+
         const LOCAL_PRINTER_IP = "192.168.254.250"; 
- 
+
         const normalizeId = (id) => { 
             if (!id) return ''; 
             const strId = String(id).trim(); 
             return /^\d+$/.test(strId) ? parseInt(strId, 10).toString() : strId.toLowerCase(); 
         }; 
- 
+
         const formatMoney = (v) => { 
             const num = Number(v || 0); if (isNaN(num)) return "0"; 
             return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); 
         }; 
- 
+
         const calculateHoursWorked = (start, end) => { 
             if (!start || !end || end === '00:00') return 0; 
             const [h1, m1] = start.split(':').map(Number); 
@@ -107,7 +115,7 @@
             if (diffMinutes < 0) diffMinutes += 1440;  
             return diffMinutes / 60; 
         }; 
- 
+
         const Icon = ({ d, className = "w-5 h-5", children }) => ( 
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}> 
                 {d && <path d={d} />}{children} 
@@ -133,12 +141,12 @@
         const HistoryIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></Icon>; 
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>; 
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>; 
- 
- 
+
+
         // --- DIGITAL PAYSLIP WIDGET COMPONENT --- 
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, onPrintPOS, isAdmin }) { 
             const [activeTab, setActiveTab] = useState('payslip'); 
- 
+
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth; 
              
             // Generate robust payload mapping DB values to the UI design 
@@ -147,22 +155,22 @@
             // Check for archived interactive payrolls to fetch dynamically saved bonuses 
             const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || p.startDate?.startsWith(selectedMonth))); 
             const bonusAmount = emp.bonusAmount || 0; 
- 
+
             const earnings = [ 
                 { id: 1, label: `Basic Pay (${emp.days} Days)`, amount: basicPay }, 
                 { id: 2, label: "Bonus / Incentives", amount: bonusAmount } 
             ]; 
- 
+
             const deductions = [ 
                 ...(emp.monthlyCA > 0 ? [{ id: 1, label: "C.A. Deduction", amount: emp.monthlyCA }] : []), 
                 ...((parseFloat(emp.sssRate) || 0) > 0 ? [{ id: 2, label: "SSS Contribution", amount: parseFloat(emp.sssRate) }] : []), 
                 ...((parseFloat(emp.miscRate) || 0) > 0 ? [{ id: 3, label: "Misc / Uniform", amount: parseFloat(emp.miscRate) }] : []) 
             ]; 
- 
+
             const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0); 
             const totalDeductions = deductions.reduce((sum, item) => sum + item.amount, 0); 
             const netPay = totalEarnings - totalDeductions; 
- 
+
             // Generate Ledger from actual DB records 
             const ledger = cashAdvances 
                 .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)) 
@@ -175,7 +183,7 @@
                     status: "Logged", 
                     note: ca.reason || '' 
                 })); 
- 
+
             if (bonusAmount > 0 && savedPayroll) { 
                 ledger.push({ 
                     id: 'bonus-' + savedPayroll.recordKey, 
@@ -188,7 +196,7 @@
                 }); 
                 ledger.sort((a,b) => b.date.localeCompare(a.date)); 
             } 
- 
+
             return ( 
                 <div className="w-full max-w-lg mx-auto bg-gray-50 flex flex-col relative shadow-2xl overflow-hidden rounded-[2.5rem] border border-gray-200 animate-slide-up"> 
                      
@@ -205,7 +213,7 @@
                                 </button> 
                             )} 
                         </div> 
- 
+
                         <div className="flex justify-between items-end gap-2"> 
                             <div className="flex-1"> 
                                 <h2 className="text-2xl font-black tracking-wide leading-tight truncate">{emp.name}</h2> 
@@ -220,7 +228,7 @@
                             </select> 
                         </div> 
                     </div> 
- 
+
                     {/* Tab Navigation */} 
                     <div className="flex px-6 pt-4 pb-2 gap-4 shrink-0 bg-gray-50 z-0"> 
                         <button  
@@ -236,7 +244,7 @@
                             <HistoryIcon className="w-4 h-4" /> Ledger 
                         </button> 
                     </div> 
- 
+
                     {/* Scrollable Content Area */} 
                     <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6 custom-scrollbar max-h-[60vh]"> 
                      
@@ -254,7 +262,7 @@
                                         <p className="text-xs font-bold text-gray-800">₱{formatMoney(emp.dailyRate || emp.rate)}</p> 
                                     </div> 
                                 </div> 
- 
+
                                 {/* EARNINGS SECTION */} 
                                 <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100"> 
                                     <h3 className="text-xs font-black text-gray-400 tracking-[0.2em] uppercase mb-4 text-center">Gross Earnings</h3> 
@@ -271,7 +279,7 @@
                                         <span className="text-lg font-black text-[#2563eb]">₱{formatMoney(totalEarnings)}</span> 
                                     </div> 
                                 </div> 
- 
+
                                 {/* DEDUCTIONS SECTION (RED ITEMS) */} 
                                 <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100"> 
                                     <h3 className="text-xs font-black text-gray-400 tracking-[0.2em] uppercase mb-4 text-center">Deductions</h3> 
@@ -289,19 +297,19 @@
                                         <span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span> 
                                     </div> 
                                 </div> 
- 
+
                                 {/* NET SALARY CARD (TRANSPARENT BACKGROUND, CONDITIONAL RED FONT) */} 
                                 <div className="p-6 text-center transform hover:scale-[1.02] transition-transform"> 
                                     <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p> 
                                     <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(netPay)}</p> 
                                 </div> 
- 
+
                                 {/* LIFETIME BALANCE CARD (NON-BOLD FONT) */} 
                                 <div className="p-6 border-t border-gray-200 text-center"> 
                                     <p className="text-[10px] font-normal text-gray-500 tracking-[0.15em] uppercase mb-2">Lifetime Balance</p> 
                                     <p className={`text-3xl font-normal tracking-tight ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p> 
                                 </div> 
- 
+
                                 {/* Admin Print POS Thermal Shortcut */} 
                                 {isAdmin && onPrintPOS && ( 
                                     <div className="print-hidden pt-4 border-t border-gray-100"> 
@@ -314,7 +322,7 @@
                                         <p className="text-center text-[9px] text-gray-400 mt-2 font-mono">Mobile / iOS mode active</p> 
                                     </div> 
                                 )} 
- 
+
                                 {/* Admin Actions (if provided) */} 
                                 {(onEdit || onDelete) && ( 
                                     <div className="flex gap-3 mt-4 print-hidden"> 
@@ -329,7 +337,7 @@
                                     <h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3> 
                                     <span className="text-[#1b3382] text-[10px] font-bold flex items-center bg-blue-100 px-3 py-1 rounded-full">{ledger.length} Records</span> 
                                 </div> 
- 
+
                                 {ledger.map(tx => ( 
                                     <div key={tx.id} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex items-center gap-4"> 
                                         <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}> 
@@ -361,9 +369,9 @@
                 </div> 
             ); 
         } 
- 
+
         // --- END PAYSLIP WIDGET --- 
- 
+
         function NavItem({ icon, label, active, onClick, open }) { 
             return ( 
                 <button onClick={onClick} className={`w-full flex items-center px-6 py-3.5 transition-all duration-300 ${active ? 'bg-[#386df2] text-white border-l-4 border-white shadow-lg' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white border-l-4 border-transparent'}`}> 
@@ -371,7 +379,7 @@
                 </button> 
             ); 
         } 
- 
+
         function StatCard({ title, value, icon, color }) { 
             return ( 
                 <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex items-center gap-6 animate-slide-up hover:shadow-2xl transition-all"> 
@@ -380,20 +388,20 @@
                 </div> 
             ); 
         } 
- 
+
         function LoginScreen({ onToast }) { 
             const [loading, setLoading] = useState(false); 
             const [showEmailLogin, setShowEmailLogin] = useState(false); 
             const [emailInput, setEmailInput] = useState(''); 
             const [passwordInput, setPasswordInput] = useState(''); 
- 
+
             const handleGoogleLogin = async () => { 
                 setLoading(true); 
                 const provider = new window.fb.GoogleAuthProvider(); 
                 try { await window.fb.signInWithPopup(window.fb.auth, provider); }  
                 catch (err) { onToast("Login Error: " + err.message, "error"); setLoading(false); } 
             }; 
- 
+
             const handleFacebookLogin = async () => { 
                 setLoading(true); 
                 const provider = new window.fb.FacebookAuthProvider(); 
@@ -401,14 +409,14 @@
                 try { await window.fb.signInWithPopup(window.fb.auth, provider); }  
                 catch (err) { onToast("Login Error: " + err.message, "error"); setLoading(false); } 
             }; 
- 
+
             const handleEmailSubmit = async (e) => { 
                 e.preventDefault(); 
                 setLoading(true); 
                 try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); }  
                 catch (err) { onToast("Login failed. Check your email or password.", "error"); setLoading(false); } 
             }; 
- 
+
             return ( 
                 <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50"> 
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center animate-slide-up"> 
@@ -435,7 +443,7 @@
                                         </> 
                                     )} 
                                 </button> 
- 
+
                                 <div className="pt-4 border-t mt-6"> 
                                     <button onClick={() => setShowEmailLogin(true)} className="w-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors py-2"> 
                                         Use Direct App Login instead 
@@ -460,15 +468,17 @@
                 </div> 
             ); 
         } 
- 
+
         function App() { 
             const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2";  
             const ADMIN_EMAIL = "stonegrill2014@gmail.com"; 
- 
+
             const [user, setUser] = useState(null); 
             const [userRole, setUserRole] = useState('');  
             const [currentBiometricId, setCurrentBiometricId] = useState('');  
             const [isReady, setIsReady] = useState(false); 
+            const [loadError, setLoadError] = useState(''); 
+            
             const [activeTab, setActiveTab] = useState('dashboard'); 
             const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024); 
             const [isRestoring, setIsRestoring] = useState(false); 
@@ -488,33 +498,33 @@
             const [caType, setCaType] = useState('advance'); 
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) }); 
             const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', staffEmail: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' }); 
- 
+
             const [dashSearchEmpId, setDashSearchEmpId] = useState(''); 
             const [dashSearchMonth, setDashSearchMonth] = useState(() => new Date().toISOString().slice(0, 7)); 
- 
+
             const [icEmpId, setIcEmpId] = useState(''); 
             const [icMonth, setIcMonth] = useState(() => new Date().toISOString().slice(0, 7)); 
             const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 }); 
- 
+
             const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' }); 
             const [receiptToPrint, setReceiptToPrint] = useState(null); 
             const [payslipToPrint, setPayslipToPrint] = useState(null); 
- 
+
             const isAdmin = userRole === 'Admin'; 
- 
+
             const getVaultCol = (col) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col); 
             const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col, id); 
- 
+
             const showToast = (message, type = "info") => { 
                 setToast({ message, type }); 
                 setTimeout(() => setToast(null), 3800); 
             }; 
- 
+
             const switchTab = (tab) => { 
                 setActiveTab(tab); 
                 if (window.innerWidth < 1024) setSidebarOpen(false); 
             }; 
- 
+
             const monthOptions = useMemo(() => { 
                 const options = []; const d = new Date(); 
                 for (let i = 0; i < 12; i++) { 
@@ -523,14 +533,31 @@
                 } 
                 return options; 
             }, []); 
- 
+
             useEffect(() => { 
-                window.fb.onAuthStateChanged(window.fb.auth, (u) => {  
-                    setUser(u); setIsReady(true);  
-                    if(!u) { setUserRole(''); setCurrentBiometricId(''); } 
-                }); 
+                let attempts = 0;
+                const checkFirebase = setInterval(() => {
+                    if (window && window.fb && window.fb.auth) {
+                        clearInterval(checkFirebase);
+                        try {
+                            window.fb.onAuthStateChanged(window.fb.auth, (u) => {  
+                                setUser(u); setIsReady(true);  
+                                if(!u) { setUserRole(''); setCurrentBiometricId(''); } 
+                            }); 
+                        } catch (err) {
+                            setLoadError("Firebase Error: " + err.message);
+                        }
+                    } else {
+                        attempts++;
+                        if (attempts > 100) { 
+                            clearInterval(checkFirebase);
+                            setLoadError("Cloud Database blocked. Are you running this directly from a folder (file://)? Please use a Local Web Server.");
+                        }
+                    }
+                }, 50);
+                return () => clearInterval(checkFirebase);
             }, []); 
- 
+
             useEffect(() => { 
                 if (!user) return; 
                  
@@ -542,11 +569,20 @@
                         setUserRole('Admin'); 
                         setCurrentBiometricId('ADMIN'); 
                     } else { 
+                        // Strictly match the provided email in the profile to the logged-in email
                         if (user.email) { 
                             const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase()); 
-                            if (staffMatch) { setUserRole('Staff'); setCurrentBiometricId(staffMatch.id); return; } 
+                            if (staffMatch) { 
+                                setUserRole('Staff'); 
+                                setCurrentBiometricId(staffMatch.id); 
+                                return; 
+                            } 
                         } 
-                        setUserRole('Unauthorized'); 
+                        
+                        // Only show unauthorized AFTER ensuring the database list has fully loaded
+                        if (fetchedEmps.length > 0 || s.empty) {
+                            setUserRole('Unauthorized'); 
+                        }
                     } 
                 }, (err) => showToast("Database access error: " + err.message, "error")); 
                  
@@ -557,7 +593,7 @@
                  
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubCAReq(); unsubIP(); }; 
             }, [user]); 
- 
+
             const payrollSummary = useMemo(() => { 
                 return employees.map(emp => { 
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth)); 
@@ -572,37 +608,37 @@
                     let lifetimeDays = 0;  
                     const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => a.date)); 
                     uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1)); 
- 
+
                     const lifetimeBonuses = interactivePayrolls 
                         .filter(p => normalizeId(p.empId) === normalizeId(emp.id)) 
                         .reduce((sum, p) => sum + (parseFloat(p.data?.bonus) || 0), 0); 
- 
+
                     const lifetimeGross = (lifetimeDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + lifetimeBonuses; 
- 
+
                     const totalCashReceived = cashAdvances 
                         .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)) 
                         .reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0); 
- 
+
                     const lifetimeCaBalance = lifetimeGross - totalCashReceived; 
- 
+
                     // Include bonuses safely sourced from the Payslip Builder Interactive Archives 
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || p.startDate?.startsWith(selectedMonth))); 
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0; 
- 
+
                     const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0) + bonusAmount; 
                     const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0); 
                      
                     return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount }; 
                 }); 
             }, [employees, attendance, cashAdvances, interactivePayrolls, selectedMonth]); 
- 
+
             const stats = useMemo(() => { 
                 const today = new Date().toISOString().slice(0, 10); 
                 const uniquePresent = new Set(attendance.filter(a => a.date === today).map(a => normalizeId(a.empId))).size; 
                 const totalCA = payrollSummary.reduce((sum, e) => sum + (parseFloat(e.caBalance) || 0), 0); 
                 return { count: employees.length, present: uniquePresent, totalCA }; 
             }, [payrollSummary, attendance]); 
- 
+
             let quickView = null; 
             if (dashSearchEmpId) { 
                 const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId)); 
@@ -617,7 +653,7 @@
                     quickView = { ...emp, rangeDays: rDays, rangeGross: rGross, rangeCA: rCA, rangeNet: rNet }; 
                 } 
             } 
- 
+
             useEffect(() => { 
                 if (icEmpId && icMonth) { 
                     const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId)); 
@@ -631,7 +667,7 @@
                     } 
                 } 
             }, [icEmpId, icMonth, employees, attendance, cashAdvances, interactivePayrolls]); 
- 
+
             // Formats and launches the dynamic 58mm thermal print routine for any payslip 
             const handlePrintPOSPayslip = (emp, monthValue) => { 
                 const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(monthValue)); 
@@ -651,24 +687,24 @@
                 const gross = basicPay + bonusAmount; 
                 const totalDeductions = monthlyCA + sssRate + miscRate; 
                 const net = gross - totalDeductions; 
- 
+
                 // Lifetime balance 
                 const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id)); 
                 let lifetimeDays = 0; 
                 const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => a.date)); 
                 uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1)); 
- 
+
                 const lifetimeBonuses = interactivePayrolls 
                     .filter(p => normalizeId(p.empId) === normalizeId(emp.id)) 
                     .reduce((sum, p) => sum + (parseFloat(p.data?.bonus) || 0), 0); 
- 
+
                 const lifetimeGross = (lifetimeDays * dailyRate) + lifetimeBonuses; 
                 const totalCashReceived = cashAdvances 
                     .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)) 
                     .reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0); 
- 
+
                 const caBalance = lifetimeGross - totalCashReceived; 
- 
+
                 setPayslipToPrint({ 
                     empName: emp.name || `${emp.firstName || ''} ${emp.lastName || ''}`.trim(), 
                     empId: emp.id, 
@@ -686,16 +722,16 @@
                     net: net, 
                     caBalance: caBalance 
                 }); 
- 
+
                 showToast(`Generating receipt for Mobile Share / AirPrint.`, "info"); 
- 
+
                 document.body.classList.add('pos-payslip-active'); 
                 setTimeout(() => { 
                     window.print(); 
                     document.body.classList.remove('pos-payslip-active'); 
                 }, 300); 
             }; 
- 
+
             const handleStaffSubmitCARequest = async (e) => { 
                 e.preventDefault(); 
                 if (!currentBiometricId || !staffCaRequest.amount) return; 
@@ -709,7 +745,7 @@
                 setStaffCaRequest({ amount: '', reason: '' }); 
                 showToast("Request sent to Admin for approval.", "success"); 
             }; 
- 
+
             const handleApproveCARequest = async (req) => { 
                 if (!isAdmin) return; 
                 const today = new Date().toISOString().slice(0, 10); 
@@ -718,13 +754,13 @@
                 await window.fb.addDoc(getVaultCol('cash_advances'), { empId: req.empId, amount: req.amount, reason: `Apprvd Req: ${req.reason}`, date: today, type: 'advance' }); 
                 showToast("Request approved and cash advance logged.", "success"); 
             }; 
- 
+
             const handleRejectCARequest = async (reqId) => { 
                 if (!isAdmin) return; 
                 await window.fb.updateDoc(getVaultDoc('ca_requests', reqId), { status: 'Rejected' }); 
                 showToast("Request marked as rejected.", "info"); 
             }; 
- 
+
             const handlePrintReceipt = async (req) => { 
                 try { 
                     await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Printed' }); 
@@ -732,19 +768,19 @@
                     showToast("Network error: Could not lock the record. Print cancelled to protect funds.", "error"); 
                     return;  
                 } 
- 
+
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId)); 
                 setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' }); 
                  
                 showToast(`Generating receipt for Mobile Share / AirPrint.`, "info"); 
- 
+
                 document.body.classList.add('pos-receipt-active'); 
                 setTimeout(() => { 
                     window.print(); 
                     document.body.classList.remove('pos-receipt-active'); 
                 }, 300); 
             }; 
- 
+
             const handleEditProfile = (emp) => { 
                 setNewEmpForm({ 
                     biometricId: emp.id, 
@@ -763,7 +799,7 @@
                 setShowAddStaff(true); 
                 setViewProfile(null);  
             }; 
- 
+
             const handleProcessLogs = async () => { 
                 if (!isAdmin || !rawInput.trim()) return; 
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {}; 
@@ -784,14 +820,14 @@
                     if (s.length === 1 || hoursWorked < 6) { 
                         dayVal = 0.5; 
                     } 
- 
+
                     await window.fb.setDoc(getVaultDoc('attendance', k), { empId: r.id, empName: r.name, date: r.date, firstIn: s[0], lastOut: s.length > 1 ? s[s.length-1] : '00:00', dayEquivalent: dayVal }, { merge: true }); 
                     count++; 
                 } 
                 setRawInput('');  
                 showToast(`Processed ${count} attendance records successfully.`, "success"); 
             }; 
- 
+
             const handleAddStaffSubmit = async (e) => { 
                 e.preventDefault(); if (!isAdmin) return; 
                 const bId = normalizeId(newEmpForm.biometricId); 
@@ -800,7 +836,7 @@
                 setShowAddStaff(false); setIsEditing(false); 
                 showToast("Staff profile uploaded and saved to cloud database.", "success"); 
             }; 
- 
+
             const handleIssueCA = async () => { 
                 if (!isAdmin || !newCa.empId) return; 
                 let amt = parseFloat(newCa.amount) || 0;  
@@ -810,20 +846,20 @@
                 setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) }); 
                 showToast("Transaction successfully added to lifetime Ledger.", "success"); 
             }; 
- 
+
             const handleDeleteEmployee = async (id, name) => { 
                 if (!isAdmin || !window.confirm(`PERMANENTLY delete ${name}?\nThis action cannot be undone.`)) return; 
                 await window.fb.deleteDoc(getVaultDoc('employees', normalizeId(id))); 
                 setViewProfile(null); 
                 showToast("Employee deleted from system.", "info"); 
             }; 
- 
+
             const handleDeleteCA = async (caId) => { 
                 if (!isAdmin || !window.confirm(`Delete and reverse this transaction?`)) return; 
                 await window.fb.deleteDoc(getVaultDoc('cash_advances', caId)); 
                 showToast("Transaction deleted successfully.", "info"); 
             }; 
- 
+
             const handleExportBackup = () => { 
                 if(!isAdmin) return; 
                 const data = { employees, attendance, cashAdvances, interactivePayrolls, caRequests }; 
@@ -831,7 +867,7 @@
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `stonegrill_backup.json`; a.click(); 
                 showToast("Local backup database download compiled.", "success"); 
             }; 
- 
+
             const handleImportBackup = (event) => { 
                 const file = event.target.files[0]; if (!file || !user || !isAdmin) return; 
                 setIsRestoring(true); const reader = new FileReader(); 
@@ -852,18 +888,53 @@
                 }; 
                 reader.readAsText(file); event.target.value = '';  
             }; 
- 
-            if (!isReady) return null; 
+
+            if (!isReady) {
+                return (
+                    <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center z-[100] animate-fade-in">
+                        {loadError ? (
+                            <div className="bg-white rounded-3xl p-8 max-w-sm w-full animate-slide-up shadow-2xl border border-rose-100">
+                                <X className="w-16 h-16 mx-auto mb-4 text-rose-500 bg-rose-50 rounded-full p-3" />
+                                <h2 className="text-xl font-black mb-2 uppercase tracking-widest text-slate-800">Connection Failed</h2>
+                                <p className="text-xs text-slate-500 font-bold leading-relaxed">{loadError}</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center text-white">
+                                <div className="w-12 h-12 border-4 border-t-white border-blue-800 rounded-full animate-spin mb-4 shadow-xl"></div>
+                                <p className="font-black uppercase tracking-widest text-xs opacity-80 animate-pulse">Syncing Cloud Database...</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
             if (!user) return <LoginScreen onToast={showToast} />; 
- 
+
             if (userRole === '') { 
                 return <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-t-white rounded-full animate-spin mb-4"></div><p className="font-black uppercase tracking-widest text-xs">Checking Access...</p></div>; 
             } 
- 
+
             if (userRole === 'Unauthorized') { 
                 return ( 
                     <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center z-[100]"> 
-                        <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full animate-slide-up"> 
+                        <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full animate-slide-up relative"> 
+                            
+                            {/* EMERGENCY ADMIN OVERRIDE BUTTON */}
+                            <button 
+                                onClick={() => {
+                                    if(prompt("Enter Emergency Admin PIN:") === "2014") {
+                                        setUserRole('Admin');
+                                        setCurrentBiometricId('ADMIN');
+                                        showToast("Emergency Override Activated", "success");
+                                    } else {
+                                        alert("Invalid PIN. Access remains denied.");
+                                    }
+                                }} 
+                                className="absolute top-6 right-6 text-[10px] font-black text-slate-300 hover:text-emerald-500 uppercase tracking-widest transition-colors bg-slate-50 px-3 py-1 rounded-full border border-slate-200 shadow-sm"
+                            >
+                                Override
+                            </button>
+
                             <X className="w-16 h-16 mx-auto mb-4 text-rose-500" /> 
                             <h2 className="text-xl font-black mb-2 uppercase tracking-widest text-slate-800">Access Denied</h2> 
                             <p className="text-xs text-slate-500 font-bold mb-8 leading-relaxed">The account <br/><span className="text-blue-600 font-black">{user.email || "No Email Provided"}</span><br/> is not registered in the Masterlist. Please ask the Admin to add this email to your profile.</p> 
@@ -872,15 +943,15 @@
                     </div> 
                 ); 
             } 
- 
+
             return ( 
                 <div className="flex h-screen bg-gray-50 overflow-hidden relative font-sans"> 
                     {isRestoring && <div className="fixed inset-0 bg-blue-950/80 flex items-center justify-center p-4 z-[100] font-sans flex-col text-white"><div className="w-16 h-16 border-4 border-t-white rounded-full animate-spin mb-6" /><h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Restoring Database...</h2></div>} 
- 
+
                     {isSidebarOpen && window.innerWidth < 1024 && ( 
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-30 print-hidden" onClick={() => setSidebarOpen(false)} /> 
                     )} 
- 
+
                     <aside className={`fixed lg:static inset-y-0 left-0 z-40 bg-blue-900 text-white transition-all duration-300 flex flex-col h-full print-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'} shadow-2xl`}> 
                         <div className="p-6 border-b border-blue-800 flex items-center justify-between"> 
                             <div className="font-black text-xl flex items-center"><span className="bg-white text-blue-900 p-1.5 rounded-lg mr-3"><LayoutDashboard /></span> {isSidebarOpen ? 'STONE GRILL' : ''}</div> 
@@ -904,7 +975,7 @@
                         </nav> 
                         <div className="p-4 border-t border-blue-800"><button onClick={() => window.fb.signOut(window.fb.auth)} className="w-full flex items-center px-6 py-4 text-rose-300 hover:text-white transition-colors"><LogOut /><span className={isSidebarOpen ? 'ml-4 uppercase text-xs font-black' : 'hidden'}>Sign Out</span></button></div> 
                     </aside> 
- 
+
                     <main className="flex-1 flex flex-col h-screen overflow-hidden"> 
                         <header className="h-16 bg-white border-b flex items-center justify-between px-6 shrink-0 print-hidden"> 
                             <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-slate-500 hover:text-blue-900"><Menu /></button> 
@@ -912,10 +983,10 @@
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${isAdmin ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}>{userRole} Mode</span> 
                             </div> 
                         </header> 
- 
+
                         <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar bg-slate-50" id="print-section"> 
                             <div className="max-w-7xl mx-auto space-y-6"> 
- 
+
                                 {/* DASHBOARD TAB */} 
                                 {activeTab === 'dashboard' && ( 
                                     <> 
@@ -951,14 +1022,14 @@
                                                 </div> 
                                             </> 
                                         )} 
- 
+
                                         {/* For Staff: Interactive Payslip View & CA Request */} 
                                         {(!isAdmin) && (() => { 
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId)); 
                                             if (!emp) return null; 
                                              
                                             const myRequests = caRequests.filter(r => normalizeId(r.empId) === normalizeId(emp.id)).sort((a,b)=>(b.dateRequested||'').localeCompare(a.dateRequested||'')); 
- 
+
                                             return ( 
                                                 <div className="animate-slide-up space-y-6 max-w-2xl mx-auto pb-10"> 
                                                      
@@ -973,7 +1044,7 @@
                                                         interactivePayrolls={interactivePayrolls}  
                                                         isAdmin={isAdmin} 
                                                     /> 
- 
+
                                                     {/* CA Request Tool */} 
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden mt-6"> 
                                                         <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center"> 
@@ -993,7 +1064,7 @@
                                                                     <button type="submit" className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white font-black uppercase rounded-xl hover:bg-emerald-700 active:scale-95 transition-all shadow-md">Submit Request</button> 
                                                                 </div> 
                                                             </form> 
- 
+
                                                             <h4 className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-4">Request Status Tracker</h4> 
                                                             <div className="max-h-48 overflow-y-auto custom-scrollbar border rounded-xl"> 
                                                                 <table className="w-full text-left text-xs"> 
@@ -1027,7 +1098,7 @@
                                         })()} 
                                     </> 
                                 )} 
- 
+
                                 {/* ADMIN TABS */} 
                                 {isAdmin && activeTab === 'employees' && ( 
                                     <div className="bg-white rounded-3xl shadow-xl overflow-hidden animate-slide-up"> 
@@ -1067,7 +1138,7 @@
                                         </div> 
                                     </div> 
                                 )} 
- 
+
                                 {isAdmin && activeTab === 'attendance' && ( 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full animate-slide-up"> 
                                         <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col"> 
@@ -1090,7 +1161,7 @@
                                         </div> 
                                     </div> 
                                 )} 
- 
+
                                 {isAdmin && activeTab === 'payslips' && ( 
                                     <div className="flex flex-col lg:flex-row gap-8 animate-slide-up"> 
                                         <div className="w-full lg:w-1/3 bg-white p-8 rounded-3xl shadow-xl space-y-6"> 
@@ -1188,7 +1259,7 @@
                                         </div> 
                                     </div> 
                                 )} 
- 
+
                                 {isAdmin && activeTab === 'ca' && ( 
                                     <div className="flex flex-col gap-8 animate-slide-up"> 
                                         <div className="bg-white rounded-3xl border shadow-xl overflow-hidden"> 
@@ -1220,7 +1291,7 @@
                                                 </table> 
                                             </div> 
                                         </div> 
- 
+
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8"> 
                                             <div className="bg-white p-8 rounded-3xl shadow-xl space-y-4 h-max"> 
                                                 <h2 className="font-black text-blue-900 uppercase">Issue Entry</h2> 
@@ -1267,7 +1338,7 @@
                                         </div> 
                                     </div> 
                                 )} 
- 
+
                                 {isAdmin && activeTab === 'payroll' && ( 
                                     <div className="bg-white w-full p-4 lg:p-8 animate-slide-up"> 
                                         <div className="flex justify-between items-center mb-8 print-hidden"> 
@@ -1299,7 +1370,7 @@
                                         </div> 
                                     </div> 
                                 )} 
- 
+
                                 {isAdmin && activeTab === 'summary' && ( 
                                     <div className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col min-h-[500px] animate-slide-up"> 
                                         <div className="p-6 border-b bg-slate-900 text-white"><h2 className="font-black uppercase flex items-center gap-2"><CalendarDays className="w-5 h-5"/> Yearly Overview</h2></div> 
@@ -1322,7 +1393,7 @@
                                         </div> 
                                     </div> 
                                 )} 
- 
+
                                 {isAdmin && activeTab === 'settings' && ( 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-slide-up"> 
                                         <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center"> 
@@ -1336,7 +1407,7 @@
                                                 </div> 
                                             </div> 
                                         </div> 
- 
+
                                         <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center"> 
                                             <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm"><Network className="w-8 h-8"/></div> 
                                             <h3 className="font-black text-2xl uppercase mb-2 text-blue-900">Mobile Printing</h3> 
@@ -1346,7 +1417,7 @@
                                                 <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Target IP Address</p> 
                                                 <p className="text-2xl font-black text-slate-800 font-mono tracking-widest">{LOCAL_PRINTER_IP}</p> 
                                             </div> 
- 
+
                                             <div className="w-full text-left mt-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100"> 
                                                 <h4 className="text-[10px] uppercase font-black text-blue-800 tracking-widest mb-2 border-b border-blue-200 pb-2">iOS / Mobile Setup</h4> 
                                                 <ol className="text-xs text-blue-900 font-medium space-y-2 list-decimal list-inside"> 
@@ -1360,7 +1431,7 @@
                                 )} 
                             </div> 
                         </div> 
- 
+
                         {/* HIDDEN 58MM POS RECEIPT RENDERER FOR APPROVED ADVANCES */} 
                         {receiptToPrint && ( 
                             <div id="pos-receipt-print" className="bg-white"> 
@@ -1384,7 +1455,7 @@
                                 <div style={{ paddingBottom: '40px' }}></div> 
                             </div> 
                         )} 
- 
+
                         {/* HIDDEN 58MM POS PAYSLIP RECEIPT RENDERER */} 
                         {payslipToPrint && ( 
                             <div id="pos-payslip-print" className="bg-white" style={{ fontFamily: 'monospace', color: 'black' }}> 
@@ -1495,7 +1566,7 @@
                             </div> 
                         )} 
                     </main> 
- 
+
                     {/* ADMIN ADD/EDIT STAFF MODAL */} 
                     {showAddStaff && isAdmin && ( 
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-4"> 
@@ -1505,7 +1576,7 @@
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Biometric ID</label><input type="text" required value={newEmpForm.biometricId} disabled={isEditing} onChange={e=>setNewEmpForm({...newEmpForm, biometricId: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black disabled:opacity-50"/></div> 
                                  
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Registered Email (Google/Facebook/Direct)</label><input type="email" placeholder="staff@gmail.com" value={newEmpForm.staffEmail} onChange={e=>setNewEmpForm({...newEmpForm, staffEmail: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold text-blue-600"/></div> 
- 
+
                                 <div className="grid grid-cols-2 gap-4"> 
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">First Name</label><input type="text" required value={newEmpForm.firstName} onChange={e=>setNewEmpForm({...newEmpForm, firstName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div> 
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Last Name</label><input type="text" required value={newEmpForm.lastName} onChange={e=>setNewEmpForm({...newEmpForm, lastName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div> 
@@ -1514,12 +1585,12 @@
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Role</label><input type="text" value={newEmpForm.position} onChange={e=>setNewEmpForm({...newEmpForm, position: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div> 
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Daily Rate</label><input type="number" required value={newEmpForm.dailyRate} onChange={e=>setNewEmpForm({...newEmpForm, dailyRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-blue-600"/></div> 
                                 </div> 
- 
+
                                 <div className="grid grid-cols-2 gap-4"> 
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Contact Number</label><input type="text" placeholder="09XX..." value={newEmpForm.contactNumber} onChange={e=>setNewEmpForm({...newEmpForm, contactNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div> 
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">SSS Number</label><input type="text" placeholder="XX-XXXXXXX-X" value={newEmpForm.sssNumber} onChange={e=>setNewEmpForm({...newEmpForm, sssNumber: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div> 
                                 </div> 
- 
+
                                 <div className="grid grid-cols-2 gap-4"> 
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">SSS Ded.</label><input type="number" value={newEmpForm.sssRate} onChange={e=>setNewEmpForm({...newEmpForm, sssRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-rose-600"/></div> 
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Misc Ded.</label><input type="number" value={newEmpForm.miscRate} onChange={e=>setNewEmpForm({...newEmpForm, miscRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-rose-600"/></div> 
@@ -1528,7 +1599,7 @@
                             </form> 
                         </div> 
                     )} 
- 
+
                     {/* ADMIN VIEW PROFILE MODAL */} 
                     {viewProfile && isAdmin && ( 
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[50] flex items-center justify-center p-4"> 
@@ -1548,7 +1619,7 @@
                             /> 
                         </div> 
                     )} 
- 
+
                     {/* CUSTOM PREMIUM TOAST ALERTS */} 
                     {toast && ( 
                         <div className="fixed bottom-6 right-6 z-[200] max-w-sm bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-slide-up"> 
@@ -1561,9 +1632,9 @@
                 </div> 
             ); 
         } 
- 
+
         const root = ReactDOM.createRoot(document.getElementById('root')); 
         root.render(<App />); 
     </script> 
 </body> 
-</html> 
+</html>
