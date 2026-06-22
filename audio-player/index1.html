@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <title>Ninox Audio Player</title>
+  <meta name="description" content="Listen to Solitude Reflections by Ninox Antolihao." />
+  <meta name="theme-color" content="#111522" />
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0e17;
+      --surface: rgba(23, 28, 43, 0.78);
+      --surface-strong: #171c2b;
+      --surface-soft: rgba(255, 255, 255, 0.055);
+      --text: #f7f8fb;
+      --muted: #a7afc1;
+      --line: rgba(255, 255, 255, 0.09);
+      --accent: #a8b8ff;
+      --accent-strong: #7f95ff;
+      --danger: #ff9a9a;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding:
+        max(18px, env(safe-area-inset-top))
+        max(16px, env(safe-area-inset-right))
+        max(28px, env(safe-area-inset-bottom))
+        max(16px, env(safe-area-inset-left));
+      font-family:
+        Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(110, 130, 255, 0.20), transparent 34rem),
+        radial-gradient(circle at 86% 82%, rgba(158, 93, 255, 0.12), transparent 28rem),
+        linear-gradient(160deg, #121727 0%, #090c14 58%, #080a11 100%);
+      overflow-x: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 4vw, 2.15rem);
+      line-height: 1.08;
+      letter-spacing: -0.045em;
+    }
+
+    .track-count {
+      flex: 0 0 auto;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      backdrop-filter: blur(16px);
+    }
+
+    .player-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(340px, 1.08fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px) saturate(125%);
+      -webkit-backdrop-filter: blur(24px) saturate(125%);
+    }
+
+    .now-playing {
+      position: sticky;
+      top: max(16px, env(safe-area-inset-top));
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .art-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      border-radius: 24px;
+      background: #101522;
+      box-shadow: 0 22px 46px rgba(0, 0, 0, 0.34);
+      isolation: isolate;
+    }
+
+    .art-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .cover {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      transition: transform 0.7s cubic-bezier(.2,.8,.2,1), filter 0.4s ease;
+    }
+
+    .cover.playing {
+      transform: scale(1.035);
+      filter: saturate(1.08);
+    }
+
+    .playing-badge {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 999px;
+      background: rgba(7, 10, 17, 0.66);
+      color: white;
+      font-size: 0.74rem;
+      font-weight: 800;
+      backdrop-filter: blur(14px);
+      opacity: 0;
+      transform: translateY(5px);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+
+    .playing-badge.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .equalizer {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      width: 14px;
+      height: 13px;
+    }
+
+    .equalizer span {
+      width: 3px;
+      border-radius: 999px;
+      background: var(--accent);
+      animation: bounce 0.9s infinite ease-in-out;
+    }
+
+    .equalizer span:nth-child(1) { height: 45%; animation-delay: -0.2s; }
+    .equalizer span:nth-child(2) { height: 100%; animation-delay: -0.45s; }
+    .equalizer span:nth-child(3) { height: 68%; animation-delay: -0.1s; }
+
+    @keyframes bounce {
+      0%, 100% { transform: scaleY(.45); }
+      50% { transform: scaleY(1); }
+    }
+
+    .track-info {
+      padding: 22px 4px 8px;
+      text-align: center;
+    }
+
+    .track-info h2 {
+      margin: 0;
+      font-size: clamp(1.28rem, 4vw, 1.78rem);
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    .artist {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .status {
+      min-height: 20px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .progress-area {
+      margin-top: 16px;
+    }
+
+    .range {
+      --value: 0%;
+      width: 100%;
+      height: 5px;
+      margin: 0;
+      appearance: none;
+      border-radius: 999px;
+      background:
+        linear-gradient(
+          90deg,
+          var(--accent-strong) 0%,
+          var(--accent-strong) var(--value),
+          rgba(255,255,255,.13) var(--value),
+          rgba(255,255,255,.13) 100%
+        );
+      cursor: pointer;
+      outline: none;
+    }
+
+    .range::-webkit-slider-thumb {
+      width: 16px;
+      height: 16px;
+      appearance: none;
+      border: 3px solid var(--surface-strong);
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 2px 12px rgba(0,0,0,.35);
+    }
+
+    .range::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border: 3px solid var(--surface-strong);
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 2px 12px rgba(0,0,0,.35);
+    }
+
+    .range:focus-visible {
+      outline: 3px solid rgba(168, 184, 255, .32);
+      outline-offset: 5px;
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 50px;
+      height: 50px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--surface-soft);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+
+    .icon-button:hover {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.18);
+    }
+
+    .icon-button:active {
+      transform: scale(.94);
+    }
+
+    .icon-button:focus-visible,
+    .track:focus-visible,
+    .search-input:focus-visible,
+    .speed-select:focus-visible {
+      outline: 3px solid rgba(168, 184, 255, .36);
+      outline-offset: 3px;
+    }
+
+    .icon-button svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .play-button {
+      width: 68px;
+      height: 68px;
+      border: 0;
+      background: linear-gradient(145deg, #c3cdff, #7e94ff);
+      color: #111626;
+      box-shadow: 0 14px 30px rgba(84, 110, 255, 0.34);
+    }
+
+    .play-button svg {
+      width: 27px;
+      height: 27px;
+    }
+
+    .secondary-controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .volume-wrap {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .volume-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--muted);
+      fill: currentColor;
+    }
+
+    .speed-select {
+      min-width: 76px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.055);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .playlist-panel {
+      min-height: 620px;
+      padding: 20px;
+    }
+
+    .playlist-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .playlist-header h2 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: -0.02em;
+    }
+
+    .search {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .search svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      width: 19px;
+      height: 19px;
+      color: var(--muted);
+      fill: currentColor;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 13px 15px 13px 43px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: rgba(255,255,255,.045);
+      color: var(--text);
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: #818a9e;
+    }
+
+    .playlist {
+      display: grid;
+      gap: 9px;
+      max-height: calc(100dvh - 206px);
+      min-height: 420px;
+      overflow-y: auto;
+      padding-right: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,.18) transparent;
+    }
+
+    .track {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      width: 100%;
+      padding: 9px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+
+    .track:hover {
+      background: rgba(255,255,255,.055);
+      border-color: var(--line);
+    }
+
+    .track:active {
+      transform: scale(.99);
+    }
+
+    .track.active {
+      border-color: rgba(168,184,255,.24);
+      background: linear-gradient(90deg, rgba(127,149,255,.20), rgba(255,255,255,.035));
+    }
+
+    .track-thumb {
+      width: 48px;
+      height: 48px;
+      display: block;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #111624;
+    }
+
+    .track-copy {
+      min-width: 0;
+    }
+
+    .track-title {
+      display: block;
+      overflow: hidden;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 750;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .track-artist {
+      display: block;
+      overflow: hidden;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.73rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .track-number {
+      min-width: 28px;
+      color: var(--muted);
+      font-size: .74rem;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+
+    .track.active .track-number {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .empty-state {
+      display: grid;
+      place-items: center;
+      min-height: 230px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .9rem;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        padding-bottom: max(22px, env(safe-area-inset-bottom));
+      }
+
+      .player-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .now-playing {
+        position: relative;
+        top: auto;
+      }
+
+      .playlist-panel {
+        min-height: auto;
+      }
+
+      .playlist {
+        max-height: none;
+        min-height: 0;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .topbar {
+        padding: 0 4px;
+      }
+
+      .panel {
+        border-radius: 24px;
+      }
+
+      .now-playing,
+      .playlist-panel {
+        padding: 14px;
+      }
+
+      .art-wrap {
+        border-radius: 20px;
+      }
+
+      .track-info {
+        padding-top: 18px;
+      }
+
+      .controls {
+        gap: 15px;
+      }
+
+      .secondary-controls {
+        grid-template-columns: minmax(0,1fr) auto;
+      }
+
+      .track {
+        grid-template-columns: 46px minmax(0,1fr) 26px;
+        padding: 8px;
+      }
+
+      .track-thumb {
+        width: 46px;
+        height: 46px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <p class="eyebrow">Solitude Reflections</p>
+        <h1>Ninox Audio Player</h1>
+      </div>
+      <div class="track-count" id="trackCount">0 reflections</div>
+    </header>
+
+    <main class="player-layout">
+      <section class="panel now-playing" aria-label="Now playing">
+        <div class="art-wrap">
+          <img id="cover" class="cover" src="" alt="Audio cover" />
+          <div class="playing-badge" id="playingBadge">
+            <span class="equalizer" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            Playing
+          </div>
+        </div>
+
+        <div class="track-info">
+          <h2 id="title">Loading reflection…</h2>
+          <p id="artist" class="artist">Ninox Antolihao</p>
+          <p id="status" class="status" role="status" aria-live="polite">Ready to listen</p>
+        </div>
+
+        <audio id="audio" preload="metadata"></audio>
+
+        <div class="progress-area">
+          <input
+            id="progress"
+            class="range"
+            type="range"
+            min="0"
+            max="1000"
+            value="0"
+            aria-label="Audio progress"
+          />
+          <div class="time-row">
+            <span id="currentTime">0:00</span>
+            <span id="duration">0:00</span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="previousButton" class="icon-button" type="button" aria-label="Previous reflection">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6V5Zm3.5 7 9 7V5l-9 7Z"/></svg>
+          </button>
+
+          <button id="playButton" class="icon-button play-button" type="button" aria-label="Play audio">
+            <svg id="playIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7L8 5Z"/></svg>
+          </button>
+
+          <button id="nextButton" class="icon-button" type="button" aria-label="Next reflection">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2V5ZM5.5 5v14l9-7-9-7Z"/></svg>
+          </button>
+        </div>
+
+        <div class="secondary-controls">
+          <label class="volume-wrap">
+            <svg class="volume-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm11.5 3a3.5 3.5 0 0 0-1.5-2.87v5.74A3.5 3.5 0 0 0 15.5 12Zm-1.5-6.23v2.06a5 5 0 0 1 0 8.34v2.06A7 7 0 0 0 14 5.77Z"/></svg>
+            <input
+              id="volume"
+              class="range"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1"
+              aria-label="Volume"
+            />
+          </label>
+
+          <select id="speed" class="speed-select" aria-label="Playback speed">
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="panel playlist-panel" aria-label="Playlist">
+        <div class="playlist-header">
+          <h2>All reflections</h2>
+        </div>
+
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 19.6-5.2-5.2a7.5 7.5 0 1 0-1.4 1.4l5.2 5.2 1.4-1.4ZM5 10a5 5 0 1 1 10 0 5 5 0 0 1-10 0Z"/></svg>
+          <input
+            id="searchInput"
+            class="search-input"
+            type="search"
+            placeholder="Search reflections"
+            autocomplete="off"
+          />
+        </label>
+
+        <div id="playlist" class="playlist"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const tracks = [
+  {
+    title: "Knowing Yourself",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/knowing-self/knowing-self.mp3",
+    cover: "/reflections/pages/knowing-self/cover.jpg"
+  },
+
+  {
+    title: "Theology as a Barrier of Truth",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/theology-as-barrier-to-truth/theology.mp3",
+    cover: "/reflections/pages/theology-as-barrier-to-truth/theology-barrier-og.PNG"
+  },
+  
+  {
+    title: "Mystery Shrinks When Knowledge Steps In",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/mystery-shrinks/mystery-shrinks.mp3",
+    cover: "/reflections/pages/mystery-shrinks/mystery-shrinks.jpg"
+  },
+  
+  {
+    title: "When Power Meets Belief",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/power-meets-belief/powermeetsbelief.mp3",
+    cover: "/reflections/pages/power-meets-belief/powermeetsbelief.PNG"
+  },
+
+  {
+    title: "The Madness Of Faith",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/the-madness-of-fath/the-madness-of-faith.mp3",
+    cover: "/reflections/pages/the-madness-of-fath/2A065E2E-B3E9-487F-90B9-9B41F90D1DD5.png"
+  },
+  
+  {
+    title: "The Walls of Theology To Reality",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/creation-of-the-invisible/creation-of-the-invisible.mp3",
+    cover: "/reflections/pages/creation-of-the-invisible/coti1.jpg"
+  },
+  
+  {
+    title: "The Architechture of Longging",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/seeking-divine/seeking-divine.mp3",
+    cover: "/reflections/pages/seeking-divine/seeking-divine.PNG"
+  },
+  
+  {
+    title: "Belief and Goodness",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/belief/beliefxgood.mp3",
+    cover: "/reflections/pages/belief/belief.png"
+  },
+  
+  {
+    title: "The Lost Language of Metaphor",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/the-lost-language-of-metaphor/lost-language-of-metaphor.mp3",
+    cover: "/reflections/pages/the-lost-language-of-metaphor/lostlanguageofmetaphor.jpg"
+  },
+  
+  {
+    title: "The Deity",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/diety/diety.mp3",
+    cover: "/reflections/pages/diety/diety.jpg"
+  },
+  
+  {
+    title: "The Power of Duality",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/moral-choice/moralchoice.mp3",
+    cover: "/reflections/pages/moral-choice/moralchoice.jpg"
+  },
+  
+  {
+    title: "Devine Perfection",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/divine-perfection/divine-perfection.mp3",
+    cover: "/reflections/pages/divine-perfection/divine-perfection.PNG"
+  },
+  
+  {
+    title: "The Divine Premise",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/divine-hiddeness/premiseofgod.mp3",
+    cover: "/reflections/pages/divine-hiddeness/devinepremise.jpg"
+  },
+  
+  {
+    title: "The Alchemy of the Soul",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/soul/Soul_PC.mp3",
+    cover: "/reflections/pages/soul/soul.jpg"
+  },
+  
+  {
+    title: "The God We Created",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/the-god-we-created/the-gods-we-create.mp3",
+    cover: "/reflections/pages/the-god-we-created/thegodwecreated.PNG"
+  },
+  
+  {
+    title: "The Paradox of God",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/the-paradox-of-god/godparadox.mp3",
+    cover: "/reflections/pages/the-paradox-of-god/paradoxofgod.jpg"
+  },
+  
+  {
+    title: "Transcendence",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/transcendence/transcendence.mp3",
+    cover: "/reflections/pages/transcendence/transcendence.png"
+  },
+  
+  {
+    title: "The Good and Evil Within Us",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/godevil/godevil.mp3",
+    cover: "/reflections/pages/godevil/godevil.jpg"
+  },
+  
+  {
+    title: "The Mirror of Worship",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/mirror-of-worship/themirrorofworship.mp3",
+    cover: "/reflections/pages/mirror-of-worship/mirror-worship.PNG"
+  },
+  
+   {
+    title: "From Oneness to Duality",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/oneness-duality/oneness-duality-reflection.mp3",
+    cover: "/reflections/pages/oneness-duality/oneness-duality.png"
+  },
+  
+  {
+    title: "The Shift of Blame",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/question-label-sinner/labeled-sinner.mp3",
+    cover: "/reflections/pages/question-label-sinner/label-sinner.jpeg"
+  },
+  
+  {
+    title: "The Inner Listener",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/the-inner-listener/theinnerlistener.mp3",
+    cover: "/reflections/pages/the-inner-listener/theinnerlistener.jpg"
+  },
+  
+  {
+    title: "The Subconscious Mind",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/subconsciousmind/subcon.mp3",
+    cover: "/reflections/pages/subconsciousmind/subconP.PNG"
+  },
+  
+  {
+    title: "Silent Influence",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/silent-influence/silentinfluence.mp3",
+    cover: "/reflections/pages/silent-influence/silent-influence.PNG"
+  },
+  
+  {
+    title: "The Kingdom Within",
+    artist: "Ninox Antolihao",
+    audio: "/reflections/pages/kingdom_within/kingdomwithin_reflection.mp3",
+    cover: "/reflections/pages/kingdom_within/kingdomwithin.png"
+  }
+];
+
+    const audio = document.getElementById("audio");
+    const title = document.getElementById("title");
+    const artist = document.getElementById("artist");
+    const cover = document.getElementById("cover");
+    const status = document.getElementById("status");
+    const playingBadge = document.getElementById("playingBadge");
+    const playButton = document.getElementById("playButton");
+    const playIcon = document.getElementById("playIcon");
+    const previousButton = document.getElementById("previousButton");
+    const nextButton = document.getElementById("nextButton");
+    const progress = document.getElementById("progress");
+    const volume = document.getElementById("volume");
+    const speed = document.getElementById("speed");
+    const currentTimeDisplay = document.getElementById("currentTime");
+    const durationDisplay = document.getElementById("duration");
+    const playlistElement = document.getElementById("playlist");
+    const searchInput = document.getElementById("searchInput");
+    const trackCount = document.getElementById("trackCount");
+
+    const PLAY_PATH = "M8 5v14l11-7L8 5Z";
+    const PAUSE_PATH = "M7 5h4v14H7V5Zm6 0h4v14h-4V5Z";
+
+    let currentTrackIndex = 0;
+    let filteredTrackIndexes = tracks.map((_, index) => index);
+    let isSeeking = false;
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
+      return hours > 0
+        ? `${hours}:${minutes.toString().padStart(2, "0")}:${secs}`
+        : `${minutes}:${secs}`;
+    }
+
+    function setRangeFill(element, valuePercent) {
+      const safeValue = Math.max(0, Math.min(100, valuePercent));
+      element.style.setProperty("--value", `${safeValue}%`);
+    }
+
+    function setStatus(message, isError = false) {
+      status.textContent = message;
+      status.classList.toggle("error", isError);
+    }
+
+    function setPlayingUI(isPlaying) {
+      playIcon.innerHTML = `<path d="${isPlaying ? PAUSE_PATH : PLAY_PATH}"/>`;
+      playButton.setAttribute("aria-label", isPlaying ? "Pause audio" : "Play audio");
+      cover.classList.toggle("playing", isPlaying);
+      playingBadge.classList.toggle("visible", isPlaying);
+    }
+
+    function loadTrack(index, options = {}) {
+      const { autoplay = false, restoreTime = 0 } = options;
+      const track = tracks[index];
+      if (!track) return;
+
+      currentTrackIndex = index;
+      title.textContent = track.title;
+      artist.textContent = track.artist;
+      cover.src = track.cover;
+      cover.alt = `${track.title} cover`;
+      audio.src = track.audio;
+      audio.load();
+
+      progress.value = 0;
+      setRangeFill(progress, 0);
+      currentTimeDisplay.textContent = "0:00";
+      durationDisplay.textContent = "0:00";
+      setPlayingUI(false);
+      setStatus("Loading audio…");
+
+      updatePlaylist();
+
+      const onReady = async () => {
+        if (restoreTime > 0 && Number.isFinite(audio.duration)) {
+          audio.currentTime = Math.min(restoreTime, Math.max(0, audio.duration - 1));
+        }
+        setStatus("Ready to listen");
+        if (autoplay) await playAudio();
+      };
+
+      audio.addEventListener("loadedmetadata", onReady, { once: true });
+
+      localStorage.setItem("ninox-current-track", String(index));
+      document.title = `${track.title} · Ninox Audio Player`;
+    }
+
+    async function playAudio() {
+      try {
+        setStatus("Starting…");
+        await audio.play();
+        setPlayingUI(true);
+        setStatus("Now playing");
+      } catch (error) {
+        console.error("Audio could not play:", error);
+        setPlayingUI(false);
+        setStatus("Unable to play this file. Check its path and filename.", true);
+      }
+    }
+
+    function pauseAudio() {
+      audio.pause();
+      setPlayingUI(false);
+      setStatus("Paused");
+    }
+
+    function togglePlay() {
+      audio.paused ? playAudio() : pauseAudio();
+    }
+
+    function previousTrack() {
+      if (audio.currentTime > 5) {
+        audio.currentTime = 0;
+        return;
+      }
+      const position = filteredTrackIndexes.indexOf(currentTrackIndex);
+      const previousPosition = position > 0 ? position - 1 : filteredTrackIndexes.length - 1;
+      loadTrack(filteredTrackIndexes[previousPosition] ?? 0, { autoplay: true });
+    }
+
+    function nextTrack() {
+      const position = filteredTrackIndexes.indexOf(currentTrackIndex);
+      const nextPosition = position >= 0 && position < filteredTrackIndexes.length - 1 ? position + 1 : 0;
+      loadTrack(filteredTrackIndexes[nextPosition] ?? 0, { autoplay: true });
+    }
+
+    function updatePlaylist() {
+      playlistElement.innerHTML = "";
+
+      if (!filteredTrackIndexes.length) {
+        playlistElement.innerHTML = `<div class="empty-state">No reflection matches your search.</div>`;
+        trackCount.textContent = "0 results";
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      filteredTrackIndexes.forEach((trackIndex, visibleIndex) => {
+        const track = tracks[trackIndex];
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "track";
+        button.dataset.index = String(trackIndex);
+
+        if (trackIndex === currentTrackIndex) {
+          button.classList.add("active");
+          button.setAttribute("aria-current", "true");
+        }
+
+        const thumb = document.createElement("img");
+        thumb.className = "track-thumb";
+        thumb.src = track.cover;
+        thumb.alt = "";
+        thumb.loading = "lazy";
+
+        const copy = document.createElement("span");
+        copy.className = "track-copy";
+
+        const name = document.createElement("span");
+        name.className = "track-title";
+        name.textContent = track.title;
+
+        const byline = document.createElement("span");
+        byline.className = "track-artist";
+        byline.textContent = track.artist;
+
+        const number = document.createElement("span");
+        number.className = "track-number";
+        number.textContent = String(visibleIndex + 1).padStart(2, "0");
+
+        copy.append(name, byline);
+        button.append(thumb, copy, number);
+
+        button.addEventListener("click", () => {
+          if (trackIndex === currentTrackIndex) {
+            togglePlay();
+          } else {
+            loadTrack(trackIndex, { autoplay: true });
+          }
+        });
+
+        fragment.appendChild(button);
+      });
+
+      playlistElement.appendChild(fragment);
+      trackCount.textContent =
+        filteredTrackIndexes.length === tracks.length
+          ? `${tracks.length} reflections`
+          : `${filteredTrackIndexes.length} results`;
+
+      requestAnimationFrame(() => {
+        playlistElement.querySelector(".track.active")?.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth"
+        });
+      });
+    }
+
+    function filterTracks() {
+      const query = searchInput.value.trim().toLowerCase();
+      filteredTrackIndexes = tracks
+        .map((track, index) => ({ track, index }))
+        .filter(({ track }) =>
+          `${track.title} ${track.artist}`.toLowerCase().includes(query)
+        )
+        .map(({ index }) => index);
+      updatePlaylist();
+    }
+
+    playButton.addEventListener("click", togglePlay);
+    previousButton.addEventListener("click", previousTrack);
+    nextButton.addEventListener("click", nextTrack);
+    searchInput.addEventListener("input", filterTracks);
+
+    audio.addEventListener("loadedmetadata", () => {
+      durationDisplay.textContent = formatTime(audio.duration);
+      setStatus("Ready to listen");
+    });
+
+    audio.addEventListener("canplay", () => {
+      if (audio.paused) setStatus("Ready to listen");
+    });
+
+    audio.addEventListener("waiting", () => {
+      if (!audio.paused) setStatus("Buffering…");
+    });
+
+    audio.addEventListener("playing", () => {
+      setPlayingUI(true);
+      setStatus("Now playing");
+    });
+
+    audio.addEventListener("pause", () => {
+      if (!audio.ended) setPlayingUI(false);
+    });
+
+    audio.addEventListener("error", () => {
+      setPlayingUI(false);
+      setStatus("Audio file not found or could not be loaded.", true);
+    });
+
+    audio.addEventListener("timeupdate", () => {
+      if (!audio.duration || isSeeking) return;
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progress.value = String(Math.round(percent * 10));
+      setRangeFill(progress, percent);
+      currentTimeDisplay.textContent = formatTime(audio.currentTime);
+
+      localStorage.setItem(
+        "ninox-playback-position",
+        JSON.stringify({
+          index: currentTrackIndex,
+          time: Math.floor(audio.currentTime)
+        })
+      );
+    });
+
+    progress.addEventListener("input", () => {
+      isSeeking = true;
+      const percent = Number(progress.value) / 10;
+      setRangeFill(progress, percent);
+      if (audio.duration) {
+        currentTimeDisplay.textContent = formatTime((percent / 100) * audio.duration);
+      }
+    });
+
+    progress.addEventListener("change", () => {
+      if (audio.duration) {
+        audio.currentTime = (Number(progress.value) / 1000) * audio.duration;
+      }
+      isSeeking = false;
+    });
+
+    volume.addEventListener("input", () => {
+      audio.volume = Number(volume.value);
+      setRangeFill(volume, Number(volume.value) * 100);
+      localStorage.setItem("ninox-volume", volume.value);
+    });
+
+    speed.addEventListener("change", () => {
+      audio.playbackRate = Number(speed.value);
+      localStorage.setItem("ninox-speed", speed.value);
+    });
+
+    audio.addEventListener("ended", nextTrack);
+
+    document.addEventListener("keydown", event => {
+      if (event.target.matches("input, select")) return;
+
+      if (event.code === "Space") {
+        event.preventDefault();
+        togglePlay();
+      } else if (event.code === "ArrowRight") {
+        audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10);
+      } else if (event.code === "ArrowLeft") {
+        audio.currentTime = Math.max(0, audio.currentTime - 10);
+      }
+    });
+
+    const savedVolume = Number(localStorage.getItem("ninox-volume"));
+    if (Number.isFinite(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+      audio.volume = savedVolume;
+      volume.value = String(savedVolume);
+    }
+    setRangeFill(volume, Number(volume.value) * 100);
+
+    const savedSpeed = localStorage.getItem("ninox-speed");
+    if ([...speed.options].some(option => option.value === savedSpeed)) {
+      speed.value = savedSpeed;
+      audio.playbackRate = Number(savedSpeed);
+    }
+
+    let initialIndex = Number(localStorage.getItem("ninox-current-track"));
+    if (!Number.isInteger(initialIndex) || initialIndex < 0 || initialIndex >= tracks.length) {
+      initialIndex = 0;
+    }
+
+    let restoreTime = 0;
+    try {
+      const savedPosition = JSON.parse(localStorage.getItem("ninox-playback-position"));
+      if (savedPosition?.index === initialIndex && Number.isFinite(savedPosition.time)) {
+        restoreTime = savedPosition.time;
+      }
+    } catch {}
+
+    trackCount.textContent = `${tracks.length} reflections`;
+    loadTrack(initialIndex, { restoreTime });
+  </script>
+</body>
+</html>

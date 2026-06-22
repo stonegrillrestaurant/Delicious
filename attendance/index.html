@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance Range Calculator</title>
+  <style>
+    :root{
+      --bg:#f5f2ea;
+      --card:#ffffff;
+      --ink:#1d1b20;
+      --muted:#6b6670;
+      --brand:#3b1f78;
+      --brand2:#5b35a3;
+      --soft:#fff3cf;
+      --line:#ddd7cc;
+      --danger:#b42318;
+      --ok:#16794c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+    header{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white;padding:18px 16px;text-align:center;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+    header h1{font-size:20px;margin:0 0 5px} header p{margin:0;font-size:13px;opacity:.9}
+    .wrap{max-width:1100px;margin:0 auto;padding:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    label{font-weight:700;font-size:13px;display:block;margin-bottom:5px;color:#2c2635}
+    input,textarea,button,select{font:inherit}
+    input,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fffdf8;color:var(--ink)}
+    textarea{min-height:130px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    button{border:0;border-radius:999px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+    button.secondary{background:#e8e1d4;color:#241d2c} button.danger{background:#b42318}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .stat{background:var(--soft);border:1px solid #eadca6;border-radius:14px;padding:12px;text-align:center}
+    .stat b{display:block;font-size:24px;color:var(--brand)} .stat span{font-size:12px;color:var(--muted)}
+    
+    /* Updated Table Container CSS */
+    .table-wrapper {
+      width: 100%;
+      max-height: 60vh; /* Keeps the table within view and scrollable */
+      overflow-y: auto;
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #eee;
+      -webkit-overflow-scrolling: touch;
+    }
+    table{width:100%;border-collapse:collapse;background:white;min-width:500px;}
+    th{background:var(--brand);color:white;text-align:left;font-size:13px;padding:10px;position:sticky;top:0;z-index:2;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+    td{border-bottom:1px solid #eee;padding:9px;font-size:14px;vertical-align:top}
+    tr:nth-child(even) td{background:#fbfaf7}
+    .status-full{font-weight:700;color:var(--ok)} .status-half{font-weight:700;color:#9a6700} .status-warn{font-weight:700;color:var(--danger)}
+    .hint{font-size:12px;color:var(--muted);line-height:1.45;margin-top:8px}
+    .hidden{display:none}
+    @media(max-width:760px){.grid,.summary{grid-template-columns:1fr 1fr} th,td{font-size:12px;padding:8px} header h1{font-size:18px}}
+    @media(max-width:460px){.grid,.summary{grid-template-columns:1fr}.wrap{padding:10px}.card{padding:12px} }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Attendance Range Calculator</h1>
+  <p>Search employee by name or ID, choose date range, and combine IN/OUT into one row per day.</p>
+</header>
+<div class="wrap">
+  <section class="card">
+    <div class="grid">
+      <div><label for="startDate">Start Date</label><input id="startDate" type="date"></div>
+      <div><label for="endDate">End Date</label><input id="endDate" type="date"></div>
+      <div><label for="searchBox">Search Name or ID</label><input id="searchBox" placeholder="Example: rony or 8"></div>
+      <div><label for="threshold">Full Day Starts At</label><input id="threshold" type="number" min="1" step="0.25" value="6"></div>
+    </div>
+    <div class="btns">
+      <button onclick="calculate()">Calculate</button>
+      <button class="secondary" onclick="loadSample()">Load Sample</button>
+      <button class="secondary" onclick="downloadCSV()">Export CSV</button>
+      <button class="danger" onclick="clearAll()">Clear</button>
+    </div>
+    <p class="hint">Rules: 1 punch / no out = Half Day / No Out. Below selected hours = Half Day. Selected hours or more = Full Day. 3 punches = warning.</p>
+  </section>
+
+  <section class="card">
+    <label for="rawData">Paste raw attendance data here</label>
+    <textarea id="rawData" placeholder="Paste from Google Sheets here. Columns should be: ID, Name, Dept., Time, Device ID"></textarea>
+    <p class="hint">You can paste tab-separated rows directly from Google Sheets. The app reads ID, Name, and Time.</p>
+  </section>
+
+  <section class="summary card">
+    <div class="stat"><b id="totalDays">0</b><span>Total Days</span></div>
+    <div class="stat"><b id="fullDays">0</b><span>Full Days</span></div>
+    <div class="stat"><b id="halfDays">0</b><span>Half Days</span></div>
+    <div class="stat"><b id="rowsCount">0</b><span>Rows Shown</span></div>
+  </section>
+
+  <section class="card" style="padding: 0; overflow: hidden; border: none; box-shadow: none;">
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Time Range</th><th>Status</th><th>Hours</th></tr></thead>
+        <tbody id="resultBody"><tr><td colspan="6">No result yet.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<script>
+let lastResults = [];
+
+// List of input IDs to save in localStorage
+const savedInputIds = ['startDate', 'endDate', 'searchBox', 'threshold', 'rawData'];
+
+// Load data on start
+window.addEventListener('DOMContentLoaded', () => {
+  // Restore saved fields
+  savedInputIds.forEach(id => {
+    const savedValue = localStorage.getItem('att_calc_' + id);
+    if (savedValue !== null) {
+      document.getElementById(id).value = savedValue;
+    }
+    
+    // Attach event listeners to auto-save when user types
+    document.getElementById(id).addEventListener('input', saveState);
+    document.getElementById(id).addEventListener('change', saveState);
+  });
+
+  // Automatically calculate if rawData exists
+  if (document.getElementById('rawData').value.trim() !== '') {
+    calculate();
+  }
+});
+
+// Save all fields to localStorage
+function saveState() {
+  savedInputIds.forEach(id => {
+    localStorage.setItem('att_calc_' + id, document.getElementById(id).value);
+  });
+}
+
+function parseDateTime(value){
+  if(!value) return null;
+  value = String(value).trim();
+  let d = new Date(value);
+  if(!isNaN(d)) return d;
+  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(m){
+    return new Date(Number(m[3]), Number(m[1])-1, Number(m[2]), Number(m[4]), Number(m[5]), Number(m[6]||0));
+  }
+  return null;
+}
+function dateKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0')}
+function prettyDate(d){return String(d.getMonth()+1).padStart(2,'0')+"/"+String(d.getDate()).padStart(2,'0')+"/"+d.getFullYear()}
+function prettyTime(d){return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}
+function parseRows(text){
+  const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  return lines.map(line=>{
+    const parts = line.includes('\t') ? line.split('\t') : line.split(/\s{2,}|,/);
+    if(parts[0] && String(parts[0]).toLowerCase()==='id') return null;
+    const id = (parts[0]||'').trim();
+    const name = (parts[1]||'').trim();
+    let timeText = (parts[3]||'').trim();
+    if(!timeText && parts.length >= 3) timeText = parts[2].trim();
+    const dt = parseDateTime(timeText);
+    if(!id || !name || !dt) return null;
+    return {id,name,dt};
+  }).filter(Boolean);
+}
+function calculate(){
+  saveState(); // Ensure state is saved when calculated
+  const text = document.getElementById('rawData').value;
+  const startVal = document.getElementById('startDate').value;
+  const endVal = document.getElementById('endDate').value;
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const threshold = Number(document.getElementById('threshold').value || 6);
+  const start = startVal ? new Date(startVal + 'T00:00:00') : null;
+  const end = endVal ? new Date(endVal + 'T23:59:59') : null;
+  const rows = parseRows(text).filter(r=>{
+    const searchOk = !q || r.name.toLowerCase().includes(q) || String(r.id).toLowerCase() === q;
+    const dateOk = (!start || r.dt >= start) && (!end || r.dt <= end);
+    return searchOk && dateOk;
+  });
+  const groups = new Map();
+  for(const r of rows){
+    const key = r.id + '♦' + r.name + '♦' + dateKey(r.dt);
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r.dt);
+  }
+  const results = [];
+  for(const [key, punches] of groups){
+    const [id,name,dk] = key.split('♦');
+    punches.sort((a,b)=>a-b);
+    const first = punches[0];
+    const last = punches[punches.length-1];
+    const count = punches.length;
+    const hours = count === 1 ? 0 : Math.round(((last-first)/36e5)*100)/100;
+    let status = '';
+    if(count === 3) status = '⚠️ 3 PUNCH';
+    else if(count === 1) status = 'Half Day / No Out';
+    else if(hours < threshold) status = 'Half Day';
+    else status = 'Full Day';
+    results.push({id,name,dateObj:first,date:prettyDate(first),time: count===1 ? `${prettyTime(first)} - NO OUT` : `${prettyTime(first)} - ${prettyTime(last)}`,status,hours});
+  }
+  results.sort((a,b)=>a.dateObj-b.dateObj || String(a.name).localeCompare(String(b.name)));
+  lastResults = results;
+  render(results);
+}
+function dayValue(status){
+  if(status === 'Full Day') return 1;
+  if(status.includes('Half Day')) return 0.5;
+  return 0;
+}
+function render(results){
+  const tbody = document.getElementById('resultBody');
+  if(!results.length){tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No matching result.</td></tr>';} else {
+    tbody.innerHTML = results.map(r=>{
+      const cls = r.status==='Full Day'?'status-full':(r.status.includes('⚠️')?'status-warn':'status-half');
+      return `<tr><td>${escapeHtml(r.id)}</td><td>${escapeHtml(r.name)}</td><td>${r.date}</td><td>${r.time}</td><td class="${cls}">${r.status}</td><td>${r.hours}</td></tr>`;
+    }).join('');
+  }
+  const total = results.reduce((s,r)=>s+dayValue(r.status),0);
+  document.getElementById('totalDays').textContent = Number.isInteger(total) ? total : total.toFixed(1);
+  document.getElementById('fullDays').textContent = results.filter(r=>r.status==='Full Day').length;
+  document.getElementById('halfDays').textContent = results.filter(r=>r.status.includes('Half Day')).length;
+  document.getElementById('rowsCount').textContent = results.length;
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function downloadCSV(){
+  if(!lastResults.length){alert('No result to export.');return;}
+  const rows = [['ID','Name','Date','Time Range','Status','Hours'], ...lastResults.map(r=>[r.id,r.name,r.date,r.time,r.status,r.hours])];
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='attendance-results.csv'; a.click(); URL.revokeObjectURL(url);
+}
+function clearAll(){
+  document.getElementById('rawData').value=''; 
+  document.getElementById('searchBox').value=''; 
+  document.getElementById('startDate').value=''; 
+  document.getElementById('endDate').value=''; 
+  document.getElementById('threshold').value='6';
+  
+  // Clear from localStorage
+  savedInputIds.forEach(id => {
+    localStorage.removeItem('att_calc_' + id);
+  });
+  
+  lastResults=[]; 
+  render([]);
+}
+function loadSample(){
+  document.getElementById('startDate').value='2026-05-01';
+  document.getElementById('endDate').value='2026-05-31';
+  document.getElementById('searchBox').value='rony';
+  document.getElementById('rawData').value=`ID\tName\tDept.\tTime\tDevice ID
+8\tRONY\tKitchen\t05/01/2026 10:02:34\t1
+8\tRONY\tKitchen\t05/01/2026 20:27:19\t1
+8\tRONY\tKitchen\t05/02/2026 9:49:02\t1
+8\tRONY\tKitchen\t05/02/2026 20:17:55\t1
+8\tRONY\tKitchen\t05/03/2026 17:01:39\t1
+8\tRONY\tKitchen\t05/03/2026 20:06:59\t1
+8\tRONY\tKitchen\t05/05/2026 16:29:43\t1
+8\tRONY\tKitchen\t05/06/2026 10:02:57\t1
+8\tRONY\tKitchen\t05/06/2026 20:00:57\t1`;
+  
+  saveState(); // Update localStorage with the sample data
+  calculate();
+}
+</script>
+</body>
+</html>
