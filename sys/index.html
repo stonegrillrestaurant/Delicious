@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stone Grill Payroll - Smart Cloud Suite</title>
+    <title>Stone Grill Payroll</title>
     
     <link rel="icon" type="image/png" href="/sys/icon.png">
     <link rel="apple-touch-icon" href="/sys/icon.png">
@@ -133,6 +133,7 @@
         const HistoryIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></Icon>;
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+
 
         // --- DIGITAL PAYSLIP WIDGET COMPONENT ---
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, onPrintPOS, isAdmin }) {
@@ -501,9 +502,8 @@
 
             const isAdmin = userRole === 'Admin';
 
-            // UPDATED: Now points to the ROOT collections where your data actually lives
-            const getVaultCol = (col) => window.fb.collection(window.fb.db, col);
-            const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, col, id);
+            const getVaultCol = (col) => window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col);
+            const getVaultDoc = (col, id) => window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'users', MASTER_VAULT_UID, col, id);
 
             const showToast = (message, type = "info") => {
                 setToast({ message, type });
