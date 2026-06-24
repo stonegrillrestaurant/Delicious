@@ -99,6 +99,9 @@
     .gcash-qr-wrap { margin:12px auto 14px; padding:12px; max-width:280px; text-align:center; background:#fff; border-radius:14px; box-shadow:0 8px 22px rgba(0,0,0,.10); }
     .gcash-qr-wrap img { display:block; width:100%; max-width:240px; height:auto; margin:0 auto; border-radius:8px; }
     .gcash-qr-label { margin-top:8px; font-size:.95rem; font-weight:700; color:#123; }
+    .gcash-backup-box { margin-top:12px; padding:12px; border-radius:10px; background:#f8fafc; border:1px solid #e5e7eb; text-align:left; }
+    .gcash-backup-box p { margin:6px 0; }
+    .gcash-backup-box .backup-note { font-size:.85rem; color:#666; margin-top:8px; }
     .receipt-upload-block { margin-top:12px; padding:12px; border-radius:10px; background:rgba(0,0,0,0.04); }
     .receipt-upload-block h4 { margin:0 0 8px; font-size:1.02rem; }
     .receipt-status { margin-top:8px; font-size:.92rem; }
@@ -270,7 +273,14 @@
         <div class="gcash-qr-label">Scan the QR code to pay</div>
       </div>
 
-      <!-- Payment name and number removed to avoid confusion. Customers should pay by scanning the QR only. -->
+      <div class="gcash-backup-box">
+        <strong>If QR scan does not work:</strong>
+        <p>You may send payment manually to:</p>
+        <p><strong>Name:</strong> <span id="gcashAccountName">NI****** A.</span></p>
+        <p><strong>GCash Number:</strong> <span id="gcashMobileText">+63 917 836 6126</span></p>
+        <button type="button" id="btnCopyNumber" class="btn ghost" style="margin-top:8px;">Copy Number</button>
+        <p class="backup-note">Please upload your receipt after payment so our staff can verify it.</p>
+      </div>
 
       <!-- Standalone uploader that posts to Telegram via hidden iframe (no CORS, no Apps Script) -->
       <div class="receipt-upload-block">
@@ -302,8 +312,8 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- Scripts -->
-  <script src="config.js?v=15"></script>
-  <script src="main.js?v=16.2"></script>
+  <script src="config.js?v=16"></script>
+  <script src="main.js?v=16.5"></script>
 
   <!-- ===== Google Sheets Recording Bridge =====
        UPDATED: Sends order data to Google Sheets through Google Apps Script.
@@ -430,9 +440,8 @@
       var btn = document.getElementById('openPayPopupBtn');
       if (!btn) return;
       btn.addEventListener('click', function(){
-        var total = (typeof cartSubtotal === 'function' && Array.isArray(window.cart) && window.cart.length)
-          ? cartSubtotal() : null;
-        window.showGcashPopup('N/A', total);
+        var total = (typeof cartSubtotal === 'function') ? cartSubtotal() : (window.currentOrderTotal || null);
+        window.showGcashPopup(window.currentOrderId || 'N/A', total);
       });
     })();
 
@@ -468,7 +477,7 @@
       const mobileTxt = document.getElementById('gcashMobileText');
       const acctName  = document.getElementById('gcashAccountName');
       if (mobileTxt && window.APP?.GCASH_MOBILE) mobileTxt.textContent = window.APP.GCASH_MOBILE;
-      if (acctName && window.APP?.GCASH_ACCOUNT_NAME) acctName.textContent = 'Account: ' + window.APP.GCASH_ACCOUNT_NAME;
+      if (acctName && window.APP?.GCASH_ACCOUNT_NAME) acctName.textContent = window.APP.GCASH_ACCOUNT_NAME;
 
       window.currentOrderId = orderId || '';
       window.currentOrderTotal = totalAmount || '';
