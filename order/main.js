@@ -382,56 +382,93 @@ function buildOrderMessage(form, orderId){
   return msg;
 }
 
-/* ---- Submit ---- */
 function handleSubmit(e){
   e.preventDefault();
-  if(cart.length===0){ showToast('Add at least 1 item to your order.'); return; }
-  var mobileEl = $('#mobileNumber'); if(mobileEl) normalizeMobile(mobileEl);
-  var form = e.currentTarget;
 
-  // Prepare metadata BEFORE we clear the cart
+  var form = e.currentTarget;
+  var submitBtn = form.querySelector('button[type="submit"]');
+
+  // Prevent duplicate / multiple submit
+  if (form.dataset.submitting === 'true') {
+    showToast('✅ Your order was already submitted. Please scan the GCash QR or upload your receipt.', 5000);
+
+    if (typeof window.showGcashPopup === 'function' && window.pendingOrder) {
+      window.showGcashPopup(window.pendingOrder.orderId, window.pendingOrder.total);
+    }
+
+    return;
+  }
+
+  if(cart.length === 0){
+    showToast('Add at least 1 item to your order.');
+    return;
+  }
+
+  var mobileEl = $('#mobileNumber');
+  if(mobileEl) normalizeMobile(mobileEl);
+
+  // Lock the form immediately
+  form.dataset.submitting = 'true';
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting... Please wait';
+  }
+
+  // Prepare order details
   var orderId = generateOrderId();
   var totalBefore = cartSubtotal();
 
-  // Persist key info for the upload caption (in case fields change)
   window.pendingOrder = {
     orderId: orderId,
     total: totalBefore,
-    name: ($('#fullName')||{}).value || '',
-    mobile: ($('#mobileNumber')||{}).value || '',
+    name: ($('#fullName') || {}).value || '',
+    mobile: ($('#mobileNumber') || {}).value || '',
     formEl: form
   };
 
+  window.currentOrderId = orderId;
+  window.currentOrderTotal = totalBefore;
+
   var message = buildOrderMessage(form, orderId);
+
   var payload = {
     orderId: orderId,
     name: window.pendingOrder.name,
     mobile: window.pendingOrder.mobile,
-    orderType: (form.querySelector('input[name="orderType"]:checked')||{}).value || '',
-    persons: ($('#persons')||{}).value || '',
-    date: ($('#orderDate')||{}).value || '',
-    time: ($('#orderTime')||{}).value || '',
-    requests: ($('#specialRequests')||{}).value || '',
-    items: cart.map(it=>({ name:it.name, qty:it.qty, price:it.price })),
+    orderType: (form.querySelector('input[name="orderType"]:checked') || {}).value || '',
+    persons: ($('#persons') || {}).value || '',
+    date: ($('#orderDate') || {}).value || '',
+    time: ($('#orderTime') || {}).value || '',
+    requests: ($('#specialRequests') || {}).value || '',
+    items: cart.map(it => ({ name: it.name, qty: it.qty, price: it.price })),
     subtotal: totalBefore,
     createdAt: new Date().toISOString()
   };
 
+  // IMPORTANT FIX:
+  // Show QR popup immediately. Do not wait for Telegram.
+  showToast('✅ Order submitted. Please scan the GCash QR or upload your receipt. Order ID: ' + orderId, 7000);
+
+  if (typeof window.showGcashPopup === 'function') {
+    window.showGcashPopup(orderId, totalBefore);
+  }
+
+  // Send to Telegram in the background
   sendToTelegram(message).then(function(){
-    // Send customer SMS via Infobip (immediately after Telegram succeeds)
-    sendInfobipSMS(window.pendingOrder.mobile, window.pendingOrder.name, orderId);
-
-    // Friendly toast + auto-open GCash popup with Order ID & Total
-    showToast('✅ Order received! Please pay via GCash now. Order ID: ' + orderId, 6000);
-    if (typeof window.showGcashPopup === 'function') {
-      window.showGcashPopup(orderId, totalBefore);
-    }
-
-    // Do NOT clear/reset yet; wait for successful receipt upload elsewhere
     logToSheets(payload);
   }).catch(function(err){
     console.error(err);
-    showToast('Failed to send to Telegram. Please try again.');
+
+    showToast('⚠️ Telegram sending failed. Please try again or contact Stone Grill staff.', 8000);
+
+    // Unlock only if Telegram really failed
+    form.dataset.submitting = 'false';
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Order';
+    }
   });
 }
 
