@@ -358,7 +358,10 @@
       return {
         orderId: orderData.orderId || orderData.id || window.currentOrderId || "",
         name: orderData.name || orderData.customerName || document.getElementById("fullName")?.value || "",
-        mobile: orderData.mobile || orderData.phone || document.getElementById("mobileNumber")?.value || "",
+        mobile: (function(){
+      var m = String(orderData.mobile || orderData.phone || document.getElementById("mobileNumber")?.value || "").trim();
+        return m && m.charAt(0) !== "'" ? "'" + m : m;
+      })(),
         orderType: orderData.orderType || (selectedType ? selectedType.value : ""),
         table: orderData.table || orderData.tableNumber || orderData.persons || document.getElementById("persons")?.value || "",
         items: normalizeSheetItems(orderData),
