@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stone Grill Payroll - Cloud Sync</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Configure Babel to use Classic React (Fixes the jsx-runtime crash) -->
+    <script>
+        Babel.registerPreset('react-classic', {
+            presets: [
+                [Babel.availablePresets['react'], { runtime: 'classic' }]
+            ]
+        });
+    </script>
+
+    <!-- Firebase Classic Compat (Pinned to 10.14.1 for Stability) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        @media print {
+            .print-hidden { display: none !important; }
+            body { background: white; margin: 0; padding: 0; }
+            @page { margin: 0; }
+        }
+        .pos-receipt-active { max-width: 320px; margin: 0 auto; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <!-- Failsafe Loading Screen -->
+        <div class="flex items-center justify-center min-h-screen bg-slate-900 text-white flex-col">
+            <i class="ph ph-spinner-gap animate-spin text-4xl mb-4 text-blue-500"></i>
+            <h1 class="font-black tracking-widest uppercase">System Initializing...</h1>
+            <p class="text-xs text-slate-400 mt-2">Connecting to Secure Database</p>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCRIPT -->
+    <script type="text/babel" data-presets="env,react-classic">
+        // 1. FIREBASE INITIALIZATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
+            authDomain: "stone-grill-payroll.firebaseapp.com",
+            projectId: "stone-grill-payroll",
+            storageBucket: "stone-grill-payroll.firebasestorage.app",
+            messagingSenderId: "255528914541",
+            appId: "1:255528914541:web:d58d9731a29d27fc253964"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        // Expose Firebase tools to window so React can use them easily
+        window.fb = {
+            db: firebase.firestore(),
+            auth: firebase.auth(),
+            appId: "stone-grill-v1"
+        };
+
+        const { useState, useEffect, useMemo } = React;
+        const ADMIN_EMAIL = 'stonegrill2014@gmail.com';
+        const OVERRIDE_PIN = '2014';
+
+        const formatMoney = (amount) => {
+            return parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        // --- MAIN APPLICATION COMPONENT ---
+        function App() {
+            const [isReady, setIsReady] = useState(false);
+            const [user, setUser] = useState(null);
+            const [userRole, setUserRole] = useState(''); 
+            const [overridePin, setOverridePin] = useState('');
+            const [showOverride, setShowOverride] = useState(false);
+
+            // Data State
+            const [employees, setEmployees] = useState([]);
+            
+            // Login State
+            const [showEmailLogin, setShowEmailLogin] = useState(false);
+            const [emailInput, setEmailInput] = useState('');
+            const [passwordInput, setPasswordInput] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            // Dashboard State
+            const [activeTab, setActiveTab] = useState('dashboard');
+
+            // 2. AUTHENTICATION LISTENER
+            useEffect(() => {
+                const unsubscribe = window.fb.auth.onAuthStateChanged((u) => {
+                    setUser(u);
+                    setIsReady(true);
+                    if (!u) {
+                        setUserRole('');
+                    }
+                });
+                return () => unsubscribe();
+            }, []);
+
+            // 3. MASTERLIST PARSER & ROLE ASSIGNMENT
+            useEffect(() => {
+                if (!user) return;
+                
+                // IMPORTANT: This is the path it is looking for data in Firebase
+                const usersRef = window.fb.db.collection('artifacts').doc(window.fb.appId).collection('public').doc('data').collection('employees');
+                
+                const unsubEmps = usersRef.onSnapshot((snapshot) => {
+                    const fetchedEmps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setEmployees(fetchedEmps);
+                    
+                    if (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                        setUserRole('Admin');
+                    } else {
+                        const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
+                        if (staffMatch) {
+                            setUserRole('Staff');
+                        } else {
+                            setUserRole('Unauthorized');
+                        }
+                    }
+                }, (err) => {
+                    console.error("Database access error:", err);
+                    if (user.email === ADMIN_EMAIL) setUserRole('Admin');
+                    else setUserRole('Unauthorized');
+                });
+
+                return () => unsubEmps();
+            }, [user]);
+
+            // --- LOGIN HANDLERS ---
+            const handleGoogleLogin = async () => {
+                setLoading(true);
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    await window.fb.auth.signInWithPopup(provider);
+                } catch (err) {
+                    alert("Login failed: " + err.message);
+                }
+                setLoading(false);
+            };
+
+            const handleEmailLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                try {
+                    await window.fb.auth.signInWithEmailAndPassword(emailInput, passwordInput);
+                } catch (err) {
+                    alert("Login failed: " + err.message);
+                }
+                setLoading(false);
+            };
+
+            const handleOverride = () => {
+                if (overridePin === OVERRIDE_PIN) {
+                    setUserRole('Admin');
+                    setShowOverride(false);
+                } else {
+                    alert("Incorrect PIN");
+                }
+            };
+
+            // --- UI RENDER LOGIC ---
+            if (!isReady) return null;
+
+            // 1. NOT LOGGED IN VIEW
+            if (!user) {
+                return (
+                    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+                        <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl text-center">
+                            <div className="w-20 h-20 bg-slate-900 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg">
+                                <i className="ph-fill ph-fire text-4xl text-orange-500"></i>
+                            </div>
+                            <h1 className="text-2xl font-black text-slate-900">Stone Grill</h1>
+                            <p className="text-slate-500 text-sm font-semibold mb-8 uppercase tracking-widest">Secure Cloud Payroll</p>
+
+                            {!showEmailLogin ? (
+                                <div className="space-y-4">
+                                    <button onClick={handleGoogleLogin} disabled={loading} className="w-full border-2 border-slate-200 py-4 rounded-2xl font-black text-slate-700 flex items-center justify-center gap-3 hover:bg-slate-50 transition-colors">
+                                        <i className="ph-fill ph-google-logo text-xl"></i> 
+                                        {loading ? 'Authenticating...' : 'Sign in with Google'}
+                                    </button>
+                                    <button onClick={() => setShowEmailLogin(true)} className="w-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors py-2">
+                                        Use Direct Email Login
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleEmailLogin} className="space-y-4">
+                                    <input type="email" placeholder="Registered Email" required value={emailInput} onChange={e => setEmailInput(e.target.value)} className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none font-bold bg-slate-50 focus:border-blue-500 transition-colors"/>
+                                    <input type="password" placeholder="Password" required value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none font-bold bg-slate-50 focus:border-blue-500 transition-colors"/>
+                                    <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg hover:bg-blue-700 transition-colors">
+                                        {loading ? 'Authenticating...' : 'Sign In Direct'}
+                                    </button>
+                                    <button type="button" onClick={() => setShowEmailLogin(false)} className="w-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors pt-4">
+                                        Back to Google
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            // 2. LOGGED IN BUT UNAUTHORIZED
+            if (userRole === 'Unauthorized') {
+                return (
+                    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+                        <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-xl text-center relative">
+                            {!showOverride && (
+                                <button onClick={() => setShowOverride(true)} className="absolute top-4 right-4 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-800">Override</button>
+                            )}
+                            <i className="ph-fill ph-lock-key text-6xl text-rose-500 mb-4"></i>
+                            <h1 className="text-2xl font-black text-slate-900 mb-2">Access Denied</h1>
+                            <p className="text-slate-500 text-sm font-semibold mb-8">
+                                The account <span className="text-blue-600">{user.email}</span> is not registered in the Masterlist. Please ask the Admin to add this email to your profile.
+                            </p>
+                            
+                            {showOverride ? (
+                                <div className="mb-8 flex gap-2">
+                                    <input type="password" placeholder="Admin PIN" value={overridePin} onChange={e => setOverridePin(e.target.value)} className="flex-1 border-2 p-3 rounded-xl font-bold outline-none text-center" />
+                                    <button onClick={handleOverride} className="bg-slate-900 text-white px-6 rounded-xl font-black">UNLOCK</button>
+                                </div>
+                            ) : null}
+
+                            <button onClick={() => window.fb.auth.signOut()} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform">
+                                Sign Out & Try Again
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // 3. ADMIN DASHBOARD
+            return (
+                <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
+                    {/* Sidebar */}
+                    <div className="w-full md:w-64 bg-slate-900 text-white flex flex-col print-hidden shrink-0">
+                        <div className="p-6">
+                            <h2 className="text-xl font-black tracking-wider">STONE GRILL</h2>
+                            <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-1">{userRole} PANEL</p>
+                        </div>
+                        
+                        <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-visible px-4 gap-2 pb-4">
+                            <SidebarButton icon="ph-squares-four" label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+                            <SidebarButton icon="ph-users" label="Masterlist" active={activeTab === 'employees'} onClick={() => setActiveTab('employees')} />
+                        </div>
+
+                        <div className="mt-auto p-4 hidden md:block">
+                            <div className="bg-slate-800 p-4 rounded-2xl text-xs overflow-hidden text-ellipsis whitespace-nowrap mb-4 text-slate-300 font-semibold">
+                                {user.email}
+                            </div>
+                            <button onClick={() => window.fb.auth.signOut()} className="w-full bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors py-3 rounded-xl font-black uppercase tracking-widest text-[10px]">
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Main Content Area */}
+                    <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+                        {activeTab === 'dashboard' && (
+                            <div>
+                                <h1 className="text-3xl font-black text-slate-900 mb-8">System Overview</h1>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <StatCard title="Total Staff Linked" value={employees.length} icon={<i className="ph-fill ph-users-three text-2xl"></i>} color="bg-blue-50 text-blue-700" />
+                                    <StatCard title="Cloud Database" value="Connected" icon={<i className="ph-fill ph-cloud-check text-2xl"></i>} color="bg-emerald-50 text-emerald-700" />
+                                </div>
+                                <div className="mt-12 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                                    <h2 className="text-xl font-black text-slate-900 mb-2">Welcome to the Fresh App Viewer</h2>
+                                    <p className="text-slate-500 font-medium mb-4">Because your data lives in Firestore, this brand new app file will load it perfectly without needing to run any migrations.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'employees' && (
+                            <div>
+                                <div className="flex justify-between items-end mb-8">
+                                    <h1 className="text-3xl font-black text-slate-900">Masterlist Directory</h1>
+                                </div>
+                                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest">
+                                            <tr>
+                                                <th className="p-4">Name</th>
+                                                <th className="p-4">Position</th>
+                                                <th className="p-4">Daily Rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {employees.length === 0 ? (
+                                                <tr><td colSpan="4" className="p-8 text-center text-slate-400 font-semibold italic">Directory is currently reading as empty.</td></tr>
+                                            ) : (
+                                                employees.map(emp => (
+                                                    <tr key={emp.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                                        <td className="p-4 font-black text-slate-900">{emp.name || `${emp.firstName || ''} ${emp.lastName || ''}`}</td>
+                                                        <td className="p-4 font-bold text-slate-500">{emp.position || 'Staff'}</td>
+                                                        <td className="p-4 font-black text-slate-700">₱{formatMoney(emp.dailyRate || emp.rate)}</td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Helper Sub-components
+        function SidebarButton({ icon, label, active, onClick }) {
+            return (
+                <button onClick={onClick} className={`flex items-center gap-3 w-full p-4 rounded-2xl font-bold text-sm transition-all whitespace-nowrap ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}>
+                    <i className={`ph-fill ${icon} text-xl ${active ? 'opacity-100' : 'opacity-70'}`}></i>
+                    <span className="hidden md:inline">{label}</span>
+                </button>
+            );
+        }
+
+        function StatCard({ title, value, icon, color }) {
+            return (
+                <div className={`p-6 rounded-3xl ${color} shadow-sm border border-white/20`}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="w-12 h-12 rounded-full bg-white/40 flex items-center justify-center shadow-inner">{icon}</div>
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-widest opacity-70 mb-1">{title}</p>
+                    <h3 className="text-4xl font-black">{value}</h3>
+                </div>
+            );
+        }
+
+        // 4. RENDER REACT APP
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
