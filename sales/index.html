@@ -6,7 +6,7 @@
     <title>Stone Grill Staff Portal</title>
     <style>
         :root {
-            --primary: #4CAF50; --danger: #f44336; --dark: #2c3e50; 
+            --primary: #4CAF50; --danger: #f44336; --warning: #f39c12; --dark: #2c3e50; 
             --light: #f8f9fa; --border: #e0e0e0; --info-bg: #e3f2fd; 
             --info-text: #1565c0; --warning-bg: #fff3e0; --warning-text: #e65100;
         }
@@ -34,29 +34,28 @@
         .status-offline { background: var(--warning-bg); color: var(--warning-text); }
 
         /* Form Layout */
-        form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; margin-bottom: 15px; background: var(--info-bg); padding: 15px; border-radius: 8px; border: 1px solid #bbdefb; }
+        form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; margin-bottom: 15px; background: var(--info-bg); padding: 15px; border-radius: 8px; border: 1px solid #bbdefb; transition: 0.3s;}
         input, select, button { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        .submit-btn { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; width: 100%; }
+        .submit-btn { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s;}
 
-        /* Filters */
+        /* Filters & Tabs */
         .filter-bar { display: flex; gap: 10px; align-items: center; background: #f1f2f6; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
         .filter-bar input { flex-grow: 1; padding: 8px; }
         .filter-bar label { font-weight: bold; font-size: 0.9rem; color: #555; }
         .clear-btn { background: #7f8c8d; color: white; padding: 8px 15px; border:none; border-radius: 6px; cursor: pointer; }
 
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; white-space: nowrap; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab-btn { padding: 10px 15px; border: 1px solid var(--border); background: white; border-radius: 6px; cursor: pointer; font-weight: bold; color: var(--dark); transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
         /* Summaries */
-        .section-title { margin-top: 20px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid var(--light); font-size: 1.1rem; color: #555; }
+        .section-title { margin-top: 10px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid var(--light); font-size: 1.1rem; color: #555; }
         .summary { display: flex; gap: 15px; margin-bottom: 15px; }
         .card { flex: 1; background: var(--light); padding: 15px 10px; text-align: center; border-radius: 8px; border: 1px solid var(--border); }
-        .card h3 { margin: 0; font-size: 0.9rem; color: #666; text-transform: uppercase; }
+        .card h3 { margin: 0; font-size: 0.85rem; color: #666; text-transform: uppercase; }
         .card p { font-size: 1.4rem; font-weight: 700; margin: 8px 0 0; }
         .text-green { color: var(--primary); } .text-red { color: var(--danger); } .text-blue { color: #1976d2; }
-
-        .cashier-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px; }
-        .cashier-card { background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .cashier-card h4 { margin: 0 0 5px 0; font-size: 0.9rem; }
-        .cashier-card p { margin: 0; font-size: 1.2rem; font-weight: bold; }
-        .admin-vault { background: #f0f8ff; border-color: #bbdefb; }
 
         /* Table */
         table { width: 100%; border-collapse: collapse; }
@@ -64,7 +63,11 @@
         th { background-color: var(--dark); color: white; font-weight: 500; }
         .cashier-badge { display: block; font-size: 0.7rem; color: #7f8c8d; margin-top: 4px; background: #f1f2f6; padding: 3px 6px; border-radius: 4px; width: fit-content; }
         .pending-badge { background: #ffeaa7; color: #d35400; border: 1px solid #f1c40f; }
+        
+        .action-group { display: flex; gap: 5px; }
         .delete-btn { background-color: var(--danger); color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; border: none; font-size: 0.85rem;}
+        .edit-btn { background-color: var(--warning); color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; border: none; font-size: 0.85rem;}
+        .edit-btn:disabled, .delete-btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
         /* Mobile Adjustments */
         @media (max-width: 650px) {
@@ -82,13 +85,15 @@
             td::before { content: attr(data-label); font-weight: bold; color: #555; text-align: left; }
             .cashier-badge { display: inline-block; margin-top: 0; }
             .col-content { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+            .action-group { width: 100%; display: flex; margin-top: 5px;}
+            .action-group button { flex: 1; padding: 12px; }
         }
 
         /* Print Mode */
         @media print {
             body { background: white; padding: 0; margin: 0; }
             .container { box-shadow: none; padding: 0; }
-            #loginView, #transactionForm, .action-btns, .status-bar, .filter-bar, .delete-btn { display: none !important; }
+            #loginView, #transactionForm, .action-btns, .status-bar, .filter-bar, .tabs, .action-group { display: none !important; }
             table { display: table !important; }
             thead { display: table-header-group !important; }
             tr { display: table-row !important; border: none; }
@@ -131,36 +136,38 @@
             <option value="transfer">Transfer to Admin Vault (-)</option>
         </select>
         <input type="text" id="description" placeholder="Item / Description" required>
-        <input type="number" id="amount" placeholder="Amount ($)" step="0.01" min="0" inputmode="decimal" required>
+        <input type="number" id="amount" placeholder="Amount (₱)" step="0.01" min="0" inputmode="decimal" required>
         <button type="submit" id="submitBtn" class="submit-btn">Add Entry</button>
     </form>
 
     <!-- History Filter -->
     <div class="filter-bar">
         <label>📅 Filter Date:</label>
-        <input type="date" id="filterDateInput" onchange="applyFilters()">
-        <button class="clear-btn" onclick="clearFilters()">Show All Time</button>
+        <input type="date" id="filterDateInput" onchange="applyDateFilter()">
+        <button class="clear-btn" onclick="clearDateFilter()">Show All Time</button>
+    </div>
+
+    <!-- Dashboard Tabs -->
+    <h3 class="section-title">📊 View Dashboards</h3>
+    <div id="tabsContainer" class="tabs">
+        <!-- Tabs injected dynamically by JS -->
     </div>
 
     <!-- Summaries -->
-    <h3 class="section-title" id="summaryTitle">📊 Store Summary</h3>
     <div class="summary">
         <div class="card">
             <h3>Total Sales</h3>
-            <p id="totalSales" class="text-green">$0.00</p>
+            <p id="totalSales" class="text-green">₱0.00</p>
         </div>
         <div class="card">
             <h3>Total Expenses</h3>
-            <p id="totalExpenses" class="text-red">$0.00</p>
+            <p id="totalExpenses" class="text-red">₱0.00</p>
         </div>
         <div class="card">
-            <h3>Store Profit</h3>
-            <p id="currentBalance">$0.00</p>
+            <h3 id="balanceLabel">Store Profit</h3>
+            <p id="currentBalance">₱0.00</p>
         </div>
     </div>
-
-    <h3 class="section-title">💵 Cash Drawer Balances</h3>
-    <div id="cashierBreakdown" class="cashier-breakdown"></div>
 
     <h3 class="section-title">📝 Transaction Ledger</h3>
     <table>
@@ -174,13 +181,19 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-    // Set today's date for inputs
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
-    document.getElementById('filterDateInput').value = today; 
-    let activeFilterDate = today; 
+    // Set today's date for inputs globally
+    function setDateToToday() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
+        return today;
+    }
+    
+    document.getElementById('filterDateInput').value = setDateToToday(); 
+    let activeFilterDate = setDateToToday(); 
+    let activeTab = 'Store';
+    let editingId = null;
 
     // YOUR FIREBASE CONFIGURATION
     const firebaseConfig = {
@@ -201,7 +214,6 @@
     let cloudTransactions = []; 
     let unsubscribeSnapshot = null;
 
-    // Database collection name
     const collectionPath = "transactions";
 
     // --- LOGIN / LOGOUT LOGIC ---
@@ -228,7 +240,6 @@
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         if (user) {
-            // Extract a display name from the email (e.g., genarlyneco@gmail.com -> Genarlyneco)
             let emailPrefix = user.email.split('@')[0];
             cashierName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
             
@@ -307,26 +318,45 @@
             type: document.getElementById('type').value,
             description: document.getElementById('description').value,
             amount: parseFloat(document.getElementById('amount').value),
-            createdAt: Date.now(),
-            cashierName: cashierName,
-            userEmail: currentUser.email
         };
 
-        if (navigator.onLine) {
-            const txRef = collection(db, collectionPath);
-            await addDoc(txRef, txData);
+        if (editingId) {
+            // Update Existing Entry
+            if (navigator.onLine) {
+                await updateDoc(doc(db, collectionPath, editingId), txData);
+                
+                // Reset Edit Mode
+                editingId = null;
+                const btn = document.getElementById('submitBtn');
+                btn.innerText = "Add Entry";
+                btn.style.backgroundColor = "var(--primary)";
+                document.getElementById('transactionForm').style.borderColor = "#bbdefb";
+            } else {
+                alert("Must be online to update entries.");
+                return;
+            }
         } else {
-            // Save to offline queue
-            let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
-            txData.id = 'pending-' + Date.now(); 
-            txData.isPending = true;
-            queue.push(txData); 
-            localStorage.setItem('sync_queue', JSON.stringify(queue));
-            initUI();
+            // Add New Entry
+            txData.createdAt = Date.now();
+            txData.cashierName = cashierName;
+            txData.userEmail = currentUser.email;
+
+            if (navigator.onLine) {
+                await addDoc(collection(db, collectionPath), txData);
+            } else {
+                let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
+                txData.id = 'pending-' + Date.now(); 
+                txData.isPending = true;
+                queue.push(txData); 
+                localStorage.setItem('sync_queue', JSON.stringify(queue));
+                initUI();
+            }
         }
         
+        // Clear fields and Reset date to today
         document.getElementById('description').value = '';
         document.getElementById('amount').value = '';
+        setDateToToday();
         document.getElementById('amount').focus();
     };
 
@@ -336,44 +366,117 @@
         }
     };
 
-    // --- FILTER LOGIC ---
-    window.applyFilters = function() {
+    window.editTransaction = function(id) {
+        if (!navigator.onLine || id.startsWith('pending-')) {
+            alert("Editing is only available online for synced entries.");
+            return;
+        }
+
+        const tx = cloudTransactions.find(t => t.id === id);
+        if (!tx) return;
+
+        document.getElementById('date').value = tx.date;
+        document.getElementById('type').value = tx.type;
+        document.getElementById('description').value = tx.description;
+        document.getElementById('amount').value = tx.amount;
+
+        editingId = id;
+        
+        // Change UI to show Edit Mode
+        const btn = document.getElementById('submitBtn');
+        btn.innerText = "Update Entry";
+        btn.style.backgroundColor = "var(--warning)";
+        document.getElementById('transactionForm').style.borderColor = "var(--warning)";
+        
+        // Scroll to top smoothly
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // --- FILTER & TABS LOGIC ---
+    window.applyDateFilter = function() {
         activeFilterDate = document.getElementById('filterDateInput').value;
         initUI();
     };
 
-    window.clearFilters = function() {
+    window.clearDateFilter = function() {
         activeFilterDate = '';
         document.getElementById('filterDateInput').value = '';
         initUI();
     };
 
+    window.switchTab = function(tabName) {
+        activeTab = tabName;
+        initUI();
+    }
+
     // --- UI RENDERING & CALCULATIONS ---
     function initUI() {
-        const transactionList = document.getElementById('transactionList');
-        transactionList.innerHTML = '';
-        
-        // Combine live data with offline queued data
+        // 1. Gather all data
         const queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
         let allTx = [...cloudTransactions, ...queue];
 
-        // Apply Date Filter
+        // 2. Apply Date Filter First
         if (activeFilterDate !== '') {
             allTx = allTx.filter(t => t.date === activeFilterDate);
-            document.getElementById('summaryTitle').innerText = `📊 Store Summary (${activeFilterDate})`;
-        } else {
-            document.getElementById('summaryTitle').innerText = `📊 Store Summary (All Time)`;
         }
 
-        // Sort by newest first
-        allTx.sort((a, b) => b.createdAt - a.createdAt);
+        // 3. Render Employee Tabs dynamically based on the filtered date
+        const uniqueNames = Array.from(new Set(allTx.map(t => t.cashierName || 'Staff')));
+        if (!uniqueNames.includes(activeTab) && activeTab !== 'Store' && activeTab !== 'Vault') {
+            activeTab = 'Store'; // Reset tab if user changes date and employee didn't work that day
+        }
+
+        let tabsHtml = `<button class="tab-btn ${activeTab === 'Store' ? 'active' : ''}" onclick="switchTab('Store')">🏢 Store Overall</button>`;
+        tabsHtml += `<button class="tab-btn ${activeTab === 'Vault' ? 'active' : ''}" onclick="switchTab('Vault')">🏛️ Admin Vault</button>`;
         
-        if (allTx.length === 0) {
-            transactionList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding: 20px;">No transactions found for this date.</td></tr>`;
+        uniqueNames.forEach(name => {
+            tabsHtml += `<button class="tab-btn ${activeTab === name ? 'active' : ''}" onclick="switchTab('${name}')">👤 ${name}</button>`;
+        });
+        document.getElementById('tabsContainer').innerHTML = tabsHtml;
+
+        // 4. Calculate Summaries and Filter Table based on Active Tab
+        let sales = 0, expenses = 0, balance = 0, balanceLabel = "Store Profit";
+        let displayTx = [];
+
+        if (activeTab === 'Store') {
+            sales = allTx.filter(t => t.type === 'sale').reduce((a, b) => a + b.amount, 0);
+            expenses = allTx.filter(t => t.type === 'expense').reduce((a, b) => a + b.amount, 0);
+            balance = sales - expenses;
+            displayTx = allTx;
+        } else if (activeTab === 'Vault') {
+            sales = 0; 
+            expenses = 0;
+            balance = allTx.filter(t => t.type === 'transfer').reduce((a, b) => a + b.amount, 0);
+            balanceLabel = "Vault Total";
+            displayTx = allTx.filter(t => t.type === 'transfer');
+        } else {
+            // Specific Cashier Dashboard
+            const myTx = allTx.filter(t => (t.cashierName || 'Staff') === activeTab);
+            sales = myTx.filter(t => t.type === 'sale').reduce((a, b) => a + b.amount, 0);
+            expenses = myTx.filter(t => t.type === 'expense').reduce((a, b) => a + b.amount, 0);
+            const transfers = myTx.filter(t => t.type === 'transfer').reduce((a, b) => a + b.amount, 0);
+            balance = sales - expenses - transfers; // Cash on Hand calculation
+            balanceLabel = "Cash on Hand";
+            displayTx = myTx;
         }
 
-        // Render Table Rows
-        allTx.forEach(transaction => {
+        // Update Summary UI
+        document.getElementById('totalSales').innerText = `₱${sales.toFixed(2)}`;
+        document.getElementById('totalExpenses').innerText = `₱${expenses.toFixed(2)}`;
+        document.getElementById('currentBalance').innerText = `₱${balance.toFixed(2)}`;
+        document.getElementById('currentBalance').className = balance < 0 ? 'text-red' : 'text-green';
+        document.getElementById('balanceLabel').innerText = balanceLabel;
+
+        // 5. Render Table
+        const transactionList = document.getElementById('transactionList');
+        transactionList.innerHTML = '';
+        displayTx.sort((a, b) => b.createdAt - a.createdAt);
+        
+        if (displayTx.length === 0) {
+            transactionList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding: 20px;">No transactions found for this view.</td></tr>`;
+        }
+
+        displayTx.forEach(transaction => {
             let sign = '+'; let typeColor = 'text-green';
             if (transaction.type === 'expense') { sign = '-'; typeColor = 'text-red'; }
             if (transaction.type === 'transfer') { sign = '-'; typeColor = 'text-blue'; }
@@ -382,7 +485,7 @@
                 ? `<span class="cashier-badge pending-badge">Pending Sync ⏳</span>` 
                 : `<span class="cashier-badge">👤 ${transaction.cashierName || 'Staff'}</span>`;
             
-            const disableDelete = transaction.isPending || !navigator.onLine ? 'disabled' : '';
+            const disableBtns = transaction.isPending || !navigator.onLine ? 'disabled' : '';
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -391,59 +494,15 @@
                 <td data-label="Description">
                     <div class="col-content"><span>${transaction.description}</span>${displayBadge}</div>
                 </td>
-                <td data-label="Amount">${sign}$${Math.abs(transaction.amount).toFixed(2)}</td>
-                <td data-label=""><button class="delete-btn" onclick="removeTransaction('${transaction.id}')" ${disableDelete}>Delete</button></td>
+                <td data-label="Amount">${sign}₱${Math.abs(transaction.amount).toFixed(2)}</td>
+                <td data-label="">
+                    <div class="action-group">
+                        <button class="edit-btn" onclick="editTransaction('${transaction.id}')" ${disableBtns}>Edit</button>
+                        <button class="delete-btn" onclick="removeTransaction('${transaction.id}')" ${disableBtns}>Delete</button>
+                    </div>
+                </td>
             `;
             transactionList.appendChild(tr);
-        });
-
-        updateSummaryValues(allTx);
-    }
-
-    function updateSummaryValues(transactionsData) {
-        // Calculate Totals
-        const sales = transactionsData.filter(t => t.type === 'sale').reduce((acc, t) => acc + t.amount, 0);
-        const expenses = transactionsData.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-        const total = sales - expenses;
-
-        document.getElementById('totalSales').innerText = `$${sales.toFixed(2)}`;
-        document.getElementById('totalExpenses').innerText = `$${expenses.toFixed(2)}`;
-        
-        const balanceEl = document.getElementById('currentBalance');
-        balanceEl.innerText = `$${total.toFixed(2)}`;
-        balanceEl.className = total < 0 ? 'text-red' : 'text-green';
-
-        // Calculate Per Cashier Drawer
-        const cashierStats = {}; let adminVault = 0;
-
-        transactionsData.forEach(t => {
-            const name = t.cashierName || 'Staff';
-            if (!cashierStats[name]) cashierStats[name] = 0;
-            
-            if (t.type === 'sale') cashierStats[name] += t.amount;
-            if (t.type === 'expense') cashierStats[name] -= t.amount;
-            if (t.type === 'transfer') { cashierStats[name] -= t.amount; adminVault += t.amount; }
-        });
-
-        // Render Cashier Breakdown Cards
-        const breakdownEl = document.getElementById('cashierBreakdown');
-        breakdownEl.innerHTML = `
-            <div class="cashier-card admin-vault">
-                <h4>🏛️ Admin Vault</h4>
-                <p class="text-green">+$${adminVault.toFixed(2)}</p>
-                <span style="font-size: 0.7rem; color: #666;">(Transferred Cash)</span>
-            </div>
-        `;
-
-        Object.keys(cashierStats).forEach(name => {
-            const bal = cashierStats[name];
-            breakdownEl.innerHTML += `
-                <div class="cashier-card">
-                    <h4>👤 ${name}</h4>
-                    <p class="${bal < 0 ? 'text-red' : 'text-green'}">$${bal.toFixed(2)}</p>
-                    <span style="font-size: 0.7rem; color: #666;">(Cash on Hand)</span>
-                </div>
-            `;
         });
     }
 </script>
