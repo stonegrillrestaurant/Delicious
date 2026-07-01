@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Auto-Sync Multi-User Ledger</title>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --danger: #f44336;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+            --border: #e0e0e0;
+            --info-bg: #e3f2fd;
+            --info-text: #1565c0;
+            --warning-bg: #fff3e0;
+            --warning-text: #e65100;
+        }
+        
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 15px;
+            -webkit-text-size-adjust: 100%; 
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: var(--dark);
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .print-btn {
+            background-color: #34495e;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .print-btn:hover { background-color: #2c3e50; }
+
+        .section-title {
+            margin-top: 25px;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--light);
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        .status-bar {
+            text-align: center;
+            font-size: 0.85rem;
+            padding: 10px;
+            background: var(--info-bg);
+            color: var(--info-text);
+            margin-bottom: 20px;
+            border-radius: 6px;
+            word-wrap: break-word;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        .status-offline {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+        }
+
+        /* Form Layout */
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr auto;
+            gap: 12px;
+            margin-bottom: 10px;
+            background: var(--info-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #bbdefb;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px; 
+        }
+
+        .submit-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Summary Cards */
+        .summary {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            flex: 1;
+            background: var(--light);
+            padding: 15px 10px;
+            text-align: center;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .card h3 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .card p {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 8px 0 0;
+        }
+
+        .text-green { color: var(--primary); }
+        .text-red { color: var(--danger); }
+        .text-blue { color: #1976d2; }
+
+        /* Cashier Breakdown */
+        .cashier-breakdown {
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px; 
+            margin-bottom: 10px;
+        }
+        
+        .cashier-card {
+            background: white; 
+            padding: 15px; 
+            border-radius: 8px;
+            border: 1px solid var(--border); 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            text-align: center;
+        }
+        
+        .cashier-card h4 { margin: 0 0 5px 0; font-size: 0.9rem; color: var(--dark); }
+        .cashier-card p { margin: 0; font-size: 1.2rem; font-weight: bold; }
+        .admin-vault { background: #f0f8ff; border-color: #bbdefb; }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--dark);
+            color: white;
+            font-weight: 500;
+        }
+
+        .cashier-badge {
+            display: block;
+            font-size: 0.7rem;
+            color: #7f8c8d;
+            margin-top: 4px;
+            background: #f1f2f6;
+            padding: 3px 6px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+
+        .pending-badge {
+            background: #ffeaa7;
+            color: #d35400;
+            border: 1px solid #f1c40f;
+        }
+
+        .delete-btn {
+            background-color: var(--danger);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .delete-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Modal styling */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal-content {
+            background: white; padding: 25px; border-radius: 12px;
+            width: 90%; max-width: 400px; text-align: center;
+        }
+        .modal-content input { margin-bottom: 15px; }
+        
+        .name-btn {
+            background: none; border: 1px underline; color: inherit; 
+            padding: 0; margin-left: 10px; font-size: 0.8rem; cursor: pointer;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 650px) {
+            .header-flex { flex-direction: column; gap: 10px; text-align: center; }
+            .print-btn { width: 100%; justify-content: center; padding: 12px;}
+            
+            .summary { flex-direction: column; gap: 10px; }
+            .card { padding: 20px; }
+            form { grid-template-columns: 1fr; }
+
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { display: none; }
+            tr {
+                margin-bottom: 15px; border: 1px solid var(--border);
+                border-radius: 8px; padding: 10px; background: white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            }
+            td {
+                display: flex; justify-content: space-between; align-items: center;
+                border-bottom: 1px solid #eee; padding: 10px 5px; text-align: right;
+            }
+            td:last-child { border-bottom: none; padding-bottom: 5px; }
+            td::before { content: attr(data-label); font-weight: bold; color: #555; text-align: left; }
+            .cashier-badge { display: inline-block; margin-top: 0; }
+            .col-content { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+            .delete-btn { width: 100%; margin-top: 5px; padding: 12px; }
+        }
+
+        /* Print Styling */
+        @media print {
+            body { background: white; padding: 0; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .container { box-shadow: none; max-width: 100%; width: 100%; padding: 0; }
+            
+            /* Hide UI controls */
+            #transactionForm, .print-btn, .status-bar, .delete-btn, #nameModal { display: none !important; }
+            
+            h2 { text-align: center; margin-bottom: 20px; }
+            .section-title { border-bottom: 1px solid #000; color: #000; }
+            
+            /* Force standard table view even if printed from mobile */
+            table { display: table !important; width: 100%; border-collapse: collapse; }
+            thead { display: table-header-group !important; }
+            thead tr { display: table-row !important; }
+            tbody { display: table-row-group !important; }
+            tr { display: table-row !important; margin: 0; box-shadow: none; border: none; padding: 0; }
+            th, td { 
+                display: table-cell !important; 
+                border: 1px solid #ccc !important; 
+                padding: 8px !important; 
+                text-align: left !important;
+            }
+            td::before { display: none !important; } /* hide mobile labels */
+            .col-content { display: block !important; align-items: flex-start !important; }
+            
+            /* Remove action column header */
+            th:last-child, td:last-child { display: none !important; } 
+        }
+    </style>
+</head>
+<body>
+
+<!-- Name Setup Modal -->
+<div id="nameModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3>👤 Set Cashier Name</h3>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Please enter your name so transactions can be assigned to you.</p>
+        <input type="text" id="cashierNameInput" placeholder="e.g. Alice" required>
+        <button class="submit-btn" onclick="saveCashierName()">Save & Continue</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header-flex">
+        <h2>Shared Cashier Ledger</h2>
+        <button class="print-btn" onclick="window.print()">🖨️ Print Report</button>
+    </div>
+    
+    <div id="statusBar" class="status-bar">Connecting to database...</div>
+
+    <!-- DATA ENTRY AT THE TOP -->
+    <form id="transactionForm" onsubmit="handleFormSubmit(event)">
+        <input type="date" id="date" required>
+        <select id="type">
+            <option value="sale">Sale (+)</option>
+            <option value="expense">Expense (-)</option>
+            <option value="transfer">Transfer to Admin Vault (-)</option>
+        </select>
+        <input type="text" id="description" placeholder="Item / Description" required>
+        <input type="number" id="amount" placeholder="Amount ($)" step="0.01" min="0" inputmode="decimal" required>
+        <button type="submit" id="submitBtn" class="submit-btn" disabled>Add Entry</button>
+    </form>
+
+    <h3 class="section-title">📊 Store Summary</h3>
+    <div class="summary">
+        <div class="card">
+            <h3>Total Sales</h3>
+            <p id="totalSales" class="text-green">$0.00</p>
+        </div>
+        <div class="card">
+            <h3>Total Expenses</h3>
+            <p id="totalExpenses" class="text-red">$0.00</p>
+        </div>
+        <div class="card">
+            <h3>Store Balance</h3>
+            <p id="currentBalance">$0.00</p>
+        </div>
+    </div>
+
+    <h3 class="section-title">💵 Cash Drawer Balances</h3>
+    <div id="cashierBreakdown" class="cashier-breakdown">
+        <!-- Populated by JS -->
+    </div>
+
+    <h3 class="section-title">📝 Transaction Ledger</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="transactionList">
+            <!-- Transactions populated by JS -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Firebase Module Script -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    document.getElementById('date').valueAsDate = new Date();
+
+    const defaultAppId = 'cashier-ledger-app';
+    const appId = typeof __app_id !== 'undefined' ? __app_id : defaultAppId;
+    
+    let isCloudEnabled = false;
+    let firebaseConfig = null;
+
+    try {
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            isCloudEnabled = true;
+        }
+    } catch (e) {
+        console.log("No cloud config found, falling back to local mode entirely.");
+    }
+
+    let db, auth;
+    let currentUser = null;
+    let cloudTransactions = []; 
+    let unsubscribeSnapshot = null;
+
+    const statusBar = document.getElementById('statusBar');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // --- CASHIER NAME LOGIC ---
+    let localCashierName = localStorage.getItem('cashierName') || '';
+    const nameModal = document.getElementById('nameModal');
+
+    function checkCashierName() {
+        if (!localCashierName) {
+            nameModal.classList.remove('hidden');
+        }
+    }
+
+    window.saveCashierName = function() {
+        const inputVal = document.getElementById('cashierNameInput').value.trim();
+        if (inputVal) {
+            localCashierName = inputVal;
+            localStorage.setItem('cashierName', localCashierName);
+            nameModal.classList.add('hidden');
+            updateStatusUI();
+            initUI(); 
+        }
+    }
+
+    window.openNameModal = function() {
+        document.getElementById('cashierNameInput').value = localCashierName;
+        nameModal.classList.remove('hidden');
+    }
+
+    // Network Listeners
+    window.addEventListener('online', handleNetworkChange);
+    window.addEventListener('offline', handleNetworkChange);
+
+    function updateStatusUI() {
+        if (!currentUser && isCloudEnabled) return;
+
+        const nameDisplay = localCashierName ? `${localCashierName}` : 'Unknown';
+        const changeNameBtn = `<button class="name-btn" onclick="openNameModal()">(Change Name)</button>`;
+
+        if (!navigator.onLine) {
+            statusBar.innerHTML = `⚠️ Offline Mode - Entries will sync when connected ${changeNameBtn}`;
+            statusBar.className = 'status-bar status-offline';
+        } else if (isCloudEnabled && currentUser) {
+            statusBar.innerHTML = `🟢 Live Ledger | Cashier: <b>${nameDisplay}</b> ${changeNameBtn}`;
+            statusBar.className = 'status-bar';
+            statusBar.style.backgroundColor = '#e8f5e9';
+            statusBar.style.color = '#2e7d32';
+        } else {
+            statusBar.innerHTML = `🟡 Local Storage Only | Cashier: <b>${nameDisplay}</b> ${changeNameBtn}`;
+            statusBar.className = 'status-bar status-offline';
+        }
+    }
+
+    function handleNetworkChange() {
+        updateStatusUI();
+        if (navigator.onLine && isCloudEnabled && currentUser) {
+            syncOfflineQueue();
+        }
+        initUI(); 
+    }
+
+    if (isCloudEnabled) {
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth Error:", error);
+                statusBar.innerText = "Error authenticating. Refresh to try again.";
+            }
+        };
+
+        initAuth();
+        checkCashierName();
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                submitBtn.disabled = false;
+                updateStatusUI();
+                loadData();
+                if (navigator.onLine) syncOfflineQueue();
+            } else {
+                if (unsubscribeSnapshot) unsubscribeSnapshot();
+            }
+        });
+    } else {
+        submitBtn.disabled = false;
+        checkCashierName();
+        updateStatusUI();
+        initUI();
+    }
+
+    function loadData() {
+        if (!currentUser) return;
+        const txRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+        
+        unsubscribeSnapshot = onSnapshot(txRef, (snapshot) => {
+            cloudTransactions = [];
+            snapshot.forEach(docSnap => {
+                cloudTransactions.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            initUI();
+        }, (error) => {
+            console.error("Data Fetch Error:", error);
+        });
+    }
+
+    // --- AUTO SYNC LOGIC ---
+    async function syncOfflineQueue() {
+        let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
+        if (queue.length === 0) return;
+
+        statusBar.innerHTML = `🔄 Syncing ${queue.length} pending entries...`;
+        
+        const txRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+        
+        for (let item of queue) {
+            const { id, isPending, ...cleanData } = item; 
+            try {
+                await addDoc(txRef, cleanData);
+            } catch (err) {
+                console.error("Failed to sync item", err);
+            }
+        }
+        
+        localStorage.removeItem('sync_queue');
+        updateStatusUI();
+    }
+
+    window.handleFormSubmit = async function(e) {
+        e.preventDefault();
+        
+        if (!localCashierName) {
+            openNameModal();
+            return;
+        }
+
+        const txData = {
+            date: document.getElementById('date').value,
+            type: document.getElementById('type').value,
+            description: document.getElementById('description').value,
+            amount: parseFloat(document.getElementById('amount').value),
+            createdAt: Date.now(),
+            cashierId: currentUser ? currentUser.uid : 'offline-user',
+            cashierName: localCashierName
+        };
+
+        if (isCloudEnabled && currentUser && navigator.onLine) {
+            const txRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+            await addDoc(txRef, txData);
+        } else if (isCloudEnabled && currentUser && !navigator.onLine) {
+            let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
+            txData.id = 'pending-' + Date.now();
+            txData.isPending = true;
+            queue.push(txData);
+            localStorage.setItem('sync_queue', JSON.stringify(queue));
+            initUI();
+        } else {
+            let localTx = JSON.parse(localStorage.getItem('transactions')) || [];
+            txData.id = Math.floor(Math.random() * 100000000).toString();
+            localTx.push(txData);
+            localStorage.setItem('transactions', JSON.stringify(localTx));
+            initUI();
+        }
+        
+        document.getElementById('description').value = '';
+        document.getElementById('amount').value = '';
+        document.getElementById('amount').focus();
+    };
+
+    window.removeTransaction = async function(id) {
+        if (isCloudEnabled && currentUser && navigator.onLine) {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'transactions', id));
+        } else if (!isCloudEnabled) {
+            let localTx = JSON.parse(localStorage.getItem('transactions')) || [];
+            localTx = localTx.filter(t => t.id !== id);
+            localStorage.setItem('transactions', JSON.stringify(localTx));
+            initUI();
+        }
+    };
+
+    function initUI() {
+        const transactionList = document.getElementById('transactionList');
+        transactionList.innerHTML = '';
+        
+        let allTx = [];
+        if (isCloudEnabled) {
+            const queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
+            allTx = [...cloudTransactions, ...queue];
+        } else {
+            allTx = JSON.parse(localStorage.getItem('transactions')) || [];
+        }
+
+        allTx.sort((a, b) => b.createdAt - a.createdAt);
+        
+        allTx.forEach(transaction => {
+            let sign = '+';
+            let typeColor = 'text-green';
+            if (transaction.type === 'expense') { sign = '-'; typeColor = 'text-red'; }
+            if (transaction.type === 'transfer') { sign = '-'; typeColor = 'text-blue'; }
+            
+            const tr = document.createElement('tr');
+            
+            const displayName = transaction.cashierName || transaction.cashierId.substring(0,6) + '...';
+            
+            const pendingLabel = transaction.isPending 
+                ? `<span class="cashier-badge pending-badge">Pending Sync ⏳</span>` 
+                : `<span class="cashier-badge">👤 ${displayName}</span>`;
+
+            const disableDelete = transaction.isPending || !navigator.onLine ? 'disabled' : '';
+
+            tr.innerHTML = `
+                <td data-label="Date">${transaction.date}</td>
+                <td data-label="Type" class="${typeColor}">
+                    <b>${transaction.type.toUpperCase()}</b>
+                </td>
+                <td data-label="Description">
+                    <div class="col-content">
+                        <span>${transaction.description}</span>
+                        ${pendingLabel}
+                    </div>
+                </td>
+                <td data-label="Amount">${sign}$${Math.abs(transaction.amount).toFixed(2)}</td>
+                <td data-label="">
+                    <button class="delete-btn" onclick="removeTransaction('${transaction.id}')" ${disableDelete}>Delete</button>
+                </td>
+            `;
+            transactionList.appendChild(tr);
+        });
+
+        updateSummaryValues(allTx);
+    }
+
+    function updateSummaryValues(transactionsData) {
+        const sales = transactionsData.filter(t => t.type === 'sale').reduce((acc, t) => acc + t.amount, 0);
+        const expenses = transactionsData.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+        const total = sales - expenses;
+
+        document.getElementById('totalSales').innerText = `$${sales.toFixed(2)}`;
+        document.getElementById('totalExpenses').innerText = `$${expenses.toFixed(2)}`;
+        
+        const balanceEl = document.getElementById('currentBalance');
+        balanceEl.innerText = `$${total.toFixed(2)}`;
+        balanceEl.className = total < 0 ? 'text-red' : 'text-green';
+
+        const cashierStats = {}; 
+        let adminVault = 0;
+
+        transactionsData.forEach(t => {
+            const uid = t.cashierId || 'unknown';
+            if (!cashierStats[uid]) {
+                cashierStats[uid] = { 
+                    name: t.cashierName || uid.substring(0, 6) + '...', 
+                    balance: 0 
+                };
+            }
+            
+            if (t.type === 'sale') cashierStats[uid].balance += t.amount;
+            if (t.type === 'expense') cashierStats[uid].balance -= t.amount;
+            if (t.type === 'transfer') {
+                cashierStats[uid].balance -= t.amount; 
+                adminVault += t.amount;                
+            }
+        });
+
+        const breakdownEl = document.getElementById('cashierBreakdown');
+        breakdownEl.innerHTML = `
+            <div class="cashier-card admin-vault">
+                <h4>🏛️ Admin Vault</h4>
+                <p class="text-green">+$${adminVault.toFixed(2)}</p>
+                <span style="font-size: 0.7rem; color: #666;">(Transferred Cash)</span>
+            </div>
+        `;
+
+        Object.values(cashierStats).forEach(stat => {
+            breakdownEl.innerHTML += `
+                <div class="cashier-card">
+                    <h4>👤 ${stat.name}</h4>
+                    <p class="${stat.balance < 0 ? 'text-red' : 'text-green'}">$${stat.balance.toFixed(2)}</p>
+                    <span style="font-size: 0.7rem; color: #666;">(Cash on Hand)</span>
+                </div>
+            `;
+        });
+    }
+</script>
+</body>
+</html>
