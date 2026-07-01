@@ -5,47 +5,168 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Stone Grill Staff Portal</title>
     <style>
-        :root { --primary: #4CAF50; --danger: #f44336; --dark: #2c3e50; --light: #f8f9fa; }
-        body { font-family: sans-serif; background: var(--light); margin: 0; padding: 20px; }
-        .box { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; margin: 50px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .hidden { display: none; }
-        .container { width: 100%; max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        :root {
+            --primary: #4CAF50; --danger: #f44336; --dark: #2c3e50; 
+            --light: #f8f9fa; --border: #e0e0e0; --info-bg: #e3f2fd; 
+            --info-text: #1565c0; --warning-bg: #fff3e0; --warning-text: #e65100;
+        }
+        
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--light); color: var(--dark); margin: 0; padding: 15px; -webkit-text-size-adjust: 100%; }
+
+        /* Login Screen */
+        .login-box { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; margin: 10vh auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 10px; }
+        
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .hidden { display: none !important; }
+
+        /* Header & Status */
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        h2 { color: var(--dark); font-size: 1.5rem; margin: 0; }
+        .action-btns { display: flex; gap: 10px; }
+        .btn-small { padding: 8px 15px; border-radius: 6px; font-size: 0.9rem; border: none; cursor: pointer; color: white; font-weight: bold; }
+        .print-btn { background-color: #34495e; }
+        .logout-btn { background-color: var(--danger); }
+        
+        .status-bar { text-align: center; font-size: 0.85rem; padding: 10px; background: var(--info-bg); color: var(--info-text); margin-bottom: 20px; border-radius: 6px; font-weight: 500; }
+        .status-offline { background: var(--warning-bg); color: var(--warning-text); }
+
+        /* Form Layout */
+        form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; margin-bottom: 15px; background: var(--info-bg); padding: 15px; border-radius: 8px; border: 1px solid #bbdefb; }
+        input, select, button { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .submit-btn { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; width: 100%; }
+
+        /* Filters */
+        .filter-bar { display: flex; gap: 10px; align-items: center; background: #f1f2f6; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .filter-bar input { flex-grow: 1; padding: 8px; }
+        .filter-bar label { font-weight: bold; font-size: 0.9rem; color: #555; }
+        .clear-btn { background: #7f8c8d; color: white; padding: 8px 15px; border:none; border-radius: 6px; cursor: pointer; }
+
+        /* Summaries */
+        .section-title { margin-top: 20px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid var(--light); font-size: 1.1rem; color: #555; }
+        .summary { display: flex; gap: 15px; margin-bottom: 15px; }
+        .card { flex: 1; background: var(--light); padding: 15px 10px; text-align: center; border-radius: 8px; border: 1px solid var(--border); }
+        .card h3 { margin: 0; font-size: 0.9rem; color: #666; text-transform: uppercase; }
+        .card p { font-size: 1.4rem; font-weight: 700; margin: 8px 0 0; }
+        .text-green { color: var(--primary); } .text-red { color: var(--danger); } .text-blue { color: #1976d2; }
+
+        .cashier-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .cashier-card { background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .cashier-card h4 { margin: 0 0 5px 0; font-size: 0.9rem; }
+        .cashier-card p { margin: 0; font-size: 1.2rem; font-weight: bold; }
+        .admin-vault { background: #f0f8ff; border-color: #bbdefb; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background-color: var(--dark); color: white; font-weight: 500; }
+        .cashier-badge { display: block; font-size: 0.7rem; color: #7f8c8d; margin-top: 4px; background: #f1f2f6; padding: 3px 6px; border-radius: 4px; width: fit-content; }
+        .pending-badge { background: #ffeaa7; color: #d35400; border: 1px solid #f1c40f; }
+        .delete-btn { background-color: var(--danger); color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; border: none; font-size: 0.85rem;}
+
+        /* Mobile Adjustments */
+        @media (max-width: 650px) {
+            .header-flex { flex-direction: column; gap: 15px; }
+            .action-btns { width: 100%; display: flex; }
+            .action-btns button { flex: 1; }
+            form, .filter-bar, .summary { flex-direction: column; display: flex; gap: 10px; }
+            form { display: flex; }
+            
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { display: none; }
+            tr { margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+            td { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 5px; text-align: right; }
+            td:last-child { border-bottom: none; }
+            td::before { content: attr(data-label); font-weight: bold; color: #555; text-align: left; }
+            .cashier-badge { display: inline-block; margin-top: 0; }
+            .col-content { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        }
+
+        /* Print Mode */
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .container { box-shadow: none; padding: 0; }
+            #loginView, #transactionForm, .action-btns, .status-bar, .filter-bar, .delete-btn { display: none !important; }
+            table { display: table !important; }
+            thead { display: table-header-group !important; }
+            tr { display: table-row !important; border: none; }
+            th, td { display: table-cell !important; border: 1px solid #ccc; padding: 8px; text-align: left; }
+            td::before { display: none !important; }
+            th:last-child, td:last-child { display: none !important; }
+        }
     </style>
 </head>
 <body>
 
-<!-- Login Section -->
-<div id="loginView" class="box">
-    <h2 style="text-align:center">🔐 Staff Login</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="handleLogin()">Login</button>
-    <p id="errorMsg" style="color:red; font-size: 0.8rem;"></p>
+<!-- Login View -->
+<div id="loginView" class="login-box">
+    <h2 style="text-align:center; margin-top:0;">🔐 Staff Login</h2>
+    <p style="text-align:center; font-size:0.9rem; color:#666;">Enter your Stone Grill credentials.</p>
+    <input type="email" id="email" placeholder="Email Address" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button class="login-btn" onclick="handleLogin()">Login</button>
+    <p id="errorMsg" style="color:red; text-align:center; margin-top:10px; font-size: 0.9rem;"></p>
 </div>
 
-<!-- Main App Section -->
+<!-- Main App View -->
 <div id="appView" class="container hidden">
-    <div class="header">
+    <div class="header-flex">
         <h2>Stone Grill Ledger</h2>
-        <button onclick="handleLogout()" style="width:auto; background:var(--danger);">Logout</button>
+        <div class="action-btns">
+            <button class="btn-small print-btn" onclick="window.print()">🖨️ Print</button>
+            <button class="btn-small logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
     </div>
     
-    <!-- Ledger Form -->
-    <div style="background:#e3f2fd; padding:15px; border-radius:8px;">
-        <input type="date" id="date">
-        <select id="type"><option value="sale">Sale (+)</option><option value="expense">Expense (-)</option></select>
-        <input type="text" id="desc" placeholder="Description">
-        <input type="number" id="amt" placeholder="Amount">
-        <button onclick="addTransaction()">Add Entry</button>
+    <div id="statusBar" class="status-bar">Authenticating...</div>
+
+    <!-- Data Entry Form -->
+    <form id="transactionForm" onsubmit="handleFormSubmit(event)">
+        <input type="date" id="date" required>
+        <select id="type">
+            <option value="sale">Sale (+)</option>
+            <option value="expense">Expense (-)</option>
+            <option value="transfer">Transfer to Admin Vault (-)</option>
+        </select>
+        <input type="text" id="description" placeholder="Item / Description" required>
+        <input type="number" id="amount" placeholder="Amount ($)" step="0.01" min="0" inputmode="decimal" required>
+        <button type="submit" id="submitBtn" class="submit-btn">Add Entry</button>
+    </form>
+
+    <!-- History Filter -->
+    <div class="filter-bar">
+        <label>📅 Filter Date:</label>
+        <input type="date" id="filterDateInput" onchange="applyFilters()">
+        <button class="clear-btn" onclick="clearFilters()">Show All Time</button>
     </div>
 
+    <!-- Summaries -->
+    <h3 class="section-title" id="summaryTitle">📊 Store Summary</h3>
+    <div class="summary">
+        <div class="card">
+            <h3>Total Sales</h3>
+            <p id="totalSales" class="text-green">$0.00</p>
+        </div>
+        <div class="card">
+            <h3>Total Expenses</h3>
+            <p id="totalExpenses" class="text-red">$0.00</p>
+        </div>
+        <div class="card">
+            <h3>Store Profit</h3>
+            <p id="currentBalance">$0.00</p>
+        </div>
+    </div>
+
+    <h3 class="section-title">💵 Cash Drawer Balances</h3>
+    <div id="cashierBreakdown" class="cashier-breakdown"></div>
+
+    <h3 class="section-title">📝 Transaction Ledger</h3>
     <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead>
+        <thead>
+            <tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Action</th></tr>
+        </thead>
         <tbody id="transactionList"></tbody>
     </table>
 </div>
@@ -53,8 +174,15 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
+    // Set today's date for inputs
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+    document.getElementById('filterDateInput').value = today; 
+    let activeFilterDate = today; 
+
+    // YOUR FIREBASE CONFIGURATION
     const firebaseConfig = {
         apiKey: "AIzaSyDX6OKrMdfnzml4LA8SE4PDFkDJLVPmKIc",
         authDomain: "stone-grill-app.firebaseapp.com",
@@ -68,45 +196,254 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    let currentUser = null;
+    let cashierName = "Cashier";
+    let cloudTransactions = []; 
+    let unsubscribeSnapshot = null;
+
+    // Database collection name
+    const collectionPath = "transactions";
+
+    // --- LOGIN / LOGOUT LOGIC ---
     window.handleLogin = async () => {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
-        try { await signInWithEmailAndPassword(auth, email, pass); } 
-        catch (e) { document.getElementById('errorMsg').innerText = "Login failed!"; }
+        const errorMsg = document.getElementById('errorMsg');
+        
+        try {
+            errorMsg.style.color = "blue";
+            errorMsg.innerText = "Logging in...";
+            await signInWithEmailAndPassword(auth, email, pass);
+            errorMsg.innerText = "";
+        } catch (e) {
+            errorMsg.style.color = "red";
+            errorMsg.innerText = "Invalid Email or Password!";
+            console.error(e);
+        }
     };
 
     window.handleLogout = () => signOut(auth);
 
+    // --- AUTH STATE LISTENER ---
     onAuthStateChanged(auth, (user) => {
+        currentUser = user;
         if (user) {
+            // Extract a display name from the email (e.g., genarlyneco@gmail.com -> Genarlyneco)
+            let emailPrefix = user.email.split('@')[0];
+            cashierName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+            
             document.getElementById('loginView').classList.add('hidden');
             document.getElementById('appView').classList.remove('hidden');
+            
+            updateStatusUI();
             loadData();
+            if (navigator.onLine) syncOfflineQueue();
         } else {
             document.getElementById('loginView').classList.remove('hidden');
             document.getElementById('appView').classList.add('hidden');
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+            document.getElementById('password').value = '';
         }
     });
 
-    window.addTransaction = async () => {
-        await addDoc(collection(db, "transactions"), {
+    // --- NETWORK STATUS ---
+    window.addEventListener('online', handleNetworkChange);
+    window.addEventListener('offline', handleNetworkChange);
+
+    function updateStatusUI() {
+        if (!currentUser) return;
+        const statusBar = document.getElementById('statusBar');
+
+        if (!navigator.onLine) {
+            statusBar.innerHTML = `⚠️ Offline Mode | User: <b>${cashierName}</b> | Entries will sync when connected`;
+            statusBar.className = 'status-bar status-offline';
+        } else {
+            statusBar.innerHTML = `🟢 Live Cloud Connected | User: <b>${cashierName}</b>`;
+            statusBar.className = 'status-bar';
+            statusBar.style.backgroundColor = '#e8f5e9';
+            statusBar.style.color = '#2e7d32';
+        } 
+    }
+
+    function handleNetworkChange() {
+        updateStatusUI();
+        if (navigator.onLine && currentUser) syncOfflineQueue();
+        initUI(); 
+    }
+
+    // --- DATABASE OPERATIONS ---
+    function loadData() {
+        if (!currentUser) return;
+        const txRef = collection(db, collectionPath);
+        
+        unsubscribeSnapshot = onSnapshot(txRef, (snapshot) => {
+            cloudTransactions = [];
+            snapshot.forEach(docSnap => cloudTransactions.push({ id: docSnap.id, ...docSnap.data() }));
+            initUI();
+        });
+    }
+
+    async function syncOfflineQueue() {
+        let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
+        if (queue.length === 0) return;
+        
+        document.getElementById('statusBar').innerHTML = `🔄 Syncing ${queue.length} pending entries...`;
+        const txRef = collection(db, collectionPath);
+        
+        for (let item of queue) {
+            const { id, isPending, ...cleanData } = item; 
+            try { await addDoc(txRef, cleanData); } catch (err) { console.error(err); }
+        }
+        localStorage.removeItem('sync_queue');
+        updateStatusUI();
+    }
+
+    window.handleFormSubmit = async function(e) {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        const txData = {
             date: document.getElementById('date').value,
             type: document.getElementById('type').value,
-            desc: document.getElementById('desc').value,
-            amt: parseFloat(document.getElementById('amt').value),
-            ts: Date.now()
-        });
+            description: document.getElementById('description').value,
+            amount: parseFloat(document.getElementById('amount').value),
+            createdAt: Date.now(),
+            cashierName: cashierName,
+            userEmail: currentUser.email
+        };
+
+        if (navigator.onLine) {
+            const txRef = collection(db, collectionPath);
+            await addDoc(txRef, txData);
+        } else {
+            // Save to offline queue
+            let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
+            txData.id = 'pending-' + Date.now(); 
+            txData.isPending = true;
+            queue.push(txData); 
+            localStorage.setItem('sync_queue', JSON.stringify(queue));
+            initUI();
+        }
+        
+        document.getElementById('description').value = '';
+        document.getElementById('amount').value = '';
+        document.getElementById('amount').focus();
     };
 
-    function loadData() {
-        const q = query(collection(db, "transactions"), orderBy("ts", "desc"));
-        onSnapshot(q, (snapshot) => {
-            const list = document.getElementById('transactionList');
-            list.innerHTML = "";
-            snapshot.forEach(doc => {
-                const d = doc.data();
-                list.innerHTML += `<tr><td>${d.date}</td><td>${d.type}</td><td>${d.desc}</td><td>$${d.amt}</td></tr>`;
-            });
+    window.removeTransaction = async function(id) {
+        if (navigator.onLine && !id.startsWith('pending-')) {
+            await deleteDoc(doc(db, collectionPath, id));
+        }
+    };
+
+    // --- FILTER LOGIC ---
+    window.applyFilters = function() {
+        activeFilterDate = document.getElementById('filterDateInput').value;
+        initUI();
+    };
+
+    window.clearFilters = function() {
+        activeFilterDate = '';
+        document.getElementById('filterDateInput').value = '';
+        initUI();
+    };
+
+    // --- UI RENDERING & CALCULATIONS ---
+    function initUI() {
+        const transactionList = document.getElementById('transactionList');
+        transactionList.innerHTML = '';
+        
+        // Combine live data with offline queued data
+        const queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
+        let allTx = [...cloudTransactions, ...queue];
+
+        // Apply Date Filter
+        if (activeFilterDate !== '') {
+            allTx = allTx.filter(t => t.date === activeFilterDate);
+            document.getElementById('summaryTitle').innerText = `📊 Store Summary (${activeFilterDate})`;
+        } else {
+            document.getElementById('summaryTitle').innerText = `📊 Store Summary (All Time)`;
+        }
+
+        // Sort by newest first
+        allTx.sort((a, b) => b.createdAt - a.createdAt);
+        
+        if (allTx.length === 0) {
+            transactionList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding: 20px;">No transactions found for this date.</td></tr>`;
+        }
+
+        // Render Table Rows
+        allTx.forEach(transaction => {
+            let sign = '+'; let typeColor = 'text-green';
+            if (transaction.type === 'expense') { sign = '-'; typeColor = 'text-red'; }
+            if (transaction.type === 'transfer') { sign = '-'; typeColor = 'text-blue'; }
+            
+            const displayBadge = transaction.isPending 
+                ? `<span class="cashier-badge pending-badge">Pending Sync ⏳</span>` 
+                : `<span class="cashier-badge">👤 ${transaction.cashierName || 'Staff'}</span>`;
+            
+            const disableDelete = transaction.isPending || !navigator.onLine ? 'disabled' : '';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td data-label="Date">${transaction.date}</td>
+                <td data-label="Type" class="${typeColor}"><b>${transaction.type.toUpperCase()}</b></td>
+                <td data-label="Description">
+                    <div class="col-content"><span>${transaction.description}</span>${displayBadge}</div>
+                </td>
+                <td data-label="Amount">${sign}$${Math.abs(transaction.amount).toFixed(2)}</td>
+                <td data-label=""><button class="delete-btn" onclick="removeTransaction('${transaction.id}')" ${disableDelete}>Delete</button></td>
+            `;
+            transactionList.appendChild(tr);
+        });
+
+        updateSummaryValues(allTx);
+    }
+
+    function updateSummaryValues(transactionsData) {
+        // Calculate Totals
+        const sales = transactionsData.filter(t => t.type === 'sale').reduce((acc, t) => acc + t.amount, 0);
+        const expenses = transactionsData.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+        const total = sales - expenses;
+
+        document.getElementById('totalSales').innerText = `$${sales.toFixed(2)}`;
+        document.getElementById('totalExpenses').innerText = `$${expenses.toFixed(2)}`;
+        
+        const balanceEl = document.getElementById('currentBalance');
+        balanceEl.innerText = `$${total.toFixed(2)}`;
+        balanceEl.className = total < 0 ? 'text-red' : 'text-green';
+
+        // Calculate Per Cashier Drawer
+        const cashierStats = {}; let adminVault = 0;
+
+        transactionsData.forEach(t => {
+            const name = t.cashierName || 'Staff';
+            if (!cashierStats[name]) cashierStats[name] = 0;
+            
+            if (t.type === 'sale') cashierStats[name] += t.amount;
+            if (t.type === 'expense') cashierStats[name] -= t.amount;
+            if (t.type === 'transfer') { cashierStats[name] -= t.amount; adminVault += t.amount; }
+        });
+
+        // Render Cashier Breakdown Cards
+        const breakdownEl = document.getElementById('cashierBreakdown');
+        breakdownEl.innerHTML = `
+            <div class="cashier-card admin-vault">
+                <h4>🏛️ Admin Vault</h4>
+                <p class="text-green">+$${adminVault.toFixed(2)}</p>
+                <span style="font-size: 0.7rem; color: #666;">(Transferred Cash)</span>
+            </div>
+        `;
+
+        Object.keys(cashierStats).forEach(name => {
+            const bal = cashierStats[name];
+            breakdownEl.innerHTML += `
+                <div class="cashier-card">
+                    <h4>👤 ${name}</h4>
+                    <p class="${bal < 0 ? 'text-red' : 'text-green'}">$${bal.toFixed(2)}</p>
+                    <span style="font-size: 0.7rem; color: #666;">(Cash on Hand)</span>
+                </div>
+            `;
         });
     }
 </script>
