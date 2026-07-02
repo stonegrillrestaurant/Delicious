@@ -183,7 +183,7 @@
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-    // Set today's date for inputs globally
+    // Date Helper
     function setDateToToday() {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('date').value = today;
@@ -216,6 +216,17 @@
 
     const collectionPath = "transactions";
 
+    // --- SAFELY READ OLD AND NEW DATA ---
+    function safeAmount(tx) {
+        return Number(tx.amount ?? tx.amt ?? 0) || 0;
+    }
+    function safeDesc(tx) {
+        return tx.description || tx.desc || "No description";
+    }
+    function safeTime(tx) {
+        return tx.createdAt || tx.ts || 0;
+    }
+
     // --- LOGIN / LOGOUT LOGIC ---
     window.handleLogin = async () => {
         const email = document.getElementById('email').value;
@@ -230,13 +241,11 @@
         } catch (e) {
             errorMsg.style.color = "red";
             errorMsg.innerText = "Invalid Email or Password!";
-            console.error(e);
         }
     };
 
     window.handleLogout = () => signOut(auth);
 
-    // --- AUTH STATE LISTENER ---
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         if (user) {
@@ -321,11 +330,9 @@
         };
 
         if (editingId) {
-            // Update Existing Entry
             if (navigator.onLine) {
                 await updateDoc(doc(db, collectionPath, editingId), txData);
                 
-                // Reset Edit Mode
                 editingId = null;
                 const btn = document.getElementById('submitBtn');
                 btn.innerText = "Add Entry";
@@ -336,7 +343,6 @@
                 return;
             }
         } else {
-            // Add New Entry
             txData.createdAt = Date.now();
             txData.cashierName = cashierName;
             txData.userEmail = currentUser.email;
@@ -353,7 +359,6 @@
             }
         }
         
-        // Clear fields and Reset date to today
         document.getElementById('description').value = '';
         document.getElementById('amount').value = '';
         setDateToToday();
@@ -375,20 +380,18 @@
         const tx = cloudTransactions.find(t => t.id === id);
         if (!tx) return;
 
-        document.getElementById('date').value = tx.date;
-        document.getElementById('type').value = tx.type;
-        document.getElementById('description').value = tx.description;
-        document.getElementById('amount').value = tx.amount;
+        document.getElementById('date').value = tx.date || setDateToToday();
+        document.getElementById('type').value = tx.type || 'sale';
+        document.getElementById('description').value = safeDesc(tx);
+        document.getElementById('amount').value = safeAmount(tx);
 
         editingId = id;
         
-        // Change UI to show Edit Mode
         const btn = document.getElementById('submitBtn');
         btn.innerText = "Update Entry";
         btn.style.backgroundColor = "var(--warning)";
         document.getElementById('transactionForm').style.borderColor = "var(--warning)";
         
-        // Scroll to top smoothly
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -411,19 +414,16 @@
 
     // --- UI RENDERING & CALCULATIONS ---
     function initUI() {
-        // 1. Gather all data
         const queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
         let allTx = [...cloudTransactions, ...queue];
 
-        // 2. Apply Date Filter First
         if (activeFilterDate !== '') {
             allTx = allTx.filter(t => t.date === activeFilterDate);
         }
 
-        // 3. Render Employee Tabs dynamically based on the filtered date
         const uniqueNames = Array.from(new Set(allTx.map(t => t.cashierName || 'Staff')));
         if (!uniqueNames.includes(activeTab) && activeTab !== 'Store' && activeTab !== 'Vault') {
-            activeTab = 'Store'; // Reset tab if user changes date and employee didn't work that day
+            activeTab = 'Store'; 
         }
 
         let tabsHtml = `<button class="tab-btn ${activeTab === 'Store' ? 'active' : ''}" onclick="switchTab('Store')">🏢 Store Overall</button>`;
@@ -434,43 +434,39 @@
         });
         document.getElementById('tabsContainer').innerHTML = tabsHtml;
 
-        // 4. Calculate Summaries and Filter Table based on Active Tab
         let sales = 0, expenses = 0, balance = 0, balanceLabel = "Store Profit";
         let displayTx = [];
 
         if (activeTab === 'Store') {
-            sales = allTx.filter(t => t.type === 'sale').reduce((a, b) => a + b.amount, 0);
-            expenses = allTx.filter(t => t.type === 'expense').reduce((a, b) => a + b.amount, 0);
+            sales = allTx.filter(t => t.type === 'sale').reduce((a, b) => a + safeAmount(b), 0);
+            expenses = allTx.filter(t => t.type === 'expense').reduce((a, b) => a + safeAmount(b), 0);
             balance = sales - expenses;
             displayTx = allTx;
         } else if (activeTab === 'Vault') {
-            sales = 0; 
-            expenses = 0;
-            balance = allTx.filter(t => t.type === 'transfer').reduce((a, b) => a + b.amount, 0);
+            sales = 0; expenses = 0;
+            balance = allTx.filter(t => t.type === 'transfer').reduce((a, b) => a + safeAmount(b), 0);
             balanceLabel = "Vault Total";
             displayTx = allTx.filter(t => t.type === 'transfer');
         } else {
-            // Specific Cashier Dashboard
             const myTx = allTx.filter(t => (t.cashierName || 'Staff') === activeTab);
-            sales = myTx.filter(t => t.type === 'sale').reduce((a, b) => a + b.amount, 0);
-            expenses = myTx.filter(t => t.type === 'expense').reduce((a, b) => a + b.amount, 0);
-            const transfers = myTx.filter(t => t.type === 'transfer').reduce((a, b) => a + b.amount, 0);
-            balance = sales - expenses - transfers; // Cash on Hand calculation
+            sales = myTx.filter(t => t.type === 'sale').reduce((a, b) => a + safeAmount(b), 0);
+            expenses = myTx.filter(t => t.type === 'expense').reduce((a, b) => a + safeAmount(b), 0);
+            const transfers = myTx.filter(t => t.type === 'transfer').reduce((a, b) => a + safeAmount(b), 0);
+            balance = sales - expenses - transfers; 
             balanceLabel = "Cash on Hand";
             displayTx = myTx;
         }
 
-        // Update Summary UI
         document.getElementById('totalSales').innerText = `₱${sales.toFixed(2)}`;
         document.getElementById('totalExpenses').innerText = `₱${expenses.toFixed(2)}`;
         document.getElementById('currentBalance').innerText = `₱${balance.toFixed(2)}`;
         document.getElementById('currentBalance').className = balance < 0 ? 'text-red' : 'text-green';
         document.getElementById('balanceLabel').innerText = balanceLabel;
 
-        // 5. Render Table
         const transactionList = document.getElementById('transactionList');
         transactionList.innerHTML = '';
-        displayTx.sort((a, b) => b.createdAt - a.createdAt);
+        
+        displayTx.sort((a, b) => safeTime(b) - safeTime(a));
         
         if (displayTx.length === 0) {
             transactionList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding: 20px;">No transactions found for this view.</td></tr>`;
@@ -478,8 +474,10 @@
 
         displayTx.forEach(transaction => {
             let sign = '+'; let typeColor = 'text-green';
-            if (transaction.type === 'expense') { sign = '-'; typeColor = 'text-red'; }
-            if (transaction.type === 'transfer') { sign = '-'; typeColor = 'text-blue'; }
+            const tType = transaction.type || 'sale';
+            
+            if (tType === 'expense') { sign = '-'; typeColor = 'text-red'; }
+            if (tType === 'transfer') { sign = '-'; typeColor = 'text-blue'; }
             
             const displayBadge = transaction.isPending 
                 ? `<span class="cashier-badge pending-badge">Pending Sync ⏳</span>` 
@@ -489,12 +487,12 @@
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td data-label="Date">${transaction.date}</td>
-                <td data-label="Type" class="${typeColor}"><b>${transaction.type.toUpperCase()}</b></td>
+                <td data-label="Date">${transaction.date || 'N/A'}</td>
+                <td data-label="Type" class="${typeColor}"><b>${tType.toUpperCase()}</b></td>
                 <td data-label="Description">
-                    <div class="col-content"><span>${transaction.description}</span>${displayBadge}</div>
+                    <div class="col-content"><span>${safeDesc(transaction)}</span>${displayBadge}</div>
                 </td>
-                <td data-label="Amount">${sign}₱${Math.abs(transaction.amount).toFixed(2)}</td>
+                <td data-label="Amount">${sign}₱${safeAmount(transaction).toFixed(2)}</td>
                 <td data-label="">
                     <div class="action-group">
                         <button class="edit-btn" onclick="editTransaction('${transaction.id}')" ${disableBtns}>Edit</button>
