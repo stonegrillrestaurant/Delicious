@@ -3,199 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stone Grill Staff Portal</title>
+    <title>Stone Grill Finance Ledger</title>
     <style>
         :root {
-            --primary: #4CAF50; --danger: #f44336; --warning: #f39c12; --dark: #2c3e50; 
-            --light: #f8f9fa; --border: #e0e0e0; --info-bg: #e3f2fd; 
-            --info-text: #1565c0; --warning-bg: #fff3e0; --warning-text: #e65100;
+            --primary: #27ae60; --danger: #e74c3c; --dark: #2c3e50; 
+            --light: #f4f6f7; --border: #bdc3c7; --blue: #2980b9; --gold: #f39c12;
         }
         
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: var(--light); color: var(--dark); margin: 0; padding: 15px; -webkit-text-size-adjust: 100%; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+        body { background-color: var(--light); color: var(--dark); margin: 0; padding: 15px; }
 
-        /* Login Screen */
-        .login-box { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; margin: 10vh auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        .login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 10px; }
-        
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        /* --- LOGIN UI (Dark Theme for Logo) --- */
+        .login-box { 
+            background: #111; padding: 25px; border-radius: 12px; width: 100%; 
+            max-width: 400px; margin: 5vh auto; box-shadow: 0 8px 20px rgba(0,0,0,0.5); 
+            color: white; text-align: center;
+        }
+        .login-box img { width: 100%; height: auto; margin-bottom: 15px; border-radius: 8px;}
+        .login-box h2 { border-bottom: none; color: var(--gold); margin: 0 0 20px 0; font-size: 1.4rem;}
+        .login-box input { 
+            width: 100%; padding: 12px; margin: 8px 0 15px; border: 1px solid #444; 
+            border-radius: 6px; font-size: 16px; background: #222; color: white;
+        }
+        .login-box input::placeholder { color: #888; }
+        .login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 5px;}
+
+        /* --- GENERAL UI --- */
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .hidden { display: none !important; }
-
-        /* Header & Status */
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        h2 { color: var(--dark); font-size: 1.5rem; margin: 0; }
-        .action-btns { display: flex; gap: 10px; }
-        .btn-small { padding: 8px 15px; border-radius: 6px; font-size: 0.9rem; border: none; cursor: pointer; color: white; font-weight: bold; }
-        .print-btn { background-color: #34495e; }
-        .logout-btn { background-color: var(--danger); }
         
-        .status-bar { text-align: center; font-size: 0.85rem; padding: 10px; background: var(--info-bg); color: var(--info-text); margin-bottom: 20px; border-radius: 6px; font-weight: 500; }
-        .status-offline { background: var(--warning-bg); color: var(--warning-text); }
-
-        /* Form Layout */
-        form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; margin-bottom: 15px; background: var(--info-bg); padding: 15px; border-radius: 8px; border: 1px solid #bbdefb; transition: 0.3s;}
-        input, select, button { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        .submit-btn { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s;}
-
-        /* Filters & Tabs */
-        .filter-bar { display: flex; gap: 10px; align-items: center; background: #f1f2f6; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
-        .filter-bar input { flex-grow: 1; padding: 8px; }
-        .filter-bar label { font-weight: bold; font-size: 0.9rem; color: #555; }
-        .clear-btn { background: #7f8c8d; color: white; padding: 8px 15px; border:none; border-radius: 6px; cursor: pointer; }
-
-        .tabs { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; white-space: nowrap; scrollbar-width: none; }
-        .tabs::-webkit-scrollbar { display: none; }
-        .tab-btn { padding: 10px 15px; border: 1px solid var(--border); background: white; border-radius: 6px; cursor: pointer; font-weight: bold; color: var(--dark); transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
-        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-        /* Summaries */
-        .section-title { margin-top: 10px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid var(--light); font-size: 1.1rem; color: #555; }
-        .summary { display: flex; gap: 15px; margin-bottom: 15px; }
-        .card { flex: 1; background: var(--light); padding: 15px 10px; text-align: center; border-radius: 8px; border: 1px solid var(--border); }
-        .card h3 { margin: 0; font-size: 0.85rem; color: #666; text-transform: uppercase; }
-        .card p { font-size: 1.4rem; font-weight: 700; margin: 8px 0 0; }
-        .text-green { color: var(--primary); } .text-red { color: var(--danger); } .text-blue { color: #1976d2; }
-
-        /* Table */
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { background-color: var(--dark); color: white; font-weight: 500; }
-        .cashier-badge { display: block; font-size: 0.7rem; color: #7f8c8d; margin-top: 4px; background: #f1f2f6; padding: 3px 6px; border-radius: 4px; width: fit-content; }
-        .pending-badge { background: #ffeaa7; color: #d35400; border: 1px solid #f1c40f; }
+        .header-title { margin-top: 0; color: var(--dark); border-bottom: 2px solid var(--gold); padding-bottom: 10px;}
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         
-        .action-group { display: flex; gap: 5px; }
-        .delete-btn { background-color: var(--danger); color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; border: none; font-size: 0.85rem;}
-        .edit-btn { background-color: var(--warning); color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; border: none; font-size: 0.85rem;}
-        .edit-btn:disabled, .delete-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        button { padding: 10px 15px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .btn-logout { background: var(--danger); padding: 8px 12px; font-size: 14px;}
+        .btn-delete { background: var(--danger); padding: 5px 10px; font-size: 12px;}
+        .btn-delete:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Mobile Adjustments */
-        @media (max-width: 650px) {
-            .header-flex { flex-direction: column; gap: 15px; }
-            .action-btns { width: 100%; display: flex; }
-            .action-btns button { flex: 1; }
-            form, .filter-bar, .summary { flex-direction: column; display: flex; gap: 10px; }
-            form { display: flex; }
-            
-            table, thead, tbody, th, td, tr { display: block; }
-            thead tr { display: none; }
-            tr { margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
-            td { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 5px; text-align: right; }
-            td:last-child { border-bottom: none; }
-            td::before { content: attr(data-label); font-weight: bold; color: #555; text-align: left; }
-            .cashier-badge { display: inline-block; margin-top: 0; }
-            .col-content { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-            .action-group { width: 100%; display: flex; margin-top: 5px;}
-            .action-group button { flex: 1; padding: 12px; }
-        }
+        /* --- CASHIER SPREADSHEET TABLE --- */
+        .table-wrapper { overflow-x: auto; margin-top: 20px;}
+        table { width: 100%; border-collapse: collapse; min-width: 600px;}
+        th, td { padding: 10px; text-align: right; border: 1px solid var(--border); }
+        th { background-color: #111; color: var(--gold); text-align: center; }
+        td:nth-child(1), td:nth-child(2) { text-align: left; } 
+        .col-in { color: var(--primary); font-weight: bold; }
+        .col-out { color: var(--danger); }
+        .col-bal { font-weight: bold; background: #f9f9f9;}
+        .badge { color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; float: right; margin-top: 2px;}
 
-        /* Print Mode */
-        @media print {
-            body { background: white; padding: 0; margin: 0; }
-            .container { box-shadow: none; padding: 0; }
-            #loginView, #transactionForm, .action-btns, .status-bar, .filter-bar, .tabs, .action-group { display: none !important; }
-            table { display: table !important; }
-            thead { display: table-header-group !important; }
-            tr { display: table-row !important; border: none; }
-            th, td { display: table-cell !important; border: 1px solid #ccc; padding: 8px; text-align: left; }
-            td::before { display: none !important; }
-            th:last-child, td:last-child { display: none !important; }
+        /* --- ADMIN DASHBOARD --- */
+        .admin-filter-bar { display: flex; align-items: center; gap: 10px; background: #ecf0f1; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .admin-filter-bar label { font-weight: bold; color: var(--dark); font-size: 0.9rem;}
+        .admin-filter-bar input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex-grow: 1;}
+        .btn-clear { background: #7f8c8d; padding: 8px 12px; font-size: 0.9rem;}
+
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { padding: 20px; text-align: center; border-radius: 8px; border: 1px solid var(--border); background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+        .card h3 { margin: 0 0 5px; font-size: 0.95rem; color: #555; text-transform: uppercase; }
+        .card p { margin: 0; font-size: 1.8rem; font-weight: bold; }
+        
+        .admin-cashier-card { padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; background: #fafafa;}
+        .admin-cashier-card div { display: flex; flex-direction: column; }
+        .admin-cashier-card strong { font-size: 1.2rem; color: var(--dark); margin-bottom: 4px;}
+        
+        .expected-remit-box { background: #fff3e0; border: 1px solid #f39c12; padding: 8px 12px; border-radius: 6px; text-align: right;}
+        .expected-remit-title { font-size: 0.8rem; color: #d35400; font-weight: bold; text-transform: uppercase;}
+        .expected-remit-amt { font-size: 1.4rem; color: var(--danger); font-weight: bold; }
+        .date-label { background: var(--dark); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 10px; vertical-align: middle;}
+
+        /* Pending Inbox styling */
+        .pending-box { background: #fffdf5; border: 1px solid var(--gold); border-radius: 8px; padding: 15px; margin-bottom: 25px; }
+        .pending-title { color: #d35400; font-weight: bold; margin-top: 0; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;}
+        .pending-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--gold); padding: 10px 0; }
+        .pending-item:last-child { border-bottom: none; padding-bottom: 0;}
+        .btn-approve { background: var(--primary); padding: 6px 12px; font-size: 0.9rem; }
+
+        /* --- FORM LAYOUT --- */
+        .form-grid { display: grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap: 10px; align-items: end; background: #f0f3f4; padding: 15px; border-radius: 8px; border: 1px solid var(--border);}
+        .form-grid label { font-size: 0.85rem; font-weight: bold; color: #555; display: block; margin-bottom: 5px;}
+        .form-grid input, .form-grid select { margin: 0; width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .admin-cashier-card { flex-direction: column; align-items: stretch; gap: 10px; }
+            .expected-remit-box { text-align: center; }
+            .pending-item { flex-direction: column; gap: 10px; align-items: stretch; text-align: center;}
+            .admin-filter-bar { flex-direction: column; align-items: stretch; }
         }
     </style>
 </head>
 <body>
 
-<!-- Login View -->
+<!-- ========================================== -->
+<!-- LOGIN VIEW                                 -->
+<!-- ========================================== -->
 <div id="loginView" class="login-box">
-    <h2 style="text-align:center; margin-top:0;">🔐 Staff Login</h2>
-    <p style="text-align:center; font-size:0.9rem; color:#666;">Enter your Stone Grill credentials.</p>
-    <input type="email" id="email" placeholder="Email Address" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <button class="login-btn" onclick="handleLogin()">Login</button>
-    <p id="errorMsg" style="color:red; text-align:center; margin-top:10px; font-size: 0.9rem;"></p>
+    <!-- STONE GRILL FINANCE LOGO -->
+    <img src="/sales/sg-finance.jpg" alt="Stone Grill Finance Department" onerror="this.style.display='none'">
+    
+    <h2>Staff Portal</h2>
+    <input type="email" id="email" placeholder="Email Address">
+    <input type="password" id="password" placeholder="Password">
+    <button class="login-btn" onclick="handleLogin()">Secure Login</button>
+    <p id="errorMsg" style="color:#ff6b6b; text-align:center; font-size: 14px; margin-top: 15px;"></p>
 </div>
 
-<!-- Main App View -->
-<div id="appView" class="container hidden">
+<!-- ========================================== -->
+<!-- CASHIER VIEW (Spreadsheet Interface)       -->
+<!-- ========================================== -->
+<div id="cashierView" class="container hidden">
     <div class="header-flex">
-        <h2>Stone Grill Ledger</h2>
-        <div class="action-btns">
-            <button class="btn-small print-btn" onclick="window.print()">🖨️ Print</button>
-            <button class="btn-small logout-btn" onclick="handleLogout()">Logout</button>
-        </div>
+        <h2 class="header-title">Ledger: <span id="cashierNameDisplay" style="color: var(--gold);"></span></h2>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
     </div>
-    
-    <div id="statusBar" class="status-bar">Authenticating...</div>
 
-    <!-- Data Entry Form -->
-    <form id="transactionForm" onsubmit="handleFormSubmit(event)">
-        <input type="date" id="date" required>
-        <select id="type">
-            <option value="sale">Sale (+)</option>
-            <option value="expense">Expense (-)</option>
-            <option value="transfer">Transfer to Admin Vault (-)</option>
-        </select>
-        <input type="text" id="description" placeholder="Item / Description" required>
-        <input type="number" id="amount" placeholder="Amount (₱)" step="0.01" min="0" inputmode="decimal" required>
-        <button type="submit" id="submitBtn" class="submit-btn">Add Entry</button>
+    <!-- Data Entry matching spreadsheet columns -->
+    <form class="form-grid" onsubmit="handleFormSubmit(event)">
+        <div>
+            <label>Date</label>
+            <input type="date" id="c_date" required>
+        </div>
+        <div>
+            <label>Description</label>
+            <input type="text" id="c_desc" placeholder="e.g., Sales, Supplies, Cash Remit" required>
+        </div>
+        <div>
+            <label>Type (In/Out)</label>
+            <select id="c_type">
+                <option value="in">Cash IN (Sales)</option>
+                <option value="out">Cash OUT (Expenses)</option>
+                <option value="remit">REMIT to Admin (Cash Out)</option>
+            </select>
+        </div>
+        <div>
+            <label>Amount (₱)</label>
+            <input type="number" id="c_amount" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+        <button type="submit" style="grid-column: 1 / -1; margin-top: 5px;">Record Entry</button>
     </form>
 
-    <!-- History Filter -->
-    <div class="filter-bar">
-        <label>📅 Filter Date:</label>
-        <input type="date" id="filterDateInput" onchange="applyDateFilter()">
-        <button class="clear-btn" onclick="clearDateFilter()">Show All Time</button>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:15%">Date</th>
+                    <th style="width:35%">Description</th>
+                    <th style="width:15%">IN</th>
+                    <th style="width:15%">OUT</th>
+                    <th style="width:15%">BALANCE</th>
+                    <th style="width:5%"></th>
+                </tr>
+            </thead>
+            <tbody id="cashierTableBody">
+                <!-- Data rendered here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ADMIN VIEW (Dashboard Interface)           -->
+<!-- ========================================== -->
+<div id="adminView" class="container hidden">
+    <div class="header-flex">
+        <h2 class="header-title">Admin Dashboard</h2>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
     </div>
 
-    <!-- Dashboard Tabs -->
-    <h3 class="section-title">📊 View Dashboards</h3>
-    <div id="tabsContainer" class="tabs">
-        <!-- Tabs injected dynamically by JS -->
+    <!-- Admin Date Filter -->
+    <div class="admin-filter-bar">
+        <label>📅 View Sales For:</label>
+        <input type="date" id="adminDateFilter" onchange="renderAdminUI()">
+        <button class="btn-clear" onclick="document.getElementById('adminDateFilter').value=''; renderAdminUI();">Show All Time</button>
     </div>
 
-    <!-- Summaries -->
-    <div class="summary">
-        <div class="card">
-            <h3>Total Sales</h3>
-            <p id="totalSales" class="text-green">₱0.00</p>
-        </div>
-        <div class="card">
-            <h3>Total Expenses</h3>
-            <p id="totalExpenses" class="text-red">₱0.00</p>
-        </div>
-        <div class="card">
-            <h3 id="balanceLabel">Store Profit</h3>
-            <p id="currentBalance">₱0.00</p>
+    <!-- Pending Remittances Inbox -->
+    <div id="adminPendingBox" class="pending-box hidden">
+        <h3 class="pending-title">⚠️ Pending Remittances (Action Required)</h3>
+        <div id="adminPendingList">
+            <!-- Items injected by JS -->
         </div>
     </div>
 
-    <h3 class="section-title">📝 Transaction Ledger</h3>
-    <table>
-        <thead>
-            <tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Action</th></tr>
-        </thead>
-        <tbody id="transactionList"></tbody>
-    </table>
+    <div class="dashboard">
+        <div class="card" style="border: 2px solid var(--gold); background: #fffdf5;" title="This is an ALL-TIME running balance. It is not affected by the date filter to ensure exact drawer counts.">
+            <h3>Cash Expected in Drawers</h3>
+            <p id="adminTotalFloating" style="color: var(--danger);">₱0.00</p>
+            <span style="font-size: 0.8rem; color:#d35400;">Total cash currently with cashiers (All-Time)</span>
+        </div>
+        <div class="card">
+            <h3>Pending Verification</h3>
+            <p id="adminTotalPending" style="color: var(--gold);">₱0.00</p>
+            <span style="font-size: 0.8rem; color:#7f8c8d;">Handed over, waiting for you to approve</span>
+        </div>
+        <div class="card">
+            <h3>Verified & Received <span id="receivedDateLabel" class="date-label"></span></h3>
+            <p id="adminTotalRemitted" style="color: var(--primary);">₱0.00</p>
+            <span style="font-size: 0.8rem; color:#7f8c8d;">Cash officially in Admin possession</span>
+        </div>
+    </div>
+
+    <h3 style="color: var(--dark); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-top: 30px;">
+        Cashier Activity <span id="cashierDateLabel" class="date-label"></span>
+    </h3>
+    <div id="adminCashierList">
+        <!-- Cashier cards rendered here -->
+    </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-    // Date Helper
-    function setDateToToday() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = today;
-        return today;
-    }
-    
-    document.getElementById('filterDateInput').value = setDateToToday(); 
-    let activeFilterDate = setDateToToday(); 
-    let activeTab = 'Store';
-    let editingId = null;
+    // Set today's date automatically
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('c_date').value = today;
 
-    // YOUR FIREBASE CONFIGURATION
+    // FIREBASE CONFIGURATION
     const firebaseConfig = {
         apiKey: "AIzaSyDX6OKrMdfnzml4LA8SE4PDFkDJLVPmKIc",
         authDomain: "stone-grill-app.firebaseapp.com",
@@ -209,38 +234,30 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    const ADMIN_EMAIL = "stonegrill2014@gmail.com";
     let currentUser = null;
-    let cashierName = "Cashier";
     let cloudTransactions = []; 
     let unsubscribeSnapshot = null;
-
     const collectionPath = "transactions";
 
-    // --- SAFELY READ OLD AND NEW DATA ---
-    function safeAmount(tx) {
-        return Number(tx.amount ?? tx.amt ?? 0) || 0;
-    }
-    function safeDesc(tx) {
-        return tx.description || tx.desc || "No description";
-    }
-    function safeTime(tx) {
-        return tx.createdAt || tx.ts || 0;
+    // Backward compatibility helper
+    function getStatus(tx) {
+        if (tx.type === 'remit') return tx.status || 'approved';
+        return 'completed';
     }
 
-    // --- LOGIN / LOGOUT LOGIC ---
+    // --- AUTHENTICATION ---
     window.handleLogin = async () => {
-        const email = document.getElementById('email').value;
+        const email = document.getElementById('email').value.trim().toLowerCase();
         const pass = document.getElementById('password').value;
-        const errorMsg = document.getElementById('errorMsg');
+        const err = document.getElementById('errorMsg');
         
         try {
-            errorMsg.style.color = "blue";
-            errorMsg.innerText = "Logging in...";
+            err.style.color = "#3498db"; err.innerText = "Authenticating...";
             await signInWithEmailAndPassword(auth, email, pass);
-            errorMsg.innerText = "";
+            err.innerText = "";
         } catch (e) {
-            errorMsg.style.color = "red";
-            errorMsg.innerText = "Invalid Email or Password!";
+            err.style.color = "#ff6b6b"; err.innerText = "Invalid credentials. Please try again.";
         }
     };
 
@@ -249,259 +266,257 @@
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         if (user) {
-            let emailPrefix = user.email.split('@')[0];
-            cashierName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-            
             document.getElementById('loginView').classList.add('hidden');
-            document.getElementById('appView').classList.remove('hidden');
             
-            updateStatusUI();
-            loadData();
-            if (navigator.onLine) syncOfflineQueue();
+            // Route to correct UI based on email
+            if (user.email === ADMIN_EMAIL) {
+                document.getElementById('adminView').classList.remove('hidden');
+                document.getElementById('cashierView').classList.add('hidden');
+            } else {
+                document.getElementById('cashierView').classList.remove('hidden');
+                document.getElementById('adminView').classList.add('hidden');
+                let name = user.email.split('@')[0];
+                document.getElementById('cashierNameDisplay').innerText = name.charAt(0).toUpperCase() + name.slice(1);
+            }
+            fetchData();
         } else {
             document.getElementById('loginView').classList.remove('hidden');
-            document.getElementById('appView').classList.add('hidden');
+            document.getElementById('cashierView').classList.add('hidden');
+            document.getElementById('adminView').classList.add('hidden');
             if (unsubscribeSnapshot) unsubscribeSnapshot();
             document.getElementById('password').value = '';
         }
     });
 
-    // --- NETWORK STATUS ---
-    window.addEventListener('online', handleNetworkChange);
-    window.addEventListener('offline', handleNetworkChange);
-
-    function updateStatusUI() {
+    // --- DATABASE FETCH ---
+    function fetchData() {
         if (!currentUser) return;
-        const statusBar = document.getElementById('statusBar');
-
-        if (!navigator.onLine) {
-            statusBar.innerHTML = `⚠️ Offline Mode | User: <b>${cashierName}</b> | Entries will sync when connected`;
-            statusBar.className = 'status-bar status-offline';
-        } else {
-            statusBar.innerHTML = `🟢 Live Cloud Connected | User: <b>${cashierName}</b>`;
-            statusBar.className = 'status-bar';
-            statusBar.style.backgroundColor = '#e8f5e9';
-            statusBar.style.color = '#2e7d32';
-        } 
-    }
-
-    function handleNetworkChange() {
-        updateStatusUI();
-        if (navigator.onLine && currentUser) syncOfflineQueue();
-        initUI(); 
-    }
-
-    // --- DATABASE OPERATIONS ---
-    function loadData() {
-        if (!currentUser) return;
-        const txRef = collection(db, collectionPath);
-        
-        unsubscribeSnapshot = onSnapshot(txRef, (snapshot) => {
+        unsubscribeSnapshot = onSnapshot(collection(db, collectionPath), (snapshot) => {
             cloudTransactions = [];
             snapshot.forEach(docSnap => cloudTransactions.push({ id: docSnap.id, ...docSnap.data() }));
-            initUI();
+            
+            if (currentUser.email === ADMIN_EMAIL) {
+                renderAdminUI();
+            } else {
+                renderCashierUI();
+            }
         });
     }
 
-    async function syncOfflineQueue() {
-        let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
-        if (queue.length === 0) return;
-        
-        document.getElementById('statusBar').innerHTML = `🔄 Syncing ${queue.length} pending entries...`;
-        const txRef = collection(db, collectionPath);
-        
-        for (let item of queue) {
-            const { id, isPending, ...cleanData } = item; 
-            try { await addDoc(txRef, cleanData); } catch (err) { console.error(err); }
-        }
-        localStorage.removeItem('sync_queue');
-        updateStatusUI();
-    }
-
+    // --- CASHIER LOGIC ---
     window.handleFormSubmit = async function(e) {
         e.preventDefault();
         if (!currentUser) return;
 
+        let name = currentUser.email.split('@')[0];
+        name = name.charAt(0).toUpperCase() + name.slice(1);
+        
+        const txType = document.getElementById('c_type').value;
+
         const txData = {
-            date: document.getElementById('date').value,
-            type: document.getElementById('type').value,
-            description: document.getElementById('description').value,
-            amount: parseFloat(document.getElementById('amount').value),
+            date: document.getElementById('c_date').value,
+            description: document.getElementById('c_desc').value,
+            type: txType, 
+            amount: parseFloat(document.getElementById('c_amount').value),
+            createdAt: Date.now(),
+            userEmail: currentUser.email,
+            cashierName: name,
+            status: txType === 'remit' ? 'pending' : 'completed' 
         };
 
-        if (editingId) {
-            if (navigator.onLine) {
-                await updateDoc(doc(db, collectionPath, editingId), txData);
-                
-                editingId = null;
-                const btn = document.getElementById('submitBtn');
-                btn.innerText = "Add Entry";
-                btn.style.backgroundColor = "var(--primary)";
-                document.getElementById('transactionForm').style.borderColor = "#bbdefb";
-            } else {
-                alert("Must be online to update entries.");
-                return;
-            }
-        } else {
-            txData.createdAt = Date.now();
-            txData.cashierName = cashierName;
-            txData.userEmail = currentUser.email;
-
-            if (navigator.onLine) {
-                await addDoc(collection(db, collectionPath), txData);
-            } else {
-                let queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
-                txData.id = 'pending-' + Date.now(); 
-                txData.isPending = true;
-                queue.push(txData); 
-                localStorage.setItem('sync_queue', JSON.stringify(queue));
-                initUI();
-            }
-        }
+        await addDoc(collection(db, collectionPath), txData);
         
-        document.getElementById('description').value = '';
-        document.getElementById('amount').value = '';
-        setDateToToday();
-        document.getElementById('amount').focus();
+        document.getElementById('c_desc').value = '';
+        document.getElementById('c_amount').value = '';
+        document.getElementById('c_date').value = today;
     };
 
     window.removeTransaction = async function(id) {
-        if (navigator.onLine && !id.startsWith('pending-')) {
+        if(confirm("Are you sure you want to delete this entry?")) {
             await deleteDoc(doc(db, collectionPath, id));
         }
     };
 
-    window.editTransaction = function(id) {
-        if (!navigator.onLine || id.startsWith('pending-')) {
-            alert("Editing is only available online for synced entries.");
+    // --- ADMIN LOGIC ---
+    window.approveRemit = async function(id) {
+        await updateDoc(doc(db, collectionPath, id), {
+            status: 'approved'
+        });
+    };
+
+    // --- RENDER CASHIER SPREADSHEET ---
+    function renderCashierUI() {
+        const tbody = document.getElementById('cashierTableBody');
+        tbody.innerHTML = '';
+
+        let myTx = cloudTransactions.filter(t => t.userEmail === currentUser.email);
+        myTx.sort((a, b) => a.createdAt - b.createdAt);
+
+        let runningBalance = 0;
+        
+        myTx.forEach(t => {
+            let amt = Number(t.amount) || 0;
+            if (t.type === 'in') {
+                runningBalance += amt;
+            } else {
+                runningBalance -= amt;
+            }
+            t.balance = runningBalance;
+        });
+
+        myTx.reverse();
+
+        if (myTx.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No entries yet.</td></tr>`;
             return;
         }
 
-        const tx = cloudTransactions.find(t => t.id === id);
-        if (!tx) return;
+        myTx.forEach(t => {
+            const tr = document.createElement('tr');
+            
+            let inCol = ''; let outCol = '';
+            let amtStr = Number(t.amount).toLocaleString('en-PH', {minimumFractionDigits: 2});
+            let badgeHtml = '';
+            let disableDel = '';
 
-        document.getElementById('date').value = tx.date || setDateToToday();
-        document.getElementById('type').value = tx.type || 'sale';
-        document.getElementById('description').value = safeDesc(tx);
-        document.getElementById('amount').value = safeAmount(tx);
+            if (t.type === 'in') {
+                inCol = amtStr;
+            } else {
+                outCol = amtStr;
+            }
 
-        editingId = id;
-        
-        const btn = document.getElementById('submitBtn');
-        btn.innerText = "Update Entry";
-        btn.style.backgroundColor = "var(--warning)";
-        document.getElementById('transactionForm').style.borderColor = "var(--warning)";
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+            if (t.type === 'remit') {
+                if (getStatus(t) === 'pending') {
+                    badgeHtml = '<span class="badge" style="background:var(--gold);">Pending Admin</span>';
+                } else {
+                    badgeHtml = '<span class="badge" style="background:var(--primary);">Received ✅</span>';
+                    disableDel = 'disabled title="Cannot delete approved remittance"'; 
+                }
+            }
 
-    // --- FILTER & TABS LOGIC ---
-    window.applyDateFilter = function() {
-        activeFilterDate = document.getElementById('filterDateInput').value;
-        initUI();
-    };
-
-    window.clearDateFilter = function() {
-        activeFilterDate = '';
-        document.getElementById('filterDateInput').value = '';
-        initUI();
-    };
-
-    window.switchTab = function(tabName) {
-        activeTab = tabName;
-        initUI();
+            tr.innerHTML = `
+                <td>${t.date}</td>
+                <td>${t.description} ${badgeHtml}</td>
+                <td class="col-in">${inCol}</td>
+                <td class="col-out">${outCol}</td>
+                <td class="col-bal">${t.balance.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                <td style="text-align:center"><button class="btn-delete" onclick="removeTransaction('${t.id}')" ${disableDel}>X</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 
-    // --- UI RENDERING & CALCULATIONS ---
-    function initUI() {
-        const queue = JSON.parse(localStorage.getItem('sync_queue')) || [];
-        let allTx = [...cloudTransactions, ...queue];
-
-        if (activeFilterDate !== '') {
-            allTx = allTx.filter(t => t.date === activeFilterDate);
-        }
-
-        const uniqueNames = Array.from(new Set(allTx.map(t => t.cashierName || 'Staff')));
-        if (!uniqueNames.includes(activeTab) && activeTab !== 'Store' && activeTab !== 'Vault') {
-            activeTab = 'Store'; 
-        }
-
-        let tabsHtml = `<button class="tab-btn ${activeTab === 'Store' ? 'active' : ''}" onclick="switchTab('Store')">🏢 Store Overall</button>`;
-        tabsHtml += `<button class="tab-btn ${activeTab === 'Vault' ? 'active' : ''}" onclick="switchTab('Vault')">🏛️ Admin Vault</button>`;
+    // --- RENDER ADMIN DASHBOARD ---
+    window.renderAdminUI = function() {
+        const filterDate = document.getElementById('adminDateFilter').value;
+        const dateDisplayStr = filterDate ? filterDate : "ALL TIME";
         
-        uniqueNames.forEach(name => {
-            tabsHtml += `<button class="tab-btn ${activeTab === name ? 'active' : ''}" onclick="switchTab('${name}')">👤 ${name}</button>`;
+        document.getElementById('receivedDateLabel').innerText = dateDisplayStr;
+        document.getElementById('cashierDateLabel').innerText = dateDisplayStr;
+
+        let filteredAdminReceived = 0; // Filtered amount received
+        let totalPendingAuth = 0; // Always show ALL pending
+        let totalUncollected = 0; // Always show ALL time physical drawer
+        
+        let allTimeStats = {};
+        let filteredStats = {};
+        let pendingItemsHtml = '';
+
+        // Single pass sorting chronologically
+        cloudTransactions.sort((a, b) => b.createdAt - a.createdAt).forEach(t => {
+            const email = t.userEmail || 'unknown';
+            const name = t.cashierName || email.split('@')[0];
+            const amt = Number(t.amount) || 0;
+            const status = getStatus(t);
+
+            if (!allTimeStats[email]) allTimeStats[email] = { name, in: 0, out: 0, remit_appr: 0, remit_pend: 0 };
+            if (!filteredStats[email]) filteredStats[email] = { name, in: 0, out: 0, remit_appr: 0, remit_pend: 0 };
+
+            // 1. Process All-Time Data (For Drawer Counts & Pending Approvals)
+            if (t.type === 'in') allTimeStats[email].in += amt;
+            if (t.type === 'out') allTimeStats[email].out += amt;
+            if (t.type === 'remit') {
+                if (status === 'pending') {
+                    allTimeStats[email].remit_pend += amt;
+                    totalPendingAuth += amt;
+                    
+                    // Build Pending Inbox UI (Always shows all pending regardless of date filter)
+                    pendingItemsHtml += `
+                        <div class="pending-item">
+                            <span>👤 <strong>${name}</strong> remitted <strong style="color:var(--danger)">₱${amt.toLocaleString('en-PH', {minimumFractionDigits:2})}</strong> on ${t.date}</span>
+                            <button class="btn-approve" onclick="approveRemit('${t.id}')">Confirm Received ✅</button>
+                        </div>
+                    `;
+                } else {
+                    allTimeStats[email].remit_appr += amt;
+                }
+            }
+
+            // 2. Process Filtered Data (For Displaying Daily Sales/Expenses)
+            if (!filterDate || t.date === filterDate) {
+                if (t.type === 'in') filteredStats[email].in += amt;
+                if (t.type === 'out') filteredStats[email].out += amt;
+                if (t.type === 'remit') {
+                    if (status === 'pending') filteredStats[email].remit_pend += amt;
+                    else {
+                        filteredStats[email].remit_appr += amt;
+                        filteredAdminReceived += amt; 
+                    }
+                }
+            }
         });
-        document.getElementById('tabsContainer').innerHTML = tabsHtml;
 
-        let sales = 0, expenses = 0, balance = 0, balanceLabel = "Store Profit";
-        let displayTx = [];
-
-        if (activeTab === 'Store') {
-            sales = allTx.filter(t => t.type === 'sale').reduce((a, b) => a + safeAmount(b), 0);
-            expenses = allTx.filter(t => t.type === 'expense').reduce((a, b) => a + safeAmount(b), 0);
-            balance = sales - expenses;
-            displayTx = allTx;
-        } else if (activeTab === 'Vault') {
-            sales = 0; expenses = 0;
-            balance = allTx.filter(t => t.type === 'transfer').reduce((a, b) => a + safeAmount(b), 0);
-            balanceLabel = "Vault Total";
-            displayTx = allTx.filter(t => t.type === 'transfer');
+        // Handle Pending Box Visibility
+        const pendingBox = document.getElementById('adminPendingBox');
+        if (pendingItemsHtml !== '') {
+            document.getElementById('adminPendingList').innerHTML = pendingItemsHtml;
+            pendingBox.classList.remove('hidden');
         } else {
-            const myTx = allTx.filter(t => (t.cashierName || 'Staff') === activeTab);
-            sales = myTx.filter(t => t.type === 'sale').reduce((a, b) => a + safeAmount(b), 0);
-            expenses = myTx.filter(t => t.type === 'expense').reduce((a, b) => a + safeAmount(b), 0);
-            const transfers = myTx.filter(t => t.type === 'transfer').reduce((a, b) => a + safeAmount(b), 0);
-            balance = sales - expenses - transfers; 
-            balanceLabel = "Cash on Hand";
-            displayTx = myTx;
+            pendingBox.classList.add('hidden');
         }
 
-        document.getElementById('totalSales').innerText = `₱${sales.toFixed(2)}`;
-        document.getElementById('totalExpenses').innerText = `₱${expenses.toFixed(2)}`;
-        document.getElementById('currentBalance').innerText = `₱${balance.toFixed(2)}`;
-        document.getElementById('currentBalance').className = balance < 0 ? 'text-red' : 'text-green';
-        document.getElementById('balanceLabel').innerText = balanceLabel;
+        // Handle Cashier List Display
+        const listDiv = document.getElementById('adminCashierList');
+        listDiv.innerHTML = '';
 
-        const transactionList = document.getElementById('transactionList');
-        transactionList.innerHTML = '';
-        
-        displayTx.sort((a, b) => safeTime(b) - safeTime(a));
-        
-        if (displayTx.length === 0) {
-            transactionList.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding: 20px;">No transactions found for this view.</td></tr>`;
-        }
+        Object.keys(allTimeStats).forEach(email => {
+            const allTime = allTimeStats[email];
+            const filtered = filteredStats[email];
 
-        displayTx.forEach(transaction => {
-            let sign = '+'; let typeColor = 'text-green';
-            const tType = transaction.type || 'sale';
-            
-            if (tType === 'expense') { sign = '-'; typeColor = 'text-red'; }
-            if (tType === 'transfer') { sign = '-'; typeColor = 'text-blue'; }
-            
-            const displayBadge = transaction.isPending 
-                ? `<span class="cashier-badge pending-badge">Pending Sync ⏳</span>` 
-                : `<span class="cashier-badge">👤 ${transaction.cashierName || 'Staff'}</span>`;
-            
-            const disableBtns = transaction.isPending || !navigator.onLine ? 'disabled' : '';
+            // Crucial: Expected drawer cash MUST be all time
+            let physicalDrawerCash = allTime.in - allTime.out - allTime.remit_appr - allTime.remit_pend;
+            totalUncollected += physicalDrawerCash;
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td data-label="Date">${transaction.date || 'N/A'}</td>
-                <td data-label="Type" class="${typeColor}"><b>${tType.toUpperCase()}</b></td>
-                <td data-label="Description">
-                    <div class="col-content"><span>${safeDesc(transaction)}</span>${displayBadge}</div>
-                </td>
-                <td data-label="Amount">${sign}₱${safeAmount(transaction).toFixed(2)}</td>
-                <td data-label="">
-                    <div class="action-group">
-                        <button class="edit-btn" onclick="editTransaction('${transaction.id}')" ${disableBtns}>Edit</button>
-                        <button class="delete-btn" onclick="removeTransaction('${transaction.id}')" ${disableBtns}>Delete</button>
+            // Display filtered sales/expenses
+            listDiv.innerHTML += `
+                <div class="admin-cashier-card">
+                    <div>
+                        <strong>👤 ${filtered.name}</strong>
+                        <span style="font-size: 0.85rem; color: #7f8c8d; margin-top:4px;">
+                            ${dateDisplayStr} Sales: ₱${filtered.in.toLocaleString('en-PH', {minimumFractionDigits:2})} | 
+                            ${dateDisplayStr} Expenses: ₱${filtered.out.toLocaleString('en-PH', {minimumFractionDigits:2})}
+                        </span>
+                        <span style="font-size: 0.85rem; color: var(--blue); margin-top:2px;">
+                            ${dateDisplayStr} Remitted: ₱${filtered.remit_appr.toLocaleString('en-PH', {minimumFractionDigits:2})}
+                        </span>
                     </div>
-                </td>
+                    <div class="expected-remit-box">
+                        <div class="expected-remit-title">Cash Expected in Drawer</div>
+                        <div class="expected-remit-amt">₱${physicalDrawerCash.toLocaleString('en-PH', {minimumFractionDigits:2})}</div>
+                        <span style="font-size:0.65rem; color:#888;">(All-Time Running Balance)</span>
+                    </div>
+                </div>
             `;
-            transactionList.appendChild(tr);
         });
+
+        if(Object.keys(allTimeStats).length === 0) {
+            listDiv.innerHTML = "<p>No cashier data found yet.</p>";
+        }
+
+        // Update Top Cards
+        document.getElementById('adminTotalRemitted').innerText = `₱${filteredAdminReceived.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+        document.getElementById('adminTotalPending').innerText = `₱${totalPendingAuth.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+        document.getElementById('adminTotalFloating').innerText = `₱${totalUncollected.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
     }
 </script>
 </body>
