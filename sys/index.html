@@ -10,18 +10,18 @@
     <link rel="manifest" href="/sys/manifest.json">
     <meta name="theme-color" content="#1e3a8a">
     
-       <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw", 
+            apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
             authDomain: "stone-grill-payroll.firebaseapp.com",
             projectId: "stone-grill-payroll",
             storageBucket: "stone-grill-payroll.firebasestorage.app",
@@ -39,10 +39,8 @@
 
     <style>
         .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
         @media print {
             body * { visibility: hidden; }
@@ -50,6 +48,7 @@
             #interactive-print-section, #interactive-print-section * { visibility: visible; }
             #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
             
+            /* 58mm POS Receipt Print Mode */
             .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
             #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
             #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
@@ -79,7 +78,7 @@
 
         const formatMoney = (v) => {
             const num = Number(v || 0); if (isNaN(num)) return "0";
-            return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            return Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         };
 
         const calculateHoursWorked = (start, end) => {
@@ -109,229 +108,6 @@
         const Menu = (p) => <Icon {...p}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></Icon>;
         const Printer = (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>;
         const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>;
-        
-        const UserIcon = (p) => <Icon {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Icon>;
-        const ChevronRight = (p) => <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>;
-        const HistoryIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></Icon>;
-        const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
-        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
-
-
-        // --- DIGITAL PAYSLIP WIDGET COMPONENT ---
-        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
-            const [activeTab, setActiveTab] = useState('payslip');
-
-            const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
-            
-            // Generate robust payload mapping DB values to the UI design
-            const basicPay = emp.days * (parseFloat(emp.dailyRate || emp.rate) || 0);
-            
-            // Check for archived interactive payrolls to fetch dynamically saved bonuses
-            const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || p.startDate?.startsWith(selectedMonth)));
-            const bonusAmount = emp.bonusAmount || 0;
-
-            const earnings = [
-                { id: 1, label: `Basic Pay (${emp.days} Days)`, amount: basicPay },
-                { id: 2, label: "Bonus / Incentives", amount: bonusAmount }
-            ];
-
-            const deductions = [
-                ...(emp.monthlyCA > 0 ? [{ id: 1, label: "C.A. Deduction", amount: emp.monthlyCA }] : []),
-                ...((parseFloat(emp.sssRate) || 0) > 0 ? [{ id: 2, label: "SSS Contribution", amount: parseFloat(emp.sssRate) }] : []),
-                ...((parseFloat(emp.miscRate) || 0) > 0 ? [{ id: 3, label: "Misc / Uniform", amount: parseFloat(emp.miscRate) }] : [])
-            ];
-
-            const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0);
-            const totalDeductions = deductions.reduce((sum, item) => sum + item.amount, 0);
-            const netPay = totalEarnings - totalDeductions;
-
-            // Generate Ledger from actual DB records
-            const ledger = cashAdvances
-                .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
-                .sort((a,b)=>(b.date||'').localeCompare(a.date||''))
-                .map((ca, idx) => ({
-                    id: ca.id || idx,
-                    date: ca.date,
-                    type: ca.amount < 0 ? "C.A. Payment" : "Cash Advance",
-                    amount: ca.amount,
-                    status: "Logged",
-                    note: ca.reason || ''
-                }));
-
-            if (bonusAmount > 0 && savedPayroll) {
-                ledger.push({
-                    id: 'bonus-' + savedPayroll.recordKey,
-                    date: savedPayroll.endDate || selectedMonth,
-                    type: "Incentive Credited",
-                    amount: Math.abs(bonusAmount), 
-                    status: "Processed",
-                    note: "Archived Payroll Bonus",
-                    isBonus: true
-                });
-                ledger.sort((a,b) => b.date.localeCompare(a.date));
-            }
-
-            return (
-                <div className="w-full max-w-lg mx-auto bg-gray-50 flex flex-col relative shadow-2xl overflow-hidden rounded-[2.5rem] border border-gray-200 animate-slide-up">
-                    
-                    {/* Header */}
-                    <div className="bg-[#1b3382] text-white px-6 pt-10 pb-6 rounded-b-[2rem] shadow-md z-10 relative shrink-0">
-                        <div className="flex justify-between items-center mb-6">
-                            <div className="flex items-center gap-3">
-                                <UserIcon className="w-6 h-6 text-white/80" />
-                                <h1 className="text-lg font-bold tracking-widest uppercase mt-1">Payslip Details</h1>
-                            </div>
-                            {onClose && (
-                                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                                    <X className="w-6 h-6" />
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="flex justify-between items-end gap-2">
-                            <div className="flex-1">
-                                <h2 className="text-2xl font-black tracking-wide leading-tight truncate">{emp.name}</h2>
-                                <p className="text-blue-200 text-xs font-medium tracking-wider uppercase mt-1">{emp.position} • {emp.id}</p>
-                            </div>
-                            <select 
-                                className="bg-white/10 border border-white/20 text-white rounded-xl px-3 py-2 text-xs outline-none font-bold backdrop-blur-sm shadow-sm"
-                                value={selectedMonth}
-                                onChange={e => setSelectedMonth(e.target.value)}
-                            >
-                                {monthOptions.map(opt => <option className="text-slate-800" key={opt.value} value={opt.value}>{opt.label}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Tab Navigation */}
-                    <div className="flex px-6 pt-4 pb-2 gap-4 shrink-0 bg-gray-50 z-0">
-                        <button 
-                            onClick={() => setActiveTab('payslip')}
-                            className={`flex-1 py-3 text-xs font-bold tracking-widest uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${activeTab === 'payslip' ? 'bg-white shadow-md text-[#1b3382] border border-gray-100' : 'text-gray-400 hover:bg-gray-200'}`}
-                        >
-                            <FileText className="w-4 h-4" /> Breakdown
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('transactions')}
-                            className={`flex-1 py-3 text-xs font-bold tracking-widest uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${activeTab === 'transactions' ? 'bg-white shadow-md text-[#1b3382] border border-gray-100' : 'text-gray-400 hover:bg-gray-200'}`}
-                        >
-                            <HistoryIcon className="w-4 h-4" /> Ledger
-                        </button>
-                    </div>
-
-                    {/* Scrollable Content Area */}
-                    <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6 custom-scrollbar max-h-[60vh]">
-                    
-                        {activeTab === 'payslip' ? (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                
-                                {/* Pay Period Info */}
-                                <div className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex justify-between items-center">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">Pay Period</p>
-                                        <p className="text-xs font-bold text-gray-800 uppercase">{monthLabel}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">Rate / Day</p>
-                                        <p className="text-xs font-bold text-gray-800">₱{formatMoney(emp.dailyRate || emp.rate)}</p>
-                                    </div>
-                                </div>
-
-                                {/* EARNINGS SECTION */}
-                                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                                    <h3 className="text-xs font-black text-gray-400 tracking-[0.2em] uppercase mb-4 text-center">Gross Earnings</h3>
-                                    <div className="space-y-3 mb-4">
-                                        {earnings.map(item => (
-                                            <div key={item.id} className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-600 font-medium">{item.label}</span>
-                                                <span className="font-bold text-gray-800">₱{formatMoney(item.amount)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
-                                        <span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Gross</span>
-                                        <span className="text-lg font-black text-[#2563eb]">₱{formatMoney(totalEarnings)}</span>
-                                    </div>
-                                </div>
-
-                                {/* DEDUCTIONS SECTION (RED ITEMS) */}
-                                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                                    <h3 className="text-xs font-black text-gray-400 tracking-[0.2em] uppercase mb-4 text-center">Deductions</h3>
-                                    <div className="space-y-3 mb-4">
-                                        {deductions.map(item => (
-                                            <div key={item.id} className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-600 font-medium">{item.label}</span>
-                                                <span className="font-bold text-red-500">- ₱{formatMoney(item.amount)}</span>
-                                            </div>
-                                        ))}
-                                        {deductions.length === 0 && <p className="text-xs text-center text-gray-400 italic">No deductions this period.</p>}
-                                    </div>
-                                    <div className="pt-4 border-t border-dashed border-gray-200 flex justify-between items-center">
-                                        <span className="text-xs font-black tracking-wider text-gray-800 uppercase">Total Deductions</span>
-                                        <span className="text-lg font-black text-red-500">- ₱{formatMoney(totalDeductions)}</span>
-                                    </div>
-                                </div>
-
-                                {/* NET SALARY CARD (TRANSPARENT BACKGROUND, CONDITIONAL RED FONT) */}
-                                <div className="p-6 text-center transform hover:scale-[1.02] transition-transform">
-                                    <p className="text-[10px] font-bold text-gray-400 tracking-[0.15em] uppercase mb-2">Net Salary (Take Home)</p>
-                                    <p className={`text-4xl font-bold tracking-tight ${netPay < 0 ? 'text-red-500' : 'text-gray-800'}`}>{netPay < 0 ? '-' : ''}₱{formatMoney(netPay)}</p>
-                                </div>
-
-                                {/* LIFETIME BALANCE CARD (NON-BOLD FONT) */}
-                                <div className="p-6 border-t border-gray-200 text-center">
-                                    <p className="text-[10px] font-normal text-gray-500 tracking-[0.15em] uppercase mb-2">Lifetime Balance</p>
-                                    <p className={`text-3xl font-normal tracking-tight ${emp.caBalance < 0 ? 'text-red-500' : 'text-gray-700'}`}>{emp.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(emp.caBalance))}</p>
-                                </div>
-
-                                {/* Admin Actions (if provided) */}
-                                {(onEdit || onDelete) && (
-                                    <div className="flex gap-3 mt-4 print-hidden">
-                                        {onEdit && <button onClick={() => onEdit(emp)} className="flex-1 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-blue-50 transition-colors shadow-sm">Edit Profile</button>}
-                                        {onDelete && <button onClick={() => onDelete(emp.id, emp.name)} className="flex-1 py-3 bg-white border border-rose-200 text-rose-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-rose-50 transition-colors shadow-sm">Delete</button>}
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                <div className="flex justify-between items-center mb-6 px-2">
-                                    <h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3>
-                                    <span className="text-[#1b3382] text-[10px] font-bold flex items-center bg-blue-100 px-3 py-1 rounded-full">{ledger.length} Records</span>
-                                </div>
-
-                                {ledger.map(tx => (
-                                    <div key={tx.id} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex items-center gap-4">
-                                        <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                            <DollarSign className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-gray-800 text-sm truncate">{tx.type}</p>
-                                            <div className="flex flex-col mt-1">
-                                                <p className="text-[10px] text-gray-400 font-medium">{new Date(tx.date).toLocaleDateString()} • {tx.status}</p>
-                                                {tx.note && <p className="text-[10px] text-gray-500 italic truncate mt-0.5">"{tx.note}"</p>}
-                                            </div>
-                                        </div>
-                                        <div className="text-right shrink-0">
-                                            <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                {(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                                {ledger.length === 0 && (
-                                    <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200">
-                                        <HistoryIcon className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No Transactions Found</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        // --- END PAYSLIP WIDGET ---
 
         function NavItem({ icon, label, active, onClick, open }) {
             return (
@@ -458,10 +234,12 @@
             const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', staffEmail: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
 
             const [dashSearchEmpId, setDashSearchEmpId] = useState('');
-            const [dashSearchMonth, setDashSearchMonth] = useState(() => new Date().toISOString().slice(0, 7));
+            const [dashSearchStart, setDashSearchStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+            const [dashSearchEnd, setDashSearchEnd] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10));
 
             const [icEmpId, setIcEmpId] = useState('');
-            const [icMonth, setIcMonth] = useState(() => new Date().toISOString().slice(0, 7));
+            const [icDateStart, setIcDateStart] = useState(dashSearchStart);
+            const [icDateEnd, setIcDateEnd] = useState(dashSearchEnd);
             const [icForm, setIcForm] = useState({ days_worked: 0, bonus: 0, sss: 0, cash_advance: 0, misc_deductions: 0 });
 
             const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' });
@@ -520,43 +298,30 @@
                 return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubCAReq(); unsubIP(); };
             }, [user]);
 
+            // 🔥 FIX: LIFETIME BALANCE IS NOW CALCULATED PERFECTLY FROM THE LEDGER
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
+                    // Attendance logic
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(selectedMonth));
                     let days = 0; const uniqueDates = new Set(empAtt.map(a => a.date));
                     uniqueDates.forEach(date => days += Math.min(Math.max(...empAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
                     
+                    // Monthly CA deduction logic
                     const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && (ca.date || '').startsWith(selectedMonth));
                     const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
                     
-                    // LIFETIME BALANCE CALCULATION: Total Salary minus Total Cash Received
-                    const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id));
-                    let lifetimeDays = 0; 
-                    const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => a.date));
-                    uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => a.date === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
-
-                    const lifetimeBonuses = interactivePayrolls
-                        .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
-                        .reduce((sum, p) => sum + (parseFloat(p.data?.bonus) || 0), 0);
-
-                    const lifetimeGross = (lifetimeDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + lifetimeBonuses;
-
-                    const totalCashReceived = cashAdvances
+                    // NEW DYNAMIC LIFETIME CA BALANCE: Subtracts payments (negative amounts) from advances (positive amounts) perfectly!
+                    const lifetimeCaBalance = cashAdvances
                         .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
                         .reduce((sum, ca) => sum + (parseFloat(ca.amount) || 0), 0);
 
-                    const lifetimeCaBalance = lifetimeGross - totalCashReceived;
-
-                    // Include bonuses safely sourced from the Payslip Builder Interactive Archives!
-                    const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || p.startDate?.startsWith(selectedMonth)));
-                    const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
-
-                    const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0) + bonusAmount;
+                    // Salary Math
+                    const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0);
                     const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0);
                     
-                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount };
+                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance };
                 });
-            }, [employees, attendance, cashAdvances, interactivePayrolls, selectedMonth]);
+            }, [employees, attendance, cashAdvances, selectedMonth]);
 
             const stats = useMemo(() => {
                 const today = new Date().toISOString().slice(0, 10);
@@ -568,31 +333,27 @@
             let quickView = null;
             if (dashSearchEmpId) {
                 const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
-                if (emp && dashSearchMonth) {
-                    const rangeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && (a.date || '').startsWith(dashSearchMonth));
+                if (emp && dashSearchStart && dashSearchEnd) {
+                    const rangeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && a.date >= dashSearchStart && a.date <= dashSearchEnd);
                     let rDays = 0; new Set(rangeAtt.map(a=>a.date)).forEach(d => rDays += Math.min(Math.max(...rangeAtt.filter(a=>a.date===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
-                    const rCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && (ca.date || '').startsWith(dashSearchMonth)).reduce((s,c)=>s+(parseFloat(c.amount)||0), 0);
-                    const rPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === dashSearchMonth || p.startDate?.startsWith(dashSearchMonth)));
-                    const rBonus = rPayroll ? (parseFloat(rPayroll.data?.bonus) || 0) : 0;
-                    const rGross = (rDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + rBonus;
+                    const rCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && ca.date >= dashSearchStart && ca.date <= dashSearchEnd).reduce((s,c)=>s+(parseFloat(c.amount)||0), 0);
+                    const rGross = rDays * (parseFloat(emp.dailyRate || emp.rate) || 0);
                     const rNet = rGross - rCA - (parseFloat(emp.sssRate)||0) - (parseFloat(emp.miscRate)||0);
                     quickView = { ...emp, rangeDays: rDays, rangeGross: rGross, rangeCA: rCA, rangeNet: rNet };
                 }
             }
 
             useEffect(() => {
-                if (icEmpId && icMonth) {
+                if (icEmpId && icDateStart && icDateEnd) {
                     const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                     if (emp) {
-                        const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && (a.date || '').startsWith(icMonth));
+                        const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && a.date >= icDateStart && a.date <= icDateEnd);
                         let calcDays = 0; new Set(att.map(a=>a.date)).forEach(d => calcDays += Math.min(Math.max(...att.filter(a=>a.date===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
-                        const rangeCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && (ca.date || '').startsWith(icMonth)).reduce((s,c)=>s+(parseFloat(c.amount)||0), 0);
-                        const saved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === icMonth || p.startDate?.startsWith(icMonth)));
-                        const bonus = saved ? (parseFloat(saved.data?.bonus) || 0) : 0;
-                        setIcForm({ days_worked: calcDays, bonus: bonus, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA });
+                        const rangeCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && ca.date >= icDateStart && ca.date <= icDateEnd).reduce((s,c)=>s+(parseFloat(c.amount)||0), 0);
+                        setIcForm({ days_worked: calcDays, bonus: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA });
                     }
                 }
-            }, [icEmpId, icMonth, employees, attendance, cashAdvances, interactivePayrolls]);
+            }, [icEmpId, icDateStart, icDateEnd, employees, attendance, cashAdvances]);
 
             const handleStaffSubmitCARequest = async (e) => {
                 e.preventDefault();
@@ -613,6 +374,7 @@
                 const today = new Date().toISOString().slice(0, 10);
                 
                 await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Approved', dateApproved: today });
+                // We add to ledger here. Because of our NEW dynamic calculation, caBalance will automatically go up! No need for manual updateDoc on employee.
                 await window.fb.addDoc(getVaultCol('cash_advances'), { empId: req.empId, amount: req.amount, reason: `Apprvd Req: ${req.reason}`, date: today, type: 'advance' });
             };
 
@@ -621,9 +383,12 @@
                 await window.fb.updateDoc(getVaultDoc('ca_requests', reqId), { status: 'Rejected' });
             };
 
+            // FIX: Reverted to 58mm Standard Browser Print for extreme LAN Printer reliability
             const handlePrintReceipt = async (req) => {
                 try {
-                    await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Printed' });
+                    await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { 
+                        status: 'Printed' 
+                    });
                 } catch (err) {
                     alert("Network error: Could not lock the record. Print cancelled to protect funds.");
                     return; 
@@ -632,6 +397,7 @@
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
                 setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
                 
+                // Alert reminder so staff selects the right LAN printer
                 alert("IMPORTANT: Make sure to select the 58mm KITCHEN PRINTER from the dropdown list before printing!");
 
                 document.body.classList.add('pos-receipt-active');
@@ -698,6 +464,7 @@
             const handleIssueCA = async () => {
                 if (!isAdmin || !newCa.empId) return;
                 let amt = parseFloat(newCa.amount) || 0; 
+                // If payment, amount becomes negative in ledger
                 if (caType === 'payment') amt = -Math.abs(amt);
                 
                 await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: amt, type: caType });
@@ -717,7 +484,7 @@
 
             const handleExportBackup = () => {
                 if(!isAdmin) return;
-                const data = { employees, attendance, cashAdvances, interactivePayrolls, caRequests };
+                const data = { employees, attendance, cashAdvances, interactivePayrolls };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `stonegrill_backup.json`; a.click();
             };
@@ -735,7 +502,7 @@
                                 if (id) await window.fb.setDoc(getVaultDoc(colName, id), rest, { merge: true }); 
                             }
                         };
-                        await restoreCollection('employees', data.employees); await restoreCollection('attendance', data.attendance); await restoreCollection('cash_advances', data.cashAdvances || data.cash_advances); await restoreCollection('payroll_entries', data.interactivePayrolls); await restoreCollection('ca_requests', data.caRequests);
+                        await restoreCollection('employees', data.employees); await restoreCollection('attendance', data.attendance); await restoreCollection('cash_advances', data.cashAdvances || data.cash_advances); await restoreCollection('payroll_entries', data.interactivePayrolls);
                         alert(`Restore Complete!`);
                     } catch (err) { alert("Restore Error: " + err.message); }
                     setIsRestoring(false);
@@ -821,7 +588,8 @@
                                                     <h3 className="font-black text-blue-900 uppercase mb-6 flex items-center gap-2"><Search /> Quick Detail Lookup</h3>
                                                     <div className="flex flex-wrap gap-4 items-end mb-8">
                                                         <div className="flex-1 min-w-[200px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Employee Name</label><select className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchEmpId} onChange={e => setDashSearchEmpId(e.target.value)}><option value="">Select Employee</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
-                                                        <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Month</label><select className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchMonth} onChange={e => setDashSearchMonth(e.target.value)}>{monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+                                                        <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Start</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchStart} onChange={e => setDashSearchStart(e.target.value)} /></div>
+                                                        <div className="flex-1 min-w-[150px]"><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">End</label><input type="date" className="w-full p-3.5 border rounded-2xl bg-slate-50 font-bold outline-none" value={dashSearchEnd} onChange={e => setDashSearchEnd(e.target.value)} /></div>
                                                     </div>
                                                     {quickView ? (
                                                         <div className="bg-white rounded-3xl p-6 md:p-8 border border-blue-100 shadow-lg animate-slide-up">
@@ -833,8 +601,8 @@
                                                                 <div className="bg-slate-50 p-4 rounded-2xl border"><p className="text-[9px] font-black text-slate-400 uppercase mb-1">Take Home</p><p className={`text-2xl font-black font-mono ${quickView.rangeNet < 0 ? 'text-red-500' : 'text-emerald-600'}`}>{quickView.rangeNet < 0 ? '-' : ''}₱{formatMoney(quickView.rangeNet)}</p></div>
                                                             </div>
                                                             <div className="mt-6 border-t pt-6 text-center">
-                                                                <p className="text-[10px] font-normal text-slate-400 uppercase mb-2">Lifetime Balance</p>
-                                                                <p className={`text-4xl font-normal tracking-tighter ${quickView.caBalance < 0 ? 'text-red-500' : 'text-slate-700'}`}>{quickView.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(quickView.caBalance))}</p>
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Current C.A. Debt (Lifetime)</p>
+                                                                <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">₱{formatMoney(quickView.caBalance)}</p>
                                                             </div>
                                                         </div>
                                                     ) : <div className="text-center py-10 text-slate-400 italic">Select an employee to view ledger.</div>}
@@ -842,7 +610,7 @@
                                             </>
                                         )}
 
-                                        {/* For Staff: Interactive Payslip View & CA Request */}
+                                        {/* For Staff: Read-Only detailed profile view */}
                                         {(!isAdmin) && (() => {
                                             const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(currentBiometricId));
                                             if (!emp) return null;
@@ -850,20 +618,79 @@
                                             const myRequests = caRequests.filter(r => normalizeId(r.empId) === normalizeId(emp.id)).sort((a,b)=>(b.dateRequested||'').localeCompare(a.dateRequested||''));
 
                                             return (
-                                                <div className="animate-slide-up space-y-6 max-w-2xl mx-auto pb-10">
-                                                    
-                                                    {/* The integrated Payslip Widget for Staff */}
-                                                    <PayslipWidget 
-                                                        emp={emp} 
-                                                        selectedMonth={selectedMonth} 
-                                                        monthOptions={monthOptions} 
-                                                        setSelectedMonth={setSelectedMonth} 
-                                                        attendance={attendance} 
-                                                        cashAdvances={cashAdvances} 
-                                                        interactivePayrolls={interactivePayrolls} 
-                                                    />
+                                                <div className="animate-slide-up space-y-6 max-w-3xl mx-auto">
+                                                    <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden">
+                                                        <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0">
+                                                            <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6 inline mr-2"/> STAFF CLOUD PROFILE</h2>
+                                                        </div>
+                                                        <div className="p-8">
+                                                            <div className="flex justify-between items-start border-b pb-6 mb-8">
+                                                                <div>
+                                                                    <div className="flex items-center gap-4 mb-1">
+                                                                        <h3 className="text-5xl font-black text-[#1e293b] uppercase tracking-tighter">{emp.name}</h3>
+                                                                        <span className="text-[10px] bg-[#dcfce7] text-[#166534] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm">ACTIVE</span>
+                                                                    </div>
+                                                                    <p className="text-sm text-[#94a3b8] font-bold uppercase tracking-widest">{emp.position} (ID: {emp.id})</p>
+                                                                    
+                                                                    <div className="mt-4 flex flex-wrap gap-4 text-[10px] font-black text-slate-500 uppercase">
+                                                                        {emp.staffEmail && <span>📧 {emp.staffEmail}</span>}
+                                                                        {emp.contactNumber && <span>📞 {emp.contactNumber}</span>}
+                                                                        {emp.sssNumber && <span>🛡️ SSS: {emp.sssNumber}</span>}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="font-black text-[#2563eb] font-mono text-3xl tracking-tighter mt-2">₱{formatMoney(emp.dailyRate || emp.rate)}/DAY</p>
+                                                                </div>
+                                                            </div>
 
-                                                    {/* CA Request Tool */}
+                                                            <div className="flex justify-between items-center bg-slate-50 p-2 rounded-xl border mb-8">
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase ml-4">Earnings Snapshot (Selected Month)</span>
+                                                                <select className="bg-white p-2 rounded-lg font-black text-xs uppercase outline-none border" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                                                                    {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                                                </select>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-8">
+                                                                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-3">Days</p><p className="text-3xl font-black text-[#1e293b] font-mono">{emp.days}</p></div>
+                                                                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-3">Gross Pay</p><p className="text-3xl font-black text-[#2563eb] font-mono">₱{formatMoney(emp.gross)}</p></div>
+                                                                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-3">Deducted</p><p className="text-3xl font-black text-[#ef4444] font-mono">₱{formatMoney(emp.monthlyCA + (parseFloat(emp.sssRate)||0) + (parseFloat(emp.miscRate)||0))}</p></div>
+                                                                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-3">Net Pay</p><p className={`text-3xl font-black font-mono ${emp.net < 0 ? 'text-red-500' : 'text-[#10b981]'}`}>{emp.net < 0 ? '-' : ''}₱{formatMoney(emp.net)}</p></div>
+                                                            </div>
+                                                            
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                                                                <div className="bg-[#fff1f2] p-8 rounded-3xl border border-[#ffe4e6] text-center shadow-inner">
+                                                                    <p className="text-[10px] font-black text-[#f43f5e] uppercase tracking-widest mb-3">Lifetime C.A. Bal.</p>
+                                                                    <p className="text-5xl font-black text-[#e11d48] font-mono tracking-tighter">₱{formatMoney(emp.caBalance)}</p>
+                                                                </div>
+                                                                <div className="bg-[#f0f9ff] p-8 rounded-3xl border border-[#e0f2fe] text-center shadow-inner">
+                                                                    <p className="text-[10px] font-black text-[#38bdf8] uppercase tracking-widest mb-3">Total Attendance</p>
+                                                                    <p className="text-5xl font-black text-[#0284c7] font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id)).length}</p>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="mt-6">
+                                                                <h4 className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-4">Transaction History</h4>
+                                                                <div className="max-h-64 overflow-y-auto custom-scrollbar bg-slate-50 border rounded-2xl">
+                                                                    <table className="w-full text-left text-xs">
+                                                                        <thead className="bg-slate-100 font-black uppercase text-[9px] text-[#94a3b8] sticky top-0"><tr><th className="p-4">Date</th><th className="p-4">Type</th><th className="p-4">Note</th><th className="p-4 text-right">Amount</th></tr></thead>
+                                                                        <tbody className="divide-y divide-slate-100">
+                                                                            {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca => (
+                                                                                <tr key={ca.id} className="hover:bg-white transition-colors">
+                                                                                    <td className="p-4 font-mono text-[#64748b] font-bold">{ca.date}</td>
+                                                                                    <td className="p-4 font-black text-[#94a3b8]">C.A.</td>
+                                                                                    <td className="p-4 italic text-[#64748b]">{ca.reason || '--'}</td>
+                                                                                    <td className={`p-4 text-right font-black font-mono text-sm ${ca.amount < 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                            {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id)).length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-400 italic">No transactions on record.</td></tr>}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* NEW: CA Request Tool */}
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden mt-6">
                                                         <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center">
                                                             <Banknote className="w-5 h-5 mr-2" /> Request Cash Advance
@@ -883,6 +710,7 @@
                                                                 </div>
                                                             </form>
 
+                                                            {/* Status Tracker */}
                                                             <h4 className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-4">Request Status Tracker</h4>
                                                             <div className="max-h-48 overflow-y-auto custom-scrollbar border rounded-xl">
                                                                 <table className="w-full text-left text-xs">
@@ -947,8 +775,8 @@
                                                             <td className="p-4 text-center font-bold text-slate-400 font-mono">₱{formatMoney(row.dailyRate || row.rate)}</td>
                                                             <td className="p-4 text-center font-bold text-slate-600">{row.days}</td>
                                                             <td className="p-4 text-right font-black text-blue-600 font-mono">₱{formatMoney(row.gross)}</td>
-                                                            <td className="p-4 text-right font-black text-red-500 font-mono">{row.monthlyCA > 0 ? `- ₱${formatMoney(row.monthlyCA)}` : '--'}</td>
-                                                            <td className={`p-4 text-right font-black font-mono text-base ${row.net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{row.net < 0 ? '-' : ''}₱{formatMoney(Math.abs(row.net))}</td>
+                                                            <td className="p-4 text-right font-black text-amber-500 font-mono">₱{formatMoney(row.monthlyCA)}</td>
+                                                            <td className={`p-4 text-right font-black font-mono text-base ${row.net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{row.net < 0 ? '-' : ''}₱{formatMoney(row.net)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -985,11 +813,9 @@
                                         <div className="w-full lg:w-1/3 bg-white p-8 rounded-3xl shadow-xl space-y-6">
                                             <h3 className="font-black text-blue-900 uppercase tracking-widest border-b pb-4">Payslip Builder</h3>
                                             <div><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Employee</label><select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icEmpId} onChange={e => setIcEmpId(e.target.value)}><option value="">Select Member</option>{employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
-                                            <div className="mb-4">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Month</label>
-                                                <select className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none" value={icMonth} onChange={e => setIcMonth(e.target.value)}>
-                                                    {monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                                </select>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Start</label><input type="date" value={icDateStart} onChange={e => setIcDateStart(e.target.value)} className="w-full p-2 border rounded-xl text-xs font-bold"/></div>
+                                                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">End</label><input type="date" value={icDateEnd} onChange={e => setIcDateEnd(e.target.value)} className="w-full p-2 border rounded-xl text-xs font-bold"/></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-2">Days</label><input type="number" step="0.1" className="w-full p-3 border rounded-xl font-black bg-slate-50" value={icForm.days_worked} onChange={e => setIcForm({...icForm, days_worked: parseFloat(e.target.value) || 0})}/></div>
@@ -1001,8 +827,8 @@
                                             </div>
                                             <button onClick={async () => {
                                                 if (!icEmpId) return;
-                                                const key = `${normalizeId(icEmpId)}_${icMonth}`;
-                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: icForm });
+                                                const key = `${normalizeId(icEmpId)}_${icDateStart}_${icDateEnd}`;
+                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), startDate: icDateStart, endDate: icDateEnd, data: icForm });
                                                 alert("Saved to archive.");
                                             }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
                                         </div>
@@ -1012,9 +838,7 @@
                                                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                                                 const gross = (icForm.days_worked * (parseFloat(emp?.dailyRate || emp?.rate) || 0)) + icForm.bonus;
                                                 const net = gross - icForm.cash_advance - icForm.sss - icForm.misc_deductions;
-                                                const rangeCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && (ca.date || '').startsWith(icMonth)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-                                                const currentMonthLabel = monthOptions.find(m => m.value === icMonth)?.label || icMonth;
-                                                
+                                                const rangeCAs = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && ca.date >= icDateStart && ca.date <= icDateEnd).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
                                                 return (
                                                 <div className="w-full max-w-sm bg-white border border-slate-200 shadow-2xl p-10 relative" id="interactive-print-section">
                                                     <div className="flex justify-center mb-8"><div className="bg-[#594276] text-white px-10 py-2.5 font-black text-lg tracking-widest shadow-md">PAYROLL</div></div>
@@ -1030,21 +854,21 @@
                                                             <div className="flex justify-between font-black text-emerald-600 italic"><span>Bonus:</span><span>{icForm.bonus > 0 ? formatMoney(icForm.bonus) : '--'}</span></div>
                                                         </div>
                                                         <div className="flex-1 p-3 text-xs space-y-2 font-mono text-rose-600 font-bold">
-                                                            <div className="flex justify-between"><span>C.A.:</span><span>{icForm.cash_advance > 0 ? `-₱${formatMoney(icForm.cash_advance)}` : '--'}</span></div>
-                                                            <div className="flex justify-between"><span>SSS:</span><span>{icForm.sss > 0 ? `-₱${formatMoney(icForm.sss)}` : '--'}</span></div>
-                                                            <div className="flex justify-between"><span>Misc:</span><span>{icForm.misc_deductions > 0 ? `-₱${formatMoney(icForm.misc_deductions)}` : '--'}</span></div>
+                                                            <div className="flex justify-between"><span>C.A.:</span><span>{icForm.cash_advance > 0 ? formatMoney(icForm.cash_advance) : '--'}</span></div>
+                                                            <div className="flex justify-between text-blue-600"><span>SSS:</span><span>{icForm.sss > 0 ? formatMoney(icForm.sss) : '--'}</span></div>
+                                                            <div className="flex justify-between"><span>Misc:</span><span>{icForm.misc_deductions > 0 ? formatMoney(icForm.misc_deductions) : '--'}</span></div>
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-between items-center mt-8">
                                                         <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">TOTAL NET</span>
-                                                        <span className={`text-3xl font-black bg-slate-100 px-6 py-3 border font-mono tracking-tighter ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(Math.abs(net))}</span>
+                                                        <span className={`text-3xl font-black bg-slate-100 px-6 py-3 border font-mono tracking-tighter ${net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{net < 0 ? '-' : ''}₱{formatMoney(net)}</span>
                                                     </div>
                                                     {rangeCAs.length > 0 && (
                                                         <div className="mt-6 pt-4 border-t border-dashed">
-                                                            <p className="text-[9px] font-black text-slate-400 uppercase text-center mb-2">CA Ledger ({currentMonthLabel})</p>
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase text-center mb-2">CA Ledger ({new Date(icDateStart).toLocaleDateString('en-US',{month:'short',day:'numeric'})} - {new Date(icDateEnd).toLocaleDateString('en-US',{month:'short',day:'numeric'})})</p>
                                                             <div className="space-y-1 bg-slate-50 p-3 rounded-lg border">
                                                                 {rangeCAs.map(ca => (
-                                                                    <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{ca.date}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</span></div>
+                                                                    <div key={ca.id} className="flex justify-between text-[10px] font-mono"><span className="text-slate-500">{ca.date}</span><span className={ca.amount < 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</span></div>
                                                                 ))}
                                                             </div>
                                                         </div>
@@ -1059,6 +883,8 @@
 
                                 {isAdmin && activeTab === 'ca' && (
                                     <div className="flex flex-col gap-8 animate-slide-up">
+                                        
+                                        {/* NEW: ADMIN APPROVAL QUEUE */}
                                         <div className="bg-white rounded-3xl border shadow-xl overflow-hidden">
                                             <div className="bg-amber-500 text-white p-4 font-black uppercase tracking-widest text-xs flex justify-between items-center">
                                                 <span>Pending Cash Advance Requests</span>
@@ -1097,18 +923,7 @@
                                                     <button onClick={()=>setCaType('payment')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='payment'?'bg-white shadow text-emerald-600':'text-slate-400'}`}>PAYMENT</button>
                                                 </div>
                                                 <select className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.empId} onChange={e=>setNewCa({...newCa, empId: e.target.value})}><option value="">Select Member</option>{employees.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
-                                                
-                                                {/* Issue CA - Display Lifetime Balance */}
-                                                {newCa.empId && (() => {
-                                                    const currentEmp = payrollSummary.find(e=>normalizeId(e.id)===normalizeId(newCa.empId));
-                                                    return (
-                                                        <div className="bg-slate-50 border p-4 rounded-xl text-center">
-                                                            <p className="text-[10px] font-normal text-slate-500 uppercase mb-1">Lifetime Balance</p>
-                                                            <p className={`text-2xl font-normal tracking-tight ${currentEmp?.caBalance < 0 ? 'text-red-500' : 'text-slate-700'}`}>{currentEmp?.caBalance < 0 ? '-' : ''}₱{formatMoney(Math.abs(currentEmp?.caBalance))}</p>
-                                                        </div>
-                                                    );
-                                                })()}
-                                                
+                                                {newCa.empId && <div className="bg-rose-50 p-4 rounded-xl text-center"><p className="text-[10px] font-black text-rose-800 opacity-50 uppercase">Current Debt</p><p className="text-2xl font-black text-rose-600 font-mono">₱{formatMoney(payrollSummary.find(e=>normalizeId(e.id)===normalizeId(newCa.empId))?.caBalance)}</p></div>}
                                                 <input type="date" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.date} onChange={e=>setNewCa({...newCa, date: e.target.value})} />
                                                 <input type="number" placeholder="Amount" className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.amount} onChange={e=>setNewCa({...newCa, amount: e.target.value})} />
                                                 <input type="text" placeholder="Note" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.reason} onChange={e=>setNewCa({...newCa, reason: e.target.value})} />
@@ -1124,7 +939,7 @@
                                                                 <tr key={ca.id} className="hover:bg-slate-50 transition-colors">
                                                                     <td className="p-4 font-mono text-slate-400">{ca.date}</td>
                                                                     <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(ca.empId))?.name || ca.empId} <span className="italic text-slate-400 font-normal ml-2">{ca.reason}</span></td>
-                                                                    <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-500'}`}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</td>
+                                                                    <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
                                                                     <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
                                                                 </tr>
                                                             ))}
@@ -1151,8 +966,8 @@
                                                             <td className="py-3 px-2 font-bold uppercase">{row.name}</td>
                                                             <td className="py-3 px-2 text-center font-mono">{formatMoney(row.dailyRate || row.rate)}</td>
                                                             <td className="py-3 px-2 text-center font-bold">{row.days}</td>
-                                                            <td className="py-3 px-2 text-right text-red-500 font-bold font-mono">{row.monthlyCA > 0 ? `-₱${formatMoney(row.monthlyCA)}` : ''}</td>
-                                                            <td className={`py-3 px-2 text-right font-black font-mono text-base ${row.net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{row.net < 0 ? '-' : ''}{formatMoney(Math.abs(row.net))}</td>
+                                                            <td className="py-3 px-2 text-right text-red-600 font-bold font-mono">{row.monthlyCA > 0 ? formatMoney(row.monthlyCA) : ''}</td>
+                                                            <td className={`py-3 px-2 text-right font-black font-mono text-base ${row.net < 0 ? 'text-red-500' : 'text-slate-900'}`}>{row.net < 0 ? '-' : ''}{formatMoney(row.net)}</td>
                                                             <td className="py-3 px-2"><div className="w-full h-8 border-b border-dashed border-gray-400"></div></td>
                                                         </tr>
                                                     ))}
@@ -1160,7 +975,7 @@
                                                 {(() => {
                                                     const totalNet = payrollSummary.reduce((sum, row) => sum + row.net, 0);
                                                     return (
-                                                        <tfoot><tr className="border-t-2 border-gray-900 font-black text-lg"><td colSpan="4" className="py-5 px-2 text-right uppercase">TOTAL:</td><td className={`py-5 px-2 text-right font-mono ${totalNet < 0 ? 'text-red-500' : ''}`}>{totalNet < 0 ? '-' : ''}₱{formatMoney(Math.abs(totalNet))}</td><td></td></tr></tfoot>
+                                                        <tfoot><tr className="border-t-2 border-gray-900 font-black text-lg"><td colSpan="4" className="py-5 px-2 text-right uppercase">TOTAL:</td><td className={`py-5 px-2 text-right font-mono ${totalNet < 0 ? 'text-red-500' : ''}`}>{totalNet < 0 ? '-' : ''}₱{formatMoney(totalNet)}</td><td></td></tr></tfoot>
                                                     );
                                                 })()}
                                             </table>
@@ -1181,7 +996,7 @@
                                                             {Array.from({length: 12}).map((_, i) => {
                                                                 const isCurrent = selectedMonth.endsWith((i+1).toString().padStart(2,'0'));
                                                                 const monthNet = payrollSummary.find(p=>p.id===emp.id)?.net;
-                                                                return <td key={i} className={`p-4 font-mono font-bold border-r ${isCurrent ? (monthNet < 0 ? 'text-red-500 bg-red-50' : 'text-blue-600 bg-blue-50/30') : 'text-slate-300 italic'}`}>{isCurrent ? `${monthNet < 0 ? '-' : ''}₱${formatMoney(Math.abs(monthNet || 0))}` : '--'}</td>;
+                                                                return <td key={i} className={`p-4 font-mono font-bold border-r ${isCurrent ? (monthNet < 0 ? 'text-red-500 bg-red-50' : 'text-blue-600 bg-blue-50/30') : 'text-slate-300 italic'}`}>{isCurrent ? `${monthNet < 0 ? '-' : ''}₱${formatMoney(monthNet)}` : '--'}</td>;
                                                             })}
                                                         </tr>
                                                     ))}
@@ -1206,7 +1021,7 @@
                             </div>
                         </div>
 
-                        {/* HIDDEN 58MM POS RECEIPT RENDERER */}
+                        {/* NEW: HIDDEN 58MM POS RECEIPT RENDERER */}
                         {receiptToPrint && (
                             <div id="pos-receipt-print" className="bg-white">
                                 <div style={{ textAlign: 'center', marginBottom: '10px' }}>
@@ -1233,7 +1048,7 @@
 
                     {/* ADMIN ADD/EDIT STAFF MODAL */}
                     {showAddStaff && isAdmin && (
-                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
                             <form onSubmit={handleAddStaffSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 space-y-5 animate-in zoom-in-95">
                                 <div className="flex justify-between items-center mb-2"><h3 className="font-black uppercase tracking-widest text-blue-900">{isEditing ? 'Edit Staff Profile' : 'Add Staff'}</h3><button type="button" onClick={()=>{setShowAddStaff(false); setIsEditing(false);}} className="text-slate-400"><X/></button></div>
                                 
@@ -1264,21 +1079,83 @@
                         </div>
                     )}
 
-                    {/* ADMIN VIEW PROFILE MODAL (Now Uses the Digital Payslip Widget) */}
+                    {/* ADMIN VIEW PROFILE MODAL */}
                     {viewProfile && isAdmin && (
-                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[50] flex items-center justify-center p-4">
-                            <PayslipWidget 
-                                emp={viewProfile}
-                                selectedMonth={selectedMonth}
-                                monthOptions={monthOptions}
-                                setSelectedMonth={setSelectedMonth}
-                                cashAdvances={cashAdvances}
-                                attendance={attendance}
-                                interactivePayrolls={interactivePayrolls}
-                                onClose={() => setViewProfile(null)}
-                                onEdit={handleEditProfile}
-                                onDelete={handleDeleteEmployee}
-                            />
+                        <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95">
+                                <div className="bg-blue-900 text-white p-6 flex justify-between items-center shrink-0"><h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3"><Users className="w-6 h-6 inline mr-2"/> PROFILE OVERVIEW</h2><button onClick={() => setViewProfile(null)} className="hover:text-blue-200"><X/></button></div>
+                                <div className="overflow-y-auto p-8 flex-1 space-y-8 custom-scrollbar">
+                                    <div className="flex justify-between items-start border-b pb-6 mb-2">
+                                        <div>
+                                            <div className="flex items-center gap-4 mb-1">
+                                                <h3 className="text-5xl font-black text-[#1e293b] uppercase tracking-tighter">{viewProfile.name}</h3>
+                                                <span className="text-[10px] bg-[#dcfce7] text-[#166534] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm">ACTIVE</span>
+                                            </div>
+                                            <p className="text-sm text-[#94a3b8] font-bold uppercase tracking-widest">{viewProfile.position} (ID: {viewProfile.id})</p>
+                                            
+                                            <div className="mt-4 flex flex-wrap gap-4 text-[10px] font-black text-slate-500 uppercase">
+                                                {viewProfile.staffEmail && <span>📧 {viewProfile.staffEmail}</span>}
+                                                {viewProfile.contactNumber && <span>📞 {viewProfile.contactNumber}</span>}
+                                                {viewProfile.sssNumber && <span>🛡️ SSS: {viewProfile.sssNumber}</span>}
+                                            </div>
+
+                                            <div className="mt-6 flex gap-3">
+                                                <button onClick={() => handleEditProfile(viewProfile)} className="bg-white text-blue-600 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all border border-blue-100">✏️ Edit Profile</button>
+                                                <button onClick={()=>handleDeleteEmployee(viewProfile.id, viewProfile.name)} className="bg-[#fff1f2] text-rose-600 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all border border-rose-100">🗑️ Delete Profile</button>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-black text-[#2563eb] font-mono text-3xl tracking-tighter mt-2">₱{formatMoney(viewProfile.dailyRate || viewProfile.rate)}/DAY</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 mb-6">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-left">Monthly Calculation Breakdown</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase mb-1 tracking-widest">Days</p><p className="text-3xl font-black text-[#1e293b] font-mono">{viewProfile.days}</p></div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase mb-1 tracking-widest">Gross</p><p className="text-3xl font-black text-[#2563eb] font-mono">₱{formatMoney(viewProfile.gross)}</p></div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase mb-1 tracking-widest">C.A. Deduct</p><p className="text-3xl font-black text-[#ef4444] font-mono">₱{formatMoney(viewProfile.monthlyCA)}</p></div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><p className="text-[10px] font-black text-[#94a3b8] uppercase mb-1 tracking-widest">SSS & Misc</p><p className="text-3xl font-black text-[#ef4444] font-mono">₱{formatMoney((parseFloat(viewProfile.sssRate)||0) + (parseFloat(viewProfile.miscRate)||0))}</p></div>
+                                        </div>
+                                        <div className="bg-slate-800 p-6 rounded-2xl text-center text-white shadow-inner">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Net Salary (Take Home)</p>
+                                            <p className={`text-5xl font-black font-mono tracking-tighter ${viewProfile.net < 0 ? 'text-red-500' : 'text-emerald-400'}`}>{viewProfile.net < 0 ? '-' : ''}₱{formatMoney(viewProfile.net)}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                        <div className="bg-[#fff1f2] p-6 rounded-3xl border border-[#ffe4e6] text-center shadow-inner">
+                                            <p className="text-[10px] font-black text-[#f43f5e] uppercase tracking-widest mb-2">Lifetime C.A. Balance</p>
+                                            <p className="text-4xl font-black text-[#e11d48] font-mono tracking-tighter">₱{formatMoney(viewProfile.caBalance)}</p>
+                                        </div>
+                                        <div className="bg-[#f0f9ff] p-6 rounded-3xl border border-[#e0f2fe] text-center shadow-inner">
+                                            <p className="text-[10px] font-black text-[#38bdf8] uppercase tracking-widest mb-2">Total Attendance</p>
+                                            <p className="text-4xl font-black text-[#0284c7] font-mono tracking-tighter">{attendance.filter(a => normalizeId(a.empId) === normalizeId(viewProfile.id)).length}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-6">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Transaction History</h4>
+                                        <div className="max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 border rounded-2xl">
+                                            <table className="w-full text-left text-xs">
+                                                <thead className="bg-slate-100 font-black uppercase text-[9px] text-[#94a3b8] sticky top-0"><tr><th className="p-4">Date</th><th className="p-4">Type</th><th className="p-4">Note</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">Action</th></tr></thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(viewProfile.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ca => (
+                                                        <tr key={ca.id} className="hover:bg-white transition-colors">
+                                                            <td className="p-4 font-mono text-[#64748b] font-bold">{ca.date}</td>
+                                                            <td className="p-4 font-black text-[#94a3b8]">C.A.</td>
+                                                            <td className="p-4 italic text-[#64748b]">{ca.reason || '--'}</td>
+                                                            <td className={`p-4 text-right font-black font-mono text-sm ${ca.amount < 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>{ca.amount < 0 ? '-' : '+'}₱{formatMoney(ca.amount)}</td>
+                                                            <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><X className="w-3 h-3"/></button></td>
+                                                        </tr>
+                                                    ))}
+                                                    {cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(viewProfile.id)).length === 0 && <tr><td colSpan="5" className="p-6 text-center text-slate-400 italic">No transactions recorded.</td></tr>}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
