@@ -40,7 +40,7 @@
         .btn-delete { background: var(--danger); padding: 5px 10px; font-size: 12px;}
         .btn-delete:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* --- CASHIER SPREADSHEET TABLE --- */
+        /* --- SPREADSHEET TABLE --- */
         .table-wrapper { overflow-x: auto; margin-top: 20px;}
         table { width: 100%; border-collapse: collapse; min-width: 600px;}
         th, td { padding: 10px; text-align: right; border: 1px solid var(--border); }
@@ -89,6 +89,13 @@
             .expected-remit-box { text-align: center; }
             .pending-item { flex-direction: column; gap: 10px; align-items: stretch; text-align: center;}
             .admin-filter-bar { flex-direction: column; align-items: stretch; }
+            
+            /* Add Mobile Table Card UI for Admin Detailed Ledger */
+            #adminTableBody tr { display: block; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: white; }
+            #adminTableBody td { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 5px; text-align: right; }
+            #adminTableBody td:last-child { border-bottom: none; }
+            #adminTableBody td::before { content: attr(data-label); font-weight: bold; color: #555; text-align: left; }
+            #adminTableBody td:nth-child(1), #adminTableBody td:nth-child(2), #adminTableBody td:nth-child(3) { text-align: right; }
         }
     </style>
 </head>
@@ -203,12 +210,36 @@
         </div>
     </div>
 
+    <!-- Top Level Status -->
     <h3 style="color: var(--dark); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-top: 30px;">
         Cashier Activity <span id="cashierDateLabel" class="date-label"></span>
     </h3>
     <div id="adminCashierList">
         <!-- Cashier cards rendered here -->
     </div>
+
+    <!-- NEW: Detailed Transaction Ledger -->
+    <h3 style="color: var(--dark); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-top: 40px;">
+        Detailed Transaction Ledger <span id="adminLedgerDateLabel" class="date-label"></span>
+    </h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:15%">Date</th>
+                    <th style="width:20%">Cashier</th>
+                    <th style="width:30%">Description</th>
+                    <th style="width:15%">IN</th>
+                    <th style="width:15%">OUT</th>
+                    <th style="width:5%"></th>
+                </tr>
+            </thead>
+            <tbody id="adminTableBody">
+                <!-- Admin detailed data rendered here -->
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 <script type="module">
@@ -413,16 +444,17 @@
         
         document.getElementById('receivedDateLabel').innerText = dateDisplayStr;
         document.getElementById('cashierDateLabel').innerText = dateDisplayStr;
+        document.getElementById('adminLedgerDateLabel').innerText = dateDisplayStr;
 
-        let filteredAdminReceived = 0; // Filtered amount received
-        let totalPendingAuth = 0; // Always show ALL pending
-        let totalUncollected = 0; // Always show ALL time physical drawer
+        let filteredAdminReceived = 0; 
+        let totalPendingAuth = 0; 
+        let totalUncollected = 0; 
         
         let allTimeStats = {};
         let filteredStats = {};
         let pendingItemsHtml = '';
 
-        // Single pass sorting chronologically
+        // 1. Calculate Summaries
         cloudTransactions.sort((a, b) => b.createdAt - a.createdAt).forEach(t => {
             const email = t.userEmail || 'unknown';
             const name = t.cashierName || email.split('@')[0];
@@ -432,7 +464,6 @@
             if (!allTimeStats[email]) allTimeStats[email] = { name, in: 0, out: 0, remit_appr: 0, remit_pend: 0 };
             if (!filteredStats[email]) filteredStats[email] = { name, in: 0, out: 0, remit_appr: 0, remit_pend: 0 };
 
-            // 1. Process All-Time Data (For Drawer Counts & Pending Approvals)
             if (t.type === 'in') allTimeStats[email].in += amt;
             if (t.type === 'out') allTimeStats[email].out += amt;
             if (t.type === 'remit') {
@@ -440,7 +471,6 @@
                     allTimeStats[email].remit_pend += amt;
                     totalPendingAuth += amt;
                     
-                    // Build Pending Inbox UI (Always shows all pending regardless of date filter)
                     pendingItemsHtml += `
                         <div class="pending-item">
                             <span>👤 <strong>${name}</strong> remitted <strong style="color:var(--danger)">₱${amt.toLocaleString('en-PH', {minimumFractionDigits:2})}</strong> on ${t.date}</span>
@@ -452,7 +482,6 @@
                 }
             }
 
-            // 2. Process Filtered Data (For Displaying Daily Sales/Expenses)
             if (!filterDate || t.date === filterDate) {
                 if (t.type === 'in') filteredStats[email].in += amt;
                 if (t.type === 'out') filteredStats[email].out += amt;
@@ -466,7 +495,7 @@
             }
         });
 
-        // Handle Pending Box Visibility
+        // 2. Render Pending Box
         const pendingBox = document.getElementById('adminPendingBox');
         if (pendingItemsHtml !== '') {
             document.getElementById('adminPendingList').innerHTML = pendingItemsHtml;
@@ -475,7 +504,7 @@
             pendingBox.classList.add('hidden');
         }
 
-        // Handle Cashier List Display
+        // 3. Render Cashier Summary List
         const listDiv = document.getElementById('adminCashierList');
         listDiv.innerHTML = '';
 
@@ -483,11 +512,9 @@
             const allTime = allTimeStats[email];
             const filtered = filteredStats[email];
 
-            // Crucial: Expected drawer cash MUST be all time
             let physicalDrawerCash = allTime.in - allTime.out - allTime.remit_appr - allTime.remit_pend;
             totalUncollected += physicalDrawerCash;
 
-            // Display filtered sales/expenses
             listDiv.innerHTML += `
                 <div class="admin-cashier-card">
                     <div>
@@ -509,14 +536,56 @@
             `;
         });
 
-        if(Object.keys(allTimeStats).length === 0) {
-            listDiv.innerHTML = "<p>No cashier data found yet.</p>";
-        }
+        if(Object.keys(allTimeStats).length === 0) listDiv.innerHTML = "<p>No cashier data found yet.</p>";
 
         // Update Top Cards
         document.getElementById('adminTotalRemitted').innerText = `₱${filteredAdminReceived.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
         document.getElementById('adminTotalPending').innerText = `₱${totalPendingAuth.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
         document.getElementById('adminTotalFloating').innerText = `₱${totalUncollected.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+
+        // 4. Render NEW Admin Detailed Transaction Ledger
+        const adminTbody = document.getElementById('adminTableBody');
+        adminTbody.innerHTML = '';
+        
+        let filteredTxForTable = cloudTransactions.filter(t => !filterDate || t.date === filterDate);
+
+        if (filteredTxForTable.length === 0) {
+            adminTbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No transactions found for this period.</td></tr>`;
+        } else {
+            filteredTxForTable.forEach(t => {
+                const tr = document.createElement('tr');
+                
+                let inCol = ''; let outCol = '';
+                let amtStr = Number(t.amount).toLocaleString('en-PH', {minimumFractionDigits: 2});
+                let badgeHtml = '';
+                let disableDel = '';
+
+                if (t.type === 'in') {
+                    inCol = amtStr;
+                } else {
+                    outCol = amtStr;
+                }
+
+                if (t.type === 'remit') {
+                    if (getStatus(t) === 'pending') {
+                        badgeHtml = '<span class="badge" style="background:var(--gold);">Pending Admin</span>';
+                    } else {
+                        badgeHtml = '<span class="badge" style="background:var(--primary);">Received ✅</span>';
+                        disableDel = 'disabled title="Approved remits cannot be deleted"';
+                    }
+                }
+
+                tr.innerHTML = `
+                    <td data-label="Date">${t.date}</td>
+                    <td data-label="Cashier" style="text-align:left">👤 <strong>${t.cashierName || 'Unknown'}</strong></td>
+                    <td data-label="Description" style="text-align:left">${t.description} ${badgeHtml}</td>
+                    <td data-label="IN" class="col-in">${inCol}</td>
+                    <td data-label="OUT" class="col-out">${outCol}</td>
+                    <td style="text-align:center"><button class="btn-delete" onclick="removeTransaction('${t.id}')" ${disableDel}>X</button></td>
+                `;
+                adminTbody.appendChild(tr);
+            });
+        }
     }
 </script>
 </body>
