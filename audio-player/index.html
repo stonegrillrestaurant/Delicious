@@ -914,7 +914,8 @@
           <p id="status" class="status" role="status" aria-live="polite">Ready to listen</p>
         </div>
 
-        <audio id="audio" preload="metadata"></audio>
+        <!-- UPDATED: Changed preload to 'auto' to encourage downloading prior to click -->
+        <audio id="audio" preload="auto"></audio>
 
         <div class="progress-area">
           <input
@@ -1267,6 +1268,7 @@
   let filteredTrackIndexes = tracks.map((_, index) => index);
   let isSeeking = false;
   let deferredInstallPrompt = null;
+  let playPromise = null; // UPDATED: tracking the play promise to handle interruption
 
   function formatTime(seconds) {
     if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -1360,23 +1362,48 @@
     document.title = `${track.title} | Ninox Audio Player`;
   }
 
+  // UPDATED: Better handling of the play promise to stop random errors
   async function playAudio() {
     try {
       setStatus("Starting…");
-      await audio.play();
+      playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+      }
+      
       setPlayingUI(true);
       setStatus("Now playing");
     } catch (error) {
-      console.error("Audio could not play:", error);
-      setPlayingUI(false);
-      setStatus("Unable to play this file. Check the MP3 path or filename.", true);
+      // AbortError is perfectly normal if you click 'Next' before it finished loading the current track
+      if (error.name === "AbortError") {
+        console.log("Audio play aborted (usually because you skipped tracks).");
+      } else if (error.name === "NotAllowedError") {
+        setPlayingUI(false);
+        setStatus("Click Play to start listening."); // Browser enforcing user interaction
+      } else {
+        console.error("Audio could not play:", error);
+        setPlayingUI(false);
+        setStatus("Unable to play this file. Check the MP3 path.", true);
+      }
     }
   }
 
   function pauseAudio() {
-    audio.pause();
-    setPlayingUI(false);
-    setStatus("Paused");
+    // UPDATED: Ensure we don't pause while play is still pending, preventing AbortErrors
+    if (playPromise !== undefined && playPromise !== null) {
+      playPromise.then(() => {
+        audio.pause();
+        setPlayingUI(false);
+        setStatus("Paused");
+      }).catch(() => {
+        // Ignored safely
+      });
+    } else {
+      audio.pause();
+      setPlayingUI(false);
+      setStatus("Paused");
+    }
   }
 
   function togglePlay() {
@@ -1535,9 +1562,13 @@
     }
   });
 
-  audio.addEventListener("error", () => {
-    setPlayingUI(false);
-    setStatus("Audio file not found or could not be loaded.", true);
+  // UPDATED: Mute false "error" alerts when the user is simply skipping tracks
+  audio.addEventListener("error", (e) => {
+    // Only show an error if it's not simply an aborted load request due to switching sources
+    if (audio.src && audio.src !== window.location.href) {
+      setPlayingUI(false);
+      setStatus("Audio file not found or could not be loaded.", true);
+    }
   });
 
   audio.addEventListener("timeupdate", updateProgressUI);
