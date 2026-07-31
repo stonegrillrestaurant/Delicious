@@ -21,7 +21,7 @@
     <script type="text/babel">
         const { useState, useMemo } = React;
 
-        // --- Inline SVG Icons (Replaces lucide-react for standalone HTML) ---
+        // --- Inline SVG Icons ---
         const IconLayoutDashboard = ({ size = 20, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
         );
@@ -43,6 +43,9 @@
         const IconShieldAlert = ({ size = 18, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
         );
+        const IconEdit = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        );
 
         // --- Constants ---
         const COURTS = [
@@ -61,8 +64,9 @@
             { id: '20:30', label: '8:30 PM', duration: 1.5 },
         ];
 
-        const SESSION_PRICE_PRIVATE = 90; // $90 for 1.5 hours
-        const SESSION_PRICE_OPEN = 15; // $15 per player
+        // Updated Pricing based on requirements
+        const PRICE_PER_COURT_HOUR = 2500; // ₱2500 per hour
+        const PRICE_OPEN_PLAY = 150;       // ₱150 per player
 
         function App() {
             const [view, setView] = useState('player'); // 'player' | 'admin'
@@ -70,6 +74,12 @@
             // "Database" State
             const [bookings, setBookings] = useState([]); // { courtId, timeSlot, type: 'private' | 'open_play' | 'maintenance', players: [] }
             const [openPlayQueues, setOpenPlayQueues] = useState({}); // { '16:00': ['Player A', 'Player B'] }
+
+            // POS Form State
+            const [posTimeSlot, setPosTimeSlot] = useState(TIME_SLOTS[0].id);
+            const [posCourtId, setPosCourtId] = useState(COURTS[0].id);
+            const [posType, setPosType] = useState('private');
+            const [posPlayerName, setPosPlayerName] = useState('');
 
             // --- Core Logic Methods ---
             const getAvailableCourts = (timeSlot) => {
@@ -86,7 +96,7 @@
                 const courtToBook = avail[0]; // Take first available
                 setBookings(prev => [
                     ...prev, 
-                    { courtId: courtToBook.id, timeSlot, type: 'private', players: ['You + 3'] }
+                    { courtId: courtToBook.id, timeSlot, type: 'private', players: ['Online User + 3'] }
                 ]);
             };
 
@@ -102,12 +112,10 @@
                         const availCourts = getAvailableCourts(timeSlot);
                         if (availCourts.length > 0) {
                             const courtToLock = availCourts[0];
-                            // Lock the court (simulate PostgreSQL transaction)
                             setBookings(currBookings => [
                                 ...currBookings,
                                 { courtId: courtToLock.id, timeSlot, type: 'open_play', players: updatedQueue.slice(0, 4) }
                             ]);
-                            // Remove the 4 players from the queue, leaving the rest on the waitlist
                             updatedQueue = updatedQueue.slice(4);
                         }
                     }
@@ -122,10 +130,42 @@
                         if (existing.type === 'maintenance') {
                             return prev.filter(b => b !== existing);
                         }
-                        return prev; // Don't overwrite actual bookings
+                        return prev; // Don't overwrite actual bookings by accident
                     }
                     return [...prev, { courtId, timeSlot, type: 'maintenance', players: [] }];
                 });
+            };
+
+            // POS Form Submission
+            const handlePOSSubmit = (e) => {
+                e.preventDefault();
+                if (!posPlayerName.trim()) {
+                    return alert("Please enter the player's name.");
+                }
+
+                const courtNum = Number(posCourtId);
+                
+                // Check if already booked
+                const existing = bookings.find(b => b.timeSlot === posTimeSlot && b.courtId === courtNum);
+                if (existing && existing.type !== 'maintenance') {
+                    return alert(`Court ${courtNum} is already booked for this time!`);
+                }
+
+                // Remove maintenance block if it exists and we are forcing a booking
+                const filteredBookings = bookings.filter(b => !(b.timeSlot === posTimeSlot && b.courtId === courtNum));
+
+                setBookings([
+                    ...filteredBookings, 
+                    { 
+                        courtId: courtNum, 
+                        timeSlot: posTimeSlot, 
+                        type: posType, 
+                        players: [posPlayerName] 
+                    }
+                ]);
+
+                alert(`Successfully booked Court ${courtNum} for ${posPlayerName}!`);
+                setPosPlayerName(''); // clear input
             };
 
             // --- Admin Analytics (Calculated dynamically) ---
@@ -138,11 +178,13 @@
                 bookings.forEach(b => {
                     const slot = TIME_SLOTS.find(s => s.id === b.timeSlot);
                     if (b.type === 'private') {
-                        revenue += SESSION_PRICE_PRIVATE;
+                        // ₱2500 per hr * 1.5 hrs = ₱3750
+                        revenue += (PRICE_PER_COURT_HOUR * slot.duration);
                         playerHours += (4 * slot.duration); // Assume 4 players for private
                         occupiedCourts++;
                     } else if (b.type === 'open_play') {
-                        revenue += (SESSION_PRICE_OPEN * 4);
+                        // ₱150 per player * 4 players = ₱600
+                        revenue += (PRICE_OPEN_PLAY * 4);
                         playerHours += (4 * slot.duration);
                         occupiedCourts++;
                     }
@@ -150,7 +192,11 @@
 
                 const occupancyRate = totalPossibleCourts > 0 ? Math.round((occupiedCourts / totalPossibleCourts) * 100) : 0;
 
-                return { revenue, playerHours, occupancyRate };
+                return { 
+                    revenue: revenue.toLocaleString(), // Format with commas
+                    playerHours, 
+                    occupancyRate 
+                };
             }, [bookings]);
 
             // --- Sub-Components ---
@@ -174,7 +220,7 @@
                                 onClick={() => setView('admin')}
                                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'admin' ? 'bg-white text-emerald-900 shadow-sm' : 'text-emerald-100 hover:text-white'}`}
                             >
-                                Admin Dashboard
+                                POS / Admin
                             </button>
                         </div>
                     </div>
@@ -201,6 +247,8 @@
                             const queue = openPlayQueues[slot.id] || [];
                             const isFull = availCourts.length === 0;
 
+                            const privateTotal = (PRICE_PER_COURT_HOUR * slot.duration).toLocaleString();
+
                             return (
                                 <div key={slot.id} className={`border rounded-xl p-5 shadow-sm transition-all ${isFull ? 'bg-gray-50 border-gray-200 opacity-80' : 'bg-white border-emerald-100'}`}>
                                     <div className="flex justify-between items-start mb-4">
@@ -223,8 +271,9 @@
                                             className="flex flex-col items-center justify-center p-3 border rounded-lg hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
                                         >
                                             <IconUsers size={20} className="mb-2 text-gray-600" />
-                                            <span className="font-semibold text-gray-900">Private Court</span>
-                                            <span className="text-xs text-gray-500">${SESSION_PRICE_PRIVATE} / court</span>
+                                            <span className="font-semibold text-gray-900 text-center">Private Court</span>
+                                            <span className="text-xs text-gray-500 text-center mt-1">₱{PRICE_PER_COURT_HOUR.toLocaleString()} / hr</span>
+                                            <span className="text-xs font-bold text-emerald-700 mt-1">(₱{privateTotal} total)</span>
                                         </button>
 
                                         <button
@@ -233,8 +282,8 @@
                                             className="relative flex flex-col items-center justify-center p-3 border rounded-lg hover:border-amber-500 hover:bg-amber-50 disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
                                         >
                                             <IconUserPlus size={20} className="mb-2 text-amber-600" />
-                                            <span className="font-semibold text-gray-900">Join Open Play</span>
-                                            <span className="text-xs text-gray-500">${SESSION_PRICE_OPEN} / player</span>
+                                            <span className="font-semibold text-gray-900 text-center">Join Open Play</span>
+                                            <span className="text-xs text-gray-500 text-center mt-1">₱{PRICE_OPEN_PLAY} / player</span>
                                             
                                             <div className={`absolute -top-3 -right-2 px-2 py-0.5 rounded-full text-xs font-bold border ${queue.length > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                                                 {queue.length}/4 Queue
@@ -266,6 +315,79 @@
 
             const AdminView = () => (
                 <div className="space-y-8">
+                    
+                    {/* POS & Manual Booking Form */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-5 border-b border-gray-200 bg-gray-50 flex items-center gap-2">
+                            <IconEdit size={20} className="text-emerald-700" />
+                            <h3 className="text-lg font-bold text-gray-900">Point of Sale (POS) - Manual Booking</h3>
+                        </div>
+                        <form onSubmit={handlePOSSubmit} className="p-5">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                                
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Time Slot</label>
+                                    <select 
+                                        value={posTimeSlot} 
+                                        onChange={(e) => setPosTimeSlot(e.target.value)}
+                                        className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                    >
+                                        {TIME_SLOTS.map(slot => (
+                                            <option key={slot.id} value={slot.id}>{slot.label} (1.5h)</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Choose Court</label>
+                                    <select 
+                                        value={posCourtId} 
+                                        onChange={(e) => setPosCourtId(e.target.value)}
+                                        className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                    >
+                                        {COURTS.map(court => (
+                                            <option key={court.id} value={court.id}>{court.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Booking Type</label>
+                                    <select 
+                                        value={posType} 
+                                        onChange={(e) => setPosType(e.target.value)}
+                                        className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                    >
+                                        <option value="private">Private Court (₱{PRICE_PER_COURT_HOUR}/hr)</option>
+                                        <option value="open_play">Open Play (Manual Lock)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Write Player Name / Notes</label>
+                                    <input 
+                                        type="text" 
+                                        value={posPlayerName}
+                                        onChange={(e) => setPosPlayerName(e.target.value)}
+                                        placeholder="e.g. Walk-in: John Doe"
+                                        className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <button 
+                                        type="submit"
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg p-2.5 text-sm transition-colors"
+                                    >
+                                        Confirm Booking
+                                    </button>
+                                </div>
+
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* KPIs */}
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 mb-4">Today's Utilization Overview</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -273,7 +395,7 @@
                                 <div className="p-3 bg-green-100 text-green-700 rounded-lg"><IconTrendingUp size={24} /></div>
                                 <div>
                                     <p className="text-sm text-gray-500 font-medium">Projected Revenue</p>
-                                    <p className="text-2xl font-bold text-gray-900">${kpis.revenue}</p>
+                                    <p className="text-2xl font-bold text-gray-900">₱{kpis.revenue}</p>
                                 </div>
                             </div>
                             <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
@@ -293,6 +415,7 @@
                         </div>
                     </div>
 
+                    {/* Heatmap Grid */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                         <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                             <div>
@@ -327,22 +450,32 @@
                                             {TIME_SLOTS.map(slot => {
                                                 const booking = bookings.find(b => b.courtId === court.id && b.timeSlot === slot.id);
                                                 
-                                                let cellClasses = "p-2 border-r border-gray-100 last:border-0 h-16 cursor-pointer hover:bg-gray-50 transition-colors";
+                                                let cellClasses = "p-2 border-r border-gray-100 last:border-0 h-20 cursor-pointer hover:bg-gray-50 transition-colors";
                                                 let content = null;
 
                                                 if (booking) {
                                                     if (booking.type === 'private') {
-                                                        cellClasses = "p-2 border-r border-white bg-blue-50 h-16 cursor-not-allowed";
-                                                        content = <div className="text-xs text-blue-700 font-bold border border-blue-200 bg-blue-100/50 p-1 rounded">Private (4P)</div>;
+                                                        cellClasses = "p-2 border-r border-white bg-blue-50 h-20 cursor-not-allowed";
+                                                        content = (
+                                                            <div className="flex flex-col h-full text-xs text-blue-800 font-medium border border-blue-200 bg-blue-100/50 p-1.5 rounded overflow-hidden">
+                                                                <span className="font-bold border-b border-blue-200/50 pb-1 mb-1">Private (₱3,750)</span>
+                                                                <span className="truncate">{booking.players[0]}</span>
+                                                            </div>
+                                                        );
                                                     } else if (booking.type === 'open_play') {
-                                                        cellClasses = "p-2 border-r border-white bg-emerald-50 h-16 cursor-not-allowed";
-                                                        content = <div className="text-xs text-emerald-700 font-bold border border-emerald-200 bg-emerald-100/50 p-1 rounded">Open Play (LOCKED)</div>;
+                                                        cellClasses = "p-2 border-r border-white bg-emerald-50 h-20 cursor-not-allowed";
+                                                        content = (
+                                                            <div className="flex flex-col h-full text-xs text-emerald-800 font-medium border border-emerald-200 bg-emerald-100/50 p-1.5 rounded overflow-hidden">
+                                                                <span className="font-bold border-b border-emerald-200/50 pb-1 mb-1">Open Play (LOCKED)</span>
+                                                                {booking.players.length === 1 ? <span className="truncate">{booking.players[0]}</span> : <span className="truncate">4 Players</span>}
+                                                            </div>
+                                                        );
                                                     } else if (booking.type === 'maintenance') {
-                                                         cellClasses = "p-2 border-r border-white bg-red-50 h-16 cursor-pointer hover:bg-red-100";
-                                                         content = <div className="flex items-center justify-center h-full text-red-500"><IconShieldAlert size={18}/></div>;
+                                                         cellClasses = "p-2 border-r border-white bg-red-50 h-20 cursor-pointer hover:bg-red-100";
+                                                         content = <div className="flex flex-col items-center justify-center h-full text-red-500"><IconShieldAlert size={18}/><span className="text-[10px] font-bold mt-1">Maintenance</span></div>;
                                                     }
                                                 } else {
-                                                    content = <div className="w-full h-full text-transparent hover:text-gray-300 flex items-center justify-center text-xs">+ Block</div>;
+                                                    content = <div className="w-full h-full text-transparent hover:text-gray-300 flex items-center justify-center text-xs font-medium">+ Block</div>;
                                                 }
 
                                                 return (
@@ -383,4 +516,5 @@
     </script>
 </body>
 </html>
+
 
