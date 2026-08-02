@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Help Us Improve | Stone Grill Restaurant</title>
+  <meta name="description" content="Share honest feedback about your Stone Grill experience. Your comments help us know what needs attention and how we can serve you better." />
+  <meta name="robots" content="index,follow" />
+
+  <style>
+    :root {
+      --bg: #f7f3ec;
+      --card: #ffffff;
+      --text: #25221e;
+      --muted: #6f675d;
+      --accent: #a94726;
+      --accent-dark: #81331c;
+      --line: #e7ddd1;
+      --soft: #fff8f2;
+      --success: #176b43;
+      --danger: #a52a2a;
+      --shadow: 0 18px 50px rgba(58, 42, 26, 0.10);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(169, 71, 38, 0.10), transparent 32%),
+        linear-gradient(180deg, #fbf8f3 0%, var(--bg) 100%);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(920px, calc(100% - 28px));
+      margin: 28px auto 70px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 26px 16px 20px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-size: .9rem;
+    }
+
+    .brand-mark {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(169, 71, 38, 0.12);
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(2rem, 7vw, 4.3rem);
+      line-height: .98;
+      letter-spacing: -.045em;
+    }
+
+    .intro {
+      max-width: 660px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: clamp(1rem, 2.5vw, 1.15rem);
+    }
+
+    .form-card {
+      background: var(--card);
+      border: 1px solid rgba(169, 71, 38, 0.13);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    form {
+      padding: clamp(20px, 5vw, 42px);
+    }
+
+    .main-question {
+      background: var(--soft);
+      border: 2px solid rgba(169, 71, 38, .35);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .main-question label {
+      display: block;
+      font-size: clamp(1.25rem, 4vw, 1.85rem);
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .help-text {
+      color: var(--muted);
+      margin: 0 0 14px;
+      font-size: .96rem;
+    }
+
+    textarea,
+    input[type="text"],
+    input[type="tel"],
+    input[type="date"],
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 14px;
+      padding: 14px 15px;
+      font: inherit;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(169, 71, 38, .11);
+    }
+
+    #experience {
+      min-height: 190px;
+      resize: vertical;
+      font-size: 1.05rem;
+    }
+
+    .section {
+      padding: 26px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .section:first-of-type {
+      border-top: 0;
+    }
+
+    .section-title {
+      margin: 0 0 5px;
+      font-size: 1.28rem;
+    }
+
+    .section-note {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: .94rem;
+    }
+
+    .rating-list {
+      display: grid;
+      gap: 13px;
+    }
+
+    .rating-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+    }
+
+    .rating-label {
+      font-weight: 700;
+    }
+
+    .stars {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+      gap: 3px;
+    }
+
+    .stars input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .stars label {
+      cursor: pointer;
+      font-size: 1.75rem;
+      line-height: 1;
+      color: #d7cec4;
+      transition: color .15s, transform .15s;
+      user-select: none;
+    }
+
+    .stars label:hover,
+    .stars label:hover ~ label,
+    .stars input:checked ~ label {
+      color: #e0a229;
+    }
+
+    .stars label:hover {
+      transform: scale(1.1);
+    }
+
+    .priority-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .choice {
+      position: relative;
+    }
+
+    .choice input {
+      position: absolute;
+      opacity: 0;
+    }
+
+    .choice label {
+      display: block;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      cursor: pointer;
+      background: #fff;
+      transition: .18s ease;
+    }
+
+    .choice input:checked + label {
+      border-color: var(--accent);
+      background: var(--soft);
+      box-shadow: 0 0 0 3px rgba(169, 71, 38, .09);
+      font-weight: 700;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field label {
+      display: block;
+      margin: 0 0 7px;
+      font-weight: 700;
+      font-size: .94rem;
+    }
+
+    .optional {
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .anonymous-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .submit-wrap {
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 15px;
+      padding: 16px 20px;
+      background: var(--accent);
+      color: white;
+      font: inherit;
+      font-weight: 800;
+      font-size: 1.06rem;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      opacity: .65;
+      cursor: not-allowed;
+    }
+
+    .status {
+      display: none;
+      margin-top: 14px;
+      padding: 13px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .status.success {
+      display: block;
+      color: var(--success);
+      background: #eaf7f0;
+    }
+
+    .status.error {
+      display: block;
+      color: var(--danger);
+      background: #fff0f0;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: .86rem;
+      padding: 22px 18px 26px;
+      border-top: 1px solid var(--line);
+      background: #fcfaf7;
+    }
+
+    @media (max-width: 680px) {
+      .page {
+        width: min(100% - 18px, 920px);
+        margin-top: 12px;
+      }
+
+      .hero {
+        padding-top: 18px;
+      }
+
+      .grid-2,
+      .priority-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .rating-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .stars label {
+        font-size: 2rem;
+      }
+
+      form {
+        padding: 18px;
+      }
+
+      .main-question {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        Stone Grill Restaurant
+      </div>
+
+      <h1>Help Us Improve</h1>
+
+      <p class="intro">
+        No restaurant is perfect, and we are always looking for ways to improve.
+        If you noticed something that needs attention, please tell us.
+        Your honest feedback helps us create a better experience for everyone.
+      </p>
+    </header>
+
+    <section class="form-card">
+      <form id="feedbackForm" novalidate>
+        <div class="main-question">
+          <label for="experience">What could we have done better?</label>
+          <p class="help-text">
+            Tell us what happened, what needs attention, or anything that could improve your next visit.
+          </p>
+          <textarea
+            id="experience"
+            name="experience"
+            placeholder="Write your honest feedback here…"
+            required
+          ></textarea>
+        </div>
+
+        <section class="section">
+          <h2 class="section-title">Rate each part of your experience</h2>
+          <p class="section-note">
+            Leave any item unanswered when it did not apply to your visit.
+          </p>
+
+          <div class="rating-list" id="ratingList"></div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">What needs the most attention?</h2>
+          <p class="section-note">Choose the one area we should focus on first.</p>
+
+          <div class="priority-grid">
+            <div class="choice">
+              <input type="radio" id="p-food" name="priority" value="Food quality" />
+              <label for="p-food">Food quality</label>
+            </div>
+
+            <div class="choice">
+              <input type="radio" id="p-portion" name="priority" value="Food portion" />
+              <label for="p-portion">Food portion</label>
+            </div>
+
+            <div class="choice">
+              <input type="radio" id="p-service" name="priority" value="Staff service" />
+              <label for="p-service">Staff service</label>
+            </div>
+
+            <div class="choice">
+              <input type="radio" id="p-waiting" name="priority" value="Waiting time" />
+              <label for="p-waiting">Waiting time</label>
+            </div>
+
+            <div class="choice">
+              <input type="radio" id="p-cleanliness" name="priority" value="Cleanliness" />
+              <label for="p-cleanliness">Cleanliness</label>
+            </div>
+
+            <div class="choice">
+              <input type="radio" id="p-value" name="priority" value="Value for money" />
+              <label for="p-value">Value for money</label>
+            </div>
+
+            <div class="choice">
+              <input type="radio" id="p-ambiance" name="priority" value="Ambiance and comfort" />
+              <label for="p-ambiance">Ambiance and comfort</label>
+            </div>
+
+            <div class="choice">
+              <input type="radio" id="p-other" name="priority" value="Other" />
+              <label for="p-other">Other</label>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Your suggestion</h2>
+          <p class="section-note">Share any idea that could help us serve guests better.</p>
+          <textarea
+            id="suggestion"
+            name="suggestion"
+            rows="4"
+            placeholder="Optional suggestion…"
+          ></textarea>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Visit details</h2>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="visitType">Type of visit</label>
+              <select id="visitType" name="visitType">
+                <option value="">Select</option>
+                <option>Dine-in</option>
+                <option>Takeout</option>
+                <option>Advance order</option>
+                <option>Catering</option>
+                <option>Event or function</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="visitDate">Date of visit <span class="optional">(optional)</span></label>
+              <input type="date" id="visitDate" name="visitDate" />
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Contact details <span class="optional">(optional)</span></h2>
+          <p class="section-note">
+            Leave these blank to submit anonymously.
+          </p>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="customerName">Name</label>
+              <input type="text" id="customerName" name="customerName" autocomplete="name" />
+            </div>
+
+            <div class="field">
+              <label for="mobile">Mobile number</label>
+              <input type="tel" id="mobile" name="mobile" autocomplete="tel" inputmode="tel" />
+            </div>
+          </div>
+
+          <p class="anonymous-note">
+            Your feedback is for improvement and will not be posted publicly without your permission.
+          </p>
+        </section>
+
+        <div class="submit-wrap">
+          <button type="submit" id="submitBtn">Send Honest Feedback</button>
+          <div id="status" class="status" role="status" aria-live="polite"></div>
+        </div>
+      </form>
+
+      <div class="footer-note">
+        Thank you for helping Stone Grill improve.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /*
+      IMPORTANT:
+      Replace the URL below with your deployed Google Apps Script Web App URL.
+      It should end with /exec.
+    */
+    const GOOGLE_SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+    const ratingCategories = [
+      ["foodQuality", "Food quality"],
+      ["foodPortion", "Food portion"],
+      ["valueForMoney", "Value for money"],
+      ["staffService", "Staff service"],
+      ["waitingTime", "Waiting time"],
+      ["cleanliness", "Cleanliness"],
+      ["ambiance", "Ambiance and comfort"],
+      ["orderingExperience", "Ordering experience"]
+    ];
+
+    const ratingList = document.getElementById("ratingList");
+
+    ratingCategories.forEach(([key, label]) => {
+      const row = document.createElement("div");
+      row.className = "rating-row";
+
+      row.innerHTML = `
+        <div class="rating-label">${label}</div>
+        <div class="stars" aria-label="${label} rating">
+          ${[5, 4, 3, 2, 1].map(number => `
+            <input
+              type="radio"
+              id="${key}-${number}"
+              name="${key}"
+              value="${number}"
+            />
+            <label
+              for="${key}-${number}"
+              title="${number} star${number > 1 ? "s" : ""}"
+              aria-label="${number} star${number > 1 ? "s" : ""}"
+            >★</label>
+          `).join("")}
+        </div>
+      `;
+
+      ratingList.appendChild(row);
+    });
+
+    const form = document.getElementById("feedbackForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusBox = document.getElementById("status");
+
+    function showStatus(message, type) {
+      statusBox.textContent = message;
+      statusBox.className = `status ${type}`;
+    }
+
+    function getSelectedValue(name) {
+      return document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      statusBox.className = "status";
+      statusBox.textContent = "";
+
+      const experience = document.getElementById("experience").value.trim();
+
+      // This accepts short honest comments such as "Excellent" or "Slow service".
+      if (!experience) {
+        showStatus("Please tell us what we could improve or what happened during your visit.", "error");
+        document.getElementById("experience").focus();
+        return;
+      }
+
+      if (
+        !GOOGLE_SCRIPT_URL ||
+        GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")
+      ) {
+        showStatus("The Google Sheets connection has not been added yet.", "error");
+        return;
+      }
+
+      const payload = new URLSearchParams();
+
+      payload.append("submittedAt", new Date().toISOString());
+      payload.append("experience", experience);
+      payload.append("suggestion", document.getElementById("suggestion").value.trim());
+      payload.append("priority", getSelectedValue("priority"));
+      payload.append("visitType", document.getElementById("visitType").value);
+      payload.append("visitDate", document.getElementById("visitDate").value);
+      payload.append("customerName", document.getElementById("customerName").value.trim());
+      payload.append("mobile", document.getElementById("mobile").value.trim());
+
+      ratingCategories.forEach(([key]) => {
+        payload.append(key, getSelectedValue(key));
+      });
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Sending…";
+
+      try {
+        /*
+          no-cors is intentional for a simple Apps Script POST.
+          The submission will still reach the Sheet even though the browser
+          cannot read the Apps Script response.
+        */
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+          },
+          body: payload.toString()
+        });
+
+        form.reset();
+        showStatus("Thank you. Your feedback has been sent.", "success");
+      } catch (error) {
+        console.error("Feedback submission error:", error);
+        showStatus("We could not send your feedback. Please check your connection and try again.", "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Send Honest Feedback";
+      }
+    });
+  </script>
+</body>
+</html>
