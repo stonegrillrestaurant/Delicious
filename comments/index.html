@@ -1437,7 +1437,9 @@
           <div class="feed-toolbar">
             <div>
               <h2 class="section-title">Approved Comments & Suggestions</h2>
-              <div class="section-sub">Customer averages and category ratings appear in every review</div>
+              <div class="section-sub">
+                Only approved reviews with all six category ratings and a written comment appear here.
+              </div>
             </div>
 
             <div class="feed-tools">
@@ -2116,18 +2118,45 @@
           );
         }
 
+        const isValidReview = review => {
+          const ratings = [
+            Number(review.foodRating),
+            Number(review.waitingRating),
+            Number(review.staffRating),
+            Number(review.cleanlinessRating),
+            Number(review.ambianceRating),
+            Number(review.valueRating)
+          ];
+          const overall = Number(review.overallAverage);
+          const comment = String(review.comments || "").trim();
+
+          return (
+            ratings.every(value =>
+              Number.isFinite(value) &&
+              value >= 1 &&
+              value <= 5
+            ) &&
+            Number.isFinite(overall) &&
+            overall >= 1 &&
+            overall <= 5 &&
+            comment.length >= 2
+          );
+        };
+
         publicReviews =
-          Array.isArray(result.comments)
+          (Array.isArray(result.comments)
             ? result.comments
-            : [];
+            : []
+          ).filter(isValidReview);
 
         bestReviews =
-          Array.isArray(result.bestReviews)
+          (Array.isArray(result.bestReviews)
             ? result.bestReviews
-            : [];
+            : []
+          ).filter(isValidReview);
 
         renderCommunitySummary(
-          result.summary || {}
+          calculateVisibleSummary(publicReviews)
         );
 
         renderBestReviews();
@@ -2142,6 +2171,55 @@
         $("reviewFeed").innerHTML =
           '<div class="empty">Approved comments are temporarily unavailable.</div>';
       }
+    }
+
+
+    function calculateVisibleSummary(reviews) {
+      const empty = {
+        totalApproved: 0,
+        overallAverage: 0,
+        foodAverage: 0,
+        waitingAverage: 0,
+        staffAverage: 0,
+        cleanlinessAverage: 0,
+        ambianceAverage: 0,
+        valueAverage: 0
+      };
+
+      if (!reviews.length) return empty;
+
+      const totals = reviews.reduce((sum, review) => {
+        sum.overall += Number(review.overallAverage);
+        sum.food += Number(review.foodRating);
+        sum.waiting += Number(review.waitingRating);
+        sum.staff += Number(review.staffRating);
+        sum.cleanliness += Number(review.cleanlinessRating);
+        sum.ambiance += Number(review.ambianceRating);
+        sum.value += Number(review.valueRating);
+        return sum;
+      }, {
+        overall: 0,
+        food: 0,
+        waiting: 0,
+        staff: 0,
+        cleanliness: 0,
+        ambiance: 0,
+        value: 0
+      });
+
+      const count = reviews.length;
+      const avg = value => Number((value / count).toFixed(1));
+
+      return {
+        totalApproved: count,
+        overallAverage: avg(totals.overall),
+        foodAverage: avg(totals.food),
+        waitingAverage: avg(totals.waiting),
+        staffAverage: avg(totals.staff),
+        cleanlinessAverage: avg(totals.cleanliness),
+        ambianceAverage: avg(totals.ambiance),
+        valueAverage: avg(totals.value)
+      };
     }
 
 
@@ -2383,10 +2461,20 @@
 
 
     function categoryBox(label, value) {
+      const numeric = Number(value);
+
+      if (
+        !Number.isFinite(numeric) ||
+        numeric < 1 ||
+        numeric > 5
+      ) {
+        return "";
+      }
+
       return `
         <div class="review-category">
           <strong>${escapeHtml(label)}</strong>
-          ${Number(value).toFixed(1)} / 5
+          ${numeric.toFixed(1)} / 5
         </div>
       `;
     }
