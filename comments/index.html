@@ -766,41 +766,26 @@
     .review-overall{
       display:flex;
       align-items:center;
-      gap:7px;
+      flex-wrap:wrap;
+      gap:8px;
       margin-top:7px
     }
 
     .review-overall-score{
       color:#a94d00;
-      font-size:19px;
+      font-size:16px;
       font-weight:950
     }
 
     .review-overall-stars{
-      color:var(--gold);
-      letter-spacing:1px
+      display:inline-flex;
+      gap:2px;
+      font-size:17px;
+      line-height:1
     }
 
-    .review-category-grid{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:6px;
-      margin-top:9px
-    }
-
-    .review-category{
-      padding:7px 8px;
-      background:#f4f6f8;
-      border-radius:8px;
-      color:#5b6268;
-      font-size:9px
-    }
-
-    .review-category strong{
-      display:block;
-      color:#2d3236;
-      font-size:10px
-    }
+    .rating-star{color:#c7cbd0}
+    .rating-star.active{color:var(--gold)}
 
     .review-text{
       margin:11px 0 0;
@@ -1438,7 +1423,7 @@
             <div>
               <h2 class="section-title">Approved Comments & Suggestions</h2>
               <div class="section-sub">
-                Only approved reviews with all six category ratings and a written comment appear here.
+                Approved reviews show the customer’s automatic overall average and written feedback.
               </div>
             </div>
 
@@ -2403,21 +2388,12 @@
 
               <div class="review-overall">
                 <span class="review-overall-score">
-                  ${overall.toFixed(1)} / 5
+                  ${overall.toFixed(1)}
                 </span>
 
-                <span class="review-overall-stars">
-                  ${starString(overall)}
+                <span class="review-overall-stars" aria-label="${overall.toFixed(1)} out of 5">
+                  ${compactStars(overall)}
                 </span>
-              </div>
-
-              <div class="review-category-grid">
-                ${categoryBox("Food", review.foodRating)}
-                ${categoryBox("Waiting", review.waitingRating)}
-                ${categoryBox("Staff", review.staffRating)}
-                ${categoryBox("Cleanliness", review.cleanlinessRating)}
-                ${categoryBox("Ambiance", review.ambianceRating)}
-                ${categoryBox("Value", review.valueRating)}
               </div>
 
               <p class="review-text">
@@ -2494,6 +2470,18 @@
     /* =====================================================
        HELPERS
     ===================================================== */
+
+    function compactStars(value) {
+      const highlighted = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+
+      return [1, 2, 3, 4, 5]
+        .map(position => {
+          const active = position <= highlighted ? " active" : "";
+          return `<span class="rating-star${active}">★</span>`;
+        })
+        .join("");
+    }
+
 
     function starString(value) {
       const rounded =
