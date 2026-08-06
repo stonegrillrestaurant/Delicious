@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pick all AD-Ventures | Admin Operations Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+  <!-- Admin Header -->
+  <header class="bg-slate-800 border-b border-slate-700 shadow-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider">OWNER CONTROL</div>
+        <div>
+          <h1 class="text-base font-black tracking-wide text-white">PICK ALL AD-VENTURES</h1>
+          <p class="text-[10px] text-slate-400 font-medium">Court Operations & Financial Ledger</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="exportReport()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg border border-slate-600 transition">
+          Export CSV Log
+        </button>
+        <button onclick="resetDailyData()" class="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">
+          Reset Daily Session
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Live Revenue & Occupancy Metrics -->
+  <section class="bg-slate-800/50 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div class="border-r border-slate-800">
+        <div class="text-[10px] text-slate-400 font-bold uppercase">Total Checked-In</div>
+        <div id="stat-players" class="text-xl font-black text-white">0</div>
+      </div>
+      <div class="border-r border-slate-800">
+        <div class="text-[10px] text-slate-400 font-bold uppercase">Active Courts</div>
+        <div id="stat-active-courts" class="text-xl font-black text-emerald-400">0 / 4</div>
+      </div>
+      <div class="border-r border-slate-800">
+        <div class="text-[10px] text-slate-400 font-bold uppercase">Total Matches Played</div>
+        <div id="stat-matches" class="text-xl font-black text-indigo-400">0</div>
+      </div>
+      <div>
+        <div class="text-[10px] text-slate-400 font-bold uppercase">Collected Fees</div>
+        <div id="stat-revenue" class="text-xl font-black text-amber-400">₱0</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left Column: Check-In Override & Queues -->
+    <section class="space-y-6">
+      
+      <!-- Counter Registration -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+        <h2 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
+          <span>Manual Counter Check-In</span>
+          <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-bold">₱150 / 6 Hrs</span>
+        </h2>
+        <form id="player-form" class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">Player Name</label>
+            <input type="text" id="player-name" required placeholder="Enter full name" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 mb-1">Skill Category</label>
+              <select id="player-category" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-white">
+                <option value="Beginner">Beginner</option>
+                <option value="Professional">Professional</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 mb-1">Payment</label>
+              <select id="payment-status" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-white">
+                <option value="Paid">Paid ₱150</option>
+                <option value="Unpaid">Unpaid</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-sm transition shadow-lg">Register & Queue</button>
+        </form>
+      </div>
+
+      <!-- Live Queue Control -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+        <h2 class="text-sm font-bold text-white mb-3">Live Queue Control</h2>
+        
+        <!-- Beginner Queue -->
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Beginner Queue</h3>
+            <span id="beginner-count" class="text-xs font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">0</span>
+          </div>
+          <div id="beginner-queue-list" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Pro Queue -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Professional Queue</h3>
+            <span id="pro-count" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded">0</span>
+          </div>
+          <div id="pro-queue-list" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Center & Right: Court Overrides & Daily Ledger -->
+    <section class="lg:col-span-2 space-y-6">
+
+      <!-- Court Status Overrides -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-sm font-bold text-white">Court Override & Management</h2>
+          <div class="text-[10px] text-slate-400">Tap category badge to swap Court Type</div>
+        </div>
+        <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- Daily Financial Roster -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+        <h2 class="text-sm font-bold text-white mb-3">Master Player Ledger</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="bg-slate-900/50 text-slate-400 border-b border-slate-700">
+                <th class="p-2">Time</th>
+                <th class="p-2">Player Name</th>
+                <th class="p-2">Category</th>
+                <th class="p-2">Games</th>
+                <th class="p-2">Passes</th>
+                <th class="p-2">Payment</th>
+                <th class="p-2">Action</th>
+              </tr>
+            </thead>
+            <tbody id="player-log-table" class="divide-y divide-slate-700/50 text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Sync & Application Logic -->
+  <script>
+    let state = JSON.parse(localStorage.getItem('pick_all_adventures_db')) || {
+      players: [],
+      queues: { Beginner: [], Professional: [] },
+      courts: [
+        { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
+      ],
+      totalMatchesPlayed: 0
+    };
+
+    function saveState() {
+      localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
+      render();
+    }
+
+    // Auto-sync data changes across tabs
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'pick_all_adventures_db') {
+        state = JSON.parse(e.newValue);
+        render();
+      }
+    });
+
+    function checkAutoAssign(category) {
+      if (state.queues[category].length >= 4) {
+        const openCourt = state.courts.find(c => !c.isExclusive && !c.currentMatch && c.assignedCategory === category);
+        if (openCourt) {
+          openCourt.currentMatch = state.queues[category].splice(0, 4);
+        }
+      }
+    }
+
+    document.getElementById('player-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('player-name');
+      const name = nameInput.value.trim();
+      const category = document.getElementById('player-category').value;
+      const payment = document.getElementById('payment-status').value;
+
+      if(!name) return;
+
+      const newPlayer = {
+        id: 'P-' + Date.now(),
+        name: name,
+        category: category,
+        gamesPlayed: 0,
+        passes: 0,
+        timeIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        paid: payment === 'Paid'
+      };
+
+      state.players.push(newPlayer);
+      state.queues[category].push(newPlayer.id);
+
+      checkAutoAssign(category);
+
+      nameInput.value = '';
+      saveState();
+    });
+
+    function passTurn(playerId, category) {
+      const q = state.queues[category];
+      const idx = q.indexOf(playerId);
+      if(idx > -1 && q.length > 1) {
+        q.splice(idx, 1);
+        q.push(playerId);
+        const player = state.players.find(p => p.id === playerId);
+        if(player) player.passes += 1;
+        saveState();
+      }
+    }
+
+    function removePlayerFromQueue(playerId, category) {
+      const q = state.queues[category];
+      const idx = q.indexOf(playerId);
+      if(idx > -1) q.splice(idx, 1);
+      saveState();
+    }
+
+    function togglePayment(playerId) {
+      const player = state.players.find(p => p.id === playerId);
+      if(player) {
+        player.paid = !player.paid;
+        saveState();
+      }
+    }
+
+    function toggleCourtCategory(courtId) {
+      const court = state.courts.find(c => c.id === courtId);
+      if(court && !court.currentMatch) {
+        court.assignedCategory = court.assignedCategory === 'Beginner' ? 'Professional' : 'Beginner';
+        checkAutoAssign(court.assignedCategory);
+        saveState();
+      }
+    }
+
+    function assignNextMatch(courtId) {
+      const court = state.courts.find(c => c.id === courtId);
+      if(!court || court.isExclusive) return;
+
+      const cat = court.assignedCategory;
+      const queue = state.queues[cat];
+
+      if(queue.length < 4) {
+        alert(`Need at least 4 players in the ${cat} queue.`);
+        return;
+      }
+
+      court.currentMatch = queue.splice(0, 4);
+      saveState();
+    }
+
+    function finishMatch(courtId) {
+      const court = state.courts.find(c => c.id === courtId);
+      if(!court || !court.currentMatch) return;
+
+      const cat = court.assignedCategory;
+      court.currentMatch.forEach(pId => {
+        const player = state.players.find(p => p.id === pId);
+        if(player) {
+          player.gamesPlayed += 1;
+          state.queues[player.category].push(pId);
+        }
+      });
+
+      court.currentMatch = null;
+      state.totalMatchesPlayed += 1;
+      
+      checkAutoAssign(cat);
+      saveState();
+    }
+
+    function toggleExclusive(courtId) {
+      const court = state.courts.find(c => c.id === courtId);
+      if(!court) return;
+
+      if(!court.isExclusive) {
+        const renter = prompt(`Enter rental description/client for ${court.name}:`);
+        if(renter) {
+          if(court.currentMatch) {
+            court.currentMatch.reverse().forEach(pId => {
+              const player = state.players.find(p => p.id === pId);
+              if(player) state.queues[player.category].unshift(pId);
+            });
+            court.currentMatch = null;
+          }
+          court.isExclusive = true;
+          court.Renter = renter;
+        }
+      } else {
+        court.isExclusive = false;
+        court.Renter = "";
+        checkAutoAssign(court.assignedCategory);
+      }
+      saveState();
+    }
+
+    function render() {
+      // 1. Render Queues
+      ['Beginner', 'Professional'].forEach(cat => {
+        const queueListEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-queue-list`);
+        const countEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-count`);
+        const queueIds = state.queues[cat];
+
+        countEl.innerText = queueIds.length;
+        queueListEl.innerHTML = queueIds.length === 0 
+          ? `<p class="text-xs text-slate-500 italic py-2">Queue empty.</p>`
+          : queueIds.map((pId, idx) => {
+              const p = state.players.find(x => x.id === pId);
+              return `
+                <div class="flex justify-between items-center bg-slate-900/60 border border-slate-700/60 p-2 rounded-lg text-xs">
+                  <div>
+                    <span class="font-bold text-white">#${idx+1} ${p.name}</span>
+                    <span class="text-slate-400 text-[10px] block">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
+                  </div>
+                  <div class="flex gap-1">
+                    <button onclick="passTurn('${p.id}', '${cat}')" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px]">Pass</button>
+                    <button onclick="removePlayerFromQueue('${p.id}', '${cat}')" class="bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded text-[10px]">✕</button>
+                  </div>
+                </div>
+              `;
+            }).join('');
+      });
+
+      // 2. Render Courts Grid
+      let activeCount = 0;
+      const courtsContainer = document.getElementById('courts-grid');
+      courtsContainer.innerHTML = state.courts.map(court => {
+        if(court.currentMatch || court.isExclusive) activeCount++;
+
+        if(court.isExclusive) {
+          return `
+            <div class="border-2 border-amber-500/40 bg-amber-500/5 rounded-xl p-4 flex flex-col justify-between">
+              <div class="flex justify-between items-center mb-3">
+                <span class="font-black text-white">${court.name}</span>
+                <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-[10px] px-2 py-0.5 rounded uppercase">Exclusive Rent</span>
+              </div>
+              <div class="text-center py-4">
+                <p class="text-[10px] text-amber-400 font-bold uppercase">Reserved Client</p>
+                <p class="text-sm font-black text-white">${court.Renter}</p>
+              </div>
+              <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-1.5 rounded text-xs transition">End Exclusive Rental</button>
+            </div>
+          `;
+        }
+
+        const matchPlayers = court.currentMatch ? court.currentMatch.map(id => state.players.find(p => p.id === id)) : null;
+
+        return `
+          <div class="border rounded-xl p-4 bg-slate-900/60 border-slate-700 flex flex-col justify-between shadow-sm">
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-black text-white">${court.name}</span>
+                <button onclick="toggleCourtCategory(${court.id})" class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[10px] font-bold px-2 py-0.5 rounded-full uppercase" title="Click to change court category">
+                  ${court.assignedCategory} ⚙
+                </button>
+              </div>
+              
+              <div class="my-3">
+                ${matchPlayers ? `
+                  <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Active Match</div>
+                  <div class="grid grid-cols-2 gap-1 text-xs">
+                    <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[0]?.name || 'P1'}</div>
+                    <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[1]?.name || 'P2'}</div>
+                    <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[2]?.name || 'P3'}</div>
+                    <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[3]?.name || 'P4'}</div>
+                  </div>
+                ` : `
+                  <div class="text-center py-4 text-xs text-slate-500 italic bg-slate-950/40 rounded-lg border border-dashed border-slate-800">Court Ready</div>
+                `}
+              </div>
+            </div>
+
+            <div class="space-y-2 mt-2">
+              ${matchPlayers ? `
+                <button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded text-xs transition">Finish Match & Auto-Rotate</button>
+              ` : `
+                <button onclick="assignNextMatch(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-1.5 rounded text-xs transition">Force Match Assign</button>
+              `}
+              <button onclick="toggleExclusive(${court.id})" class="w-full border border-slate-700 text-slate-400 hover:bg-slate-800 font-semibold py-1 rounded text-[10px] transition">Reserve Court</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 3. Render Metrics & Ledger
+      const paidPlayers = state.players.filter(p => p.paid).length;
+      document.getElementById('stat-players').innerText = state.players.length;
+      document.getElementById('stat-active-courts').innerText = `${activeCount} / 4`;
+      document.getElementById('stat-matches').innerText = state.totalMatchesPlayed;
+      document.getElementById('stat-revenue').innerText = `₱${paidPlayers * 150}`;
+
+      const tableBody = document.getElementById('player-log-table');
+      tableBody.innerHTML = state.players.map(p => `
+        <tr class="hover:bg-slate-800/40">
+          <td class="p-2 text-slate-500">${p.timeIn}</td>
+          <td class="p-2 font-bold text-white">${p.name}</td>
+          <td class="p-2"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-1.5 py-0.5 rounded text-[9px] font-bold">${p.category}</span></td>
+          <td class="p-2 text-slate-300 font-bold">${p.gamesPlayed}</td>
+          <td class="p-2 text-slate-500">${p.passes}</td>
+          <td class="p-2">
+            <button onclick="togglePayment('${p.id}')" class="font-bold text-[10px] px-1.5 py-0.5 rounded ${p.paid ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}">
+              ${p.paid ? 'Paid' : 'Unpaid'}
+            </button>
+          </td>
+          <td class="p-2">
+            <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="text-slate-500 hover:text-red-400 text-[10px]">Remove</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function exportReport() {
+      let csv = "Time In,Player Name,Category,Games Played,Passes Used,Payment Status\n";
+      state.players.forEach(p => {
+        csv += `"${p.timeIn}","${p.name}","${p.category}",${p.gamesPlayed},${p.passes},"${p.paid ? 'Paid ₱150' : 'Unpaid'}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `PickAllAdventures_OwnerReport_${new Date().toISOString().split('T')[0]}.csv`);
+      a.click();
+    }
+
+    function resetDailyData() {
+      if(confirm("Reset all daily queues, revenue logs, and matches?")) {
+        localStorage.removeItem('pick_all_adventures_db');
+        location.reload();
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
