@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pick all AD-Ventures | Multi-Court Management</title>
+  <title>Pick all AD-Ventures | BRGY. LUNANG HILONGOS, LEYTE</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
@@ -15,8 +15,6 @@
   <!-- Header with Brand Logo -->
   <header class="bg-emerald-800 text-white shadow-lg border-b border-emerald-900">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
-      
-      <!-- Brand Logo SVG -->
       <div class="flex items-center gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 80" class="h-12 w-auto">
           <defs>
@@ -44,20 +42,15 @@
             PICK ALL <tspan fill="#34d399">AD-VENTURES</tspan>
           </text>
           <text x="76" y="56" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="10" fill="#a7f3d0" letter-spacing="2">
-            Brgy. Lunang hilongos, Leyte
+        BRGY. LUNANG HILONGOS, LEYTE
           </text>
         </svg>
       </div>
 
-      <!-- Action Buttons -->
       <div class="flex gap-2">
         <button onclick="exportReport()" class="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold py-2 px-3 rounded-lg shadow transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           Export Report
-        </button>
-        <button onclick="resetDailyData()" class="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-3 rounded-lg shadow transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          Reset Session
         </button>
       </div>
     </div>
@@ -183,23 +176,56 @@
 
   </main>
 
-  <!-- Script Logic -->
+  <!-- Script Logic Pre-Configured with Google Apps Script -->
   <script>
-    let state = JSON.parse(localStorage.getItem('pick_all_adventures_db')) || {
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhdFp590KocGrTpK13LhUEhXZ7sd0FiMAUjmml1vfVZDg4QCIsV5BlThjheqxmooXc/exec";
+
+    let state = {
       players: [],
       queues: { Beginner: [], Professional: [] },
       courts: [
-        { id: 1, name: "Court 1", type: "RoundRobin", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 2, name: "Court 2", type: "RoundRobin", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 3, name: "Court 3", type: "RoundRobin", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 4, name: "Court 4", type: "RoundRobin", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
+        { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
       ],
       totalMatchesPlayed: 0
     };
 
-    function saveState() {
-      localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
+    async function loadState() {
+      try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+        if (data && data.players) {
+          state = data;
+          render();
+        }
+      } catch (err) {
+        console.error("Error loading data from Google Sheets:", err);
+      }
+    }
+
+    async function saveState() {
       render();
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(state)
+        });
+      } catch (err) {
+        console.error("Error saving data to Google Sheets:", err);
+      }
+    }
+
+    function checkAutoAssign(category) {
+      if (state.queues[category].length >= 4) {
+        const openCourt = state.courts.find(c => !c.isExclusive && !c.currentMatch && c.assignedCategory === category);
+        if (openCourt) {
+          openCourt.currentMatch = state.queues[category].splice(0, 4);
+        }
+      }
     }
 
     document.getElementById('player-form').addEventListener('submit', (e) => {
@@ -223,7 +249,8 @@
 
       state.players.push(newPlayer);
       state.queues[category].push(newPlayer.id);
-      
+
+      checkAutoAssign(category);
       nameInput.value = '';
       saveState();
     });
@@ -252,8 +279,7 @@
         return;
       }
 
-      const selectedPlayerIds = queue.splice(0, 4);
-      court.currentMatch = selectedPlayerIds;
+      court.currentMatch = queue.splice(0, 4);
       saveState();
     }
 
@@ -261,6 +287,7 @@
       const court = state.courts.find(c => c.id === courtId);
       if(!court || !court.currentMatch) return;
 
+      const cat = court.assignedCategory;
       court.currentMatch.forEach(pId => {
         const player = state.players.find(p => p.id === pId);
         if(player) {
@@ -271,6 +298,7 @@
 
       court.currentMatch = null;
       state.totalMatchesPlayed += 1;
+      checkAutoAssign(cat);
       saveState();
     }
 
@@ -294,6 +322,7 @@
       } else {
         court.isExclusive = false;
         court.Renter = "";
+        checkAutoAssign(court.assignedCategory);
       }
       saveState();
     }
@@ -302,102 +331,105 @@
       ['Beginner', 'Professional'].forEach(cat => {
         const queueListEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-queue-list`);
         const countEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-count`);
-        const queueIds = state.queues[cat];
+        const queueIds = state.queues[cat] || [];
 
-        countEl.innerText = queueIds.length;
-        queueListEl.innerHTML = queueIds.length === 0 
-          ? `<p class="text-xs text-slate-400 italic py-2">No players waiting.</p>`
-          : queueIds.map((pId, idx) => {
-              const p = state.players.find(x => x.id === pId);
-              return `
-                <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs">
-                  <div>
-                    <span class="font-bold text-slate-700">#${idx+1} ${p.name}</span>
-                    <span class="text-slate-400 text-[10px] block">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
+        if (countEl) countEl.innerText = queueIds.length;
+        if (queueListEl) {
+          queueListEl.innerHTML = queueIds.length === 0 
+            ? `<p class="text-xs text-slate-400 italic py-2">No players waiting.</p>`
+            : queueIds.map((pId, idx) => {
+                const p = state.players.find(x => x.id === pId);
+                if (!p) return '';
+                return `
+                  <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs">
+                    <div>
+                      <span class="font-bold text-slate-700">#${idx+1} ${p.name}</span>
+                      <span class="text-slate-400 text-[10px] block">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
+                    </div>
+                    <button onclick="passTurn('${p.id}', '${cat}')" class="flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold px-2 py-1 rounded transition text-[10px]">
+                      Pass
+                    </button>
                   </div>
-                  <button onclick="passTurn('${p.id}', '${cat}')" class="flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold px-2 py-1 rounded transition text-[10px]">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
-                    Pass
-                  </button>
-                </div>
-              `;
-            }).join('');
+                `;
+              }).join('');
+        }
       });
 
       const courtsContainer = document.getElementById('courts-grid');
-      courtsContainer.innerHTML = state.courts.map(court => {
-        if(court.isExclusive) {
+      if (courtsContainer) {
+        courtsContainer.innerHTML = state.courts.map(court => {
+          if(court.isExclusive) {
+            return `
+              <div class="border-2 border-amber-400 bg-amber-50/50 rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-3">
+                  <span class="font-black text-slate-800">${court.name}</span>
+                  <span class="bg-amber-200 text-amber-900 font-bold text-xs px-2 py-0.5 rounded">Exclusive Rent</span>
+                </div>
+                <div class="text-center py-6">
+                  <p class="text-xs text-amber-800 font-semibold uppercase tracking-wide">Reserved For</p>
+                  <p class="text-base font-black text-slate-900">${court.Renter}</p>
+                </div>
+                <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-1.5 rounded text-xs transition">End Exclusive Session</button>
+              </div>
+            `;
+          }
+
+          const matchPlayers = court.currentMatch ? court.currentMatch.map(id => state.players.find(p => p.id === id)) : null;
+
           return `
-            <div class="border-2 border-amber-400 bg-amber-50/50 rounded-xl p-4 flex flex-col justify-between">
-              <div class="flex justify-between items-center mb-3">
-                <span class="font-black text-slate-800">${court.name}</span>
-                <span class="bg-amber-200 text-amber-900 font-bold text-xs px-2 py-0.5 rounded flex items-center gap-1">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                  Exclusive Rent
-                </span>
+            <div class="border rounded-xl p-4 bg-white flex flex-col justify-between border-slate-200 shadow-sm">
+              <div>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="font-black text-slate-800">${court.name}</span>
+                  <span class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-xs font-bold px-2 py-0.5 rounded-full">${court.assignedCategory}</span>
+                </div>
+                
+                <div class="my-3">
+                  ${matchPlayers ? `
+                    <div class="text-xs font-semibold text-slate-500 mb-1">Active Match:</div>
+                    <div class="grid grid-cols-2 gap-1 text-xs">
+                      <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[0]?.name || 'P1'}</div>
+                      <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[1]?.name || 'P2'}</div>
+                      <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[2]?.name || 'P3'}</div>
+                      <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[3]?.name || 'P4'}</div>
+                    </div>
+                  ` : `
+                    <div class="text-center py-4 text-xs text-slate-400 italic bg-slate-50 rounded-lg border border-dashed">Court Available</div>
+                  `}
+                </div>
               </div>
-              <div class="text-center py-6">
-                <p class="text-xs text-amber-800 font-semibold uppercase tracking-wide">Reserved For</p>
-                <p class="text-base font-black text-slate-900">${court.Renter}</p>
+
+              <div class="space-y-2 mt-2">
+                ${matchPlayers ? `
+                  <button onclick="finishMatch(${court.id})" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-1.5 rounded text-xs transition">Finish Match & Rotate Queue</button>
+                ` : `
+                  <button onclick="assignNextMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded text-xs transition">Call Next 4 Players</button>
+                `}
+                <button onclick="toggleExclusive(${court.id})" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold py-1 rounded text-[11px] transition">Set to Exclusive Rent</button>
               </div>
-              <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-1.5 rounded text-xs transition">End Exclusive Session</button>
             </div>
           `;
-        }
-
-        const matchPlayers = court.currentMatch ? court.currentMatch.map(id => state.players.find(p => p.id === id)) : null;
-
-        return `
-          <div class="border rounded-xl p-4 bg-white flex flex-col justify-between border-slate-200 shadow-sm">
-            <div>
-              <div class="flex justify-between items-center mb-2">
-                <span class="font-black text-slate-800">${court.name}</span>
-                <span class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-xs font-bold px-2 py-0.5 rounded-full">${court.assignedCategory}</span>
-              </div>
-              
-              <div class="my-3">
-                ${matchPlayers ? `
-                  <div class="text-xs font-semibold text-slate-500 mb-1">Active Match:</div>
-                  <div class="grid grid-cols-2 gap-1 text-xs">
-                    <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[0]?.name || 'P1'}</div>
-                    <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[1]?.name || 'P2'}</div>
-                    <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[3]?.name || 'P3'}</div>
-                    <div class="bg-slate-100 p-1.5 rounded font-medium text-slate-700">${matchPlayers[2]?.name || 'P4'}</div>
-                  </div>
-                ` : `
-                  <div class="text-center py-4 text-xs text-slate-400 italic bg-slate-50 rounded-lg border border-dashed">Court Available</div>
-                `}
-              </div>
-            </div>
-
-            <div class="space-y-2 mt-2">
-              ${matchPlayers ? `
-                <button onclick="finishMatch(${court.id})" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-1.5 rounded text-xs transition">Finish Match & Rotate Queue</button>
-              ` : `
-                <button onclick="assignNextMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded text-xs transition">Call Next 4 Players</button>
-              `}
-              <button onclick="toggleExclusive(${court.id})" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 font-semibold py-1 rounded text-[11px] transition">Set to Exclusive Rent</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+        }).join('');
+      }
 
       const paidPlayers = state.players.filter(p => p.paid).length;
-      document.getElementById('report-total-players').innerText = state.players.length;
-      document.getElementById('report-total-matches').innerText = state.totalMatchesPlayed;
-      document.getElementById('report-total-revenue').innerText = `₱${paidPlayers * 150}`;
+      if (document.getElementById('report-total-players')) document.getElementById('report-total-players').innerText = state.players.length;
+      if (document.getElementById('report-total-matches')) document.getElementById('report-total-matches').innerText = state.totalMatchesPlayed;
+      if (document.getElementById('report-total-revenue')) document.getElementById('report-total-revenue').innerText = `₱${paidPlayers * 150}`;
 
       const tableBody = document.getElementById('player-log-table');
-      tableBody.innerHTML = state.players.map(p => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-2 border-b text-slate-500">${p.timeIn}</td>
-          <td class="p-2 border-b font-bold text-slate-800">${p.name}</td>
-          <td class="p-2 border-b"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-1.5 py-0.5 rounded text-[10px] font-bold">${p.category}</span></td>
-          <td class="p-2 border-b font-semibold text-slate-700">${p.gamesPlayed}</td>
-          <td class="p-2 border-b text-slate-500">${p.passes}</td>
-          <td class="p-2 border-b font-bold ${p.paid ? 'text-emerald-600' : 'text-red-500'}">${p.paid ? 'Paid' : 'Unpaid'}</td>
-        </tr>
-      `).join('');
+      if (tableBody) {
+        tableBody.innerHTML = state.players.map(p => `
+          <tr class="hover:bg-slate-50">
+            <td class="p-2 border-b text-slate-500">${p.timeIn}</td>
+            <td class="p-2 border-b font-bold text-slate-800">${p.name}</td>
+            <td class="p-2 border-b"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-1.5 py-0.5 rounded text-[10px] font-bold">${p.category}</span></td>
+            <td class="p-2 border-b font-semibold text-slate-700">${p.gamesPlayed}</td>
+            <td class="p-2 border-b text-slate-500">${p.passes}</td>
+            <td class="p-2 border-b font-bold ${p.paid ? 'text-emerald-600' : 'text-red-500'}">${p.paid ? 'Paid' : 'Unpaid'}</td>
+          </tr>
+        `).join('');
+      }
     }
 
     function exportReport() {
@@ -413,14 +445,8 @@
       a.click();
     }
 
-    function resetDailyData() {
-      if(confirm("Are you sure you want to reset all daily player queues, matches, and report records?")) {
-        localStorage.removeItem('pick_all_adventures_db');
-        location.reload();
-      }
-    }
-
-    render();
+    loadState();
+    setInterval(loadState, 4000);
   </script>
 </body>
 </html>
