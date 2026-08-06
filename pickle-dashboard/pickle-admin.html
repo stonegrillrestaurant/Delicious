@@ -2,11 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Pick all AD-Ventures | Owner Operations Panel</title>
-  <meta property="og:image" content="https://stonegrillresto.net/og-image.png">
-<meta property="og:title" content="Pick all AD-Ventures | Pickleball Court">
-<meta property="og:description" content="Eza Ventures Inc. Pickleball Court & Sports Arena">
+  
+  <!-- Social Media Sharing (OG Tags) -->
+  <meta property="og:image" content="https://stonegrillresto.net/pickle-dashboard/og-image.png">
+  <meta property="og:title" content="Pick all AD-Ventures | Pickleball Court">
+  <meta property="og:description" content="Eza Ventures Inc. Pickleball Court & Sports Arena">
+  
+  <!-- PWA Setup -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <link rel="apple-touch-icon" href="/pickle-dashboard/pwa-icon.PNG">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
@@ -15,14 +23,13 @@
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-  <!-- Admin Header -->
   <header class="bg-slate-800 border-b border-slate-700 shadow-xl sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-3">
-        <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider">ADMIN</div>
+        <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider">ADMIN CONTROL</div>
         <div>
-          <h1 class="text-base font-black tracking-wide text-white">PICKLE AD-VENTURES</h1>
-          <p class="text-[10px] text-slate-400 font-medium">Ayesa Dodong Ventures</p>
+          <h1 class="text-base font-black tracking-wide text-white">PICK ALL AD-VENTURES</h1>
+          <p class="text-[10px] text-slate-400 font-medium">Court Operations & Financial Ledger</p>
         </div>
       </div>
 
@@ -37,7 +44,6 @@
     </div>
   </header>
 
-  <!-- Live Metrics -->
   <section class="bg-slate-800/50 border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
       <div class="border-r border-slate-800">
@@ -59,13 +65,10 @@
     </div>
   </section>
 
-  <!-- Main Workspace -->
   <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <!-- Left Column: Check-In Override & Queues -->
     <section class="space-y-6">
       
-      <!-- Counter Registration -->
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <h2 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
           <span>Manual Counter Check-In</span>
@@ -96,11 +99,9 @@
         </form>
       </div>
 
-      <!-- Live Queue Control -->
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <h2 class="text-sm font-bold text-white mb-3">Live Queue Control</h2>
         
-        <!-- Beginner Queue -->
         <div class="mb-4">
           <div class="flex justify-between items-center mb-2">
             <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Beginner Queue</h3>
@@ -109,7 +110,6 @@
           <div id="beginner-queue-list" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
         </div>
 
-        <!-- Pro Queue -->
         <div>
           <div class="flex justify-between items-center mb-2">
             <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Professional Queue</h3>
@@ -121,10 +121,8 @@
 
     </section>
 
-    <!-- Center & Right Column: Court Overrides & Daily Ledger -->
     <section class="lg:col-span-2 space-y-6">
 
-      <!-- Court Status Overrides -->
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-sm font-bold text-white">Court Override & Management</h2>
@@ -133,7 +131,6 @@
         <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
       </div>
 
-      <!-- Daily Financial Roster -->
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <h2 class="text-sm font-bold text-white mb-3">Master Player Ledger</h2>
         <div class="overflow-x-auto">
@@ -158,16 +155,21 @@
 
   </main>
 
-  <!-- Script Logic Pre-Configured with Google Apps Script -->
-  <!-- Script Logic Pre-Configured with Dual-Save System -->
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRN3iTK7K2p5zSDXDO-7TqZJqd_NXLVpwiMvoThTSq5Q6CDi8sZ0X0prlXEPqHmHWrqA/exec";
+    // Register PWA Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(registration => console.log('PWA Ready'))
+          .catch(err => console.log('PWA Error: ', err));
+      });
+    }
 
-    // 1. Always load from Local Storage first so the screen is never empty
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhdFp590KocGrTpK13LhUEhXZ7sd0FiMAUjmml1vfVZDg4QCIsV5BlThjheqxmooXc/exec";
+
     let localData = localStorage.getItem('pick_all_adventures_db');
     let state = localData ? JSON.parse(localData) : {
-      players: [],
-      queues: { Beginner: [], Professional: [] },
+      players: [], queues: { Beginner: [], Professional: [] },
       courts: [
         { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
         { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
@@ -177,12 +179,11 @@
       totalMatchesPlayed: 0
     };
 
-    // 2. Fetch from Google Sheets quietly in the background
     async function loadState() {
       try {
         const response = await fetch(SCRIPT_URL);
         const text = await response.text(); 
-        const data = JSON.parse(text); // Converts safely
+        const data = JSON.parse(text); 
         
         if (data && data.players && data.players.length >= state.players.length) {
           state = data;
@@ -194,11 +195,9 @@
       }
     }
 
-    // 3. Save to Local Device FIRST, then send to Google
     async function saveState() {
       localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
-      render(); // Instantly displays the name on your screen!
-      
+      render();
       try {
         await fetch(SCRIPT_URL, {
           method: 'POST',
@@ -244,7 +243,7 @@
 
       checkAutoAssign(category);
       nameInput.value = '';
-      saveState(); // Triggers instant local save
+      saveState();
     });
 
     function passTurn(playerId, category) {
@@ -266,6 +265,7 @@
       
       const pIdx = state.players.findIndex(p => p.id === playerId);
       if(pIdx > -1) state.players.splice(pIdx, 1);
+
       saveState();
     }
 
@@ -350,17 +350,15 @@
             : queueIds.map((pId, idx) => {
                 const p = state.players.find(x => x.id === pId);
                 if (!p) return '';
-                // Admin vs Client render check
-                const isAdmin = document.getElementById('stat-players') !== null;
                 return `
-                  <div class="flex justify-between items-center ${isAdmin ? 'bg-slate-900/60 border-slate-700/60' : 'bg-slate-50 border'} p-2 rounded-lg text-xs">
+                  <div class="flex justify-between items-center bg-slate-900/60 border border-slate-700/60 p-2 rounded-lg text-xs">
                     <div>
-                      <span class="font-bold ${isAdmin ? 'text-white' : 'text-slate-700'}">#${idx+1} ${p.name}</span>
-                      <span class="${isAdmin ? 'text-slate-400' : 'text-slate-400'} text-[10px] block">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
+                      <span class="font-bold text-white">#${idx+1} ${p.name}</span>
+                      <span class="text-slate-400 text-[10px] block">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
                     </div>
                     <div class="flex gap-1">
-                      <button onclick="passTurn('${p.id}', '${cat}')" class="${isAdmin ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-100 text-amber-900 font-semibold'} px-2 py-0.5 rounded text-[10px] border">Pass</button>
-                      ${isAdmin ? `<button onclick="removePlayerFromQueue('${p.id}', '${cat}')" class="bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded text-[10px]">✕</button>` : ''}
+                      <button onclick="passTurn('${p.id}', '${cat}')" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px]">Pass</button>
+                      <button onclick="removePlayerFromQueue('${p.id}', '${cat}')" class="bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded text-[10px]">✕</button>
                     </div>
                   </div>
                 `;
@@ -370,23 +368,21 @@
 
       let activeCount = 0;
       const courtsContainer = document.getElementById('courts-grid');
-      const isAdmin = document.getElementById('stat-players') !== null;
-      
       if (courtsContainer) {
         courtsContainer.innerHTML = state.courts.map(court => {
           if(court.currentMatch || court.isExclusive) activeCount++;
           if(court.isExclusive) {
             return `
-              <div class="border-2 ${isAdmin ? 'border-amber-500/40 bg-amber-500/5' : 'border-amber-400 bg-amber-50/50'} rounded-xl p-4 flex flex-col justify-between">
+              <div class="border-2 border-amber-500/40 bg-amber-500/5 rounded-xl p-4 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-3">
-                  <span class="font-black ${isAdmin ? 'text-white' : 'text-slate-800'}">${court.name}</span>
-                  <span class="${isAdmin ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-200 text-amber-900'} font-bold text-[10px] px-2 py-0.5 rounded uppercase border">Exclusive Rent</span>
+                  <span class="font-black text-white">${court.name}</span>
+                  <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-[10px] px-2 py-0.5 rounded uppercase">Exclusive Rent</span>
                 </div>
                 <div class="text-center py-4">
-                  <p class="text-[10px] ${isAdmin ? 'text-amber-400' : 'text-amber-800'} font-bold uppercase">Reserved Client</p>
-                  <p class="text-sm font-black ${isAdmin ? 'text-white' : 'text-slate-900'}">${court.Renter}</p>
+                  <p class="text-[10px] text-amber-400 font-bold uppercase">Reserved Client</p>
+                  <p class="text-sm font-black text-white">${court.Renter}</p>
                 </div>
-                <button onclick="toggleExclusive(${court.id})" class="w-full ${isAdmin ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-200 hover:bg-slate-300'} text-${isAdmin ? 'white' : 'slate-800'} font-bold py-1.5 rounded text-xs transition">End Exclusive Rental</button>
+                <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-1.5 rounded text-xs transition">End Exclusive Rental</button>
               </div>
             `;
           }
@@ -394,36 +390,36 @@
           const matchPlayers = court.currentMatch ? court.currentMatch.map(id => state.players.find(p => p.id === id)) : null;
 
           return `
-            <div class="border rounded-xl p-4 ${isAdmin ? 'bg-slate-900/60 border-slate-700' : 'bg-white border-slate-200'} flex flex-col justify-between shadow-sm">
+            <div class="border rounded-xl p-4 bg-slate-900/60 border-slate-700 flex flex-col justify-between shadow-sm">
               <div>
                 <div class="flex justify-between items-center mb-2">
-                  <span class="font-black ${isAdmin ? 'text-white' : 'text-slate-800'}">${court.name}</span>
-                  <button ${isAdmin ? `onclick="toggleCourtCategory(${court.id})"` : ''} class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[10px] font-bold px-2 py-0.5 rounded-full uppercase" title="Category">
-                    ${court.assignedCategory} ${isAdmin ? '⚙' : ''}
+                  <span class="font-black text-white">${court.name}</span>
+                  <button onclick="toggleCourtCategory(${court.id})" class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[10px] font-bold px-2 py-0.5 rounded-full uppercase" title="Click to change court category">
+                    ${court.assignedCategory} ⚙
                   </button>
                 </div>
                 
                 <div class="my-3">
                   ${matchPlayers ? `
-                    <div class="text-[10px] font-bold ${isAdmin ? 'text-slate-400' : 'text-slate-500'} uppercase mb-1">Active Match</div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Active Match</div>
                     <div class="grid grid-cols-2 gap-1 text-xs">
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[0]?.name || 'P1'}</div>
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[1]?.name || 'P2'}</div>
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[2]?.name || 'P3'}</div>
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[3]?.name || 'P4'}</div>
+                      <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[0]?.name || 'P1'}</div>
+                      <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[1]?.name || 'P2'}</div>
+                      <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[2]?.name || 'P3'}</div>
+                      <div class="bg-slate-800 p-2 rounded font-medium text-slate-200 border border-slate-700">${matchPlayers[3]?.name || 'P4'}</div>
                     </div>
                   ` : `
-                    <div class="text-center py-4 text-xs ${isAdmin ? 'text-slate-500 bg-slate-950/40 border-slate-800' : 'text-slate-400 bg-slate-50'} italic rounded-lg border border-dashed">Court Ready</div>
+                    <div class="text-center py-4 text-xs text-slate-500 italic bg-slate-950/40 rounded-lg border border-dashed border-slate-800">Court Ready</div>
                   `}
                 </div>
               </div>
               <div class="space-y-2 mt-2">
                 ${matchPlayers ? `
-                  <button onclick="finishMatch(${court.id})" class="w-full ${isAdmin ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-800 hover:bg-slate-900'} text-white font-bold py-1.5 rounded text-xs transition">Finish Match</button>
+                  <button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded text-xs transition">Finish Match & Auto-Rotate</button>
                 ` : `
-                  <button onclick="assignNextMatch(${court.id})" class="w-full ${isAdmin ? 'bg-slate-700 hover:bg-slate-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white font-bold py-1.5 rounded text-xs transition">Force Match Assign</button>
+                  <button onclick="assignNextMatch(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-1.5 rounded text-xs transition">Force Match Assign</button>
                 `}
-                <button onclick="toggleExclusive(${court.id})" class="w-full border ${isAdmin ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-slate-300 text-slate-600 hover:bg-slate-50'} font-semibold py-1 rounded text-[10px] transition">Reserve Court</button>
+                <button onclick="toggleExclusive(${court.id})" class="w-full border border-slate-700 text-slate-400 hover:bg-slate-800 font-semibold py-1 rounded text-[10px] transition">Reserve Court</button>
               </div>
             </div>
           `;
@@ -435,25 +431,24 @@
       if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 4`;
       if (document.getElementById('stat-matches')) document.getElementById('stat-matches').innerText = state.totalMatchesPlayed;
       if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${paidPlayers * 150}`;
-      if (document.getElementById('report-total-players')) document.getElementById('report-total-players').innerText = state.players.length;
-      if (document.getElementById('report-total-matches')) document.getElementById('report-total-matches').innerText = state.totalMatchesPlayed;
-      if (document.getElementById('report-total-revenue')) document.getElementById('report-total-revenue').innerText = `₱${paidPlayers * 150}`;
 
       const tableBody = document.getElementById('player-log-table');
       if (tableBody) {
         tableBody.innerHTML = state.players.map(p => `
-          <tr class="${isAdmin ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}">
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700 text-slate-500' : 'border-slate-100 text-slate-500'}">${p.timeIn}</td>
-            <td class="p-2 border-b font-bold ${isAdmin ? 'border-slate-700 text-white' : 'border-slate-100 text-slate-800'}">${p.name}</td>
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700' : 'border-slate-100'}"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-1.5 py-0.5 rounded text-[9px] font-bold">${p.category}</span></td>
-            <td class="p-2 border-b font-bold ${isAdmin ? 'border-slate-700 text-slate-300' : 'border-slate-100 text-slate-700'}">${p.gamesPlayed}</td>
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700 text-slate-500' : 'border-slate-100 text-slate-500'}">${p.passes}</td>
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700' : 'border-slate-100'}">
-              <button ${isAdmin ? `onclick="togglePayment('${p.id}')"` : 'disabled'} class="font-bold text-[10px] px-1.5 py-0.5 rounded ${p.paid ? (isAdmin ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-emerald-600') : (isAdmin ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-red-500')}">
+          <tr class="hover:bg-slate-800/40">
+            <td class="p-2 text-slate-500">${p.timeIn}</td>
+            <td class="p-2 font-bold text-white">${p.name}</td>
+            <td class="p-2"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-1.5 py-0.5 rounded text-[9px] font-bold">${p.category}</span></td>
+            <td class="p-2 text-slate-300 font-bold">${p.gamesPlayed}</td>
+            <td class="p-2 text-slate-500">${p.passes}</td>
+            <td class="p-2">
+              <button onclick="togglePayment('${p.id}')" class="font-bold text-[10px] px-1.5 py-0.5 rounded ${p.paid ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}">
                 ${p.paid ? 'Paid' : 'Unpaid'}
               </button>
             </td>
-            ${isAdmin ? `<td class="p-2 border-b border-slate-700"><button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="text-slate-500 hover:text-red-400 text-[10px]">Remove</button></td>` : ''}
+            <td class="p-2">
+              <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="text-slate-500 hover:text-red-400 text-[10px]">Remove</button>
+            </td>
           </tr>
         `).join('');
       }
@@ -468,7 +463,7 @@
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.setAttribute('href', url);
-      a.setAttribute('download', `PickAllAdventures_Report_${new Date().toISOString().split('T')[0]}.csv`);
+      a.setAttribute('download', `PickAllAdventures_OwnerReport_${new Date().toISOString().split('T')[0]}.csv`);
       a.click();
     }
 
@@ -489,9 +484,11 @@
       }
     }
 
-    render(); // Draw instantly on page load
-    loadState(); // Then check Google for updates
-    setInterval(loadState, 5000); // Check every 5 seconds
+    render();
+    loadState();
+    setInterval(loadState, 4000);
   </script>
 </body>
 </html>
+
+
