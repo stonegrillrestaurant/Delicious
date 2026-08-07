@@ -5,23 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Pick all AD-Ventures | Owner Operations Panel</title>
   
-  <meta property="og:image" content="https://stonegrillresto.net/pickle-dashboard/og-image.png">
   <meta property="og:title" content="Pick all AD-Ventures | Pickleball Court">
   <meta property="og:description" content="Eza Ventures Inc. Pickleball Court & Sports Arena">
   
-  <link rel="manifest" href="/pickle-dashboard/manfest.json">
   <meta name="theme-color" content="#1e293b">
-  <link rel="apple-touch-icon" href="/pickle-dashboard/pwa-icon.PNG">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    
+    /* Scrollbar styling for a cleaner look */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-10">
 
-  <header class="bg-slate-800 border-b border-slate-700 shadow-xl sticky top-0 z-50">
+  <header class="bg-slate-800 border-b border-slate-700 shadow-xl sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-3">
         <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider">OWNER CONTROL</div>
@@ -32,7 +35,7 @@
       </div>
       <div class="flex items-center gap-2">
         <button onclick="exportReport()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg border border-slate-600 transition">Export CSV Log</button>
-        <button onclick="resetDailyData()" class="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Reset Daily Session</button>
+        <button onclick="requestResetDailyData()" class="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Reset Session</button>
       </div>
     </div>
   </header>
@@ -59,10 +62,13 @@
   </section>
 
   <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- LEFT COLUMN: Registration and Queues -->
     <section class="space-y-6">
+      
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <h2 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
-          <span>Manual Counter Check-In</span>
+          <span>Counter Check-In</span>
           <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-bold">₱150 / 6 Hrs</span>
         </h2>
         <form id="player-form" class="space-y-3">
@@ -89,60 +95,78 @@
           <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-sm transition shadow-lg">Register & Queue</button>
         </form>
       </div>
+      
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <h2 class="text-sm font-bold text-white mb-3">Live Queue Control</h2>
+        
         <div class="mb-4">
           <div class="flex justify-between items-center mb-2">
             <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Beginner Queue</h3>
             <span id="beginner-count" class="text-xs font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">0</span>
           </div>
-          <div id="beginner-queue-list" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+          <div id="beginner-queue-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
         </div>
+        
         <div>
           <div class="flex justify-between items-center mb-2">
             <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Professional Queue</h3>
             <span id="pro-count" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded">0</span>
           </div>
-          <div id="pro-queue-list" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+          <div id="pro-queue-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
         </div>
       </div>
     </section>
 
+    <!-- RIGHT COLUMN: Courts & Master Ledger -->
     <section class="lg:col-span-2 space-y-6">
+      
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-sm font-bold text-white">Court Override & Management</h2>
+          <h2 class="text-sm font-bold text-white">Court Control</h2>
           <div class="text-[10px] text-slate-400">Tap category badge to swap Court Type</div>
         </div>
-        <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        <div id="courts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
       </div>
+      
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
         <h2 class="text-sm font-bold text-white mb-3">Master Player Ledger</h2>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead>
-              <tr class="bg-slate-900/50 text-slate-400 border-b border-slate-700">
-                <th class="p-2">Time</th>
-                <th class="p-2">Player Name</th>
-                <th class="p-2">Category</th>
-                <th class="p-2">Games</th>
-                <th class="p-2">Passes</th>
-                <th class="p-2">Payment</th>
-                <th class="p-2">Action</th>
+        <div class="overflow-x-auto rounded-lg border border-slate-700 max-h-80">
+          <table class="w-full text-left text-xs relative">
+            <thead class="sticky top-0 bg-slate-900 border-b border-slate-700 shadow-sm">
+              <tr class="text-slate-400">
+                <th class="p-3">Time</th>
+                <th class="p-3">Player Name</th>
+                <th class="p-3">Category</th>
+                <th class="p-3 text-center">Games</th>
+                <th class="p-3">Status</th> <!-- REPLACED 'Passes' with 'Status' -->
+                <th class="p-3">Payment</th>
+                <th class="p-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody id="player-log-table" class="divide-y divide-slate-700/50 text-slate-300"></tbody>
+            <tbody id="player-log-table" class="divide-y divide-slate-700/50 text-slate-300 bg-slate-800"></tbody>
           </table>
         </div>
       </div>
+      
     </section>
   </main>
 
-    <!-- Script Logic Pre-Configured with Dual-Save System -->
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Custom Modal Backdrop -->
+  <div id="custom-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-[70] flex items-center justify-center opacity-0 transition-opacity duration-200">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform scale-95 transition-transform duration-200" id="modal-content-box">
+      <div class="p-5" id="modal-body">
+        <!-- Dynamic Content Injected Here -->
+      </div>
+    </div>
+  </div>
+
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhdFp590KocGrTpK13LhUEhXZ7sd0FiMAUjmml1vfVZDg4QCIsV5BlThjheqxmooXc/exec";
 
-    // 1. Always load from Local Storage first so the screen is never empty
+    // App State Loading
     let localData = localStorage.getItem('pick_all_adventures_db');
     let state = localData ? JSON.parse(localData) : {
       players: [],
@@ -156,12 +180,11 @@
       totalMatchesPlayed: 0
     };
 
-    // 2. Fetch from Google Sheets quietly in the background
     async function loadState() {
       try {
         const response = await fetch(SCRIPT_URL);
         const text = await response.text(); 
-        const data = JSON.parse(text); // Converts safely
+        const data = JSON.parse(text); 
         
         if (data && data.players && data.players.length >= state.players.length) {
           state = data;
@@ -173,10 +196,9 @@
       }
     }
 
-    // 3. Save to Local Device FIRST, then send to Google
     async function saveState() {
       localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
-      render(); // Instantly displays the name on your screen!
+      render(); 
       
       try {
         await fetch(SCRIPT_URL, {
@@ -190,13 +212,141 @@
       }
     }
 
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bg = type === 'success' ? 'bg-emerald-600' : (type === 'warn' ? 'bg-amber-500' : 'bg-red-600');
+      
+      toast.className = `${bg} text-white px-4 py-2 rounded shadow-lg text-xs font-bold transform transition-all duration-300 translate-y-4 opacity-0 flex items-center gap-2`;
+      toast.innerHTML = `<span>${message}</span>`;
+      
+      container.appendChild(toast);
+      
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove('translate-y-4', 'opacity-0');
+      }, 10);
+
+      // Animate out and remove
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function showModal(htmlContent) {
+      const modal = document.getElementById('custom-modal');
+      const box = document.getElementById('modal-content-box');
+      document.getElementById('modal-body').innerHTML = htmlContent;
+      
+      modal.classList.remove('hidden');
+      // trigger reflow
+      void modal.offsetWidth; 
+      
+      modal.classList.remove('opacity-0');
+      box.classList.remove('scale-95');
+    }
+
+    function hideModal() {
+      const modal = document.getElementById('custom-modal');
+      const box = document.getElementById('modal-content-box');
+      
+      modal.classList.add('opacity-0');
+      box.classList.add('scale-95');
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    function requestResetDailyData() {
+      const content = `
+        <h3 class="text-lg font-black text-white mb-2">Reset Session?</h3>
+        <p class="text-sm text-slate-400 mb-6">This will wipe all queues, revenue logs, and current matches. This cannot be undone.</p>
+        <div class="flex justify-end gap-3">
+          <button onclick="hideModal()" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-bold hover:bg-slate-600">Cancel</button>
+          <button onclick="executeReset()" class="px-4 py-2 rounded bg-red-600 text-white text-sm font-bold hover:bg-red-500">Yes, Reset Data</button>
+        </div>
+      `;
+      showModal(content);
+    }
+
+    function executeReset() {
+      state = {
+        players: [],
+        queues: { Beginner: [], Professional: [] },
+        courts: [
+          { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+          { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
+          { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+          { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
+        ],
+        totalMatchesPlayed: 0
+      };
+      saveState();
+      hideModal();
+      showToast("Session data has been reset.");
+    }
+
+    function promptRenter(courtId) {
+      const court = state.courts.find(c => c.id === courtId);
+      const content = `
+        <h3 class="text-lg font-black text-white mb-2">Exclusive Rental: ${court.name}</h3>
+        <p class="text-sm text-slate-400 mb-4">Enter the name of the client renting this court.</p>
+        <input type="text" id="renter-input" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white focus:outline-none focus:border-amber-500 mb-5" placeholder="Client Name">
+        <div class="flex justify-end gap-3">
+          <button onclick="hideModal()" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-bold hover:bg-slate-600">Cancel</button>
+          <button onclick="executeExclusiveRent(${courtId})" class="px-4 py-2 rounded bg-amber-500 text-white text-sm font-bold hover:bg-amber-400">Confirm Rental</button>
+        </div>
+      `;
+      showModal(content);
+      setTimeout(() => document.getElementById('renter-input').focus(), 100);
+    }
+
+    function executeExclusiveRent(courtId) {
+      const court = state.courts.find(c => c.id === courtId);
+      const input = document.getElementById('renter-input');
+      const renterName = input ? input.value.trim() : '';
+      
+      if (!renterName) {
+        showToast("Renter name is required.", "warn");
+        return;
+      }
+
+      if(court.currentMatch) {
+        // Refund current match back to front of queue
+        court.currentMatch.reverse().forEach(pId => {
+          const player = state.players.find(p => p.id === pId);
+          if(player) state.queues[player.category].unshift(pId);
+        });
+        court.currentMatch = null;
+      }
+      
+      court.isExclusive = true;
+      court.Renter = renterName;
+      
+      saveState();
+      hideModal();
+      showToast(`${court.name} reserved for ${renterName}`);
+    }
+
     function checkAutoAssign(category) {
-      if (state.queues[category].length >= 4) {
+      let assignedAny = false;
+      
+      // Loop continuously while we have 4+ players AND an open court
+      while (state.queues[category].length >= 4) {
         const openCourt = state.courts.find(c => !c.isExclusive && !c.currentMatch && c.assignedCategory === category);
+        
         if (openCourt) {
+          // Instantly pull 4 players from the front of the queue
           openCourt.currentMatch = state.queues[category].splice(0, 4);
+          assignedAny = true;
+        } else {
+          // No more open courts for this category, break the loop
+          break; 
         }
       }
+      return assignedAny;
     }
 
     document.getElementById('player-form').addEventListener('submit', (e) => {
@@ -218,23 +368,39 @@
         paid: payment === 'Paid'
       };
 
+      // Push to master ledger
       state.players.push(newPlayer);
+      
+      // Append to the VERY END of the waiting list queue (First In, First Out)
       state.queues[category].push(newPlayer.id);
 
-      checkAutoAssign(category);
+      // Check if they can play instantly (loops through available courts)
+      checkAutoAssign(category); 
+      
       nameInput.value = '';
-      saveState(); // Triggers instant local save
+      showToast(`${name} added to ${category} queue.`);
+      saveState(); 
     });
 
     function passTurn(playerId, category) {
       const q = state.queues[category];
       const idx = q.indexOf(playerId);
-      if(idx > -1 && q.length > 1) {
-        q.splice(idx, 1);
-        q.push(playerId);
-        const player = state.players.find(p => p.id === playerId);
-        if(player) player.passes += 1;
-        saveState();
+      
+      if(idx > -1) {
+        if (idx < q.length - 1) {
+          // Swap with the player directly behind them (let them play first)
+          const temp = q[idx];
+          q[idx] = q[idx + 1];
+          q[idx + 1] = temp;
+          
+          const player = state.players.find(p => p.id === playerId);
+          if(player) player.passes += 1; // Track internally
+          
+          saveState();
+          showToast(`Passed. Swapped places with next player.`);
+        } else {
+          showToast("Cannot pass. Nobody behind them in queue.", 'warn');
+        }
       }
     }
 
@@ -246,6 +412,7 @@
       const pIdx = state.players.findIndex(p => p.id === playerId);
       if(pIdx > -1) state.players.splice(pIdx, 1);
       saveState();
+      showToast("Player removed.");
     }
 
     function togglePayment(playerId) {
@@ -270,53 +437,61 @@
       if(!court || court.isExclusive) return;
       const cat = court.assignedCategory;
       const queue = state.queues[cat];
-      if(queue.length < 4) { alert(`Need at least 4 players in the ${cat} queue.`); return; }
+      
+      if(queue.length < 4) { 
+        showToast(`Need at least 4 players in ${cat} queue.`, 'warn'); 
+        return; 
+      }
+      
       court.currentMatch = queue.splice(0, 4);
       saveState();
+      showToast("Manual match assigned.");
     }
 
     function finishMatch(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       if(!court || !court.currentMatch) return;
       const cat = court.assignedCategory;
+      
+      // Bump finished players to the back of the queue
       court.currentMatch.forEach(pId => {
         const player = state.players.find(p => p.id === pId);
         if(player) {
           player.gamesPlayed += 1;
+          // Add to the back of the line
           state.queues[player.category].push(pId);
         }
       });
+      
+      // Clear court
       court.currentMatch = null;
       state.totalMatchesPlayed += 1;
+      
+      // Instantly try to pull next 4 waiting players
       checkAutoAssign(cat);
+      
       saveState();
+      showToast("Match finished. Queue updated.");
     }
 
     function toggleExclusive(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       if(!court) return;
+      
       if(!court.isExclusive) {
-        const renter = prompt(`Enter rental description/client for ${court.name}:`);
-        if(renter) {
-          if(court.currentMatch) {
-            court.currentMatch.reverse().forEach(pId => {
-              const player = state.players.find(p => p.id === pId);
-              if(player) state.queues[player.category].unshift(pId);
-            });
-            court.currentMatch = null;
-          }
-          court.isExclusive = true;
-          court.Renter = renter;
-        }
+        promptRenter(courtId);
       } else {
         court.isExclusive = false;
         court.Renter = "";
         checkAutoAssign(court.assignedCategory);
+        saveState();
+        showToast(`Exclusive rent ended for ${court.name}.`);
       }
-      saveState();
     }
 
     function render() {
+      
+      // Render Queues
       ['Beginner', 'Professional'].forEach(cat => {
         const queueListEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-queue-list`);
         const countEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-count`);
@@ -325,21 +500,19 @@
         if (countEl) countEl.innerText = queueIds.length;
         if (queueListEl) {
           queueListEl.innerHTML = queueIds.length === 0 
-            ? `<p class="text-xs text-slate-500 italic py-2">Queue empty.</p>`
+            ? `<div class="text-xs text-slate-500 italic py-3 text-center bg-slate-900/50 rounded-lg border border-dashed border-slate-700">Queue empty</div>`
             : queueIds.map((pId, idx) => {
                 const p = state.players.find(x => x.id === pId);
                 if (!p) return '';
-                // Admin vs Client render check
-                const isAdmin = document.getElementById('stat-players') !== null;
                 return `
-                  <div class="flex justify-between items-center ${isAdmin ? 'bg-slate-900/60 border-slate-700/60' : 'bg-slate-50 border'} p-2 rounded-lg text-xs">
+                  <div class="flex justify-between items-center bg-slate-900/60 border border-slate-700/60 p-2.5 rounded-lg transition hover:bg-slate-800">
                     <div>
-                      <span class="font-bold ${isAdmin ? 'text-white' : 'text-slate-700'}">#${idx+1} ${p.name}</span>
-                      <span class="${isAdmin ? 'text-slate-400' : 'text-slate-400'} text-[10px] block">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
+                      <span class="font-bold text-white text-xs">#${idx+1} ${p.name}</span>
+                      <span class="text-slate-400 text-[10px] block mt-0.5">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
                     </div>
-                    <div class="flex gap-1">
-                      <button onclick="passTurn('${p.id}', '${cat}')" class="${isAdmin ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-100 text-amber-900 font-semibold'} px-2 py-0.5 rounded text-[10px] border">Pass</button>
-                      ${isAdmin ? `<button onclick="removePlayerFromQueue('${p.id}', '${cat}')" class="bg-red-500/20 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded text-[10px]">✕</button>` : ''}
+                    <div class="flex gap-1.5">
+                      <button onclick="passTurn('${p.id}', '${cat}')" class="bg-amber-500/10 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 px-2 py-1 rounded text-[10px] font-bold transition">Pass</button>
+                      <button onclick="removePlayerFromQueue('${p.id}', '${cat}')" class="bg-red-500/10 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-2 py-1 rounded text-[10px] font-bold transition">✕</button>
                     </div>
                   </div>
                 `;
@@ -347,25 +520,27 @@
         }
       });
 
+      // Render Courts Stats
       let activeCount = 0;
       const courtsContainer = document.getElementById('courts-grid');
-      const isAdmin = document.getElementById('stat-players') !== null;
       
       if (courtsContainer) {
         courtsContainer.innerHTML = state.courts.map(court => {
           if(court.currentMatch || court.isExclusive) activeCount++;
+          
           if(court.isExclusive) {
             return `
-              <div class="border-2 ${isAdmin ? 'border-amber-500/40 bg-amber-500/5' : 'border-amber-400 bg-amber-50/50'} rounded-xl p-4 flex flex-col justify-between">
-                <div class="flex justify-between items-center mb-3">
-                  <span class="font-black ${isAdmin ? 'text-white' : 'text-slate-800'}">${court.name}</span>
-                  <span class="${isAdmin ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-200 text-amber-900'} font-bold text-[10px] px-2 py-0.5 rounded uppercase border">Exclusive Rent</span>
+              <div class="border-2 border-amber-500/40 bg-amber-500/5 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden shadow-lg">
+                <div class="flex justify-between items-center mb-3 relative z-10">
+                  <span class="font-black text-white text-sm">${court.name}</span>
+                  <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-[10px] px-2 py-0.5 rounded uppercase shadow-sm">Exclusive Rent</span>
                 </div>
-                <div class="text-center py-4">
-                  <p class="text-[10px] ${isAdmin ? 'text-amber-400' : 'text-amber-800'} font-bold uppercase">Reserved Client</p>
-                  <p class="text-sm font-black ${isAdmin ? 'text-white' : 'text-slate-900'}">${court.Renter}</p>
+                <div class="text-center py-5 relative z-10">
+                  <p class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-1">Reserved Client</p>
+                  <p class="text-lg font-black text-white">${court.Renter}</p>
                 </div>
-                <button onclick="toggleExclusive(${court.id})" class="w-full ${isAdmin ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-200 hover:bg-slate-300'} text-${isAdmin ? 'white' : 'slate-800'} font-bold py-1.5 rounded text-xs transition">End Exclusive Rental</button>
+                <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-xs transition relative z-10">End Exclusive Rental</button>
+                <div class="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none"></div>
               </div>
             `;
           }
@@ -373,75 +548,107 @@
           const matchPlayers = court.currentMatch ? court.currentMatch.map(id => state.players.find(p => p.id === id)) : null;
 
           return `
-            <div class="border rounded-xl p-4 ${isAdmin ? 'bg-slate-900/60 border-slate-700' : 'bg-white border-slate-200'} flex flex-col justify-between shadow-sm">
+            <div class="border rounded-xl p-4 bg-slate-900/60 border-slate-700 flex flex-col justify-between shadow-lg">
               <div>
-                <div class="flex justify-between items-center mb-2">
-                  <span class="font-black ${isAdmin ? 'text-white' : 'text-slate-800'}">${court.name}</span>
-                  <button ${isAdmin ? `onclick="toggleCourtCategory(${court.id})"` : ''} class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[10px] font-bold px-2 py-0.5 rounded-full uppercase" title="Category">
-                    ${court.assignedCategory} ${isAdmin ? '⚙' : ''}
+                <div class="flex justify-between items-center mb-3">
+                  <span class="font-black text-white text-sm">${court.name}</span>
+                  <button onclick="toggleCourtCategory(${court.id})" class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase shadow-sm transition transform hover:scale-105" title="Tap to Swap Category">
+                    ${court.assignedCategory} ⚙
                   </button>
                 </div>
                 
-                <div class="my-3">
+                <div class="my-4">
                   ${matchPlayers ? `
-                    <div class="text-[10px] font-bold ${isAdmin ? 'text-slate-400' : 'text-slate-500'} uppercase mb-1">Active Match</div>
-                    <div class="grid grid-cols-2 gap-1 text-xs">
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[0]?.name || 'P1'}</div>
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[1]?.name || 'P2'}</div>
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[2]?.name || 'P3'}</div>
-                      <div class="${isAdmin ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'} p-2 rounded font-medium border">${matchPlayers[3]?.name || 'P4'}</div>
+                    <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                      Active Match
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                      <div class="bg-slate-800 border border-slate-700 text-slate-200 p-2.5 rounded-lg font-bold text-center truncate shadow-inner">${matchPlayers[0]?.name || 'P1'}</div>
+                      <div class="bg-slate-800 border border-slate-700 text-slate-200 p-2.5 rounded-lg font-bold text-center truncate shadow-inner">${matchPlayers[1]?.name || 'P2'}</div>
+                      <div class="bg-slate-800 border border-slate-700 text-slate-200 p-2.5 rounded-lg font-bold text-center truncate shadow-inner">${matchPlayers[2]?.name || 'P3'}</div>
+                      <div class="bg-slate-800 border border-slate-700 text-slate-200 p-2.5 rounded-lg font-bold text-center truncate shadow-inner">${matchPlayers[3]?.name || 'P4'}</div>
                     </div>
                   ` : `
-                    <div class="text-center py-4 text-xs ${isAdmin ? 'text-slate-500 bg-slate-950/40 border-slate-800' : 'text-slate-400 bg-slate-50'} italic rounded-lg border border-dashed">Court Ready</div>
+                    <div class="text-center py-6 text-xs text-slate-500 bg-slate-950/40 border-slate-800 italic rounded-lg border border-dashed flex flex-col items-center justify-center">
+                       <svg class="w-6 h-6 text-slate-700 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                       Court Ready
+                    </div>
                   `}
                 </div>
               </div>
               <div class="space-y-2 mt-2">
                 ${matchPlayers ? `
-                  <button onclick="finishMatch(${court.id})" class="w-full ${isAdmin ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-800 hover:bg-slate-900'} text-white font-bold py-1.5 rounded text-xs transition">Finish Match</button>
+                  <button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-xs transition shadow-md">Finish Match</button>
                 ` : `
-                  <button onclick="assignNextMatch(${court.id})" class="w-full ${isAdmin ? 'bg-slate-700 hover:bg-slate-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white font-bold py-1.5 rounded text-xs transition">Force Match Assign</button>
+                  <button onclick="assignNextMatch(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-xs transition">Force Match Assign</button>
                 `}
-                <button onclick="toggleExclusive(${court.id})" class="w-full border ${isAdmin ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-slate-300 text-slate-600 hover:bg-slate-50'} font-semibold py-1 rounded text-[10px] transition">Reserve Court</button>
+                <button onclick="toggleExclusive(${court.id})" class="w-full border border-slate-700 text-slate-400 hover:bg-slate-800 font-semibold py-1.5 rounded-lg text-[10px] transition">Reserve Court</button>
               </div>
             </div>
           `;
         }).join('');
       }
 
+      // Update Dashboard Stats
       const paidPlayers = state.players.filter(p => p.paid).length;
       if (document.getElementById('stat-players')) document.getElementById('stat-players').innerText = state.players.length;
       if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 4`;
       if (document.getElementById('stat-matches')) document.getElementById('stat-matches').innerText = state.totalMatchesPlayed;
       if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${paidPlayers * 150}`;
-      if (document.getElementById('report-total-players')) document.getElementById('report-total-players').innerText = state.players.length;
-      if (document.getElementById('report-total-matches')) document.getElementById('report-total-matches').innerText = state.totalMatchesPlayed;
-      if (document.getElementById('report-total-revenue')) document.getElementById('report-total-revenue').innerText = `₱${paidPlayers * 150}`;
 
+      // Render Master Ledger Table
       const tableBody = document.getElementById('player-log-table');
       if (tableBody) {
-        tableBody.innerHTML = state.players.map(p => `
-          <tr class="${isAdmin ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}">
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700 text-slate-500' : 'border-slate-100 text-slate-500'}">${p.timeIn}</td>
-            <td class="p-2 border-b font-bold ${isAdmin ? 'border-slate-700 text-white' : 'border-slate-100 text-slate-800'}">${p.name}</td>
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700' : 'border-slate-100'}"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-1.5 py-0.5 rounded text-[9px] font-bold">${p.category}</span></td>
-            <td class="p-2 border-b font-bold ${isAdmin ? 'border-slate-700 text-slate-300' : 'border-slate-100 text-slate-700'}">${p.gamesPlayed}</td>
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700 text-slate-500' : 'border-slate-100 text-slate-500'}">${p.passes}</td>
-            <td class="p-2 border-b ${isAdmin ? 'border-slate-700' : 'border-slate-100'}">
-              <button ${isAdmin ? `onclick="togglePayment('${p.id}')"` : 'disabled'} class="font-bold text-[10px] px-1.5 py-0.5 rounded ${p.paid ? (isAdmin ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-emerald-600') : (isAdmin ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-red-500')}">
-                ${p.paid ? 'Paid' : 'Unpaid'}
+        tableBody.innerHTML = state.players.map(p => {
+          
+          // Determine Player Status logic
+          let status = 'Waiting';
+          let statusColor = 'text-slate-400';
+          
+          // Check if player is currently in any active match
+          for (let c of state.courts) {
+            if (c.currentMatch && c.currentMatch.includes(p.id)) {
+              status = `Playing - ${c.name}`;
+              statusColor = 'text-emerald-400 font-bold';
+              break;
+            }
+          }
+          
+          return `
+          <tr class="hover:bg-slate-700/30 transition">
+            <td class="p-3 border-b border-slate-700/50 text-slate-400 whitespace-nowrap">${p.timeIn}</td>
+            <td class="p-3 border-b border-slate-700/50 font-bold text-white whitespace-nowrap">${p.name}</td>
+            <td class="p-3 border-b border-slate-700/50 whitespace-nowrap"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-2 py-1 rounded text-[10px] font-bold">${p.category}</span></td>
+            <td class="p-3 border-b border-slate-700/50 font-bold text-slate-300 text-center">${p.gamesPlayed}</td>
+            
+            <!-- NEW STATUS COLUMN -->
+            <td class="p-3 border-b border-slate-700/50 text-[11px] whitespace-nowrap ${statusColor}">${status}</td>
+            
+            <td class="p-3 border-b border-slate-700/50">
+              <button onclick="togglePayment('${p.id}')" class="font-bold text-[10px] px-2 py-1 rounded w-full transition ${p.paid ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'}">
+                ${p.paid ? 'PAID' : 'UNPAID'}
               </button>
             </td>
-            ${isAdmin ? `<td class="p-2 border-b border-slate-700"><button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="text-slate-500 hover:text-red-400 text-[10px]">Remove</button></td>` : ''}
+            <td class="p-3 border-b border-slate-700/50 text-right">
+              <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 px-2 py-1 rounded text-[10px] font-bold transition">Remove</button>
+            </td>
           </tr>
-        `).join('');
+        `}).join('');
       }
     }
 
     function exportReport() {
-      let csv = "Time In,Player Name,Category,Games Played,Passes Used,Payment Status\n";
+      let csv = "Time In,Player Name,Category,Games Played,Status,Payment Status\n";
       state.players.forEach(p => {
-        csv += `"${p.timeIn}","${p.name}","${p.category}",${p.gamesPlayed},${p.passes},"${p.paid ? 'Paid ₱150' : 'Unpaid'}"\n`;
+        let status = 'Waiting';
+        for (let c of state.courts) {
+          if (c.currentMatch && c.currentMatch.includes(p.id)) {
+            status = `Playing - ${c.name}`;
+            break;
+          }
+        }
+        csv += `"${p.timeIn}","${p.name}","${p.category}",${p.gamesPlayed},"${status}","${p.paid ? 'Paid ₱150' : 'Unpaid'}"\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
@@ -451,26 +658,10 @@
       a.click();
     }
 
-    function resetDailyData() {
-      if(confirm("Reset all daily queues, revenue logs, and matches?")) {
-        state = {
-          players: [],
-          queues: { Beginner: [], Professional: [] },
-          courts: [
-            { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-            { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
-            { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-            { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
-          ],
-          totalMatchesPlayed: 0
-        };
-        saveState();
-      }
-    }
-
-    render(); // Draw instantly on page load
-    loadState(); // Then check Google for updates
-    setInterval(loadState, 5000); // Check every 5 seconds
+    // Initialize the app immediately on load
+    render(); 
+    loadState(); 
+    setInterval(loadState, 5000); 
   </script>
 
 </body>
