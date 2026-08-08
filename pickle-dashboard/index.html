@@ -20,338 +20,128 @@
     #qr-modal { transition: opacity 0.2s ease-in-out; }
     .modal-active { opacity: 1; pointer-events: auto; }
     .modal-hidden { opacity: 0; pointer-events: none; }
+    
+    /* Hide scrollbar for a clean TV display */
+    ::-webkit-scrollbar { display: none; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col">
 
-  <header class="bg-emerald-800 text-white shadow-lg border-b border-emerald-900 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
-      <div class="flex items-center gap-3">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 80" class="h-12 w-auto">
-          <defs>
-            <linearGradient id="paddleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#10b981" />
-              <stop offset="100%" stop-color="#047857" />
-            </linearGradient>
-            <linearGradient id="ballGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#fbbf24" />
-              <stop offset="100%" stop-color="#d97706" />
-            </linearGradient>
-          </defs>
-          <g transform="translate(10, 10)">
-            <rect x="5" y="5" width="34" height="42" rx="12" fill="url(#paddleGrad)" />
-            <rect x="18" y="47" width="8" height="15" rx="2" fill="#064e3b" />
-            <rect x="16" y="58" width="12" height="4" rx="1" fill="#a7f3d0" />
-            <circle cx="38" cy="18" r="14" fill="url(#ballGrad)" />
-            <circle cx="33" cy="14" r="2" fill="#92400e" opacity="0.6"/>
-            <circle cx="43" cy="14" r="2" fill="#92400e" opacity="0.6"/>
-            <circle cx="38" cy="20" r="2" fill="#92400e" opacity="0.6"/>
-            <circle cx="32" cy="22" r="1.8" fill="#92400e" opacity="0.6"/>
-            <circle cx="42" cy="22" r="1.8" fill="#92400e" opacity="0.6"/>
-          </g>
-          <text x="75" y="38" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="24" fill="#ffffff" letter-spacing="0.5">
-            PICK ALL <tspan fill="#34d399">AD-VENTURES</tspan>
-          </text>
-          <text x="76" y="56" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="10" fill="#a7f3d0" letter-spacing="2">
-            MULTI-COURT QUEUE MANAGEMENT
-          </text>
-        </svg>
-      </div>
+  <!-- Header -->
+  <header class="bg-slate-800 border-b border-slate-700 shadow-xl py-4 px-6 flex justify-between items-center">
+    <div>
+      <div class="bg-amber-500 text-slate-950 font-black px-3 py-1 rounded-lg text-sm tracking-wider inline-block mb-1">LIVE QUEUE</div>
+      <h1 class="text-2xl font-black tracking-wide text-white">PICK ALL AD-VENTURES</h1>
+    </div>
+    <div class="text-right">
+      <div id="clock" class="text-3xl font-black text-emerald-400">00:00</div>
+      <div id="sync-status" class="text-xs text-slate-400 font-bold uppercase mt-1">Syncing...</div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <section class="space-y-6">
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <h2 class="text-base font-bold text-slate-900 mb-4 flex justify-between items-center border-b pb-3">
-          <span>Player Registration</span>
-          <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full font-bold">₱150 / 6 Hours</span>
-        </h2>
-        
-        <form id="player-form" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">Player Name</label>
-            <input type="text" id="player-name" required placeholder="Enter full name" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-slate-50">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">Queue Category</label>
-            <select id="player-category" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-slate-50">
-              <option value="Beginner">Beginner</option>
-              <option value="Professional">Professional</option>
-            </select>
-          </div>
-
-          <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <label class="block text-xs font-bold text-slate-700 mb-2">Select Payment Method</label>
-            <div class="grid grid-cols-2 gap-2 mb-3">
-              <label class="flex items-center gap-2 p-2 border rounded cursor-pointer bg-white hover:bg-slate-50 transition">
-                <input type="radio" name="payMethod" value="QR Ph" class="text-emerald-600 focus:ring-emerald-500" checked>
-                <span class="text-xs font-bold text-slate-700">QR Ph</span>
-              </label>
-              <label class="flex items-center gap-2 p-2 border rounded cursor-pointer bg-white hover:bg-slate-50 transition">
-                <input type="radio" name="payMethod" value="GCash" class="text-emerald-600 focus:ring-emerald-500">
-                <span class="text-xs font-bold text-slate-700">GCash Transfer</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between bg-white p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-50 transition relative group" onclick="copyNumber(this, '09178366126')">
-              <div class="text-[10px] text-slate-500 font-medium">Send exact amount to:</div>
-              <div class="flex items-center gap-2">
-                <div class="text-xs font-black text-slate-800">0917 836 6126</div>
-                <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-              </div>
-              <div class="copy-tooltip absolute -top-8 right-0 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 transition-opacity pointer-events-none">Copied!</div>
-            </div>
-            
-            <button type="button" onclick="toggleQRModal(true)" class="w-full mt-2 flex justify-center items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-bold py-1.5 rounded text-xs transition">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-              View QR Ph Code
-            </button>
-          </div>
-          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-sm mt-2">Confirm Payment & Join Queue</button>
-          <p class="text-center text-[9px] text-slate-400 mt-1">Admin will verify your transaction at the counter.</p>
-        </form>
-      </div>
-
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <h2 class="text-base font-bold text-slate-900 mb-3">Live Waiting Queues</h2>
-        <div class="mb-5">
-          <div class="flex justify-between items-center mb-2">
-            <h3 class="text-xs font-extrabold text-emerald-800 flex items-center uppercase tracking-wide">
-              <svg class="w-4 h-4 mr-1 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/></svg>
-              Beginner Queue
-            </h3>
-            <span id="beginner-count" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">0</span>
-          </div>
-          <div id="beginner-queue-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
-        </div>
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <h3 class="text-xs font-extrabold text-indigo-800 flex items-center uppercase tracking-wide">
-              <svg class="w-4 h-4 mr-1 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-              Professional Queue
-            </h3>
-            <span id="pro-count" class="text-xs font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">0</span>
-          </div>
-          <div id="pro-queue-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
-        </div>
+  <!-- Main Content Area -->
+  <main class="flex-1 p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <!-- Active Courts Column -->
+    <section class="bg-slate-800 rounded-xl border border-slate-700 shadow-lg p-5 flex flex-col">
+      <h2 class="text-xl font-black text-white mb-4 border-b border-slate-700 pb-2">Currently Playing</h2>
+      <div id="playing-list" class="flex-1 space-y-3 overflow-hidden">
+        <!-- Playing data will inject here -->
       </div>
     </section>
 
-    <section class="lg:col-span-2 space-y-6">
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <div class="flex justify-between items-center mb-4 border-b pb-3">
-          <h2 class="text-base font-bold text-slate-900">Live Courts Summary</h2>
-          <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Automated Rotations</div>
-        </div>
-        <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    <!-- Waiting Queue Column -->
+    <section class="bg-slate-800 rounded-xl border border-slate-700 shadow-lg p-5 flex flex-col">
+      <h2 class="text-xl font-black text-white mb-4 border-b border-slate-700 pb-2">On Deck / Waiting</h2>
+      <div class="overflow-hidden flex-1">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-900 text-slate-400">
+            <tr>
+              <th class="p-3">Player Name</th>
+              <th class="p-3">Category</th>
+              <th class="p-3">Time In</th>
+            </tr>
+          </thead>
+          <tbody id="waiting-list" class="divide-y divide-slate-700/50">
+            <!-- Waiting data will inject here -->
+          </tbody>
+        </table>
       </div>
     </section>
+
   </main>
 
-  <div id="qr-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal-hidden">
-    <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 relative text-center">
-      <button onclick="toggleQRModal(false)" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 bg-slate-100 rounded-full p-1 transition">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
-      <h3 class="text-lg font-black text-slate-900 mb-1">Scan to Pay</h3>
-      <p class="text-xs text-slate-500 mb-4">GP Stone Grill Restaurant</p>
-      <div class="border-4 border-slate-100 rounded-lg overflow-hidden flex justify-center bg-white p-2 mb-4">
-        <img src="/pickle-dashboard/qr.png" alt="QR Ph Code" onerror="this.src='./qr.png'" class="w-48 h-48 object-contain">
-      </div>
-      <div class="bg-slate-50 rounded border p-3 cursor-pointer hover:bg-slate-100 transition relative group" onclick="copyNumber(this, '09178366126')">
-        <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Manual GCash Transfer</div>
-        <div class="flex items-center justify-center gap-2">
-            <div class="text-lg font-black text-emerald-700 tracking-widest">0917 836 6126</div>
-            <svg class="w-4 h-4 text-slate-400 group-hover:text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-        </div>
-        <div class="copy-tooltip absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 transition-opacity pointer-events-none">Copied!</div>
-      </div>
-      <button onclick="toggleQRModal(false)" class="w-full mt-4 bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded-lg text-sm transition">Close</button>
-    </div>
-  </div>
-
   <script>
-    // PWA KILL SWITCH
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) { registration.unregister(); }
-      });
-    }
+    const DATABASE_URL = "https://script.google.com/macros/s/AKfycbxpieHosDgAPmVFS9gSMUT0Igq_qNRxGHY9IhS--9unwCAzg3jATKZEgKPDLV9Z-F3Vqg/exec";
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhdFp590KocGrTpK13LhUEhXZ7sd0FiMAUjmml1vfVZDg4QCIsV5BlThjheqxmooXc/exec";
-    let localData = localStorage.getItem('pick_all_adventures_db');
-    let state = localData ? JSON.parse(localData) : {
-      players: [], queues: { Beginner: [], Professional: [] },
-      courts: [
-        { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
-      ],
-      totalMatchesPlayed: 0
-    };
+    // Update the live clock on the TV
+    setInterval(() => {
+      document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }, 1000);
 
-    function copyNumber(element, number) {
-      const tempInput = document.createElement("input");
-      tempInput.value = number;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      document.execCommand("copy");
-      document.body.removeChild(tempInput);
-      const tooltip = element.querySelector('.copy-tooltip');
-      if (tooltip) {
-          tooltip.style.opacity = '1';
-          setTimeout(() => { tooltip.style.opacity = '0'; }, 1500);
-      }
-    }
+    // Fetch live data from Google Sheets
+    async function fetchLiveData() {
+      const statusIndicator = document.getElementById('sync-status');
+      statusIndicator.innerText = "Syncing...";
+      statusIndicator.classList.replace('text-emerald-500', 'text-slate-400');
 
-    function toggleQRModal(show) {
-      const modal = document.getElementById('qr-modal');
-      if (show) { modal.classList.remove('modal-hidden'); modal.classList.add('modal-active');
-      } else { modal.classList.remove('modal-active'); modal.classList.add('modal-hidden'); }
-    }
-
-    async function loadState() {
       try {
-        const response = await fetch(SCRIPT_URL);
-        const text = await response.text(); 
-        const data = JSON.parse(text); 
-        if (data && data.players && data.players.length >= state.players.length) {
-          state = data;
-          localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
-          render();
-        }
-      } catch (err) { console.log("Local mode active."); }
-    }
+        const response = await fetch(DATABASE_URL);
+        const players = await response.json();
+        
+        renderTVDisplay(players);
 
-    async function saveState() {
-      localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
-      render(); 
-      try {
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(state) });
-      } catch (err) { console.log("Saved locally."); }
-    }
-
-    function checkAutoAssign(category) {
-      if (state.queues[category].length >= 4) {
-        const openCourt = state.courts.find(c => !c.isExclusive && !c.currentMatch && c.assignedCategory === category);
-        if (openCourt) { openCourt.currentMatch = state.queues[category].splice(0, 4); }
+        statusIndicator.innerText = "Live / Synced";
+        statusIndicator.classList.replace('text-slate-400', 'text-emerald-500');
+      } catch (error) {
+        console.error("Failed to fetch queue data:", error);
+        statusIndicator.innerText = "Connection Lost";
+        statusIndicator.classList.replace('text-emerald-500', 'text-red-500');
       }
     }
 
-    document.getElementById('player-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nameInput = document.getElementById('player-name');
-      const name = nameInput.value.trim();
-      const category = document.getElementById('player-category').value;
-      const payMethodRadio = document.querySelector('input[name="payMethod"]:checked');
-      const payMethod = payMethodRadio ? payMethodRadio.value : "Unknown";
-      if(!name) return;
-      const newPlayer = {
-        id: 'P-' + Date.now(),
-        name: name,
-        category: category,
-        gamesPlayed: 0,
-        passes: 0,
-        timeIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        paid: false, 
-        paymentMethod: payMethod 
-      };
-      state.players.push(newPlayer);
-      state.queues[category].push(newPlayer.id);
-      checkAutoAssign(category);
-      nameInput.value = '';
-      alert(`Success! Please ensure your ${payMethod} payment is completed.`);
-      saveState(); 
-    });
+    function renderTVDisplay(players) {
+      const playingContainer = document.getElementById('playing-list');
+      const waitingContainer = document.getElementById('waiting-list');
 
-    function passTurn(playerId, category) {
-      const q = state.queues[category];
-      const idx = q.indexOf(playerId);
-      if(idx > -1 && q.length > 1) {
-        q.splice(idx, 1);
-        q.push(playerId);
-        const player = state.players.find(p => p.id === playerId);
-        if(player) player.passes += 1;
-        saveState();
-      }
-    }
+      // Separate players into those playing vs waiting
+      const playing = players.filter(p => p.Status === 'Playing');
+      const waiting = players.filter(p => p.Status === 'Waiting');
 
-    function render() {
-      ['Beginner', 'Professional'].forEach(cat => {
-        const queueListEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-queue-list`);
-        const countEl = document.getElementById(`${cat.toLowerCase().slice(0,3)}-count`);
-        const queueIds = state.queues[cat] || [];
-        if (countEl) countEl.innerText = queueIds.length;
-        if (queueListEl) {
-          queueListEl.innerHTML = queueIds.length === 0 
-            ? `<p class="text-xs text-slate-500 italic py-2">Queue empty.</p>`
-            : queueIds.map((pId, idx) => {
-                const p = state.players.find(x => x.id === pId);
-                if (!p) return '';
-                const statusDot = p.paid ? '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1"></span>' : '<span class="w-2 h-2 rounded-full bg-amber-400 inline-block mr-1"></span>';
-                return `
-                  <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs">
-                    <div>
-                      <div class="font-bold text-slate-700 flex items-center">${statusDot} #${idx+1} ${p.name}</div>
-                      <span class="text-slate-400 text-[10px] block ml-3">Games: ${p.gamesPlayed} | Passes: ${p.passes}</span>
-                    </div>
-                    <div class="flex gap-1">
-                      <button onclick="passTurn('${p.id}', '${cat}')" class="bg-amber-100 text-amber-900 font-semibold px-2 py-0.5 rounded text-[10px] border border-amber-200 hover:bg-amber-200 transition">Pass</button>
-                    </div>
-                  </div>
-                `;
-              }).join('');
-        }
-      });
-      const courtsContainer = document.getElementById('courts-grid');
-      if (courtsContainer) {
-        courtsContainer.innerHTML = state.courts.map(court => {
-          if(court.isExclusive) {
-            return `
-              <div class="border-2 border-amber-400 bg-amber-50/50 rounded-xl p-4 flex flex-col justify-between">
-                <div class="flex justify-between items-center mb-3">
-                  <span class="font-black text-slate-800">${court.name}</span>
-                  <span class="bg-amber-200 text-amber-900 font-bold text-[10px] px-2 py-0.5 rounded uppercase border border-amber-300">Exclusive Rent</span>
-                </div>
-                <div class="text-center py-4">
-                  <p class="text-[10px] text-amber-800 font-bold uppercase">Reserved Client</p>
-                  <p class="text-sm font-black text-slate-900">${court.Renter}</p>
-                </div>
-              </div>
-            `;
-          }
-          const matchPlayers = court.currentMatch ? court.currentMatch.map(id => state.players.find(p => p.id === id)) : null;
-          return `
-            <div class="border rounded-xl p-4 bg-white border-slate-200 flex flex-col justify-between shadow-sm">
-              <div>
-                <div class="flex justify-between items-center mb-2">
-                  <span class="font-black text-slate-800">${court.name}</span>
-                  <span class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">${court.assignedCategory}</span>
-                </div>
-                <div class="my-3">
-                  ${matchPlayers ? `
-                    <div class="text-[10px] font-bold text-slate-500 uppercase mb-1">Active Match</div>
-                    <div class="grid grid-cols-2 gap-1 text-xs">
-                      <div class="bg-slate-100 text-slate-700 p-2 rounded font-medium border">${matchPlayers[0]?.name || 'P1'}</div>
-                      <div class="bg-slate-100 text-slate-700 p-2 rounded font-medium border">${matchPlayers[1]?.name || 'P2'}</div>
-                      <div class="bg-slate-100 text-slate-700 p-2 rounded font-medium border">${matchPlayers[2]?.name || 'P3'}</div>
-                      <div class="bg-slate-100 text-slate-700 p-2 rounded font-medium border">${matchPlayers[3]?.name || 'P4'}</div>
-                    </div>
-                  ` : `
-                    <div class="text-center py-4 text-xs text-slate-400 bg-slate-50 italic rounded-lg border border-dashed">Court Ready</div>
-                  `}
-                </div>
-              </div>
+      // 1. Render Active Players
+      if (playing.length === 0) {
+        playingContainer.innerHTML = `<div class="text-slate-500 italic p-4 text-center">Courts are open</div>`;
+      } else {
+        playingContainer.innerHTML = playing.map(p => `
+          <div class="bg-slate-900 border border-slate-700 p-4 rounded-lg flex justify-between items-center">
+            <div>
+              <div class="font-black text-white text-lg">${p.Player_Name}</div>
+              <div class="${p.Category === 'Beginner' ? 'text-emerald-400' : 'text-indigo-400'} text-xs font-bold uppercase mt-1">${p.Category}</div>
             </div>
-          `;
-        }).join('');
+            <div class="text-right">
+              <div class="bg-slate-800 text-slate-300 border border-slate-600 px-3 py-1 rounded font-bold text-sm shadow-inner">${p.Assigned_Court}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 2. Render Waiting Queue
+      if (waiting.length === 0) {
+        waitingContainer.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-500 italic">No players waiting</td></tr>`;
+      } else {
+        waitingContainer.innerHTML = waiting.map(p => `
+          <tr class="bg-slate-800 hover:bg-slate-700/50 transition">
+            <td class="p-3 font-bold text-white text-base">${p.Player_Name}</td>
+            <td class="p-3"><span class="${p.Category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-2 py-1 rounded text-xs font-bold uppercase">${p.Category}</span></td>
+            <td class="p-3 text-slate-400 text-sm font-bold">${p.Time_In}</td>
+          </tr>
+        `).join('');
       }
     }
-    render(); 
-    loadState(); 
-    setInterval(loadState, 5000); 
+
+    // Initial fetch, then repeat every 5 seconds
+    fetchLiveData();
+    setInterval(fetchLiveData, 5000);
   </script>
 </body>
 </html>
