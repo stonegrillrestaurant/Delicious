@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pick all AD-Ventures | Live TV Display</title>
+  <title>Ad-Ventures| Live Queue</title>
   
   <meta property="og:image" content="https://stonegrillresto.net/pickle-dashboard/og-image.png">
-  <meta property="og:title" content="Pick all AD-Ventures | Pickleball Court">
+  <meta property="og:title" content="AD-Ventures | Live Queue">
   <meta property="og:description" content="Eza Ventures Inc. Pickleball Court & Sports Arena">
   
   <link rel="manifest" href="/pickle-dashboard/manifest.json">
@@ -17,60 +17,59 @@
   <style>
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .badge-open { background-color: #1e293b; color: #64748b; border: 1px dashed #334155; }
     
-    /* Hide scrollbar for a clean TV display but allow scrolling */
+    /* Hide scrollbar for a clean TV display but keep functionality */
     ::-webkit-scrollbar { display: none; }
     body { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans h-screen overflow-hidden flex flex-col">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- Header -->
-  <header class="bg-slate-800 border-b border-slate-700 shadow-xl py-3 px-6 flex justify-between items-center z-50 shrink-0">
-    <div>
-      <div class="bg-amber-500 text-slate-950 font-black px-3 py-1 rounded-lg text-sm tracking-wider inline-block mb-1 shadow-lg">LIVE QUEUE</div>
-      <h1 class="text-3xl font-black tracking-wide text-white">PICK ALL AD-VENTURES</h1>
+  <!-- Ultra-Compact Header to save screen space -->
+  <header class="bg-slate-900 border-b border-slate-800 py-2.5 px-5 flex justify-between items-center shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded text-[11px] tracking-wider uppercase shadow-sm">Live TV Queue</div>
+      <h1 class="text-xl font-black tracking-widest text-white">PICK ALL AD-VENTURES</h1>
     </div>
-    <div class="text-right">
-      <div id="clock" class="text-4xl font-black text-emerald-400 drop-shadow-md">00:00</div>
-      <div id="sync-status" class="text-sm text-slate-400 font-bold uppercase mt-1">Syncing...</div>
+    <div class="flex items-center gap-5">
+      <div id="sync-status" class="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse" id="sync-dot"></span> Syncing
+      </div>
+      <div id="clock" class="text-3xl font-black text-emerald-400 tabular-nums tracking-tight">00:00</div>
     </div>
   </header>
 
-  <main class="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
+  <!-- Main Content Area: Side by Side -->
+  <main class="flex-1 flex flex-row gap-5 p-5 overflow-hidden">
     
-    <!-- Active Courts Grid (Top Row) -->
-    <section class="bg-slate-800/80 rounded-2xl border border-slate-700 shadow-xl p-5 shrink-0">
-      <h2 class="text-xl font-black text-white mb-4 flex items-center gap-2">
-        <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-        Currently Playing
-      </h2>
-      <div id="playing-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Court Cards will inject here -->
+    <!-- LEFT COLUMN: Active Courts (60% Width) -->
+    <section class="w-[60%] flex flex-col gap-3">
+      <div class="flex items-center gap-2 mb-1 pl-1">
+        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+        <h2 class="text-sm font-black text-slate-300 uppercase tracking-widest">Active Courts</h2>
+      </div>
+      
+      <!-- 2x2 Court Grid -->
+      <div id="courts-grid" class="grid grid-cols-2 gap-4 flex-1">
+        <!-- Court Cards injected here via JS -->
       </div>
     </section>
 
-    <!-- Waiting Queue Table (Bottom Fill) -->
-    <section class="bg-slate-800/80 rounded-2xl border border-slate-700 shadow-xl p-5 flex-1 flex flex-col overflow-hidden">
-      <div class="flex justify-between items-end border-b border-slate-700 pb-3 mb-4 shrink-0">
-        <h2 class="text-3xl font-black text-white tracking-wide">Waiting Line</h2>
-        <span class="text-base font-bold text-slate-400 uppercase tracking-wider">Top 4 On Deck</span>
+    <!-- RIGHT COLUMN: Waiting Queue (40% Width) -->
+    <section class="w-[40%] flex flex-col gap-3">
+      <div class="flex items-center gap-2 mb-1 pl-1">
+        <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div>
+        <h2 class="text-sm font-black text-slate-300 uppercase tracking-widest">On Deck / Waiting Line</h2>
       </div>
-      
-      <div class="overflow-y-auto flex-1 rounded-xl bg-slate-900/50 border border-slate-700/50 shadow-inner">
-        <table class="w-full text-left relative">
-          <thead class="bg-slate-950/80 text-slate-400 sticky top-0 shadow-md z-10 backdrop-blur-sm">
-            <tr class="text-lg uppercase tracking-wider">
-              <th class="p-4 w-24 text-center">Rank</th>
-              <th class="p-4">Player Name</th>
-              <th class="p-4">Category</th>
-              <th class="p-4 text-right pr-8">Time In</th>
-            </tr>
-          </thead>
-          <tbody id="waiting-list" class="divide-y divide-slate-700/50">
-            <!-- Waiting data will inject here -->
-          </tbody>
-        </table>
+
+      <!-- Queue Container spans full remaining height -->
+      <div class="bg-slate-900/80 rounded-2xl border border-slate-700 flex-1 overflow-hidden flex flex-col shadow-2xl">
+        <div class="flex-1 overflow-y-auto">
+          <div id="waiting-list" class="flex flex-col">
+            <!-- Waiting players injected here via JS -->
+          </div>
+        </div>
       </div>
     </section>
 
@@ -79,114 +78,146 @@
   <script>
     const DATABASE_URL = "https://script.google.com/macros/s/AKfycbxpieHosDgAPmVFS9gSMUT0Igq_qNRxGHY9IhS--9unwCAzg3jATKZEgKPDLV9Z-F3Vqg/exec";
 
-    // Update the live clock on the TV
+    // 1. Update the live clock
     setInterval(() => {
       document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
-    // Fetch live data from Google Sheets
-    async function fetchLiveData() {
-      const statusIndicator = document.getElementById('sync-status');
-      statusIndicator.innerText = "Syncing...";
-      statusIndicator.classList.replace('text-emerald-500', 'text-slate-400');
+    // 2. Format the ugly 1899-12-30 Google Sheet Timestamp back into normal time
+    function formatSheetTime(timeStr) {
+      if (!timeStr) return '';
+      if (typeof timeStr === 'string' && timeStr.includes('T')) {
+        try {
+          const d = new Date(timeStr);
+          let hours = d.getUTCHours();
+          let minutes = d.getUTCMinutes();
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12; 
+          minutes = minutes < 10 ? '0' + minutes : minutes;
+          return `${hours}:${minutes} ${ampm}`;
+        } catch(e) {}
+      }
+      return timeStr; 
+    }
 
+    // 3. Fetch live data from Google Sheets
+    async function fetchLiveData() {
+      const syncDot = document.getElementById('sync-dot');
+      
       try {
-        // Fetch bypasses cache to always get newest data
-        const response = await fetch(DATABASE_URL, { cache: "no-store" });
+        const response = await fetch(DATABASE_URL);
         const players = await response.json();
         
         renderTVDisplay(players);
 
-        statusIndicator.innerText = "Live / Synced";
-        statusIndicator.classList.replace('text-slate-400', 'text-emerald-500');
-        statusIndicator.classList.replace('text-red-500', 'text-emerald-500');
+        syncDot.classList.replace('bg-slate-500', 'bg-emerald-500');
+        syncDot.classList.replace('bg-red-500', 'bg-emerald-500');
       } catch (error) {
         console.error("Failed to fetch queue data:", error);
-        statusIndicator.innerText = "Connection Lost";
-        statusIndicator.classList.replace('text-emerald-500', 'text-red-500');
-        statusIndicator.classList.replace('text-slate-400', 'text-red-500');
+        syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
+        syncDot.classList.replace('bg-slate-500', 'bg-red-500');
       }
     }
 
+    // 4. Paint the Screen
     function renderTVDisplay(players) {
-      const playingContainer = document.getElementById('playing-list');
-      const waitingContainer = document.getElementById('waiting-list');
-
       const playing = players.filter(p => p.Status === 'Playing');
       const waiting = players.filter(p => p.Status === 'Waiting');
 
-      // 1. Render Courts (4 Grid format like Admin)
-      const courtNames = ["Court 1", "Court 2", "Court 3", "Court 4"];
-      
-      playingContainer.innerHTML = courtNames.map(courtName => {
-        const matchPlayers = playing.filter(p => p.Assigned_Court === courtName);
-        
-        // Default Empty State
-        let badgeHtml = `<span class="bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-sm">OPEN</span>`;
-        let contentHtml = `<div class="text-center text-sm text-slate-500 bg-slate-950/40 border-slate-800 italic rounded-lg border border-dashed py-4">Court Open</div>`;
+      // --- RENDER COURTS (Forcing 4 static courts) ---
+      const courtsList = [
+        { name: "Court 1", players: [], cat: "OPEN" },
+        { name: "Court 2", players: [], cat: "OPEN" },
+        { name: "Court 3", players: [], cat: "OPEN" },
+        { name: "Court 4", players: [], cat: "OPEN" }
+      ];
 
-        // Active Match State
-        if (matchPlayers.length > 0) {
-          const cat = matchPlayers[0].Category;
-          badgeHtml = `<span class="${cat === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-sm tracking-wider">${cat}</span>`;
-          
-          contentHtml = `
-            <div class="grid grid-cols-2 gap-2 text-sm">
-              <div class="bg-slate-800 border border-slate-700 text-slate-100 py-2 px-1.5 rounded-lg font-black text-center truncate shadow-inner">${matchPlayers[0]?.Player_Name || '---'}</div>
-              <div class="bg-slate-800 border border-slate-700 text-slate-100 py-2 px-1.5 rounded-lg font-black text-center truncate shadow-inner">${matchPlayers[1]?.Player_Name || '---'}</div>
-              <div class="bg-slate-800 border border-slate-700 text-slate-100 py-2 px-1.5 rounded-lg font-black text-center truncate shadow-inner">${matchPlayers[2]?.Player_Name || '---'}</div>
-              <div class="bg-slate-800 border border-slate-700 text-slate-100 py-2 px-1.5 rounded-lg font-black text-center truncate shadow-inner">${matchPlayers[3]?.Player_Name || '---'}</div>
-            </div>
-          `;
+      // Map playing players into their respective courts
+      playing.forEach(p => {
+        const court = courtsList.find(c => c.name === p.Assigned_Court);
+        if (court) {
+           court.players.push(p);
+           court.cat = p.Category;
         }
+      });
 
-        return `
-          <div class="border rounded-2xl p-4 bg-slate-900 border-slate-700 flex flex-col justify-between shadow-lg">
-            <div class="flex justify-between items-center mb-4">
-              <span class="font-black text-white text-lg tracking-wide">${courtName}</span>
-              ${badgeHtml}
-            </div>
-            <div class="flex flex-col justify-center">
-              ${contentHtml}
-            </div>
+      const courtsHTML = courtsList.map(c => {
+         let badge = `<span class="badge-open text-[10px] px-2 py-0.5 rounded font-bold uppercase">OPEN</span>`;
+         if (c.cat === 'Beginner') badge = `<span class="badge-beginner text-[10px] px-2 py-0.5 rounded font-bold uppercase">BEGINNER</span>`;
+         if (c.cat === 'Professional') badge = `<span class="badge-pro text-[10px] px-2 py-0.5 rounded font-bold uppercase">PRO</span>`;
+
+         let playersHTML = '';
+         if (c.players.length === 0) {
+            playersHTML = `<div class="col-span-2 flex items-center justify-center text-slate-600 font-black text-sm border-2 border-slate-700/50 border-dashed rounded-xl bg-slate-800/20 uppercase tracking-widest">Court Available</div>`;
+         } else {
+            // Guarantee exactly 4 player blocks are drawn per court
+            for(let i = 0; i < 4; i++) {
+               const pName = c.players[i] ? c.players[i].Player_Name : '---';
+               const textStyle = c.players[i] ? 'text-white bg-slate-700/80 shadow-md border-slate-600' : 'text-slate-600 bg-slate-800/30 border-slate-700/50 border-dashed';
+               playersHTML += `<div class="border rounded-lg flex items-center justify-center p-3 text-sm font-black uppercase text-center truncate ${textStyle}">${pName}</div>`;
+            }
+         }
+
+         return `
+          <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-5 flex flex-col shadow-xl">
+             <div class="flex justify-between items-center mb-4 pl-1">
+                <h3 class="font-black text-white text-xl tracking-wide">${c.name}</h3>
+                ${badge}
+             </div>
+             <div class="grid grid-cols-2 gap-3 flex-1">
+                ${playersHTML}
+             </div>
           </div>
-        `;
+         `;
       }).join('');
 
-      // 2. Render Massive Waiting Queue Table
+      document.getElementById('courts-grid').innerHTML = courtsHTML;
+
+      // --- RENDER WAITING QUEUE ---
       if (waiting.length === 0) {
-        waitingContainer.innerHTML = `<tr><td colspan="4" class="p-10 text-center text-slate-500 text-2xl font-bold italic">No players currently waiting.</td></tr>`;
+         document.getElementById('waiting-list').innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-slate-600 p-10 text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mb-4 opacity-50" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M4.285 12.433a.5.5 0 0 0 .683-.183A3.498 3.498 0 0 1 8 10.5c1.295 0 2.426.703 3.032 1.75a.5.5 0 0 0 .866-.5A4.498 4.498 0 0 0 8 9.5a4.5 4.5 0 0 0-3.898 2.25.5.5 0 0 0 .183.683zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm4 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5z"/></svg>
+              <h3 class="font-black text-xl tracking-widest uppercase">Queue is Empty</h3>
+            </div>`;
       } else {
-        waitingContainer.innerHTML = waiting.map((p, index) => {
-          const rank = index + 1;
-          // Highlight top 4 players
-          const isTop4 = rank <= 4;
-          const rankBadge = isTop4 
-            ? 'bg-amber-500/20 text-amber-400 border-2 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
-            : 'text-slate-400 bg-slate-800 border border-slate-700';
-          
-          return `
-          <tr class="hover:bg-slate-700/40 transition-colors border-b border-slate-700/60 last:border-0">
-            <td class="p-5 text-center">
-              <span class="${rankBadge} px-4 py-1.5 rounded-lg font-black text-xl flex items-center justify-center w-14 mx-auto">
-                #${rank}
-              </span>
-            </td>
-            <td class="p-5 font-black text-white text-2xl md:text-3xl uppercase tracking-wider">${p.Player_Name}</td>
-            <td class="p-5">
-              <span class="${p.Category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-3 py-1.5 rounded-lg text-sm font-bold uppercase tracking-wider shadow-sm">
-                ${p.Category}
-              </span>
-            </td>
-            <td class="p-5 text-slate-400 text-xl font-bold text-right pr-8 whitespace-nowrap">${p.Time_In}</td>
-          </tr>
-        `}).join('');
+         document.getElementById('waiting-list').innerHTML = waiting.map((p, index) => {
+            const rank = index + 1;
+            const isTop4 = rank <= 4;
+            
+            // Highlight the next 4 players up so they get ready
+            const rankStyle = isTop4 
+               ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]' 
+               : 'bg-slate-800 text-slate-500 border-slate-700';
+            
+            const bgStyle = isTop4 ? 'bg-slate-800/80 border-l-4 border-l-amber-500' : 'bg-transparent border-l-4 border-l-transparent';
+            const catBadge = p.Category === 'Beginner' ? 'badge-beginner' : 'badge-pro';
+            const timeFormatted = formatSheetTime(p.Time_In);
+
+            return `
+            <div class="flex items-center gap-4 p-4 border-b border-slate-800 ${bgStyle} transition-colors">
+               <div class="w-12 h-12 rounded-lg border-2 flex-shrink-0 flex items-center justify-center font-black text-xl ${rankStyle}">
+                 #${rank}
+               </div>
+               <div class="flex-1 min-w-0">
+                  <div class="font-black text-white text-2xl leading-tight uppercase truncate tracking-wide">${p.Player_Name}</div>
+                  <div class="flex items-center gap-3 mt-1.5">
+                     <span class="${catBadge} text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${p.Category}</span>
+                     <span class="text-slate-400 text-sm font-bold whitespace-nowrap">TIME IN: <span class="text-slate-300">${timeFormatted}</span></span>
+                  </div>
+               </div>
+            </div>
+            `;
+         }).join('');
       }
     }
 
-    // Start App
+    // Initial fetch, then ping the spreadsheet every 4 seconds
     fetchLiveData();
-    setInterval(fetchLiveData, 5000); // Refreshes exactly every 5 seconds
+    setInterval(fetchLiveData, 4000);
   </script>
 </body>
 </html>
+
+
