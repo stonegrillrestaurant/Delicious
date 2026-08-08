@@ -9,7 +9,7 @@
   <meta property="og:description" content="Eza Ventures Inc. Pickleball Court & Sports Arena">
   <meta property="og:image" content="https://stonegrillresto.net/pickle-dashboard/og-image.png">
   
-  <link rel="manifest" href="/pickle-dashboard/manfest.json">
+  <link rel="manifest" href="/pickle-dashboard/manifest.json">
   <link rel="apple-touch-icon" href="/pickle-dashboard/pwa-icon.PNG">
   
   <meta name="theme-color" content="#1e293b">
@@ -39,6 +39,10 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <!-- NEW: Sync From Cloud Button -->
+        <button onclick="fetchDatabaseOnLoad(true)" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 p-2 rounded-lg transition" title="Force Sync from Google Sheets">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+        </button>
         <button onclick="exportFullBackup(false, true)" class="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/30 p-2 rounded-lg transition" title="Quick Save to Drive">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
         </button>
@@ -225,6 +229,89 @@
     let historyVault = [];
     const DATABASE_URL = "https://script.google.com/macros/s/AKfycbxpieHosDgAPmVFS9gSMUT0Igq_qNRxGHY9IhS--9unwCAzg3jATKZEgKPDLV9Z-F3Vqg/exec";
 
+    // NEW FUNCTION: Pulls data from Google Sheets to rebuild Admin Panel when opened on a new device
+    async function fetchDatabaseOnLoad(isManual = false) {
+      if(isManual) showToast("Pulling latest data from Google Sheets...", "warn");
+      try {
+        const response = await fetch(DATABASE_URL);
+        const data = await response.json();
+        
+        if (data && Array.isArray(data)) {
+          let cloudState = {
+            players: [],
+            queues: { Beginner: [], Professional: [] },
+            courts: [
+              { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+              { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
+              { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+              { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
+            ],
+            totalMatchesPlayed: state.totalMatchesPlayed || 0
+          };
+
+          data.forEach(p => {
+             if (p.Category === 'Exclusive') {
+                 const court = cloudState.courts.find(c => c.name === p.Assigned_Court);
+                 if (court) {
+                     court.isExclusive = true;
+                     court.Renter = p.Player_Name;
+                 }
+             } else {
+                 const newPlayer = {
+                    id: p.Player_ID,
+                    name: p.Player_Name,
+                    category: p.Category,
+                    gamesPlayed: parseInt(p.Games_Played) || 0,
+                    timeIn: p.Time_In,
+                    timeOut: p.Time_Out,
+                    expireTimestamp: null,
+                    isExpired: p.Status === 'Expired',
+                    paid: p.Payment === 'Paid'
+                 };
+                 
+                 // Try to reconstruct the invisible expiration timer
+                 if (p.Time_Out && p.Time_Out.includes(':')) {
+                    try {
+                        const now = new Date();
+                        const match = p.Time_Out.match(/(\d+):(\d+)\s(AM|PM)/i);
+                        if (match) {
+                            let hours = parseInt(match[1]);
+                            let mins = parseInt(match[2]);
+                            if (match[3].toUpperCase() === 'PM' && hours < 12) hours += 12;
+                            if (match[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
+                            const expireDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, mins, 0);
+                            newPlayer.expireTimestamp = expireDate.getTime();
+                        }
+                    } catch(e) {}
+                 }
+
+                 cloudState.players.push(newPlayer);
+
+                 if (p.Status === 'Playing') {
+                     const court = cloudState.courts.find(c => c.name === p.Assigned_Court);
+                     if (court) {
+                         if (!court.currentMatch) court.currentMatch = [];
+                         court.currentMatch.push(newPlayer.id);
+                         court.assignedCategory = p.Category;
+                     }
+                 } else if (p.Status === 'Waiting') {
+                     if (!cloudState.queues[p.Category]) cloudState.queues[p.Category] = [];
+                     cloudState.queues[p.Category].push(newPlayer.id);
+                 }
+             }
+          });
+          
+          state = cloudState;
+          localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
+          render();
+          if(isManual) showToast("Data Synced from Google Sheets!", "success");
+        }
+      } catch (err) {
+        console.error("Failed to load from cloud:", err);
+        if(isManual) showToast("Sync failed. Check internet connection.", "error");
+      }
+    }
+
     function syncToDatabase() {
       // 1. Format the standard players exactly how the Google Sheet expects it
       let formattedData = state.players.map(p => {
@@ -249,11 +336,10 @@
       // 2. NEW FIX: Check for Exclusive Courts and force them into the data payload
       state.courts.forEach(c => {
          if (c.isExclusive) {
-            // Create a "ghost" player entry just to hold the reservation data
             formattedData.push({
                id: 'RES-' + c.id,
                name: c.Renter,
-               category: "Exclusive", // This acts as a flag for the TV
+               category: "Exclusive",
                status: "Playing",
                gamesPlayed: 0,
                timeIn: "",
@@ -272,10 +358,7 @@
           "Content-Type": "text/plain;charset=utf-8", 
         },
         body: JSON.stringify({ players: formattedData })
-      })
-      .then(response => response.json())
-      .then(data => console.log("Database Sync Success:", data))
-      .catch(err => console.error("Sync error:", err));
+      }).catch(err => console.log("Sync error:", err));
     }
 
     function loadData() {
@@ -292,6 +375,8 @@
         if (localHistory) historyVault = JSON.parse(localHistory);
       } catch (e) { console.error("Starting fresh data."); }
     }
+    
+    // Load local storage first so the screen isn't empty, then fetch latest cloud data
     loadData();
 
     function saveState() {
@@ -301,7 +386,7 @@
       } catch(e) {}
       render(); 
       renderHistory();
-      syncToDatabase(); // <-- THIS IS THE NEW LINE
+      syncToDatabase(); 
     }
 
     function switchTab(tabId) {
@@ -949,6 +1034,7 @@
     }
 
     render(); 
+    fetchDatabaseOnLoad(); // Auto-pull from cloud on startup
   </script>
 </body>
 </html>
