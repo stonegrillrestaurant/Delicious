@@ -223,6 +223,35 @@
     };
 
     let historyVault = [];
+    const DATABASE_URL = "https://script.google.com/macros/s/AKfycbxpieHosDgAPmVFS9gSMUT0Igq_qNRxGHY9IhS--9unwCAzg3jATKZEgKPDLV9Z-F3Vqg/exec";
+
+function syncToDatabase() {
+  // Format the player data exactly how the Google Sheet expects it
+  const formattedPlayers = state.players.map(p => {
+    const court = state.courts.find(c => c.currentMatch && c.currentMatch.includes(p.id));
+    
+    let statusText = p.isExpired ? "Expired" : "Waiting";
+    if (court) statusText = "Playing";
+
+    return {
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      status: statusText,
+      gamesPlayed: p.gamesPlayed || 0,
+      timeIn: p.timeIn,
+      timeOut: p.timeOut,
+      paid: p.paid,
+      assignedCourt: court ? court.name : "None"
+    };
+  });
+
+  // Send the data to the Google Sheet quietly in the background
+  fetch(DATABASE_URL, {
+    method: "POST",
+    body: JSON.stringify({ players: formattedPlayers })
+  }).catch(err => console.log("Sync error:", err));
+}
 
     function loadData() {
       try {
@@ -241,13 +270,14 @@
     loadData();
 
     function saveState() {
-      try {
-        localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
-        localStorage.setItem('pick_all_adventures_history', JSON.stringify(historyVault));
-      } catch(e) {}
-      render(); 
-      renderHistory();
-    }
+  try {
+    localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
+    localStorage.setItem('pick_all_adventures_history', JSON.stringify(historyVault));
+  } catch(e) {}
+  render(); 
+  renderHistory();
+  syncToDatabase(); // <-- THIS IS THE NEW LINE
+}
 
     function switchTab(tabId) {
       if (tabId === 'dashboard') {
