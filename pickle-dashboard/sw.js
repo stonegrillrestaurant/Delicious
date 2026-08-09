@@ -2,8 +2,9 @@ const CACHE_NAME = 'pickle-dashboard-v1';
 const urlsToCache = [
   './',
   './index.html',
-  './admin.html',
-  '/pickle-dashboard/pwa-icon.PNG'
+  './pickle-admin.html',
+  './pwa-icon.PNG',
+  './manifest.json'
 ];
 
 self.addEventListener('install', event => {
@@ -22,4 +23,3 @@ self.addEventListener('fetch', event => {
     })
   );
 });
-
