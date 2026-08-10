@@ -13,7 +13,6 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* New 4-Category Badges */
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
     .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
@@ -24,6 +23,9 @@
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
     .hidden-section { display: none !important; }
+    
+    /* Ensure date picker icon is visible on dark backgrounds in some browsers */
+    ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-10">
@@ -79,7 +81,6 @@
           <h2 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
             <span>Counter Check-In</span>
           </h2>
-          <!-- Updated to 5 Hrs -->
           <div class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-2 rounded font-bold mb-4 text-center">
             ₱150 / 5 Hrs Playtime
           </div>
@@ -90,7 +91,6 @@
             </div>
             <div>
               <label class="block text-[11px] font-bold text-slate-400 mb-1">Skill Category</label>
-              <!-- Added 4 Categories -->
               <select id="player-category" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-white shadow-inner">
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
@@ -168,7 +168,6 @@
   </div>
 
   <div id="view-history" class="hidden-section">
-    <!-- View History Code remains the same structure -->
     <main class="max-w-7xl mx-auto px-4 py-6">
       <div class="flex flex-col md:flex-row gap-6">
         <div class="w-full md:w-1/3 space-y-4">
@@ -223,7 +222,6 @@
     let currentUser = null;
     let isConnected = false;
 
-    // Added 4 Queues instead of 2
     let state = {
       players: [],
       queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
@@ -291,7 +289,6 @@
       try { await setDoc(historyRef, { history: historyVault }); } catch (e) { console.error("Error saving history:", e); }
     }
 
-    // Badge Class Helper
     function getBadgeClass(cat) {
       if (cat === 'Beginner') return 'badge-beginner';
       if (cat === 'Intermediate') return 'badge-intermediate';
@@ -344,7 +341,7 @@
       setTimeout(() => modal.classList.add('hidden'), 200);
     };
 
-    // FORM SUBMISSION (Register Player)
+    // FORM SUBMISSION
     document.getElementById('player-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const nameInput = document.getElementById('player-name');
@@ -356,8 +353,7 @@
 
       const now = new Date();
       const timeInStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      // SET TO 5 HOURS
-      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 HOURS
       const timeOutStr = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const newPlayer = {
@@ -421,21 +417,16 @@
       }
     };
 
-    // AUTO-REMOVE 5 HOUR EXPIRATION LOOP
+    // AUTO-REMOVE 5 HOUR LOOP
     setInterval(() => {
       if(!isConnected) return; 
-      
       const now = Date.now();
       let changed = false;
       state.players.forEach(p => {
         if (!p.expireTimestamp) return; 
-        
-        // If 5 hours have passed and they aren't marked expired yet
         if (!p.isExpired && now >= p.expireTimestamp) {
           p.isExpired = true;
           changed = true;
-          
-          // Auto remove them from the queue line
           if (state.queues[p.category]) {
             const idx = state.queues[p.category].indexOf(p.id);
             if (idx > -1) state.queues[p.category].splice(idx, 1);
@@ -452,7 +443,7 @@
       const player = state.players.find(p => p.id === playerId);
       if (player) {
         const now = new Date();
-        player.expireTimestamp = now.getTime() + (5 * 60 * 60 * 1000); // 5 hours
+        player.expireTimestamp = now.getTime() + (5 * 60 * 60 * 1000);
         player.timeOut = new Date(player.expireTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         player.isExpired = false;
         
@@ -464,7 +455,6 @@
       }
     };
 
-    // Cycle through all 4 categories
     window.toggleCourtCategory = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       if(court && !court.currentMatch) {
@@ -499,12 +489,9 @@
         const player = state.players.find(p => p.id === pId);
         if(player) {
           player.gamesPlayed = (player.gamesPlayed || 0) + 1;
-          
-          // Check expiration when match ends
           if (player.expireTimestamp && Date.now() >= player.expireTimestamp) {
              player.isExpired = true;
           }
-          
           if (!player.isExpired) {
              if(!state.queues[player.category]) state.queues[player.category] = [];
              state.queues[player.category].push(pId);
@@ -563,30 +550,47 @@
       window.showToast(`${court.name} reserved.`);
     };
 
+    // --- NEW SMART ARCHIVE LOGIC ---
     window.requestResetDailyData = function() {
       if (state.players.length === 0) {
         window.showToast("No data to archive yet.", "warn");
         return;
       }
+      
+      // Calculate local date to prepopulate the Date Picker
+      const today = new Date();
+      const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
       const content = `
-        <h3 class="text-lg font-black text-white mb-2">End Day & Archive?</h3>
-        <p class="text-sm text-slate-400 mb-4">This packages today's logs into the Vault in the cloud. <br><br><b>Important:</b> The app will ask you to save a backup to your Drive immediately after to prevent data loss.</p>
+        <h3 class="text-lg font-black text-white mb-2">End Day & Archive</h3>
+        <p class="text-sm text-slate-400 mb-4">This packages all active logs into the cloud Vault.</p>
+        
+        <div class="mb-6 bg-slate-900 p-4 rounded-lg border border-slate-700">
+          <label class="block text-[11px] font-bold text-slate-400 mb-2">ARCHIVE DATE (Change if closing after midnight)</label>
+          <input type="date" id="archive-date" value="${localDate}" class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500 shadow-inner">
+        </div>
+
         <div class="flex justify-end gap-3">
           <button onclick="hideModal()" class="px-4 py-3 rounded-lg bg-slate-700 text-white text-sm font-bold">Cancel</button>
-          <button onclick="executeArchive()" class="px-4 py-3 rounded-lg bg-amber-600 text-white text-sm font-bold">Archive & Backup</button>
+          <button onclick="executeArchive()" class="px-4 py-3 rounded-lg bg-amber-600 text-white text-sm font-bold shadow-lg">Archive Data</button>
         </div>
       `;
       window.showModal(content);
     };
 
     window.executeArchive = async function() {
+      const dateInput = document.getElementById('archive-date').value;
       window.hideModal();
-      const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      
+      // Use the picked date safely (forced to midday to avoid timezone shifting)
+      const selectedDate = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
+      const dateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      
       const revenue = state.players.filter(p => p.paid).length * 150;
       
       const sessionArchive = {
         id: 'ARCHIVE-' + Date.now(),
-        date: dateStr,
+        date: dateStr, // Uses the smart selected date
         timestamp: Date.now(),
         totalPlayers: state.players.length,
         totalMatches: state.totalMatchesPlayed,
@@ -598,10 +602,10 @@
       saveHistory();
 
       const backupSuccess = await window.exportFullBackup(true, false);
-      if (backupSuccess) window.showToast("Backup to Drive successful! Clearing dashboard.");
-      else window.showToast("Warning: Saved to Vault, but Drive backup was skipped.", "warn");
+      if (backupSuccess) window.showToast(`Saved to ${dateStr} successfully! Clearing board.`);
+      else window.showToast(`Archived to ${dateStr}, but Drive backup skipped.`, "warn");
 
-      // Reset queues to include all 4 categories
+      // Reset queues to include all 4 categories and clear reserved courts
       state = {
         players: [],
         queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
