@@ -37,8 +37,8 @@
           LIVE
         </div>
         <div>
-          <h1 class="text-base font-black tracking-wide text-white">OWNER CONTROL DASHBOARD</h1>
-          <p class="text-[10px] text-slate-400 font-medium">PICK ALL AD-VENTURES | BRGY. LUNANG HILONGOS, LEYTE</p>
+          <h1 class="text-base font-black tracking-wide text-white">ADMIN DASHBOARD</h1>
+          <p class="text-[10px] text-slate-400 font-medium">AD-VENTURES | BRGY. LUNANG HILONGOS, LEYTE</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -74,7 +74,6 @@
     </section>
 
     <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-      
       <section class="lg:col-span-1 space-y-6">
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg sticky top-24">
           <h2 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
@@ -200,7 +199,6 @@
   </div>
 
   <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
-
   <div id="custom-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-[70] flex items-center justify-center opacity-0 transition-opacity duration-200 p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform duration-200" id="modal-content-box">
       <div class="p-5" id="modal-body"></div>
@@ -211,6 +209,9 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+    // ----------------------------------------------------
+    // YOUR LIVE FIREBASE CREDENTIALS
+    // ----------------------------------------------------
     const firebaseConfig = {
       apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
       authDomain: "payroll-c4f0c.firebaseapp.com",
@@ -239,17 +240,20 @@
     };
     let historyVault = [];
     let isConnected = false;
+    let hasFetchedInitialData = false;
 
     const stateRef = doc(db, 'pickleball', 'currentState');
     const historyRef = doc(db, 'pickleball', 'historyVault');
 
     onSnapshot(stateRef, (docSnap) => {
+      hasFetchedInitialData = true;
       if (docSnap.exists()) {
         const fetchedData = docSnap.data();
         state.players = fetchedData.players || [];
         state.queues = fetchedData.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
         state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
         
+        // Safeguard to ensure 4 courts always exist
         if (fetchedData.courts && Array.isArray(fetchedData.courts) && fetchedData.courts.length >= 4) {
            state.courts = fetchedData.courts;
         } else {
@@ -272,7 +276,27 @@
       } else { saveHistory(); }
     });
 
+    // Central function to update expirations immediately BEFORE saving,
+    // ensuring we never save stale un-expired data
+    function applyExpirations() {
+       const now = Date.now();
+       let changed = false;
+       state.players.forEach(p => {
+          if (!p.isExpired && p.expireTimestamp && now >= p.expireTimestamp) {
+             p.isExpired = true;
+             changed = true;
+             if (state.queues[p.category]) {
+                const idx = state.queues[p.category].indexOf(p.id);
+                if (idx > -1) state.queues[p.category].splice(idx, 1);
+             }
+          }
+       });
+       return changed;
+    }
+
     async function saveState() {
+      if (!hasFetchedInitialData) return; // Prevent overwriting cloud with empty default data!
+      applyExpirations(); // Clean up state right before cloud push
       try { await setDoc(stateRef, state); } catch (e) { console.error(e); }
     }
 
@@ -287,6 +311,7 @@
       return 'badge-pro';
     }
 
+    // UI HELPER FUNCTIONS
     window.switchTab = function(tabId) {
       if (tabId === 'dashboard') {
         document.getElementById('view-dashboard').classList.remove('hidden-section');
@@ -331,6 +356,7 @@
       setTimeout(() => modal.classList.add('hidden'), 200);
     };
 
+    // FORM SUBMISSION
     document.getElementById('player-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const nameInput = document.getElementById('player-name');
@@ -381,6 +407,7 @@
     };
 
     window.removePlayerFromQueue = function(playerId, category) {
+      applyExpirations();
       const q = state.queues[category] || [];
       const idx = q.indexOf(playerId);
       if(idx > -1) q.splice(idx, 1);
@@ -406,23 +433,11 @@
       }
     };
 
+    // UI-ONLY AUTO-REMOVE 5 HOUR LOOP (Prevents background sleep overwrites)
     setInterval(() => {
       if(!isConnected) return; 
-      const now = Date.now();
-      let changed = false;
-      state.players.forEach(p => {
-        if (!p.expireTimestamp) return; 
-        if (!p.isExpired && now >= p.expireTimestamp) {
-          p.isExpired = true;
-          changed = true;
-          if (state.queues[p.category]) {
-            const idx = state.queues[p.category].indexOf(p.id);
-            if (idx > -1) state.queues[p.category].splice(idx, 1);
-          }
-        }
-      });
-      if (changed) {
-        saveState();
+      if (applyExpirations()) {
+        render(); // Visually update the screen immediately, but don't force a cloud push
         window.showToast("Player(s) 5-hour limit reached. Auto-removed.", "warn");
       }
     }, 60000);
@@ -454,6 +469,7 @@
     };
 
     window.assignNextMatch = function(courtId) {
+      applyExpirations();
       const court = state.courts.find(c => c.id === courtId);
       if(!court || court.isExclusive) return;
       const cat = court.assignedCategory;
@@ -470,6 +486,7 @@
     };
 
     window.finishMatch = function(courtId) {
+      applyExpirations();
       const court = state.courts.find(c => c.id === courtId);
       if(!court || !court.currentMatch) return;
       
