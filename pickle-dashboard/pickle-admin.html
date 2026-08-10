@@ -24,7 +24,6 @@
     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
     .hidden-section { display: none !important; }
     
-    /* Ensure date picker icon is visible on dark backgrounds in some browsers */
     ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
   </style>
 </head>
@@ -222,17 +221,21 @@
     let currentUser = null;
     let isConnected = false;
 
+    // Hardcoded default courts in case database is empty or corrupt
+    const DEFAULT_COURTS = [
+      { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+      { id: 2, name: "Court 2", assignedCategory: "Intermediate", currentMatch: null, isExclusive: false, Renter: "" },
+      { id: 3, name: "Court 3", assignedCategory: "Advanced", currentMatch: null, isExclusive: false, Renter: "" },
+      { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
+    ];
+
     let state = {
       players: [],
       queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
-      courts: [
-        { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 2, name: "Court 2", assignedCategory: "Intermediate", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 3, name: "Court 3", assignedCategory: "Advanced", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
-      ],
+      courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)), // Deep copy defaults
       totalMatchesPlayed: 0
     };
+    
     let historyVault = [];
 
     const initAuth = async () => {
@@ -258,9 +261,25 @@
 
       onSnapshot(stateRef, (docSnap) => {
         if (docSnap.exists()) {
-          state = docSnap.data();
+          const fetchedData = docSnap.data();
+          
+          // SAFETY NET: If the database is missing arrays, force build them safely.
+          state.players = fetchedData.players || [];
+          state.queues = fetchedData.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
+          state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
+          
+          // STRICT SAFETY NET FOR COURTS: Always force 4 courts
+          if (fetchedData.courts && Array.isArray(fetchedData.courts) && fetchedData.courts.length >= 4) {
+             state.courts = fetchedData.courts;
+          } else {
+             state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
+          }
+
           render();
-        } else { saveState(); }
+        } else { 
+          // New database? Save the defaults immediately
+          saveState(); 
+        }
         
         if (!isConnected) {
             isConnected = true;
@@ -550,14 +569,12 @@
       window.showToast(`${court.name} reserved.`);
     };
 
-    // --- NEW SMART ARCHIVE LOGIC ---
     window.requestResetDailyData = function() {
       if (state.players.length === 0) {
         window.showToast("No data to archive yet.", "warn");
         return;
       }
       
-      // Calculate local date to prepopulate the Date Picker
       const today = new Date();
       const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
@@ -582,7 +599,6 @@
       const dateInput = document.getElementById('archive-date').value;
       window.hideModal();
       
-      // Use the picked date safely (forced to midday to avoid timezone shifting)
       const selectedDate = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
       const dateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
       
@@ -590,7 +606,7 @@
       
       const sessionArchive = {
         id: 'ARCHIVE-' + Date.now(),
-        date: dateStr, // Uses the smart selected date
+        date: dateStr,
         timestamp: Date.now(),
         totalPlayers: state.players.length,
         totalMatches: state.totalMatchesPlayed,
@@ -605,11 +621,10 @@
       if (backupSuccess) window.showToast(`Saved to ${dateStr} successfully! Clearing board.`);
       else window.showToast(`Archived to ${dateStr}, but Drive backup skipped.`, "warn");
 
-      // Reset queues to include all 4 categories and clear reserved courts
       state = {
         players: [],
         queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
-        courts: state.courts.map(c => ({...c, currentMatch: null, isExclusive: false, Renter: ""})),
+        courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)), // Deep copy defaults to ensure courts exist
         totalMatchesPlayed: 0
       };
       
@@ -729,11 +744,15 @@
 
     function render() {
       let activeCount = 0;
-      const paidPlayers = state.players.filter(p => p.paid).length;
+      
+      // EXTRA SAFETY: If courts are undefined for any reason, use an empty array so map() doesn't crash
+      const safeCourts = Array.isArray(state.courts) ? state.courts : [];
+      
+      const paidPlayers = Array.isArray(state.players) ? state.players.filter(p => p.paid).length : 0;
       
       const courtsContainer = document.getElementById('courts-grid');
       if (courtsContainer) {
-        courtsContainer.innerHTML = state.courts.map(court => {
+        courtsContainer.innerHTML = safeCourts.map(court => {
           if(court.currentMatch || court.isExclusive) activeCount++;
           
           if(court.isExclusive) {
@@ -760,7 +779,7 @@
                 <div class="flex justify-between items-center mb-3">
                   <span class="font-black text-white text-sm">${court.name}</span>
                   <button onclick="toggleCourtCategory(${court.id})" class="${getBadgeClass(court.assignedCategory)} text-[9px] font-bold px-2 py-0.5 rounded uppercase shadow-sm">
-                    ${court.assignedCategory} ⚙
+                    ${court.assignedCategory || 'Beginner'} ⚙
                   </button>
                 </div>
                 
@@ -790,18 +809,19 @@
         }).join('');
       }
 
-      if (document.getElementById('stat-players')) document.getElementById('stat-players').innerText = state.players.length;
+      if (document.getElementById('stat-players')) document.getElementById('stat-players').innerText = (state.players || []).length;
       if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 4`;
       if (document.getElementById('stat-matches')) document.getElementById('stat-matches').innerText = state.totalMatchesPlayed || 0;
       if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${paidPlayers * 150}`;
 
       const tableBody = document.getElementById('player-log-table');
       if (tableBody) {
-        const getPlayingCourt = (p) => state.courts.find(c => c.currentMatch && c.currentMatch.includes(p.id));
+        const getPlayingCourt = (p) => safeCourts.find(c => c.currentMatch && c.currentMatch.includes(p.id));
         
-        let displayList = state.players.filter(p => !p.isExpired);
+        let displayList = Array.isArray(state.players) ? state.players.filter(p => !p.isExpired) : [];
+        
         displayList.sort((a, b) => {
-          if (a.category !== b.category) return a.category.localeCompare(b.category); 
+          if (a.category !== b.category) return (a.category || '').localeCompare(b.category || ''); 
           const courtA = getPlayingCourt(a), courtB = getPlayingCourt(b);
           if (courtA && !courtB) return -1; 
           if (!courtA && courtB) return 1;
@@ -810,7 +830,7 @@
              const qB = state.queues[b.category] ? state.queues[b.category].indexOf(b.id) : 999;
              return qA - qB;
           }
-          if (courtA && courtB) return courtA.name.localeCompare(courtB.name);
+          if (courtA && courtB) return (courtA.name || '').localeCompare(courtB.name || '');
           return 0;
         });
 
@@ -861,7 +881,7 @@
 
       const expiredTableBody = document.getElementById('expired-log-table');
       if (expiredTableBody) {
-         let expiredList = state.players.filter(p => p.isExpired);
+         let expiredList = Array.isArray(state.players) ? state.players.filter(p => p.isExpired) : [];
          expiredTableBody.innerHTML = expiredList.map(p => `
             <tr class="hover:bg-slate-700/30 transition group border-b border-slate-700/50 last:border-none">
               <td class="p-3 font-bold text-slate-400 whitespace-nowrap">
