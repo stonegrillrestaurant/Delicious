@@ -221,7 +221,6 @@
     let currentUser = null;
     let isConnected = false;
 
-    // Hardcoded default courts in case database is empty or corrupt
     const DEFAULT_COURTS = [
       { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
       { id: 2, name: "Court 2", assignedCategory: "Intermediate", currentMatch: null, isExclusive: false, Renter: "" },
@@ -232,7 +231,7 @@
     let state = {
       players: [],
       queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
-      courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)), // Deep copy defaults
+      courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)), 
       totalMatchesPlayed: 0
     };
     
@@ -262,24 +261,17 @@
       onSnapshot(stateRef, (docSnap) => {
         if (docSnap.exists()) {
           const fetchedData = docSnap.data();
-          
-          // SAFETY NET: If the database is missing arrays, force build them safely.
           state.players = fetchedData.players || [];
           state.queues = fetchedData.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
           state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
           
-          // STRICT SAFETY NET FOR COURTS: Always force 4 courts
           if (fetchedData.courts && Array.isArray(fetchedData.courts) && fetchedData.courts.length >= 4) {
              state.courts = fetchedData.courts;
           } else {
              state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
           }
-
           render();
-        } else { 
-          // New database? Save the defaults immediately
-          saveState(); 
-        }
+        } else { saveState(); }
         
         if (!isConnected) {
             isConnected = true;
@@ -372,7 +364,7 @@
 
       const now = new Date();
       const timeInStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 HOURS
+      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000);
       const timeOutStr = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const newPlayer = {
@@ -624,7 +616,7 @@
       state = {
         players: [],
         queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
-        courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)), // Deep copy defaults to ensure courts exist
+        courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)),
         totalMatchesPlayed: 0
       };
       
@@ -696,7 +688,6 @@
       reader.readAsText(file);
     };
 
-    // RENDER FUNCTIONS
     function renderHistory() {
       const container = document.getElementById('history-list');
       if (!container) return;
@@ -744,10 +735,7 @@
 
     function render() {
       let activeCount = 0;
-      
-      // EXTRA SAFETY: If courts are undefined for any reason, use an empty array so map() doesn't crash
       const safeCourts = Array.isArray(state.courts) ? state.courts : [];
-      
       const paidPlayers = Array.isArray(state.players) ? state.players.filter(p => p.paid).length : 0;
       
       const courtsContainer = document.getElementById('courts-grid');
@@ -817,7 +805,6 @@
       const tableBody = document.getElementById('player-log-table');
       if (tableBody) {
         const getPlayingCourt = (p) => safeCourts.find(c => c.currentMatch && c.currentMatch.includes(p.id));
-        
         let displayList = Array.isArray(state.players) ? state.players.filter(p => !p.isExpired) : [];
         
         displayList.sort((a, b) => {
