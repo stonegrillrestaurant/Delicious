@@ -70,6 +70,7 @@
         </div>
       </div>
     </section>
+
   </main>
 
   <script type="module">
@@ -80,9 +81,7 @@
       document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
-    // ----------------------------------------------------
-    // YOUR LIVE FIREBASE CREDENTIALS
-    // ----------------------------------------------------
+    // PERFECTLY INTEGRATED FIREBASE KEYS FROM YOUR CONSOLE
     const firebaseConfig = {
       apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
       authDomain: "payroll-c4f0c.firebaseapp.com",
@@ -97,26 +96,18 @@
     const db = getFirestore(app);
 
     const stateRef = doc(db, 'pickleball', 'currentState');
-    let lastKnownState = null;
 
     onSnapshot(stateRef, (docSnap) => {
       if (docSnap.exists()) {
-        lastKnownState = docSnap.data();
-        renderTVDisplay(lastKnownState);
+        renderTVDisplay(docSnap.data());
       } else {
-        lastKnownState = { courts: [], players: [], queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] }};
-        renderTVDisplay(lastKnownState);
+        renderTVDisplay({ courts: [], players: [], queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] }});
       }
     }, (err) => {
         console.error("Firebase Sync Error:", err);
         const syncDot = document.getElementById('sync-dot');
         if(syncDot) syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
     });
-
-    // Run purely visual update every 60s so expired players drop off the TV automatically
-    setInterval(() => {
-       if (lastKnownState) renderTVDisplay(lastKnownState);
-    }, 60000);
 
     function getBadgeClass(cat) {
       if (cat === 'Beginner') return 'badge-beginner';
@@ -190,13 +181,7 @@
          if (c.currentMatch) c.currentMatch.forEach(id => playingIds.add(id));
       });
 
-      const now = Date.now();
-      
-      // Filter out players who are playing OR whose 5 hours have passed
-      let waiting = playersList.filter(p => {
-         const isActuallyExpired = p.isExpired || (p.expireTimestamp && now >= p.expireTimestamp);
-         return !isActuallyExpired && !playingIds.has(p.id);
-      });
+      let waiting = playersList.filter(p => !p.isExpired && !playingIds.has(p.id));
 
       waiting.sort((a, b) => {
           let idxA = queues[a.category] ? queues[a.category].indexOf(a.id) : 999;
