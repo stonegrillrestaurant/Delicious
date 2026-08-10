@@ -4,27 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ADMIN PANEL | Pick all AD-Ventures</title>
-  
-  <meta property="og:title" content="Pick all AD-Ventures | Pickleball Court">
-  <meta property="og:description" content="Eza Ventures Inc. Pickleball Court & Sports Arena">
-  
-  <link rel="manifest" href="/pickle-dashboard/manifest.json">
   <meta name="theme-color" content="#1e293b">
-
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
     .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
     .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
-    
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
     .hidden-section { display: none !important; }
-    
-    ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-10">
@@ -32,13 +23,13 @@
   <header class="bg-slate-800 border-b border-slate-700 shadow-xl sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-3">
-        <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider flex items-center gap-1.5">
-          <span id="connection-dot" class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span>
-          LIVE
+        <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider flex items-center gap-1.5" id="admin-status-badge">
+          <span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span>
+          CONNECTING...
         </div>
         <div>
           <h1 class="text-base font-black tracking-wide text-white">OWNER CONTROL DASHBOARD</h1>
-          <p class="text-[10px] text-slate-400 font-medium">PICK ALL AD-VENTURES | BRGY. LUNANG HILONGOS, LEYTE</p>
+          <p class="text-[10px] text-slate-400 font-medium">PICK ALL AD-VENTURES | BRGY. LUNANG HILONGOS</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -74,8 +65,6 @@
     </section>
 
     <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-      
-      <!-- Check-in form section -->
       <section class="lg:col-span-1 space-y-6">
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg sticky top-24">
           <h2 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
@@ -145,10 +134,7 @@
         </div>
         
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-          <h2 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.247 1.856a.5.5 0 0 1-.494.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"/></svg>
-            Expired / Time-Up Players (5 Hrs)
-          </h2>
+          <h2 class="text-sm font-bold text-red-400 mb-3">Expired / Time-Up Players (5 Hrs)</h2>
           <div class="overflow-auto rounded-lg border border-slate-700 max-h-[300px]">
             <table class="w-full text-left text-xs">
               <thead class="sticky top-0 bg-slate-900 border-b border-slate-700 z-10">
@@ -175,24 +161,18 @@
             <h2 class="text-sm font-bold text-white mb-4">Master Data Backup</h2>
             <p class="text-xs text-slate-400 mb-6">Backup your entire history to your device or cloud drive. Keep this safe.</p>
             <div class="space-y-3">
-              <button onclick="exportFullBackup()" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg text-sm transition shadow-lg">
-                Manual Save to Drive
-              </button>
+              <button onclick="exportFullBackup()" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg text-sm transition shadow-lg">Manual Save to Drive</button>
               <div class="pt-4 border-t border-slate-700">
                 <p class="text-xs text-slate-400 mb-2 font-semibold">Restore from Backup:</p>
                 <input type="file" id="restore-file" accept=".json" class="hidden" onchange="handleRestoreFile(event)">
-                <button onclick="document.getElementById('restore-file').click()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition border border-slate-600">
-                  Select Backup File
-                </button>
+                <button onclick="document.getElementById('restore-file').click()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition border border-slate-600">Select Backup File</button>
               </div>
             </div>
           </div>
         </div>
         <div class="w-full md:w-2/3">
           <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-sm font-bold text-white">Daily Session Archives</h2>
-            </div>
+            <h2 class="text-sm font-bold text-white mb-4">Daily Session Archives</h2>
             <div id="history-list" class="space-y-3"></div>
           </div>
         </div>
@@ -201,7 +181,6 @@
   </div>
 
   <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
-
   <div id="custom-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-[70] flex items-center justify-center opacity-0 transition-opacity duration-200 p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform duration-200" id="modal-content-box">
       <div class="p-5" id="modal-body"></div>
@@ -212,15 +191,13 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // PERFECTLY INTEGRATED FIREBASE KEYS FROM YOUR CONSOLE
     const firebaseConfig = {
       apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
       authDomain: "payroll-c4f0c.firebaseapp.com",
       projectId: "payroll-c4f0c",
       storageBucket: "payroll-c4f0c.firebasestorage.app",
       messagingSenderId: "427050362534",
-      appId: "1:427050362534:web:35d3b1c5eee26b3c417667",
-      measurementId: "G-ZQBJPH4WWY"
+      appId: "1:427050362534:web:35d3b1c5eee26b3c417667"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -246,6 +223,8 @@
     const historyRef = doc(db, 'pickleball', 'historyVault');
 
     onSnapshot(stateRef, (docSnap) => {
+      document.getElementById('admin-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> DB LIVE`;
+      
       if (docSnap.exists()) {
         const fetchedData = docSnap.data();
         state.players = fetchedData.players || [];
@@ -264,26 +243,39 @@
       
       if (!isConnected) {
           isConnected = true;
-          document.getElementById('connection-dot').classList.replace('bg-slate-950', 'bg-emerald-500');
-          window.showToast("Connected to live cloud database.");
+          window.showToast("Connected to Cloud.");
       }
+    }, (err) => {
+        document.getElementById('admin-status-badge').innerHTML = `ERROR: DB BLOCKED`;
+        document.getElementById('admin-status-badge').classList.replace('bg-emerald-500', 'bg-red-500');
+        console.error("Firebase Sync Error:", err);
     });
 
     onSnapshot(historyRef, (docSnap) => {
       if (docSnap.exists()) {
         historyVault = docSnap.data().history || [];
         renderHistory();
-      } else { 
-        saveHistory(); 
-      }
+      } else { saveHistory(); }
     });
 
+    // ⚠️ THE BULLETPROOF SAVER ⚠️
     async function saveState() {
-      try { await setDoc(stateRef, state); } catch (e) { console.error(e); }
+      try {
+        // This deep-cleaner permanently removes Ghost Data that crashes Firebase
+        const cleanState = JSON.parse(JSON.stringify(state)); 
+        await setDoc(stateRef, cleanState);
+      } catch (e) {
+        // If Firebase STILL rejects it, this loud alarm will tell you why!
+        alert("🛑 CLOUD SAVE BLOCKED BY FIREBASE 🛑\n\nError: " + e.message + "\n\nIf this says 'Missing or insufficient permissions', your database Rules are still locked.");
+        console.error("Cloud Save Failed:", e);
+      }
     }
 
     async function saveHistory() {
-      try { await setDoc(historyRef, { history: historyVault }); } catch (e) { console.error(e); }
+      try { 
+        const cleanHistory = JSON.parse(JSON.stringify(historyVault));
+        await setDoc(historyRef, { history: cleanHistory }); 
+      } catch (e) { console.error("History Save Failed:", e); }
     }
 
     function getBadgeClass(cat) {
@@ -293,7 +285,6 @@
       return 'badge-pro';
     }
 
-    // UI HELPER FUNCTIONS
     window.switchTab = function(tabId) {
       if (tabId === 'dashboard') {
         document.getElementById('view-dashboard').classList.remove('hidden-section');
@@ -349,7 +340,7 @@
 
       const now = new Date();
       const timeInStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 HOURS
+      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); 
       const timeOutStr = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const newPlayer = {
@@ -369,7 +360,7 @@
       state.queues[category].push(newPlayer.id);
       
       nameInput.value = '';
-      window.showToast(`${name} added to ${category} queue.`);
+      window.showToast(`${name} added to queue.`);
       saveState(); 
     });
 
@@ -381,9 +372,9 @@
           q[idx] = q[idx + 1];
           q[idx + 1] = temp;
           saveState();
-          window.showToast(`Passed turn. Stepped back in line.`);
+          window.showToast(`Passed turn.`);
       } else {
-          window.showToast("Cannot pass. Nobody behind them in queue.", 'warn');
+          window.showToast("Cannot pass.", 'warn');
       }
     };
 
@@ -414,7 +405,7 @@
     };
 
     setInterval(() => {
-      if(!isConnected) return; 
+      if(!isConnected) return;
       const now = Date.now();
       let changed = false;
       state.players.forEach(p => {
@@ -429,9 +420,8 @@
         }
       });
       if (changed) {
-        // ONLY VISUAL UPDATE - DOES NOT SAVE TO CLOUD UNTIL AN ACTION IS TAKEN
-        render(); 
-        window.showToast("Player(s) 5-hour limit reached. Auto-removed.", "warn");
+        saveState(); 
+        window.showToast("Player(s) auto-removed (5 hours).", "warn");
       }
     }, 60000);
 
@@ -447,7 +437,7 @@
         state.queues[player.category].push(player.id);
         
         saveState();
-        window.showToast(`${player.name} extended for 5 more hours.`);
+        window.showToast(`Extended 5 hours.`);
       }
     };
 
@@ -468,13 +458,13 @@
       const queue = state.queues[cat] || [];
       
       if(queue.length < 4) { 
-        window.showToast(`Need at least 4 players in ${cat} queue.`, 'warn'); 
+        window.showToast(`Need 4 players.`, 'warn'); 
         return; 
       }
       
       court.currentMatch = queue.splice(0, 4);
       saveState();
-      window.showToast("Match assigned to " + court.name);
+      window.showToast("Match assigned");
     };
 
     window.finishMatch = function(courtId) {
@@ -498,7 +488,7 @@
       court.currentMatch = null;
       state.totalMatchesPlayed = (state.totalMatchesPlayed || 0) + 1;
       saveState();
-      window.showToast("Match finished. Players processed.");
+      window.showToast("Match finished.");
     };
 
     window.toggleExclusive = function(courtId) {
@@ -508,11 +498,10 @@
       if(!court.isExclusive) {
         const content = `
           <h3 class="text-lg font-black text-white mb-2">Exclusive Rental</h3>
-          <p class="text-sm text-slate-400 mb-4">Enter client name renting ${court.name}.</p>
-          <input type="text" id="renter-input" class="w-full px-3 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-amber-500 mb-5" placeholder="Client Name">
+          <input type="text" id="renter-input" class="w-full px-3 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white mb-5" placeholder="Client Name">
           <div class="flex justify-end gap-3">
-            <button onclick="hideModal()" class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-bold">Cancel</button>
-            <button onclick="executeExclusiveRent(${courtId})" class="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-bold">Confirm</button>
+            <button onclick="hideModal()" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-bold">Cancel</button>
+            <button onclick="executeExclusiveRent(${courtId})" class="px-4 py-2 rounded bg-amber-500 text-white text-sm font-bold">Confirm</button>
           </div>
         `;
         window.showModal(content);
@@ -521,7 +510,6 @@
         court.isExclusive = false;
         court.Renter = "";
         saveState();
-        window.showToast(`Exclusive rent ended.`);
       }
     };
 
@@ -529,7 +517,7 @@
       const court = state.courts.find(c => c.id === courtId);
       const input = document.getElementById('renter-input');
       const renterName = input ? input.value.trim() : '';
-      if (!renterName) { window.showToast("Name required.", "warn"); return; }
+      if (!renterName) return;
 
       if(court.currentMatch) {
         court.currentMatch.reverse().forEach(pId => {
@@ -543,30 +531,17 @@
       court.Renter = renterName;
       saveState();
       window.hideModal();
-      window.showToast(`${court.name} reserved.`);
     };
 
     window.requestResetDailyData = function() {
-      if (state.players.length === 0) {
-        window.showToast("No data to archive yet.", "warn");
-        return;
-      }
-      
-      const today = new Date();
-      const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-
+      if (state.players.length === 0) return;
+      const localDate = new Date().toISOString().split('T')[0];
       const content = `
-        <h3 class="text-lg font-black text-white mb-2">End Day & Archive</h3>
-        <p class="text-sm text-slate-400 mb-4">This packages all active logs into the cloud Vault.</p>
-        
-        <div class="mb-6 bg-slate-900 p-4 rounded-lg border border-slate-700">
-          <label class="block text-[11px] font-bold text-slate-400 mb-2">ARCHIVE DATE (Change if closing after midnight)</label>
-          <input type="date" id="archive-date" value="${localDate}" class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500 shadow-inner">
-        </div>
-
+        <h3 class="text-lg font-black text-white mb-2">End Day Archive</h3>
+        <input type="date" id="archive-date" value="${localDate}" class="w-full px-3 py-2 bg-slate-800 text-white mb-4">
         <div class="flex justify-end gap-3">
-          <button onclick="hideModal()" class="px-4 py-3 rounded-lg bg-slate-700 text-white text-sm font-bold">Cancel</button>
-          <button onclick="executeArchive()" class="px-4 py-3 rounded-lg bg-amber-600 text-white text-sm font-bold shadow-lg">Archive Data</button>
+          <button onclick="hideModal()" class="px-4 py-3 rounded bg-slate-700 text-white font-bold">Cancel</button>
+          <button onclick="executeArchive()" class="px-4 py-3 rounded bg-amber-600 text-white font-bold">Archive</button>
         </div>
       `;
       window.showModal(content);
@@ -579,24 +554,17 @@
       const selectedDate = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
       const dateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
       
-      const revenue = state.players.filter(p => p.paid).length * 150;
-      
-      const sessionArchive = {
+      historyVault.unshift({
         id: 'ARCHIVE-' + Date.now(),
         date: dateStr,
         timestamp: Date.now(),
         totalPlayers: state.players.length,
         totalMatches: state.totalMatchesPlayed,
-        revenue: revenue,
+        revenue: state.players.filter(p => p.paid).length * 150,
         players: [...state.players] 
-      };
+      });
 
-      historyVault.unshift(sessionArchive);
       saveHistory();
-
-      const backupSuccess = await window.exportFullBackup(true, false);
-      if (backupSuccess) window.showToast(`Saved to ${dateStr} successfully! Clearing board.`);
-      else window.showToast(`Archived to ${dateStr}, but Drive backup skipped.`, "warn");
 
       state = {
         players: [],
@@ -604,71 +572,37 @@
         courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)),
         totalMatchesPlayed: 0
       };
-      
       saveState();
     };
 
-    window.exportFullBackup = async function(isAutoTrigger = false, isQuickSave = false) {
-      const backupData = { exportDate: new Date().toISOString(), currentState: state, history: historyVault };
-      const dataStr = JSON.stringify(backupData, null, 2);
-      const fileName = `PickAllAdventures_Backup_${new Date().toISOString().split('T')[0]}.json`;
-
-      if (navigator.share && navigator.canShare) {
-        try {
-          const file = new File([dataStr], fileName, { type: "application/json" });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ title: 'Pickleball App Backup', text: isAutoTrigger ? 'End of Day Master Backup' : 'Manual Master Backup', files: [file] });
-            if(!isAutoTrigger) window.showToast("Backup saved to Drive successfully!");
-            return true;
-          }
-        } catch (err) {
-          if(isQuickSave) window.showToast("Quick Save Cancelled.", "warn");
-          return false;
-        }
-      }
-
+    window.exportFullBackup = function() {
+      const dataStr = JSON.stringify({ exportDate: new Date().toISOString(), currentState: state, history: historyVault }, null, 2);
       const blob = new Blob([dataStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = fileName;
+      a.download = `PickAllAdventures_Backup_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      if(!isAutoTrigger) window.showToast("Backup file downloaded.");
-      return true;
     };
 
     window.handleRestoreFile = function(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
           const contents = JSON.parse(e.target.result);
-          if (contents && contents.currentState && contents.history) {
-            const content = `
-              <h3 class="text-lg font-black text-red-400 mb-2">Warning: Restore Data?</h3>
-              <p class="text-sm text-slate-300 mb-4">This will OVERWRITE the cloud database for everyone with the backup from <span class="font-bold text-white">${new Date(contents.exportDate).toLocaleDateString()}</span>.</p>
-              <div class="flex justify-end gap-3">
-                <button onclick="hideModal()" class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-bold">Cancel</button>
-                <button id="confirm-restore-btn" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">OVERWRITE DATA</button>
-              </div>
-            `;
-            window.showModal(content);
-            document.getElementById('confirm-restore-btn').onclick = function() {
-              state = contents.currentState;
-              historyVault = contents.history;
-              saveState();
-              saveHistory();
-              window.hideModal();
-              window.showToast("Data restored to the cloud successfully!");
-              document.getElementById('restore-file').value = ''; 
-            };
-          } else { window.showToast("Invalid backup file.", "error"); }
-        } catch (err) { window.showToast("Error reading file.", "error"); }
+          if (contents && contents.currentState) {
+            state = contents.currentState;
+            historyVault = contents.history || [];
+            saveState();
+            saveHistory();
+            window.showToast("Data restored!");
+          }
+        } catch (err) {}
       };
       reader.readAsText(file);
     };
@@ -681,16 +615,9 @@
         return;
       }
       container.innerHTML = historyVault.map(archive => `
-        <div class="bg-slate-900 border border-slate-700 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h3 class="font-bold text-white text-sm">${archive.date}</h3>
-            <div class="flex gap-4 mt-2 text-xs">
-              <span class="text-emerald-400 font-bold">Rev: ₱${archive.revenue}</span>
-              <span class="text-slate-400">Players: ${archive.totalPlayers}</span>
-              <span class="text-slate-400">Matches: ${archive.totalMatches}</span>
-            </div>
-          </div>
-          <button onclick="viewArchivePlayers('${archive.id}')" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white px-3 py-2 rounded text-xs font-bold transition">View Players</button>
+        <div class="bg-slate-900 border border-slate-700 p-4 rounded-lg flex justify-between items-center">
+          <div><h3 class="font-bold text-white text-sm">${archive.date}</h3></div>
+          <button onclick="viewArchivePlayers('${archive.id}')" class="bg-slate-800 text-white px-3 py-2 rounded text-xs font-bold">View</button>
         </div>
       `).join('');
     }
@@ -698,30 +625,17 @@
     window.viewArchivePlayers = function(archiveId) {
       const archive = historyVault.find(a => a.id === archiveId);
       if (!archive) return;
-      const playerRows = archive.players.map(p => `
-        <tr class="border-b border-slate-700/50 text-xs">
-          <td class="p-2 text-white font-bold">${p.name}<span class="block text-[9px] font-normal text-slate-500 mt-0.5">${p.timeIn} - ${p.timeOut || 'N/A'}</span></td>
-          <td class="p-2 text-slate-400">${p.category}</td>
-          <td class="p-2 text-slate-400">${p.gamesPlayed} games</td>
-          <td class="p-2 text-emerald-400">${p.paid ? 'Paid ₱150' : '<span class="text-red-400">Unpaid</span>'}</td>
-        </tr>`).join('');
-      const content = `
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-base font-black text-white">${archive.date} Log</h3>
-          <button onclick="hideModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
-        </div>
-        <div class="max-h-64 overflow-y-auto bg-slate-900 rounded-lg border border-slate-700">
-          <table class="w-full text-left"><tbody class="divide-y divide-slate-700/50">${playerRows}</tbody></table>
-        </div>
-        <div class="mt-4 flex justify-end"><button onclick="hideModal()" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-bold">Close</button></div>
-      `;
-      window.showModal(content);
+      const rows = archive.players.map(p => `<tr><td class="p-2 text-white">${p.name}</td><td class="p-2 text-slate-400">${p.category}</td></tr>`).join('');
+      window.showModal(`
+        <div class="flex justify-between items-center mb-4"><h3 class="text-white font-bold">${archive.date}</h3></div>
+        <div class="max-h-64 overflow-y-auto"><table class="w-full text-left text-xs">${rows}</table></div>
+        <div class="mt-4 flex justify-end"><button onclick="hideModal()" class="px-4 py-2 bg-slate-700 text-white rounded font-bold">Close</button></div>
+      `);
     };
 
     function render() {
       let activeCount = 0;
       const safeCourts = Array.isArray(state.courts) ? state.courts : JSON.parse(JSON.stringify(DEFAULT_COURTS));
-      const paidPlayers = Array.isArray(state.players) ? state.players.filter(p => p.paid).length : 0;
       
       const courtsContainer = document.getElementById('courts-grid');
       if (courtsContainer) {
@@ -733,13 +647,10 @@
               <div class="border-2 border-amber-500/40 bg-amber-500/5 rounded-xl p-4 flex flex-col justify-between shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                   <span class="font-black text-white text-sm">${court.name}</span>
-                  <span class="bg-amber-500/20 text-amber-300 font-bold text-[10px] px-2 py-0.5 rounded uppercase">Exclusive</span>
+                  <span class="bg-amber-500/20 text-amber-300 font-bold text-[10px] px-2 rounded">Exclusive</span>
                 </div>
-                <div class="text-center py-4">
-                  <p class="text-[10px] text-amber-400 font-bold uppercase mb-1">Rented By</p>
-                  <p class="text-sm font-black text-white truncate px-2">${court.Renter}</p>
-                </div>
-                <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-xs transition mt-2">End Rent</button>
+                <div class="text-center py-4"><p class="text-[10px] text-amber-400 font-bold mb-1">Rented By</p><p class="text-sm font-black text-white truncate px-2">${court.Renter}</p></div>
+                <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-700 text-white font-bold py-2 rounded-lg text-xs mt-2">End Rent</button>
               </div>
             `;
           }
@@ -751,11 +662,10 @@
               <div>
                 <div class="flex justify-between items-center mb-3">
                   <span class="font-black text-white text-sm">${court.name}</span>
-                  <button onclick="toggleCourtCategory(${court.id})" class="${getBadgeClass(court.assignedCategory)} text-[9px] font-bold px-2 py-0.5 rounded uppercase shadow-sm">
+                  <button onclick="toggleCourtCategory(${court.id})" class="${getBadgeClass(court.assignedCategory)} text-[9px] font-bold px-2 rounded">
                     ${court.assignedCategory || 'Beginner'} ⚙
                   </button>
                 </div>
-                
                 <div class="my-3 min-h-[60px] flex flex-col justify-center">
                   ${matchPlayers ? `
                     <div class="grid grid-cols-2 gap-1.5 text-xs">
@@ -764,18 +674,13 @@
                       <div class="bg-slate-800 border border-slate-700 text-slate-200 p-1.5 rounded font-bold text-center truncate shadow-inner text-[10px]">${matchPlayers[2]?.name || 'P3'}</div>
                       <div class="bg-slate-800 border border-slate-700 text-slate-200 p-1.5 rounded font-bold text-center truncate shadow-inner text-[10px]">${matchPlayers[3]?.name || 'P4'}</div>
                     </div>
-                  ` : `
-                    <div class="text-center text-xs text-slate-500 bg-slate-950/40 border-slate-800 italic rounded border border-dashed py-3">Court Open</div>
-                  `}
+                  ` : `<div class="text-center text-xs text-slate-500 bg-slate-950/40 border-slate-800 italic rounded border border-dashed py-3">Court Open</div>`}
                 </div>
               </div>
               <div class="space-y-1.5 mt-2">
-                ${matchPlayers ? `
-                  <button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-xs transition">Finish Match</button>
-                ` : `
-                  <button onclick="assignNextMatch(${court.id})" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg text-xs transition">Assign Match (Next 4)</button>
-                `}
-                <button onclick="toggleExclusive(${court.id})" class="w-full border border-slate-700 text-slate-400 hover:bg-slate-800 font-semibold py-1.5 rounded-lg text-[10px] transition">Reserve</button>
+                ${matchPlayers ? `<button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">Finish Match</button>` 
+                : `<button onclick="assignNextMatch(${court.id})" class="w-full bg-slate-700 text-white font-bold py-2 rounded-lg text-xs">Assign Match (Next 4)</button>`}
+                <button onclick="toggleExclusive(${court.id})" class="w-full border border-slate-700 text-slate-400 py-1.5 rounded-lg text-[10px]">Reserve</button>
               </div>
             </div>
           `;
@@ -785,7 +690,7 @@
       if (document.getElementById('stat-players')) document.getElementById('stat-players').innerText = (state.players || []).length;
       if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 4`;
       if (document.getElementById('stat-matches')) document.getElementById('stat-matches').innerText = state.totalMatchesPlayed || 0;
-      if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${paidPlayers * 150}`;
+      if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${(state.players||[]).filter(p => p.paid).length * 150}`;
 
       const tableBody = document.getElementById('player-log-table');
       if (tableBody) {
@@ -802,7 +707,6 @@
              const qB = state.queues[b.category] ? state.queues[b.category].indexOf(b.id) : 999;
              return qA - qB;
           }
-          if (courtA && courtB) return (courtA.name || '').localeCompare(courtB.name || '');
           return 0;
         });
 
@@ -810,41 +714,29 @@
           const playingCourt = getPlayingCourt(p);
           const qList = state.queues[p.category] || [];
           const qPos = qList.indexOf(p.id);
+          let lineStatus = '?', statusText = 'Waiting', statusColor = 'text-slate-400', showPassButton = false;
           
-          let lineStatus = '?', statusText = 'Unknown', statusColor = '', showPassButton = false;
           if (playingCourt) {
              lineStatus = `<span class="text-emerald-500 font-black text-[12px] uppercase">Active</span>`;
              statusText = `Playing - ${playingCourt.name}`;
              statusColor = 'text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded';
           } else if (qPos > -1) {
-             const displayPos = qPos + 1;
-             lineStatus = displayPos <= 4 
-                 ? `<span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-black text-xs">#${displayPos}</span>`
-                 : `<span class="text-slate-400 font-bold px-2 py-0.5 text-xs">#${displayPos}</span>`;
-             statusText = `Waiting`;
-             statusColor = 'text-slate-400';
+             lineStatus = (qPos + 1) <= 4 ? `<span class="bg-amber-500/20 text-amber-400 px-2 rounded font-black text-xs">#${qPos + 1}</span>` : `<span class="text-slate-400 font-bold px-2 text-xs">#${qPos + 1}</span>`;
              if (qPos < qList.length - 1) showPassButton = true;
           }
           
           return `
-          <tr class="hover:bg-slate-700/30 transition group border-b border-slate-700/50 last:border-none">
-            <td class="p-3 whitespace-nowrap">${lineStatus}</td>
-            <td class="p-3 font-bold text-white whitespace-nowrap">
-              ${p.name}
-              <span class="block text-[9px] font-normal text-slate-400 mt-0.5">In: ${p.timeIn} <span class="text-slate-600">|</span> Out: ${p.timeOut || 'N/A'}</span>
-            </td>
-            <td class="p-3 whitespace-nowrap"><span class="${getBadgeClass(p.category)} px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
+          <tr class="hover:bg-slate-700/30 transition border-b border-slate-700/50">
+            <td class="p-3">${lineStatus}</td>
+            <td class="p-3 font-bold text-white">${p.name}<span class="block text-[9px] text-slate-400 mt-0.5">In: ${p.timeIn}</span></td>
+            <td class="p-3"><span class="${getBadgeClass(p.category)} px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
             <td class="p-3 font-bold text-slate-300 text-center">${p.gamesPlayed || 0}</td>
-            <td class="p-3 text-[11px] whitespace-nowrap"><span class="${statusColor}">${statusText}</span></td>
-            <td class="p-3 text-center">
-              <button onclick="togglePayment('${p.id}')" class="font-bold text-[9px] px-2 py-2 rounded-lg transition ${p.paid ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}">
-                ${p.paid ? 'PAID' : 'UNPAID'}
-              </button>
-            </td>
-            <td class="p-3 text-right whitespace-nowrap">
+            <td class="p-3 text-[11px]"><span class="${statusColor}">${statusText}</span></td>
+            <td class="p-3 text-center"><button onclick="togglePayment('${p.id}')" class="font-bold text-[9px] px-2 py-2 rounded-lg ${p.paid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">${p.paid ? 'PAID' : 'UNPAID'}</button></td>
+            <td class="p-3 text-right">
               <div class="flex gap-2 justify-end">
-                ${showPassButton ? `<button onclick="passTurn('${p.id}', '${p.category}')" class="bg-amber-500/10 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">Pass</button>` : `<span class="w-[48px]"></span>`}
-                <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">✕</button>
+                ${showPassButton ? `<button onclick="passTurn('${p.id}', '${p.category}')" class="bg-amber-500/10 text-amber-400 px-3 py-1.5 rounded-lg text-[10px] font-bold">Pass</button>` : `<span class="w-[48px]"></span>`}
+                <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="bg-slate-800 text-slate-400 hover:text-red-400 px-3 py-1.5 rounded-lg text-[10px] font-bold">✕</button>
               </div>
             </td>
           </tr>`}).join('');
@@ -855,25 +747,19 @@
       if (expiredTableBody) {
          let expiredList = Array.isArray(state.players) ? state.players.filter(p => p.isExpired) : [];
          expiredTableBody.innerHTML = expiredList.map(p => `
-            <tr class="hover:bg-slate-700/30 transition group border-b border-slate-700/50 last:border-none">
-              <td class="p-3 font-bold text-slate-400 whitespace-nowrap">
-                ${p.name}
-                <span class="block text-[9px] font-normal text-slate-500 mt-0.5">Time Out: ${p.timeOut}</span>
-              </td>
-              <td class="p-3 whitespace-nowrap"><span class="${getBadgeClass(p.category)} opacity-60 px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
+            <tr class="hover:bg-slate-700/30 transition border-b border-slate-700/50">
+              <td class="p-3 font-bold text-slate-400">${p.name}</td>
+              <td class="p-3"><span class="${getBadgeClass(p.category)} opacity-60 px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
               <td class="p-3 font-bold text-slate-500 text-center">${p.gamesPlayed || 0}</td>
-              <td class="p-3 text-right whitespace-nowrap">
+              <td class="p-3 text-right">
                 <div class="flex gap-2 justify-end">
-                  <button onclick="extendTime('${p.id}')" class="bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">Extend (+5h)</button>
-                  <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">✕</button>
+                  <button onclick="extendTime('${p.id}')" class="bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-lg text-[10px] font-bold">Extend (+5h)</button>
+                  <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="bg-slate-800 text-slate-400 hover:text-red-400 px-3 py-1.5 rounded-lg text-[10px] font-bold">✕</button>
                 </div>
               </td>
             </tr>`).join('');
-         if(expiredList.length === 0) expiredTableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500 text-sm italic">No expired players.</td></tr>`;
       }
     }
-
-    render();
   </script>
 </body>
 </html>
