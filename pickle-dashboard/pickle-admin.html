@@ -208,18 +208,21 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    const firebaseConfig = {
+      apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
+      authDomain: "payroll-c4f0c.firebaseapp.com",
+      projectId: "payroll-c4f0c",
+      storageBucket: "payroll-c4f0c.firebasestorage.app",
+      messagingSenderId: "427050362534",
+      appId: "1:427050362534:web:35d3b1c5eee26b3c417667",
+      measurementId: "G-ZQBJPH4WWY"
+    };
+
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-    let currentUser = null;
-    let isConnected = false;
 
     const DEFAULT_COURTS = [
       { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
@@ -234,70 +237,47 @@
       courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)), 
       totalMatchesPlayed: 0
     };
-    
     let historyVault = [];
+    let isConnected = false;
 
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
+    const stateRef = doc(db, 'pickleball', 'currentState');
+    const historyRef = doc(db, 'pickleball', 'historyVault');
+
+    onSnapshot(stateRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const fetchedData = docSnap.data();
+        state.players = fetchedData.players || [];
+        state.queues = fetchedData.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
+        state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
+        
+        if (fetchedData.courts && Array.isArray(fetchedData.courts) && fetchedData.courts.length >= 4) {
+           state.courts = fetchedData.courts;
         } else {
-          await signInAnonymously(auth);
+           state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
         }
-      } catch (err) { console.error("Auth error:", err); }
-    };
-    initAuth();
-
-    onAuthStateChanged(auth, (user) => {
-      currentUser = user;
-      if (user) setupRealtimeSync();
+        render();
+      } else { saveState(); }
+      
+      if (!isConnected) {
+          isConnected = true;
+          document.getElementById('connection-dot').classList.replace('bg-slate-950', 'bg-red-500');
+          showToast("Connected to live cloud database.");
+      }
     });
 
-    function setupRealtimeSync() {
-      if (!currentUser) return;
-      const stateRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'currentState');
-      const historyRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'historyVault');
-
-      onSnapshot(stateRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const fetchedData = docSnap.data();
-          state.players = fetchedData.players || [];
-          state.queues = fetchedData.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
-          state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
-          
-          if (fetchedData.courts && Array.isArray(fetchedData.courts) && fetchedData.courts.length >= 4) {
-             state.courts = fetchedData.courts;
-          } else {
-             state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
-          }
-          render();
-        } else { saveState(); }
-        
-        if (!isConnected) {
-            isConnected = true;
-            document.getElementById('connection-dot').classList.replace('bg-slate-950', 'bg-red-500');
-            showToast("Connected to live cloud database.");
-        }
-      }, (err) => console.error(err));
-
-      onSnapshot(historyRef, (docSnap) => {
-        if (docSnap.exists()) {
-          historyVault = docSnap.data().history || [];
-          renderHistory();
-        } else { saveHistory(); }
-      }, (err) => console.error(err));
-    }
+    onSnapshot(historyRef, (docSnap) => {
+      if (docSnap.exists()) {
+        historyVault = docSnap.data().history || [];
+        renderHistory();
+      } else { saveHistory(); }
+    });
 
     async function saveState() {
-      if (!currentUser) return;
-      const stateRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'currentState');
-      try { await setDoc(stateRef, state); } catch (e) { console.error("Error saving to cloud:", e); }
+      try { await setDoc(stateRef, state); } catch (e) { console.error(e); }
     }
 
     async function saveHistory() {
-      if (!currentUser) return;
-      const historyRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'historyVault');
-      try { await setDoc(historyRef, { history: historyVault }); } catch (e) { console.error("Error saving history:", e); }
+      try { await setDoc(historyRef, { history: historyVault }); } catch (e) { console.error(e); }
     }
 
     function getBadgeClass(cat) {
@@ -307,7 +287,6 @@
       return 'badge-pro';
     }
 
-    // UI HELPER FUNCTIONS
     window.switchTab = function(tabId) {
       if (tabId === 'dashboard') {
         document.getElementById('view-dashboard').classList.remove('hidden-section');
@@ -352,7 +331,6 @@
       setTimeout(() => modal.classList.add('hidden'), 200);
     };
 
-    // FORM SUBMISSION
     document.getElementById('player-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const nameInput = document.getElementById('player-name');
@@ -364,7 +342,7 @@
 
       const now = new Date();
       const timeInStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 HOURS
       const timeOutStr = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const newPlayer = {
@@ -428,7 +406,6 @@
       }
     };
 
-    // AUTO-REMOVE 5 HOUR LOOP
     setInterval(() => {
       if(!isConnected) return; 
       const now = Date.now();
@@ -446,7 +423,7 @@
       });
       if (changed) {
         saveState();
-        window.showToast("Player(s) 5-hour limit reached. Auto-removed from queue.", "warn");
+        window.showToast("Player(s) 5-hour limit reached. Auto-removed.", "warn");
       }
     }, 60000);
 
@@ -735,7 +712,7 @@
 
     function render() {
       let activeCount = 0;
-      const safeCourts = Array.isArray(state.courts) ? state.courts : [];
+      const safeCourts = Array.isArray(state.courts) ? state.courts : JSON.parse(JSON.stringify(DEFAULT_COURTS));
       const paidPlayers = Array.isArray(state.players) ? state.players.filter(p => p.paid).length : 0;
       
       const courtsContainer = document.getElementById('courts-grid');
@@ -892,5 +869,3 @@
   </script>
 </body>
 </html>
-
-
