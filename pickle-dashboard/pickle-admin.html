@@ -7,23 +7,22 @@
   
   <meta property="og:title" content="Pick all AD-Ventures | Pickleball Court">
   <meta property="og:description" content="Eza Ventures Inc. Pickleball Court & Sports Arena">
-  <meta property="og:image" content="https://stonegrillresto.net/pickle-dashboard/og-image.png">
   
   <link rel="manifest" href="/pickle-dashboard/manifest.json">
-  <link rel="apple-touch-icon" href="/pickle-dashboard/pwa-icon.PNG">
-  
   <meta name="theme-color" content="#1e293b">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* New 4-Category Badges */
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+    .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
     .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
     
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
     .hidden-section { display: none !important; }
   </style>
 </head>
@@ -32,17 +31,16 @@
   <header class="bg-slate-800 border-b border-slate-700 shadow-xl sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-3">
-        <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider">SECURE</div>
+        <div class="bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider flex items-center gap-1.5">
+          <span id="connection-dot" class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span>
+          LIVE
+        </div>
         <div>
           <h1 class="text-base font-black tracking-wide text-white">OWNER CONTROL DASHBOARD</h1>
           <p class="text-[10px] text-slate-400 font-medium">PICK ALL AD-VENTURES | BRGY. LUNANG HILONGOS, LEYTE</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <!-- NEW: Sync From Cloud Button -->
-        <button onclick="fetchDatabaseOnLoad(true)" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 p-2 rounded-lg transition" title="Force Sync from Google Sheets">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
-        </button>
         <button onclick="exportFullBackup(false, true)" class="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/30 p-2 rounded-lg transition" title="Quick Save to Drive">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
         </button>
@@ -81,8 +79,9 @@
           <h2 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
             <span>Counter Check-In</span>
           </h2>
+          <!-- Updated to 5 Hrs -->
           <div class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-2 rounded font-bold mb-4 text-center">
-            ₱150 / 6 Hrs Playtime
+            ₱150 / 5 Hrs Playtime
           </div>
           <form id="player-form" class="space-y-4">
             <div>
@@ -91,8 +90,11 @@
             </div>
             <div>
               <label class="block text-[11px] font-bold text-slate-400 mb-1">Skill Category</label>
+              <!-- Added 4 Categories -->
               <select id="player-category" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-white shadow-inner">
                 <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
                 <option value="Professional">Professional</option>
               </select>
             </div>
@@ -109,11 +111,10 @@
       </section>
 
       <section class="lg:col-span-3 space-y-6">
-        
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-sm font-bold text-white">Court Control</h2>
-            <div class="text-[10px] text-slate-400">Tap category badge to swap Court Type</div>
+            <div class="text-[10px] text-slate-400">Tap category badge to cycle Court Type</div>
           </div>
           <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
         </div>
@@ -146,7 +147,7 @@
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
           <h2 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.247 1.856a.5.5 0 0 1-.494.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"/></svg>
-            Expired / Time-Up Players
+            Expired / Time-Up Players (5 Hrs)
           </h2>
           <div class="overflow-auto rounded-lg border border-slate-700 max-h-[300px]">
             <table class="w-full text-left text-xs">
@@ -162,26 +163,22 @@
             </table>
           </div>
         </div>
-        
       </section>
     </main>
   </div>
 
   <div id="view-history" class="hidden-section">
+    <!-- View History Code remains the same structure -->
     <main class="max-w-7xl mx-auto px-4 py-6">
       <div class="flex flex-col md:flex-row gap-6">
-        
         <div class="w-full md:w-1/3 space-y-4">
           <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
             <h2 class="text-sm font-bold text-white mb-4">Master Data Backup</h2>
             <p class="text-xs text-slate-400 mb-6">Backup your entire history to your device or cloud drive. Keep this safe.</p>
-            
             <div class="space-y-3">
               <button onclick="exportFullBackup()" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg text-sm transition shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
                 Manual Save to Drive
               </button>
-              
               <div class="pt-4 border-t border-slate-700">
                 <p class="text-xs text-slate-400 mb-2 font-semibold">Restore from Backup:</p>
                 <input type="file" id="restore-file" accept=".json" class="hidden" onchange="handleRestoreFile(event)">
@@ -192,7 +189,6 @@
             </div>
           </div>
         </div>
-
         <div class="w-full md:w-2/3">
           <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
             <div class="flex justify-between items-center mb-4">
@@ -213,183 +209,98 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+    let currentUser = null;
+    let isConnected = false;
+
+    // Added 4 Queues instead of 2
     let state = {
       players: [],
-      queues: { Beginner: [], Professional: [] },
+      queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
       courts: [
         { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
-        { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 2, name: "Court 2", assignedCategory: "Intermediate", currentMatch: null, isExclusive: false, Renter: "" },
+        { id: 3, name: "Court 3", assignedCategory: "Advanced", currentMatch: null, isExclusive: false, Renter: "" },
         { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
       ],
       totalMatchesPlayed: 0
     };
-
     let historyVault = [];
-    const DATABASE_URL = "https://script.google.com/macros/s/AKfycbxpieHosDgAPmVFS9gSMUT0Igq_qNRxGHY9IhS--9unwCAzg3jATKZEgKPDLV9Z-F3Vqg/exec";
 
-    // NEW FUNCTION: Pulls data from Google Sheets to rebuild Admin Panel when opened on a new device
-    async function fetchDatabaseOnLoad(isManual = false) {
-      if(isManual) showToast("Pulling latest data from Google Sheets...", "warn");
+    const initAuth = async () => {
       try {
-        const response = await fetch(DATABASE_URL);
-        const data = await response.json();
-        
-        if (data && Array.isArray(data)) {
-          let cloudState = {
-            players: [],
-            queues: { Beginner: [], Professional: [] },
-            courts: [
-              { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-              { id: 2, name: "Court 2", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" },
-              { id: 3, name: "Court 3", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-              { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
-            ],
-            totalMatchesPlayed: state.totalMatchesPlayed || 0
-          };
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) { console.error("Auth error:", err); }
+    };
+    initAuth();
 
-          data.forEach(p => {
-             if (p.Category === 'Exclusive') {
-                 const court = cloudState.courts.find(c => c.name === p.Assigned_Court);
-                 if (court) {
-                     court.isExclusive = true;
-                     court.Renter = p.Player_Name;
-                 }
-             } else {
-                 const newPlayer = {
-                    id: p.Player_ID,
-                    name: p.Player_Name,
-                    category: p.Category,
-                    gamesPlayed: parseInt(p.Games_Played) || 0,
-                    timeIn: p.Time_In,
-                    timeOut: p.Time_Out,
-                    expireTimestamp: null,
-                    isExpired: p.Status === 'Expired',
-                    paid: p.Payment === 'Paid'
-                 };
-                 
-                 // Try to reconstruct the invisible expiration timer
-                 if (p.Time_Out && p.Time_Out.includes(':')) {
-                    try {
-                        const now = new Date();
-                        const match = p.Time_Out.match(/(\d+):(\d+)\s(AM|PM)/i);
-                        if (match) {
-                            let hours = parseInt(match[1]);
-                            let mins = parseInt(match[2]);
-                            if (match[3].toUpperCase() === 'PM' && hours < 12) hours += 12;
-                            if (match[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
-                            const expireDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, mins, 0);
-                            newPlayer.expireTimestamp = expireDate.getTime();
-                        }
-                    } catch(e) {}
-                 }
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if (user) setupRealtimeSync();
+    });
 
-                 cloudState.players.push(newPlayer);
+    function setupRealtimeSync() {
+      if (!currentUser) return;
+      const stateRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'currentState');
+      const historyRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'historyVault');
 
-                 if (p.Status === 'Playing') {
-                     const court = cloudState.courts.find(c => c.name === p.Assigned_Court);
-                     if (court) {
-                         if (!court.currentMatch) court.currentMatch = [];
-                         court.currentMatch.push(newPlayer.id);
-                         court.assignedCategory = p.Category;
-                     }
-                 } else if (p.Status === 'Waiting') {
-                     if (!cloudState.queues[p.Category]) cloudState.queues[p.Category] = [];
-                     cloudState.queues[p.Category].push(newPlayer.id);
-                 }
-             }
-          });
-          
-          state = cloudState;
-          localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
+      onSnapshot(stateRef, (docSnap) => {
+        if (docSnap.exists()) {
+          state = docSnap.data();
           render();
-          if(isManual) showToast("Data Synced from Google Sheets!", "success");
-        }
-      } catch (err) {
-        console.error("Failed to load from cloud:", err);
-        if(isManual) showToast("Sync failed. Check internet connection.", "error");
-      }
-    }
-
-    function syncToDatabase() {
-      // 1. Format the standard players exactly how the Google Sheet expects it
-      let formattedData = state.players.map(p => {
-        const court = state.courts.find(c => c.currentMatch && c.currentMatch.includes(p.id));
+        } else { saveState(); }
         
-        let statusText = p.isExpired ? "Expired" : "Waiting";
-        if (court) statusText = "Playing";
-
-        return {
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          status: statusText,
-          gamesPlayed: p.gamesPlayed || 0,
-          timeIn: p.timeIn,
-          timeOut: p.timeOut,
-          paid: p.paid,
-          assignedCourt: court ? court.name : "None"
-        };
-      });
-
-      // 2. NEW FIX: Check for Exclusive Courts and force them into the data payload
-      state.courts.forEach(c => {
-         if (c.isExclusive) {
-            formattedData.push({
-               id: 'RES-' + c.id,
-               name: c.Renter,
-               category: "Exclusive",
-               status: "Playing",
-               gamesPlayed: 0,
-               timeIn: "",
-               timeOut: "",
-               paid: true,
-               assignedCourt: c.name
-            });
-         }
-      });
-
-      // Send the combined data to the Google Sheet quietly in the background
-      fetch(DATABASE_URL, {
-        method: "POST",
-        redirect: "follow", 
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8", 
-        },
-        body: JSON.stringify({ players: formattedData })
-      }).catch(err => console.log("Sync error:", err));
-    }
-
-    function loadData() {
-      try {
-        const localData = localStorage.getItem('pick_all_adventures_db');
-        if (localData) {
-          const parsedData = JSON.parse(localData);
-          if (parsedData && parsedData.players && parsedData.queues && parsedData.courts) {
-            state = parsedData;
-          }
+        if (!isConnected) {
+            isConnected = true;
+            document.getElementById('connection-dot').classList.replace('bg-slate-950', 'bg-red-500');
+            showToast("Connected to live cloud database.");
         }
-        
-        const localHistory = localStorage.getItem('pick_all_adventures_history');
-        if (localHistory) historyVault = JSON.parse(localHistory);
-      } catch (e) { console.error("Starting fresh data."); }
-    }
-    
-    // Load local storage first so the screen isn't empty, then fetch latest cloud data
-    loadData();
+      }, (err) => console.error(err));
 
-    function saveState() {
-      try {
-        localStorage.setItem('pick_all_adventures_db', JSON.stringify(state));
-        localStorage.setItem('pick_all_adventures_history', JSON.stringify(historyVault));
-      } catch(e) {}
-      render(); 
-      renderHistory();
-      syncToDatabase(); 
+      onSnapshot(historyRef, (docSnap) => {
+        if (docSnap.exists()) {
+          historyVault = docSnap.data().history || [];
+          renderHistory();
+        } else { saveHistory(); }
+      }, (err) => console.error(err));
     }
 
-    function switchTab(tabId) {
+    async function saveState() {
+      if (!currentUser) return;
+      const stateRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'currentState');
+      try { await setDoc(stateRef, state); } catch (e) { console.error("Error saving to cloud:", e); }
+    }
+
+    async function saveHistory() {
+      if (!currentUser) return;
+      const historyRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'historyVault');
+      try { await setDoc(historyRef, { history: historyVault }); } catch (e) { console.error("Error saving history:", e); }
+    }
+
+    // Badge Class Helper
+    function getBadgeClass(cat) {
+      if (cat === 'Beginner') return 'badge-beginner';
+      if (cat === 'Intermediate') return 'badge-intermediate';
+      if (cat === 'Advanced') return 'badge-advanced';
+      return 'badge-pro';
+    }
+
+    // UI HELPER FUNCTIONS
+    window.switchTab = function(tabId) {
       if (tabId === 'dashboard') {
         document.getElementById('view-dashboard').classList.remove('hidden-section');
         document.getElementById('view-history').classList.add('hidden-section');
@@ -402,44 +313,38 @@
         document.getElementById('btn-tab-history').classList.replace('bg-slate-700', 'bg-emerald-600');
         renderHistory();
       }
-    }
+    };
 
-    function showToast(message, type = 'success') {
+    window.showToast = function(message, type = 'success') {
       const container = document.getElementById('toast-container');
       const toast = document.createElement('div');
       const bg = type === 'success' ? 'bg-emerald-600' : (type === 'warn' ? 'bg-amber-500' : 'bg-red-600');
-      
       toast.className = `${bg} text-white px-4 py-3 rounded-lg shadow-lg text-sm font-bold transform transition-all duration-300 translate-y-4 opacity-0 flex items-center gap-2`;
       toast.innerHTML = `<span>${message}</span>`;
-      
       container.appendChild(toast);
-      
       setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 10);
-      setTimeout(() => {
-        toast.classList.add('opacity-0');
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }
+      setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+    };
 
-    function showModal(htmlContent) {
+    window.showModal = function(htmlContent) {
       const modal = document.getElementById('custom-modal');
       const box = document.getElementById('modal-content-box');
       document.getElementById('modal-body').innerHTML = htmlContent;
-      
       modal.classList.remove('hidden');
       void modal.offsetWidth; 
       modal.classList.remove('opacity-0');
       box.classList.remove('scale-95');
-    }
+    };
 
-    function hideModal() {
+    window.hideModal = function() {
       const modal = document.getElementById('custom-modal');
       const box = document.getElementById('modal-content-box');
       modal.classList.add('opacity-0');
       box.classList.add('scale-95');
       setTimeout(() => modal.classList.add('hidden'), 200);
-    }
+    };
 
+    // FORM SUBMISSION (Register Player)
     document.getElementById('player-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const nameInput = document.getElementById('player-name');
@@ -451,7 +356,8 @@
 
       const now = new Date();
       const timeInStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const expireTime = new Date(now.getTime() + 6 * 60 * 60 * 1000); // 6 hours
+      // SET TO 5 HOURS
+      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000);
       const timeOutStr = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const newPlayer = {
@@ -471,28 +377,25 @@
       state.queues[category].push(newPlayer.id);
       
       nameInput.value = '';
-      showToast(`${name} added to ${category} queue.`);
+      window.showToast(`${name} added to ${category} queue.`);
       saveState(); 
     });
 
-    function passTurn(playerId, category) {
+    window.passTurn = function(playerId, category) {
       const q = state.queues[category] || [];
       const idx = q.indexOf(playerId);
-      
-      if(idx > -1) {
-        if (idx < q.length - 1) {
+      if(idx > -1 && idx < q.length - 1) {
           const temp = q[idx];
           q[idx] = q[idx + 1];
           q[idx + 1] = temp;
           saveState();
-          showToast(`Passed turn. Stepped back in line.`);
-        } else {
-          showToast("Cannot pass. Nobody behind them in queue.", 'warn');
-        }
+          window.showToast(`Passed turn. Stepped back in line.`);
+      } else {
+          window.showToast("Cannot pass. Nobody behind them in queue.", 'warn');
       }
-    }
+    };
 
-    function removePlayerFromQueue(playerId, category) {
+    window.removePlayerFromQueue = function(playerId, category) {
       const q = state.queues[category] || [];
       const idx = q.indexOf(playerId);
       if(idx > -1) q.splice(idx, 1);
@@ -506,29 +409,33 @@
            if (c.currentMatch.length === 0) c.currentMatch = null;
         }
       });
-      
       saveState();
-      showToast("Player removed.");
-    }
+      window.showToast("Player removed.");
+    };
 
-    function togglePayment(playerId) {
+    window.togglePayment = function(playerId) {
       const player = state.players.find(p => p.id === playerId);
       if(player) {
         player.paid = !player.paid;
         saveState();
       }
-    }
+    };
 
-    function checkExpirations() {
+    // AUTO-REMOVE 5 HOUR EXPIRATION LOOP
+    setInterval(() => {
+      if(!isConnected) return; 
+      
       const now = Date.now();
       let changed = false;
       state.players.forEach(p => {
         if (!p.expireTimestamp) return; 
         
+        // If 5 hours have passed and they aren't marked expired yet
         if (!p.isExpired && now >= p.expireTimestamp) {
           p.isExpired = true;
           changed = true;
           
+          // Auto remove them from the queue line
           if (state.queues[p.category]) {
             const idx = state.queues[p.category].indexOf(p.id);
             if (idx > -1) state.queues[p.category].splice(idx, 1);
@@ -537,16 +444,15 @@
       });
       if (changed) {
         saveState();
-        showToast("Player(s) 6-hour limit reached.", "warn");
+        window.showToast("Player(s) 5-hour limit reached. Auto-removed from queue.", "warn");
       }
-    }
-    setInterval(checkExpirations, 60000);
+    }, 60000);
 
-    function extendTime(playerId) {
+    window.extendTime = function(playerId) {
       const player = state.players.find(p => p.id === playerId);
       if (player) {
         const now = new Date();
-        player.expireTimestamp = now.getTime() + (6 * 60 * 60 * 1000);
+        player.expireTimestamp = now.getTime() + (5 * 60 * 60 * 1000); // 5 hours
         player.timeOut = new Date(player.expireTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         player.isExpired = false;
         
@@ -554,35 +460,38 @@
         state.queues[player.category].push(player.id);
         
         saveState();
-        showToast(`${player.name} extended for 6 more hours.`);
+        window.showToast(`${player.name} extended for 5 more hours.`);
       }
-    }
+    };
 
-    function toggleCourtCategory(courtId) {
+    // Cycle through all 4 categories
+    window.toggleCourtCategory = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       if(court && !court.currentMatch) {
-        court.assignedCategory = court.assignedCategory === 'Beginner' ? 'Professional' : 'Beginner';
+        const cats = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
+        const currentIdx = cats.indexOf(court.assignedCategory);
+        court.assignedCategory = cats[(currentIdx + 1) % cats.length];
         saveState();
       }
-    }
+    };
 
-    function assignNextMatch(courtId) {
+    window.assignNextMatch = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       if(!court || court.isExclusive) return;
       const cat = court.assignedCategory;
       const queue = state.queues[cat] || [];
       
       if(queue.length < 4) { 
-        showToast(`Need at least 4 players in ${cat} queue.`, 'warn'); 
+        window.showToast(`Need at least 4 players in ${cat} queue.`, 'warn'); 
         return; 
       }
       
       court.currentMatch = queue.splice(0, 4);
       saveState();
-      showToast("Match assigned to " + court.name);
-    }
+      window.showToast("Match assigned to " + court.name);
+    };
 
-    function finishMatch(courtId) {
+    window.finishMatch = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       if(!court || !court.currentMatch) return;
       
@@ -591,6 +500,7 @@
         if(player) {
           player.gamesPlayed = (player.gamesPlayed || 0) + 1;
           
+          // Check expiration when match ends
           if (player.expireTimestamp && Date.now() >= player.expireTimestamp) {
              player.isExpired = true;
           }
@@ -605,10 +515,10 @@
       court.currentMatch = null;
       state.totalMatchesPlayed = (state.totalMatchesPlayed || 0) + 1;
       saveState();
-      showToast("Match finished. Players moved to back of line.");
-    }
+      window.showToast("Match finished. Players processed.");
+    };
 
-    function toggleExclusive(courtId) {
+    window.toggleExclusive = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       if(!court) return;
       
@@ -622,22 +532,21 @@
             <button onclick="executeExclusiveRent(${courtId})" class="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-bold">Confirm</button>
           </div>
         `;
-        showModal(content);
+        window.showModal(content);
         setTimeout(() => document.getElementById('renter-input').focus(), 100);
       } else {
         court.isExclusive = false;
         court.Renter = "";
         saveState();
-        showToast(`Exclusive rent ended.`);
+        window.showToast(`Exclusive rent ended.`);
       }
-    }
+    };
 
-    function executeExclusiveRent(courtId) {
+    window.executeExclusiveRent = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       const input = document.getElementById('renter-input');
       const renterName = input ? input.value.trim() : '';
-      
-      if (!renterName) { showToast("Name required.", "warn"); return; }
+      if (!renterName) { window.showToast("Name required.", "warn"); return; }
 
       if(court.currentMatch) {
         court.currentMatch.reverse().forEach(pId => {
@@ -650,29 +559,28 @@
       court.isExclusive = true;
       court.Renter = renterName;
       saveState();
-      hideModal();
-      showToast(`${court.name} reserved.`);
-    }
+      window.hideModal();
+      window.showToast(`${court.name} reserved.`);
+    };
 
-    function requestResetDailyData() {
+    window.requestResetDailyData = function() {
       if (state.players.length === 0) {
-        showToast("No data to archive yet.", "warn");
+        window.showToast("No data to archive yet.", "warn");
         return;
       }
-
       const content = `
         <h3 class="text-lg font-black text-white mb-2">End Day & Archive?</h3>
-        <p class="text-sm text-slate-400 mb-4">This packages today's logs into the Vault. <br><br><b>Important:</b> The app will ask you to save a backup to your Drive immediately after to prevent data loss.</p>
+        <p class="text-sm text-slate-400 mb-4">This packages today's logs into the Vault in the cloud. <br><br><b>Important:</b> The app will ask you to save a backup to your Drive immediately after to prevent data loss.</p>
         <div class="flex justify-end gap-3">
           <button onclick="hideModal()" class="px-4 py-3 rounded-lg bg-slate-700 text-white text-sm font-bold">Cancel</button>
           <button onclick="executeArchive()" class="px-4 py-3 rounded-lg bg-amber-600 text-white text-sm font-bold">Archive & Backup</button>
         </div>
       `;
-      showModal(content);
-    }
+      window.showModal(content);
+    };
 
-    async function executeArchive() {
-      hideModal();
+    window.executeArchive = async function() {
+      window.hideModal();
       const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
       const revenue = state.players.filter(p => p.paid).length * 150;
       
@@ -687,32 +595,25 @@
       };
 
       historyVault.unshift(sessionArchive);
+      saveHistory();
 
-      const backupSuccess = await exportFullBackup(true, false);
-      
-      if (backupSuccess) {
-          showToast("Backup to Drive successful! Clearing dashboard.");
-      } else {
-          showToast("Warning: Saved to Vault, but Drive backup was skipped.", "warn");
-      }
+      const backupSuccess = await window.exportFullBackup(true, false);
+      if (backupSuccess) window.showToast("Backup to Drive successful! Clearing dashboard.");
+      else window.showToast("Warning: Saved to Vault, but Drive backup was skipped.", "warn");
 
+      // Reset queues to include all 4 categories
       state = {
         players: [],
-        queues: { Beginner: [], Professional: [] },
+        queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] },
         courts: state.courts.map(c => ({...c, currentMatch: null, isExclusive: false, Renter: ""})),
         totalMatchesPlayed: 0
       };
       
       saveState();
-    }
+    };
 
-    async function exportFullBackup(isAutoTrigger = false, isQuickSave = false) {
-      const backupData = {
-        exportDate: new Date().toISOString(),
-        currentState: state,
-        history: historyVault
-      };
-
+    window.exportFullBackup = async function(isAutoTrigger = false, isQuickSave = false) {
+      const backupData = { exportDate: new Date().toISOString(), currentState: state, history: historyVault };
       const dataStr = JSON.stringify(backupData, null, 2);
       const fileName = `PickAllAdventures_Backup_${new Date().toISOString().split('T')[0]}.json`;
 
@@ -720,17 +621,12 @@
         try {
           const file = new File([dataStr], fileName, { type: "application/json" });
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: 'Pickleball App Backup',
-              text: isAutoTrigger ? 'End of Day Master Backup' : 'Manual Master Backup',
-              files: [file]
-            });
-            if(!isAutoTrigger) showToast("Backup saved to Drive successfully!");
+            await navigator.share({ title: 'Pickleball App Backup', text: isAutoTrigger ? 'End of Day Master Backup' : 'Manual Master Backup', files: [file] });
+            if(!isAutoTrigger) window.showToast("Backup saved to Drive successfully!");
             return true;
           }
         } catch (err) {
-          console.log("Mobile share canceled or failed.");
-          if(isQuickSave) showToast("Quick Save Cancelled.", "warn");
+          if(isQuickSave) window.showToast("Quick Save Cancelled.", "warn");
           return false;
         }
       }
@@ -744,11 +640,11 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      if(!isAutoTrigger) showToast("Backup file downloaded.");
+      if(!isAutoTrigger) window.showToast("Backup file downloaded.");
       return true;
-    }
+    };
 
-    function handleRestoreFile(event) {
+    window.handleRestoreFile = function(event) {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -759,41 +655,36 @@
           if (contents && contents.currentState && contents.history) {
             const content = `
               <h3 class="text-lg font-black text-red-400 mb-2">Warning: Restore Data?</h3>
-              <p class="text-sm text-slate-300 mb-4">This will OVERWRITE all current data on this device with the backup from <span class="font-bold text-white">${new Date(contents.exportDate).toLocaleDateString()}</span>.</p>
+              <p class="text-sm text-slate-300 mb-4">This will OVERWRITE the cloud database for everyone with the backup from <span class="font-bold text-white">${new Date(contents.exportDate).toLocaleDateString()}</span>.</p>
               <div class="flex justify-end gap-3">
                 <button onclick="hideModal()" class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-bold">Cancel</button>
                 <button id="confirm-restore-btn" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">OVERWRITE DATA</button>
               </div>
             `;
-            showModal(content);
-            
+            window.showModal(content);
             document.getElementById('confirm-restore-btn').onclick = function() {
               state = contents.currentState;
               historyVault = contents.history;
               saveState();
-              hideModal();
-              showToast("Data restored successfully!");
+              saveHistory();
+              window.hideModal();
+              window.showToast("Data restored to the cloud successfully!");
               document.getElementById('restore-file').value = ''; 
             };
-          } else {
-            showToast("Invalid backup file.", "error");
-          }
-        } catch (err) {
-          showToast("Error reading file.", "error");
-        }
+          } else { window.showToast("Invalid backup file.", "error"); }
+        } catch (err) { window.showToast("Error reading file.", "error"); }
       };
       reader.readAsText(file);
-    }
+    };
 
+    // RENDER FUNCTIONS
     function renderHistory() {
       const container = document.getElementById('history-list');
       if (!container) return;
-
       if (historyVault.length === 0) {
         container.innerHTML = `<p class="text-slate-500 text-sm italic p-4 text-center">No past days archived yet.</p>`;
         return;
       }
-
       container.innerHTML = historyVault.map(archive => `
         <div class="bg-slate-900 border border-slate-700 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -809,40 +700,28 @@
       `).join('');
     }
 
-    function viewArchivePlayers(archiveId) {
+    window.viewArchivePlayers = function(archiveId) {
       const archive = historyVault.find(a => a.id === archiveId);
       if (!archive) return;
-
       const playerRows = archive.players.map(p => `
         <tr class="border-b border-slate-700/50 text-xs">
-          <td class="p-2 text-white font-bold">
-            ${p.name}
-            <span class="block text-[9px] font-normal text-slate-500 mt-0.5">${p.timeIn} - ${p.timeOut || 'N/A'}</span>
-          </td>
+          <td class="p-2 text-white font-bold">${p.name}<span class="block text-[9px] font-normal text-slate-500 mt-0.5">${p.timeIn} - ${p.timeOut || 'N/A'}</span></td>
           <td class="p-2 text-slate-400">${p.category}</td>
           <td class="p-2 text-slate-400">${p.gamesPlayed} games</td>
           <td class="p-2 text-emerald-400">${p.paid ? 'Paid ₱150' : '<span class="text-red-400">Unpaid</span>'}</td>
-        </tr>
-      `).join('');
-
+        </tr>`).join('');
       const content = `
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-base font-black text-white">${archive.date} Log</h3>
           <button onclick="hideModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
         </div>
         <div class="max-h-64 overflow-y-auto bg-slate-900 rounded-lg border border-slate-700">
-          <table class="w-full text-left">
-            <tbody class="divide-y divide-slate-700/50">
-              ${playerRows}
-            </tbody>
-          </table>
+          <table class="w-full text-left"><tbody class="divide-y divide-slate-700/50">${playerRows}</tbody></table>
         </div>
-        <div class="mt-4 flex justify-end">
-          <button onclick="hideModal()" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-bold">Close</button>
-        </div>
+        <div class="mt-4 flex justify-end"><button onclick="hideModal()" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-bold">Close</button></div>
       `;
-      showModal(content);
-    }
+      window.showModal(content);
+    };
 
     function render() {
       let activeCount = 0;
@@ -876,7 +755,7 @@
               <div>
                 <div class="flex justify-between items-center mb-3">
                   <span class="font-black text-white text-sm">${court.name}</span>
-                  <button onclick="toggleCourtCategory(${court.id})" class="${court.assignedCategory === 'Beginner' ? 'badge-beginner' : 'badge-pro'} text-[9px] font-bold px-2 py-0.5 rounded uppercase shadow-sm">
+                  <button onclick="toggleCourtCategory(${court.id})" class="${getBadgeClass(court.assignedCategory)} text-[9px] font-bold px-2 py-0.5 rounded uppercase shadow-sm">
                     ${court.assignedCategory} ⚙
                   </button>
                 </div>
@@ -914,32 +793,20 @@
 
       const tableBody = document.getElementById('player-log-table');
       if (tableBody) {
-        const getPlayingCourt = (p) => {
-          return state.courts.find(c => c.currentMatch && c.currentMatch.includes(p.id));
-        };
+        const getPlayingCourt = (p) => state.courts.find(c => c.currentMatch && c.currentMatch.includes(p.id));
         
         let displayList = state.players.filter(p => !p.isExpired);
-        
         displayList.sort((a, b) => {
-          if (a.category !== b.category) {
-            return a.category.localeCompare(b.category); 
-          }
-          
-          const courtA = getPlayingCourt(a);
-          const courtB = getPlayingCourt(b);
-          
+          if (a.category !== b.category) return a.category.localeCompare(b.category); 
+          const courtA = getPlayingCourt(a), courtB = getPlayingCourt(b);
           if (courtA && !courtB) return -1; 
           if (!courtA && courtB) return 1;
-          
           if (!courtA && !courtB) {
              const qA = state.queues[a.category] ? state.queues[a.category].indexOf(a.id) : 999;
              const qB = state.queues[b.category] ? state.queues[b.category].indexOf(b.id) : 999;
              return qA - qB;
           }
-          
-          if (courtA && courtB) {
-            return courtA.name.localeCompare(courtB.name);
-          }
+          if (courtA && courtB) return courtA.name.localeCompare(courtB.name);
           return 0;
         });
 
@@ -948,31 +815,19 @@
           const qList = state.queues[p.category] || [];
           const qPos = qList.indexOf(p.id);
           
-          let lineStatus = '';
-          let statusText = '';
-          let statusColor = '';
-          let showPassButton = false;
-          
+          let lineStatus = '?', statusText = 'Unknown', statusColor = '', showPassButton = false;
           if (playingCourt) {
              lineStatus = `<span class="text-emerald-500 font-black text-[12px] uppercase">Active</span>`;
              statusText = `Playing - ${playingCourt.name}`;
              statusColor = 'text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded';
           } else if (qPos > -1) {
              const displayPos = qPos + 1;
-             if (displayPos <= 4) {
-                 lineStatus = `<span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-black text-xs">#${displayPos}</span>`;
-             } else {
-                 lineStatus = `<span class="text-slate-400 font-bold px-2 py-0.5 text-xs">#${displayPos}</span>`;
-             }
+             lineStatus = displayPos <= 4 
+                 ? `<span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-black text-xs">#${displayPos}</span>`
+                 : `<span class="text-slate-400 font-bold px-2 py-0.5 text-xs">#${displayPos}</span>`;
              statusText = `Waiting`;
              statusColor = 'text-slate-400';
-             
-             if (qPos < qList.length - 1) {
-                 showPassButton = true;
-             }
-          } else {
-             lineStatus = '?';
-             statusText = 'Unknown';
+             if (qPos < qList.length - 1) showPassButton = true;
           }
           
           return `
@@ -982,7 +837,7 @@
               ${p.name}
               <span class="block text-[9px] font-normal text-slate-400 mt-0.5">In: ${p.timeIn} <span class="text-slate-600">|</span> Out: ${p.timeOut || 'N/A'}</span>
             </td>
-            <td class="p-3 whitespace-nowrap"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
+            <td class="p-3 whitespace-nowrap"><span class="${getBadgeClass(p.category)} px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
             <td class="p-3 font-bold text-slate-300 text-center">${p.gamesPlayed || 0}</td>
             <td class="p-3 text-[11px] whitespace-nowrap"><span class="${statusColor}">${statusText}</span></td>
             <td class="p-3 text-center">
@@ -996,45 +851,35 @@
                 <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">✕</button>
               </div>
             </td>
-          </tr>
-        `}).join('');
-        
-        if(displayList.length === 0) {
-           tableBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-500 text-sm italic">No players in active queue.</td></tr>`;
-        }
+          </tr>`}).join('');
+        if(displayList.length === 0) tableBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-500 text-sm italic">No players in active queue.</td></tr>`;
       }
 
       const expiredTableBody = document.getElementById('expired-log-table');
       if (expiredTableBody) {
          let expiredList = state.players.filter(p => p.isExpired);
-         
-         expiredTableBody.innerHTML = expiredList.map(p => {
-            return `
+         expiredTableBody.innerHTML = expiredList.map(p => `
             <tr class="hover:bg-slate-700/30 transition group border-b border-slate-700/50 last:border-none">
               <td class="p-3 font-bold text-slate-400 whitespace-nowrap">
                 ${p.name}
                 <span class="block text-[9px] font-normal text-slate-500 mt-0.5">Time Out: ${p.timeOut}</span>
               </td>
-              <td class="p-3 whitespace-nowrap"><span class="${p.category === 'Beginner' ? 'badge-beginner' : 'badge-pro'} opacity-60 px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
+              <td class="p-3 whitespace-nowrap"><span class="${getBadgeClass(p.category)} opacity-60 px-2 py-1 rounded text-[9px] font-bold uppercase">${p.category}</span></td>
               <td class="p-3 font-bold text-slate-500 text-center">${p.gamesPlayed || 0}</td>
               <td class="p-3 text-right whitespace-nowrap">
                 <div class="flex gap-2 justify-end">
-                  <button onclick="extendTime('${p.id}')" class="bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">Extend (+6h)</button>
+                  <button onclick="extendTime('${p.id}')" class="bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">Extend (+5h)</button>
                   <button onclick="removePlayerFromQueue('${p.id}', '${p.category}')" class="bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">✕</button>
                 </div>
               </td>
-            </tr>
-            `;
-         }).join('');
-         
-         if(expiredList.length === 0) {
-           expiredTableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500 text-sm italic">No expired players.</td></tr>`;
-         }
+            </tr>`).join('');
+         if(expiredList.length === 0) expiredTableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500 text-sm italic">No expired players.</td></tr>`;
       }
     }
 
-    render(); 
-    fetchDatabaseOnLoad(); // Auto-pull from cloud on startup
+    render();
   </script>
 </body>
 </html>
+
+
