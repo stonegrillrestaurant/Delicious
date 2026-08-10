@@ -4,29 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LIVE QUEUE | Court Availability</title>
-  
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://stonegrillresto.net/pickle-dashboard/index.html">
-  <meta property="og:title" content="Live Queue">
-  <meta property="og:description" content="Pickleball Court availability">
-  
-  <meta property="og:image" content="https://stonegrillresto.net/pickle-dashboard/og-image.jpg">
-  <meta property="og:image:type" content="image/jpeg">
-  <meta property="og:image:alt" content="Live Pickleball Queue Dashboard">
-  
-  <link rel="manifest" href="/pickle-dashboard/manifest.json">
   <meta name="theme-color" content="#065f46">
-  <link rel="apple-touch-icon" href="/pickle-dashboard/pwa-icon.PNG">
-
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
     .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
     .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
-    
     .badge-open { background-color: #1e293b; color: #64748b; border: 1px dashed #334155; }
-    
     ::-webkit-scrollbar { display: none; }
     body { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
@@ -39,22 +24,21 @@
       <h1 class="text-sm sm:text-xl font-black tracking-widest text-white truncate">PUBLIC QUEUE & COURTS</h1>
     </div>
     <div class="flex items-center gap-3 sm:gap-5 flex-shrink-0 ml-2">
-      <div id="sync-status" class="hidden sm:flex text-[10px] text-emerald-500 font-black uppercase tracking-widest items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="sync-dot"></span> LIVE SYNC
+      <div id="sync-status" class="flex text-[10px] text-slate-500 font-black uppercase tracking-widest items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse" id="sync-dot"></span> 
+        <span id="sync-text">CONNECTING...</span>
       </div>
       <div id="clock" class="text-xl sm:text-3xl font-black text-emerald-400 tabular-nums tracking-tight">00:00</div>
     </div>
   </header>
 
   <main class="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-5 p-3 sm:p-5 overflow-y-auto lg:overflow-hidden">
-    
     <section class="w-full lg:w-[60%] flex flex-col gap-3 flex-shrink-0">
       <div class="flex items-center gap-2 mb-1 pl-1">
         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
         <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">Active Courts</h2>
       </div>
-      <div id="courts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-1">
-      </div>
+      <div id="courts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-1"></div>
     </section>
 
     <section class="w-full lg:w-[40%] flex flex-col gap-3 flex-1 lg:flex-none lg:overflow-hidden mt-2 lg:mt-0 pb-6 lg:pb-0">
@@ -62,15 +46,12 @@
         <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div>
         <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">On Deck / Waiting Line</h2>
       </div>
-
       <div class="bg-slate-900/80 rounded-2xl border border-slate-700 flex-1 overflow-hidden flex flex-col shadow-2xl">
         <div class="flex-1 overflow-y-auto">
-          <div id="waiting-list" class="flex flex-col">
-          </div>
+          <div id="waiting-list" class="flex flex-col"></div>
         </div>
       </div>
     </section>
-
   </main>
 
   <script type="module">
@@ -81,15 +62,13 @@
       document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
-    // PERFECTLY INTEGRATED FIREBASE KEYS FROM YOUR CONSOLE
     const firebaseConfig = {
       apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
       authDomain: "payroll-c4f0c.firebaseapp.com",
       projectId: "payroll-c4f0c",
       storageBucket: "payroll-c4f0c.firebasestorage.app",
       messagingSenderId: "427050362534",
-      appId: "1:427050362534:web:35d3b1c5eee26b3c417667",
-      measurementId: "G-ZQBJPH4WWY"
+      appId: "1:427050362534:web:35d3b1c5eee26b3c417667"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -98,15 +77,27 @@
     const stateRef = doc(db, 'pickleball', 'currentState');
 
     onSnapshot(stateRef, (docSnap) => {
+      const syncDot = document.getElementById('sync-dot');
+      const syncText = document.getElementById('sync-text');
+      syncDot.classList.replace('bg-slate-500', 'bg-emerald-500');
+      syncDot.classList.replace('bg-red-500', 'bg-emerald-500');
+      syncText.innerText = "🔥 CLOUD SYNC ACTIVE";
+      syncText.classList.replace('text-slate-500', 'text-emerald-500');
+      syncText.classList.replace('text-red-500', 'text-emerald-500');
+
       if (docSnap.exists()) {
         renderTVDisplay(docSnap.data());
       } else {
         renderTVDisplay({ courts: [], players: [], queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] }});
       }
     }, (err) => {
-        console.error("Firebase Sync Error:", err);
         const syncDot = document.getElementById('sync-dot');
-        if(syncDot) syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
+        const syncText = document.getElementById('sync-text');
+        syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
+        syncDot.classList.replace('bg-slate-500', 'bg-red-500');
+        syncText.innerText = "ERROR: DB BLOCKED";
+        syncText.classList.replace('text-emerald-500', 'text-red-500');
+        syncText.classList.replace('text-slate-500', 'text-red-500');
     });
 
     function getBadgeClass(cat) {
