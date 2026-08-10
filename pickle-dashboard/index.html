@@ -20,7 +20,6 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* 4 Categories Added */
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
     .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
@@ -113,7 +112,6 @@
       }
     });
 
-    // Helper to color format categories
     function getBadgeClass(cat) {
       if (cat === 'Beginner') return 'badge-beginner';
       if (cat === 'Intermediate') return 'badge-intermediate';
@@ -122,14 +120,25 @@
     }
 
     function renderTVDisplay(state) {
-      const courtsList = state.courts || [];
-      const playersList = state.players || [];
+      // Ensure we always have 4 courts structurally so the grid looks perfect
+      let courtsList = Array.isArray(state.courts) ? state.courts : [];
+      if (courtsList.length < 4) {
+         courtsList = [
+            { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+            { id: 2, name: "Court 2", assignedCategory: "Intermediate", currentMatch: null, isExclusive: false, Renter: "" },
+            { id: 3, name: "Court 3", assignedCategory: "Advanced", currentMatch: null, isExclusive: false, Renter: "" },
+            { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
+         ];
+      }
+      
+      const playersList = Array.isArray(state.players) ? state.players : [];
       const queues = state.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
 
       const courtsHTML = courtsList.map(c => {
          if (c.isExclusive) {
+             // Exact structure restored
              return `
-              <div class="bg-slate-800/90 rounded-2xl border-2 border-amber-500/40 p-4 sm:p-5 flex flex-col shadow-[0_0_15px_rgba(245,158,11,0.15)] relative overflow-hidden h-full">
+              <div class="bg-slate-800/90 rounded-2xl border-2 border-amber-500/40 p-4 sm:p-5 flex flex-col shadow-[0_0_15px_rgba(245,158,11,0.15)] relative overflow-hidden">
                  <div class="absolute inset-0 bg-amber-500/5"></div>
                  <div class="flex justify-between items-center mb-4 pl-1 relative z-10">
                     <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
@@ -147,8 +156,10 @@
 
          let playersHTML = '';
          if (!c.currentMatch || c.currentMatch.length === 0) {
-            playersHTML = `<div class="col-span-2 flex items-center justify-center text-slate-600 font-black text-xs sm:text-sm border-2 border-slate-700/50 border-dashed rounded-xl bg-slate-800/20 uppercase tracking-widest min-h-[60px] h-full">Court Available</div>`;
+            // Exact original empty state div
+            playersHTML = `<div class="col-span-2 flex items-center justify-center text-slate-600 font-black text-xs sm:text-sm border-2 border-slate-700/50 border-dashed rounded-xl bg-slate-800/20 uppercase tracking-widest min-h-[60px]">Court Available</div>`;
          } else {
+            // Exact original 2x2 grid inner div for players
             for(let i = 0; i < 4; i++) {
                const pId = c.currentMatch[i];
                const playerObj = pId ? playersList.find(p => p.id === pId) : null;
@@ -158,8 +169,9 @@
             }
          }
 
+         // Exact original wrapping structure
          return `
-          <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 sm:p-5 flex flex-col shadow-xl h-full">
+          <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 sm:p-5 flex flex-col shadow-xl">
              <div class="flex justify-between items-center mb-3 sm:mb-4 pl-1">
                 <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
                 ${badge}
@@ -177,7 +189,7 @@
          if (c.currentMatch) c.currentMatch.forEach(id => playingIds.add(id));
       });
 
-      // Show waiting list ONLY for non-expired players who aren't currently on the courts
+      // Filter and Sort Queue
       let waiting = playersList.filter(p => !p.isExpired && !playingIds.has(p.id));
 
       waiting.sort((a, b) => {
@@ -185,7 +197,7 @@
           let idxB = queues[b.category] ? queues[b.category].indexOf(b.id) : 999;
           
           if (idxA !== idxB) return idxA - idxB;
-          return a.id.localeCompare(b.id);
+          return (a.id || '').localeCompare(b.id || '');
       });
 
       if (waiting.length === 0) {
@@ -195,6 +207,7 @@
               <h3 class="font-black text-lg sm:text-xl tracking-widest uppercase">Queue is Empty</h3>
             </div>`;
       } else {
+         // Exact original waiting item HTML string replaced block by block
          document.getElementById('waiting-list').innerHTML = waiting.map((p, index) => {
             const rank = index + 1;
             const isTop4 = rank <= 4;
@@ -214,7 +227,7 @@
                <div class="flex-1 min-w-0">
                   <div class="font-black text-white text-lg sm:text-2xl leading-tight uppercase truncate tracking-wide">${p.name}</div>
                   <div class="flex items-center gap-2 sm:gap-3 mt-1 sm:mt-1.5 flex-wrap">
-                     <span class="${catBadge} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${p.category}</span>
+                     <span class="${catBadge} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${p.category.toUpperCase()}</span>
                      <span class="text-slate-400 text-xs sm:text-sm font-bold whitespace-nowrap">TIME IN: <span class="text-slate-300">${p.timeIn}</span></span>
                   </div>
                </div>
