@@ -5,13 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LIVE QUEUE | Court Availability</title>
   
-  <!-- Required Open Graph Tags -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://stonegrillresto.net/pickle-dashboard/index.html">
   <meta property="og:title" content="Live Queue">
   <meta property="og:description" content="Pickleball Court availability">
   
-  <!-- Pointing to your new .jpg image -->
   <meta property="og:image" content="https://stonegrillresto.net/pickle-dashboard/og-image.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:alt" content="Live Pickleball Queue Dashboard">
@@ -22,151 +20,116 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* 4 Categories Added */
     .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+    .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
     .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    
     .badge-open { background-color: #1e293b; color: #64748b; border: 1px dashed #334155; }
     
-    /* Hide scrollbar for a clean TV display but keep functionality */
     ::-webkit-scrollbar { display: none; }
     body { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<!-- min-h-screen for mobile scrolling, lg:h-screen for fixed TV view -->
 <body class="bg-slate-950 text-slate-100 font-sans flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
 
-  <!-- Responsive Header -->
   <header class="bg-slate-900 border-b border-slate-800 py-2.5 px-3 sm:px-5 flex justify-between items-center shrink-0 sticky top-0 z-50">
     <div class="flex items-center gap-2 sm:gap-3 overflow-hidden">
       <div class="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded text-[9px] sm:text-[11px] tracking-wider uppercase shadow-sm whitespace-nowrap">DISPLAY</div>
       <h1 class="text-sm sm:text-xl font-black tracking-widest text-white truncate">PUBLIC QUEUE & COURTS</h1>
     </div>
     <div class="flex items-center gap-3 sm:gap-5 flex-shrink-0 ml-2">
-      <div id="sync-status" class="hidden sm:flex text-[10px] text-slate-500 font-black uppercase tracking-widest items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse" id="sync-dot"></span> Syncing
+      <div id="sync-status" class="hidden sm:flex text-[10px] text-emerald-500 font-black uppercase tracking-widest items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="sync-dot"></span> LIVE SYNC
       </div>
       <div id="clock" class="text-xl sm:text-3xl font-black text-emerald-400 tabular-nums tracking-tight">00:00</div>
     </div>
   </header>
 
-  <!-- Main Content Area: Stacks on mobile, Side-by-Side on desktop -->
   <main class="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-5 p-3 sm:p-5 overflow-y-auto lg:overflow-hidden">
     
-    <!-- LEFT COLUMN / TOP: Active Courts -->
     <section class="w-full lg:w-[60%] flex flex-col gap-3 flex-shrink-0">
       <div class="flex items-center gap-2 mb-1 pl-1">
         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
         <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">Active Courts</h2>
       </div>
-      
-      <!-- Courts collapse to 1 column on very small phones, 2 columns on tablets+ -->
       <div id="courts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-1">
-        <!-- Court Cards injected here via JS -->
       </div>
     </section>
 
-    <!-- RIGHT COLUMN / BOTTOM: Waiting Queue -->
-    <!-- On mobile, this will expand fully down the page. On TV, it locks to the remaining height. -->
     <section class="w-full lg:w-[40%] flex flex-col gap-3 flex-1 lg:flex-none lg:overflow-hidden mt-2 lg:mt-0 pb-6 lg:pb-0">
       <div class="flex items-center gap-2 mb-1 pl-1">
         <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div>
         <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">On Deck / Waiting Line</h2>
       </div>
 
-      <!-- Queue Container -->
       <div class="bg-slate-900/80 rounded-2xl border border-slate-700 flex-1 overflow-hidden flex flex-col shadow-2xl">
         <div class="flex-1 overflow-y-auto">
           <div id="waiting-list" class="flex flex-col">
-            <!-- Waiting players injected here via JS -->
           </div>
         </div>
       </div>
     </section>
-
   </main>
 
-  <script>
-    const DATABASE_URL = "https://script.google.com/macros/s/AKfycbxpieHosDgAPmVFS9gSMUT0Igq_qNRxGHY9IhS--9unwCAzg3jATKZEgKPDLV9Z-F3Vqg/exec";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // 1. Update the live clock
     setInterval(() => {
       document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
-    // 2. Format the ugly 1899-12-30 Google Sheet Timestamp back into normal time
-    function formatSheetTime(timeStr) {
-      if (!timeStr) return '';
-      if (typeof timeStr === 'string' && timeStr.includes('T')) {
-        try {
-          const d = new Date(timeStr);
-          let hours = d.getUTCHours();
-          let minutes = d.getUTCMinutes();
-          const ampm = hours >= 12 ? 'PM' : 'AM';
-          hours = hours % 12;
-          hours = hours ? hours : 12; 
-          minutes = minutes < 10 ? '0' + minutes : minutes;
-          return `${hours}:${minutes} ${ampm}`;
-        } catch(e) {}
-      }
-      return timeStr; 
-    }
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    // 3. Fetch live data from Google Sheets
-    async function fetchLiveData() {
-      const syncDot = document.getElementById('sync-dot');
-      
+    const initAuth = async () => {
       try {
-        const response = await fetch(DATABASE_URL);
-        const players = await response.json();
-        
-        renderTVDisplay(players);
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+        else await signInAnonymously(auth);
+      } catch (err) { console.error("Auth error:", err); }
+    };
+    initAuth();
 
-        if(syncDot) {
-            syncDot.classList.replace('bg-slate-500', 'bg-emerald-500');
-            syncDot.classList.replace('bg-red-500', 'bg-emerald-500');
-        }
-      } catch (error) {
-        console.error("Failed to fetch queue data:", error);
-        if(syncDot) {
-            syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
-            syncDot.classList.replace('bg-slate-500', 'bg-red-500');
-        }
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const stateRef = doc(db, 'artifacts', appId, 'public', 'data', 'pickleball_data', 'currentState');
+        onSnapshot(stateRef, (docSnap) => {
+          if (docSnap.exists()) {
+            renderTVDisplay(docSnap.data());
+          } else {
+            renderTVDisplay({ courts: [], players: [], queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] }});
+          }
+        }, (err) => {
+            console.error("Firebase Sync Error:", err);
+            const syncDot = document.getElementById('sync-dot');
+            if(syncDot) syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
+        });
       }
+    });
+
+    // Helper to color format categories
+    function getBadgeClass(cat) {
+      if (cat === 'Beginner') return 'badge-beginner';
+      if (cat === 'Intermediate') return 'badge-intermediate';
+      if (cat === 'Advanced') return 'badge-advanced';
+      return 'badge-pro';
     }
 
-    // 4. Paint the Screen
-    function renderTVDisplay(players) {
-      const playing = players.filter(p => p.Status === 'Playing');
-      const waiting = players.filter(p => p.Status === 'Waiting');
-
-      // --- RENDER COURTS (Forcing 4 static courts) ---
-      const courtsList = [
-        { name: "Court 1", players: [], cat: "OPEN", isExclusive: false, renter: "" },
-        { name: "Court 2", players: [], cat: "OPEN", isExclusive: false, renter: "" },
-        { name: "Court 3", players: [], cat: "OPEN", isExclusive: false, renter: "" },
-        { name: "Court 4", players: [], cat: "OPEN", isExclusive: false, renter: "" }
-      ];
-
-      // Map playing players into their respective courts
-      playing.forEach(p => {
-        const court = courtsList.find(c => c.name === p.Assigned_Court);
-        if (court) {
-           if (p.Category === 'Exclusive') {
-               // If it's the ghost reservation player, mark the court as exclusive
-               court.isExclusive = true;
-               court.renter = p.Player_Name;
-           } else {
-               // Otherwise, it's a normal match
-               court.players.push(p);
-               court.cat = p.Category;
-           }
-        }
-      });
+    function renderTVDisplay(state) {
+      const courtsList = state.courts || [];
+      const playersList = state.players || [];
+      const queues = state.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
 
       const courtsHTML = courtsList.map(c => {
-         // NEW: Check if the court is exclusive first
          if (c.isExclusive) {
              return `
-              <div class="bg-slate-800/90 rounded-2xl border-2 border-amber-500/40 p-4 sm:p-5 flex flex-col shadow-[0_0_15px_rgba(245,158,11,0.15)] relative overflow-hidden">
+              <div class="bg-slate-800/90 rounded-2xl border-2 border-amber-500/40 p-4 sm:p-5 flex flex-col shadow-[0_0_15px_rgba(245,158,11,0.15)] relative overflow-hidden h-full">
                  <div class="absolute inset-0 bg-amber-500/5"></div>
                  <div class="flex justify-between items-center mb-4 pl-1 relative z-10">
                     <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
@@ -174,31 +137,29 @@
                  </div>
                  <div class="flex flex-col items-center justify-center flex-1 relative z-10 py-2">
                     <p class="text-[9px] sm:text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-1.5 opacity-80">Rented By</p>
-                    <p class="text-xl sm:text-2xl font-black text-white truncate px-2 text-center w-full">${c.renter}</p>
+                    <p class="text-xl sm:text-2xl font-black text-white truncate px-2 text-center w-full">${c.Renter}</p>
                  </div>
-              </div>
-             `;
+              </div>`;
          }
 
-         // Existing normal court rendering logic...
          let badge = `<span class="badge-open text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">OPEN</span>`;
-         if (c.cat === 'Beginner') badge = `<span class="badge-beginner text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">BEGINNER</span>`;
-         if (c.cat === 'Professional') badge = `<span class="badge-pro text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">PRO</span>`;
+         if (c.assignedCategory) badge = `<span class="${getBadgeClass(c.assignedCategory)} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">${c.assignedCategory.toUpperCase()}</span>`;
 
          let playersHTML = '';
-         if (c.players.length === 0) {
-            playersHTML = `<div class="col-span-2 flex items-center justify-center text-slate-600 font-black text-xs sm:text-sm border-2 border-slate-700/50 border-dashed rounded-xl bg-slate-800/20 uppercase tracking-widest min-h-[60px]">Court Available</div>`;
+         if (!c.currentMatch || c.currentMatch.length === 0) {
+            playersHTML = `<div class="col-span-2 flex items-center justify-center text-slate-600 font-black text-xs sm:text-sm border-2 border-slate-700/50 border-dashed rounded-xl bg-slate-800/20 uppercase tracking-widest min-h-[60px] h-full">Court Available</div>`;
          } else {
-            // Guarantee exactly 4 player blocks are drawn per court
             for(let i = 0; i < 4; i++) {
-               const pName = c.players[i] ? c.players[i].Player_Name : '---';
-               const textStyle = c.players[i] ? 'text-white bg-slate-700/80 shadow-md border-slate-600' : 'text-slate-600 bg-slate-800/30 border-slate-700/50 border-dashed';
+               const pId = c.currentMatch[i];
+               const playerObj = pId ? playersList.find(p => p.id === pId) : null;
+               const pName = playerObj ? playerObj.name : '---';
+               const textStyle = playerObj ? 'text-white bg-slate-700/80 shadow-md border-slate-600' : 'text-slate-600 bg-slate-800/30 border-slate-700/50 border-dashed';
                playersHTML += `<div class="border rounded-lg flex items-center justify-center p-2 sm:p-3 text-xs sm:text-sm font-black uppercase text-center truncate ${textStyle}">${pName}</div>`;
             }
          }
 
          return `
-          <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 sm:p-5 flex flex-col shadow-xl">
+          <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 sm:p-5 flex flex-col shadow-xl h-full">
              <div class="flex justify-between items-center mb-3 sm:mb-4 pl-1">
                 <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
                 ${badge}
@@ -206,17 +167,31 @@
              <div class="grid grid-cols-2 gap-2 sm:gap-3 flex-1">
                 ${playersHTML}
              </div>
-          </div>
-         `;
+          </div>`;
       }).join('');
 
       document.getElementById('courts-grid').innerHTML = courtsHTML;
 
-      // --- RENDER WAITING QUEUE ---
+      const playingIds = new Set();
+      courtsList.forEach(c => {
+         if (c.currentMatch) c.currentMatch.forEach(id => playingIds.add(id));
+      });
+
+      // Show waiting list ONLY for non-expired players who aren't currently on the courts
+      let waiting = playersList.filter(p => !p.isExpired && !playingIds.has(p.id));
+
+      waiting.sort((a, b) => {
+          let idxA = queues[a.category] ? queues[a.category].indexOf(a.id) : 999;
+          let idxB = queues[b.category] ? queues[b.category].indexOf(b.id) : 999;
+          
+          if (idxA !== idxB) return idxA - idxB;
+          return a.id.localeCompare(b.id);
+      });
+
       if (waiting.length === 0) {
          document.getElementById('waiting-list').innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-slate-600 p-10 text-center min-h-[200px]">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 sm:w-16 sm:h-16 mb-4 opacity-50" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M4.285 12.433a.5.5 0 0 0 .683-.183A3.498 3.498 0 0 1 8 10.5c1.295 0 2.426.703 3.032 1.75a.5.5 0 0 0 .866-.5A4.498 4.498 0 0 0 8 9.5a4.5 4.5 0 0 0-3.898 2.25.5.5 0 0 0 .183.683zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm4 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5z"/></svg>
+            <div class="flex flex-col items-center justify-center h-full text-slate-600 p-10 text-center min-h-[200px] flex-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 sm:w-16 sm:h-16 mb-4 opacity-50 mx-auto" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M4.285 12.433a.5.5 0 0 0 .683-.183A3.498 3.498 0 0 1 8 10.5c1.295 0 2.426.703 3.032 1.75a.5.5 0 0 0 .866-.5A4.498 4.498 0 0 0 8 9.5a4.5 4.5 0 0 0-3.898 2.25.5.5 0 0 0 .183.683zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm4 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5z"/></svg>
               <h3 class="font-black text-lg sm:text-xl tracking-widest uppercase">Queue is Empty</h3>
             </div>`;
       } else {
@@ -224,14 +199,12 @@
             const rank = index + 1;
             const isTop4 = rank <= 4;
             
-            // Highlight the next 4 players up so they get ready
             const rankStyle = isTop4 
                ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]' 
                : 'bg-slate-800 text-slate-500 border-slate-700';
             
             const bgStyle = isTop4 ? 'bg-slate-800/80 border-l-4 border-l-amber-500' : 'bg-transparent border-l-4 border-l-transparent';
-            const catBadge = p.Category === 'Beginner' ? 'badge-beginner' : 'badge-pro';
-            const timeFormatted = formatSheetTime(p.Time_In);
+            const catBadge = getBadgeClass(p.category);
 
             return `
             <div class="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border-b border-slate-800 ${bgStyle} transition-colors">
@@ -239,21 +212,18 @@
                  #${rank}
                </div>
                <div class="flex-1 min-w-0">
-                  <div class="font-black text-white text-lg sm:text-2xl leading-tight uppercase truncate tracking-wide">${p.Player_Name}</div>
+                  <div class="font-black text-white text-lg sm:text-2xl leading-tight uppercase truncate tracking-wide">${p.name}</div>
                   <div class="flex items-center gap-2 sm:gap-3 mt-1 sm:mt-1.5 flex-wrap">
-                     <span class="${catBadge} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${p.Category}</span>
-                     <span class="text-slate-400 text-xs sm:text-sm font-bold whitespace-nowrap">TIME IN: <span class="text-slate-300">${timeFormatted}</span></span>
+                     <span class="${catBadge} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${p.category}</span>
+                     <span class="text-slate-400 text-xs sm:text-sm font-bold whitespace-nowrap">TIME IN: <span class="text-slate-300">${p.timeIn}</span></span>
                   </div>
                </div>
-            </div>
-            `;
+            </div>`;
          }).join('');
       }
     }
-
-    // Initial fetch, then ping the spreadsheet every 4 seconds
-    fetchLiveData();
-    setInterval(fetchLiveData, 4000);
   </script>
 </body>
 </html>
+
+
