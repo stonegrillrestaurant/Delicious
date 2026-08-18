@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Pickleball Court Queuing Kiosk</title>
+  <title>Courtside Gatherings - Court Queuing Kiosk</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons CDN -->
@@ -13,19 +13,20 @@
       theme: {
         extend: {
           colors: {
-            volt: '#ccff00',
-            'volt-dark': '#a6d200',
-            court: '#0284c7',
-            darkbg: '#0b0f19',
-            surface: '#161e2e',
-            'surface-light': '#232d42'
+            /* Courtside Gatherings Brand Palette */
+            volt: '#9bc53d',
+            'volt-dark': '#82a82d',
+            court: '#1e3a5f',
+            darkbg: '#0c121e',
+            surface: '#151f32',
+            'surface-light': '#1e2c45'
           }
         }
       }
     }
   </script>
   <style>
-    /* Kiosk Touch Enhancements */
+    /* Kiosk Touch Optimization */
     * {
       -webkit-tap-highlight-color: transparent;
       user-select: none;
@@ -35,7 +36,7 @@
       height: 6px;
     }
     ::-webkit-scrollbar-thumb {
-      background: #334155;
+      background: #24334d;
       border-radius: 9999px;
     }
   </style>
@@ -43,56 +44,55 @@
 <body class="bg-darkbg text-slate-100 min-h-screen flex flex-col font-sans overflow-x-hidden">
 
   <!-- ================= TOP KIOSK HEADER ================= -->
-<header class="bg-surface border-b border-slate-800 px-8 py-4 flex items-center justify-between shadow-xl">
-  <div class="flex items-center space-x-4">
-    <!-- Replace the placeholder zap icon with your image -->
-    <div class="w-14 h-14 rounded-full overflow-hidden bg-white p-1 border-2 border-volt shadow-lg shadow-volt/20 flex items-center justify-center shrink-0">
-      <img 
-        src="IMG_4180.png" 
-        alt="Courtside Gatherings Logo" 
-        class="w-full h-full object-contain"
-      />
+  <header class="bg-surface border-b border-slate-800 px-8 py-4 flex items-center justify-between shadow-xl">
+    <div class="flex items-center space-x-4">
+      <!-- Courtside Gatherings Circular Badge Logo -->
+      <div class="w-14 h-14 rounded-full overflow-hidden bg-white p-1 border-2 border-volt shadow-lg shadow-volt/20 flex items-center justify-center shrink-0">
+        <img 
+          src="/pagibig-form/IMG_4180.png" 
+          alt="Courtside Gatherings Logo" 
+          class="w-full h-full object-contain"
+        />
+      </div>
+      <div>
+        <h1 class="text-2xl font-black tracking-wider uppercase text-white flex items-center gap-2">
+          Courtside <span class="text-volt font-normal text-lg">Gatherings</span>
+        </h1>
+        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+          Pickleball • Community • Connection
+        </p>
+      </div>
     </div>
-    <div>
-      <h1 class="text-2xl font-black tracking-wider uppercase text-white flex items-center gap-2">
-        Courtside <span class="text-volt font-normal text-lg">Gatherings</span>
-      </h1>
-      <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-        Pickleball • Community • Connection
-      </p>
-    </div>
-  </div>
 
-  <!-- Live Stats Bar -->
-  <div class="hidden md:flex items-center space-x-6 bg-darkbg/80 border border-slate-800 rounded-2xl px-6 py-2.5">
-    <div class="text-center">
-      <p class="text-[10px] uppercase font-bold text-slate-400">Available</p>
-      <p id="stat-available" class="text-lg font-black text-volt">2 Courts</p>
+    <!-- Live Court Metrics -->
+    <div class="hidden md:flex items-center space-x-6 bg-darkbg/90 border border-slate-800 rounded-2xl px-6 py-2.5 shadow-inner">
+      <div class="text-center">
+        <p class="text-[10px] uppercase font-bold text-slate-400">Available</p>
+        <p id="stat-available" class="text-lg font-black text-volt">2 Courts</p>
+      </div>
+      <div class="h-6 w-px bg-slate-800"></div>
+      <div class="text-center">
+        <p class="text-[10px] uppercase font-bold text-slate-400">In Play</p>
+        <p id="stat-occupied" class="text-lg font-black text-amber-400">4 Courts</p>
+      </div>
+      <div class="h-6 w-px bg-slate-800"></div>
+      <div class="text-center">
+        <p class="text-[10px] uppercase font-bold text-slate-400">In Queue</p>
+        <p id="stat-queue" class="text-lg font-black text-sky-400">4 Players</p>
+      </div>
     </div>
-    <div class="h-6 w-px bg-slate-800"></div>
-    <div class="text-center">
-      <p class="text-[10px] uppercase font-bold text-slate-400">In Play</p>
-      <p id="stat-occupied" class="text-lg font-black text-amber-400">4 Courts</p>
-    </div>
-    <div class="h-6 w-px bg-slate-800"></div>
-    <div class="text-center">
-      <p class="text-[10px] uppercase font-bold text-slate-400">Waiting Queue</p>
-      <p id="stat-queue" class="text-lg font-black text-court">4 Players</p>
-    </div>
-  </div>
 
-  <!-- Live Clock & Reset -->
-  <div class="flex items-center space-x-4">
-    <div class="text-right">
-      <div id="live-time" class="text-xl font-black tracking-tight text-white">12:00:00 PM</div>
-      <div id="live-date" class="text-xs text-slate-400 font-medium">Loading Date...</div>
+    <!-- Live Clock & Reset -->
+    <div class="flex items-center space-x-4">
+      <div class="text-right">
+        <div id="live-time" class="text-xl font-black tracking-tight text-white">12:00:00 PM</div>
+        <div id="live-date" class="text-xs text-slate-400 font-medium">Loading Date...</div>
+      </div>
+      <button onclick="resetKiosk()" title="Reset Screen" class="p-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl transition border border-slate-700/60">
+        <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+      </button>
     </div>
-    <button onclick="resetKiosk()" class="p-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl transition">
-      <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-    </button>
-  </div>
-</header>
-
+  </header>
 
   <!-- ================= MAIN WORKFLOW CONTAINER ================= -->
   <main class="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full">
@@ -105,7 +105,7 @@
             <span>Select an Open Court</span>
             <span class="text-xs bg-volt/20 text-volt px-3 py-1 rounded-full uppercase font-bold border border-volt/30">Step 1 of 3</span>
           </h2>
-          <p class="text-sm text-slate-400">Tap an available court to book or view queue availability.</p>
+          <p class="text-sm text-slate-400">Tap any available court to claim or set up a match challenge.</p>
         </div>
 
         <!-- Filter Chips -->
@@ -119,27 +119,27 @@
 
       <!-- Court Grid -->
       <div id="court-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Rendered dynamically by JavaScript -->
+        <!-- Injected via JavaScript -->
       </div>
     </section>
 
-    <!-- STEP 2: OPPONENT & MATCH SETUP (HIDDEN INITIALLY) -->
+    <!-- STEP 2: MATCH SETUP & OPPONENT SELECTION -->
     <section id="step-2" class="hidden space-y-6">
       <div class="flex items-center justify-between bg-surface p-4 rounded-2xl border border-slate-800">
-        <button onclick="goToStep(1)" class="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white transition bg-slate-800/60 px-4 py-2.5 rounded-xl">
+        <button onclick="goToStep(1)" class="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white transition bg-slate-800/80 px-4 py-2.5 rounded-xl">
           <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Courts
         </button>
         <div class="text-center">
-          <span class="text-xs uppercase tracking-widest text-slate-400 font-bold">Selected Court</span>
-          <p id="step2-court-name" class="text-lg font-black text-volt">Court 1 (Full Court)</p>
+          <span class="text-xs uppercase tracking-widest text-slate-400 font-bold">Selected Location</span>
+          <p id="step2-court-name" class="text-lg font-black text-volt">Court 1</p>
         </div>
         <span class="text-xs bg-volt/20 text-volt px-3 py-1 rounded-full uppercase font-bold border border-volt/30">Step 2 of 3</span>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Left: Match Options -->
+        <!-- Left: Match Type Selection -->
         <div class="lg:col-span-1 space-y-5 bg-surface border border-slate-800 p-6 rounded-3xl">
-          <h3 class="text-lg font-black text-white">1. Choose Format</h3>
+          <h3 class="text-lg font-black text-white">1. Select Game Format</h3>
           
           <div class="grid grid-cols-2 gap-3">
             <button id="format-doubles" onclick="setMatchFormat('Doubles')" class="match-format-btn active-format p-4 rounded-2xl border-2 border-volt bg-volt/10 text-left transition flex flex-col justify-between">
@@ -159,16 +159,14 @@
           </div>
 
           <div class="pt-4 border-t border-slate-800">
-            <h3 class="text-lg font-black text-white mb-2">2. Match Style</h3>
-            <div class="space-y-2.5">
-              <button onclick="selectOpenPlay()" class="w-full p-4 rounded-2xl border border-volt/30 bg-volt/5 hover:bg-volt/10 transition text-left flex items-center justify-between group">
-                <div>
-                  <p class="font-bold text-volt text-sm">Create Open Lobby</p>
-                  <p class="text-xs text-slate-400">Let any waiting players join your court</p>
-                </div>
-                <i data-lucide="plus-circle" class="w-5 h-5 text-volt group-hover:scale-110 transition"></i>
-              </button>
-            </div>
+            <h3 class="text-lg font-black text-white mb-2">2. Match Queue Mode</h3>
+            <button onclick="selectOpenPlay()" class="w-full p-4 rounded-2xl border border-volt/30 bg-volt/5 hover:bg-volt/10 transition text-left flex items-center justify-between group">
+              <div>
+                <p class="font-bold text-volt text-sm">Create Open Match Lobby</p>
+                <p class="text-xs text-slate-400">Allow any waiting players to join your game</p>
+              </div>
+              <i data-lucide="plus-circle" class="w-5 h-5 text-volt group-hover:scale-110 transition"></i>
+            </button>
           </div>
         </div>
 
@@ -176,8 +174,8 @@
         <div class="lg:col-span-2 space-y-4 bg-surface border border-slate-800 p-6 rounded-3xl flex flex-col">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-black text-white">Or Challenge Waiting Players</h3>
-              <p class="text-xs text-slate-400">Select players currently in the queue lobby to start right away.</p>
+              <h3 class="text-lg font-black text-white">Challenge Waiting Players</h3>
+              <p class="text-xs text-slate-400">Directly challenge an opponent or team waiting in the lobby.</p>
             </div>
             <span id="queue-count-badge" class="text-xs bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-xl border border-slate-700">4 in queue</span>
           </div>
@@ -190,7 +188,7 @@
       </div>
     </section>
 
-    <!-- STEP 3: PLAYER IDENTIFICATION / TOUCH KEYPAD MODAL (HIDDEN) -->
+    <!-- STEP 3: PLAYER IDENTIFICATION / TOUCH KEYPAD -->
     <section id="step-3" class="hidden max-w-xl mx-auto space-y-6">
       <div class="bg-surface border border-slate-800 p-8 rounded-3xl shadow-2xl space-y-6">
         <div class="flex items-center justify-between">
@@ -202,19 +200,19 @@
 
         <div class="text-center space-y-1">
           <h2 class="text-2xl font-black text-white">Player Check-In</h2>
-          <p class="text-xs text-slate-400">Enter your Member ID / PIN or Player Name</p>
+          <p class="text-xs text-slate-400">Enter your Member PIN or select a player profile</p>
         </div>
 
-        <!-- Touch Display Field -->
+        <!-- PIN Display Field -->
         <div class="bg-darkbg border-2 border-slate-700 focus-within:border-volt rounded-2xl p-4 flex items-center justify-between transition">
           <div class="flex items-center gap-3">
-            <i data-lucide="credit-card" class="w-6 h-6 text-volt"></i>
+            <i data-lucide="shield-check" class="w-6 h-6 text-volt"></i>
             <span id="pin-display" class="text-2xl font-black tracking-widest text-white">_ _ _ _</span>
           </div>
           <button onclick="clearPin()" class="text-xs font-bold uppercase text-slate-400 hover:text-red-400 px-2 py-1">Clear</button>
         </div>
 
-        <!-- Quick Player Name Presets for Fast Kiosk Demo -->
+        <!-- Fast Member Buttons -->
         <div>
           <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Quick Select Member:</p>
           <div class="grid grid-cols-3 gap-2">
@@ -224,13 +222,13 @@
             <button onclick="setPlayerFast('Sarah T. (3.5)')" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-bold text-slate-200 py-2.5 px-3 rounded-xl border border-slate-700 text-center">
               Sarah T.
             </button>
-            <button onclick="setPlayerFast('Guest Player')" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-bold text-slate-200 py-2.5 px-3 rounded-xl border border-slate-700 text-center">
+            <button onclick="setPlayerFast('Guest Member')" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-bold text-slate-200 py-2.5 px-3 rounded-xl border border-slate-700 text-center">
               + Guest
             </button>
           </div>
         </div>
 
-        <!-- On-Screen Touch Numpad -->
+        <!-- Touch Numpad -->
         <div class="grid grid-cols-3 gap-3 pt-2">
           <button onclick="pressNum('1')" class="h-14 bg-slate-800 hover:bg-slate-700 active:bg-volt active:text-darkbg font-black text-xl rounded-2xl transition border border-slate-700/50">1</button>
           <button onclick="pressNum('2')" class="h-14 bg-slate-800 hover:bg-slate-700 active:bg-volt active:text-darkbg font-black text-xl rounded-2xl transition border border-slate-700/50">2</button>
@@ -251,35 +249,34 @@
         </div>
 
         <button onclick="confirmBooking()" class="w-full py-4 bg-volt hover:bg-volt-dark text-darkbg font-black text-lg rounded-2xl shadow-xl shadow-volt/20 transition active:scale-98 uppercase tracking-wider flex items-center justify-center gap-2">
-          <span>Confirm & Issue Ticket</span>
+          <span>Confirm & Claim Court</span>
           <i data-lucide="arrow-right" class="w-5 h-5"></i>
         </button>
       </div>
     </section>
 
-    <!-- STEP 4: BOARDING PASS / CONFIRMATION (HIDDEN) -->
+    <!-- STEP 4: BOARDING PASS & CONFIRMATION -->
     <section id="step-4" class="hidden max-w-xl mx-auto space-y-6">
       <div class="bg-gradient-to-b from-surface to-darkbg border-2 border-volt p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-        <!-- Top Glow -->
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-2 bg-volt shadow-lg shadow-volt"></div>
 
         <div class="text-center space-y-2 pb-6 border-b border-dashed border-slate-700">
           <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-volt/20 text-volt mb-2">
             <i data-lucide="badge-check" class="w-8 h-8"></i>
           </div>
-          <h2 class="text-3xl font-black text-white tracking-tight">Court Reserved!</h2>
-          <p class="text-xs text-slate-400">Present this ticket or head straight to your court.</p>
+          <h2 class="text-3xl font-black text-white tracking-tight">Court Confirmed!</h2>
+          <p class="text-xs text-slate-400">Your match is active on the club dashboard.</p>
         </div>
 
         <!-- Ticket Details -->
         <div class="py-6 space-y-4">
-          <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between">
+          <div class="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex items-center justify-between">
             <div>
               <p class="text-xs uppercase font-bold text-slate-400">Assigned Court</p>
               <h3 id="ticket-court-name" class="text-2xl font-black text-volt">Court 1</h3>
             </div>
             <div class="text-right">
-              <p class="text-xs uppercase font-bold text-slate-400">Match Duration</p>
+              <p class="text-xs uppercase font-bold text-slate-400">Standard Duration</p>
               <h3 class="text-lg font-black text-white">25 Mins</h3>
             </div>
           </div>
@@ -294,23 +291,23 @@
               <span id="ticket-opponent" class="font-bold text-volt">Open Challenge</span>
             </div>
             <div class="bg-surface p-3.5 rounded-xl border border-slate-800">
-              <span class="text-[10px] uppercase font-bold text-slate-400 block">Format</span>
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Match Format</span>
               <span id="ticket-format" class="font-bold text-white">Doubles (2v2)</span>
             </div>
             <div class="bg-surface p-3.5 rounded-xl border border-slate-800">
-              <span class="text-[10px] uppercase font-bold text-slate-400 block">Match ID</span>
-              <span id="ticket-id" class="font-bold font-mono text-slate-300">#PKL-8492</span>
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Ticket Ref</span>
+              <span id="ticket-id" class="font-bold font-mono text-slate-300">#CG-8492</span>
             </div>
           </div>
         </div>
 
-        <!-- Auto reset banner -->
+        <!-- Auto-Reset Countdown -->
         <div class="pt-4 border-t border-slate-800 text-center space-y-4">
           <p class="text-xs text-slate-400">
-            Screen resetting for next player in <span id="reset-counter" class="text-volt font-bold">12</span>s
+            Kiosk returning to home in <span id="reset-counter" class="text-volt font-bold">12</span>s
           </p>
           <button onclick="resetKiosk()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition uppercase tracking-wider text-xs">
-            Finish & Return to Home
+            Finish & Return Home
           </button>
         </div>
       </div>
@@ -318,16 +315,16 @@
 
   </main>
 
-  <!-- ================= FOOTER / ASSISTANCE ================= -->
-  <footer class="bg-surface/60 border-t border-slate-800/80 px-8 py-3.5 flex flex-wrap items-center justify-between text-xs text-slate-500">
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-surface/60 border-t border-slate-800/80 px-8 py-3.5 flex flex-wrap items-center justify-between text-xs text-slate-400">
     <div class="flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-      <span>Kiosk Station — Courtyard Gatherings</span>
+      <span class="w-2 h-2 rounded-full bg-volt animate-pulse"></span>
+      <span>Courtside Gatherings • Kiosk Station #01</span>
     </div>
     <div class="flex items-center gap-4">
-      <span>Rules: Standard USAPA Games</span>
+      <span>Standard USAPA 11-point Games</span>
       <span>•</span>
-      <span class="text-slate-400">Need help? Tap front desk intercom</span>
+      <span class="text-slate-400">Need assistance? Please contact the front desk.</span>
     </div>
   </footer>
 
@@ -336,11 +333,11 @@
     // --- Application State ---
     const state = {
       courts: [
-        { id: 1, name: 'Court 1 (Championship)', type: 'doubles', status: 'available', timeRemaining: 0, currentPlayers: [] },
+        { id: 1, name: 'Court 1 (Main Court)', type: 'doubles', status: 'available', timeRemaining: 0, currentPlayers: [] },
         { id: 2, name: 'Court 2 (North)', type: 'doubles', status: 'in-play', timeRemaining: 14, currentPlayers: ['Marcus (4.0)', 'Elena (3.5)', 'David (4.0)', 'Leo (3.5)'] },
         { id: 3, name: 'Court 3 (Central)', type: 'singles', status: 'in-play', timeRemaining: 8, currentPlayers: ['Jhie (4.5)', 'Raffy (4.5)'] },
         { id: 4, name: 'Court 4 (South)', type: 'doubles', status: 'available', timeRemaining: 0, currentPlayers: [] },
-        { id: 5, name: 'Court 5 (Dink/Practice)', type: 'singles', status: 'in-play', timeRemaining: 19, currentPlayers: ['Nel B. (3.0)', 'Alex K. (3.0)'] },
+        { id: 5, name: 'Court 5 (Dink Practice)', type: 'singles', status: 'in-play', timeRemaining: 19, currentPlayers: ['Nel B. (3.0)', 'Alex K. (3.0)'] },
         { id: 6, name: 'Court 6 (Covered)', type: 'doubles', status: 'maintenance', timeRemaining: 0, currentPlayers: [] }
       ],
       queue: [
@@ -382,7 +379,7 @@
       document.getElementById('queue-count-badge').textContent = `${state.queue.length} in queue`;
     }
 
-    // --- Render Court Grid ---
+    // --- Render Court Cards ---
     function renderCourts() {
       const grid = document.getElementById('court-grid');
       grid.innerHTML = '';
@@ -400,12 +397,10 @@
 
         let badge = `<span class="bg-slate-800 text-slate-400 text-xs px-3 py-1 rounded-full font-bold uppercase">Maintenance</span>`;
         let borderClass = "border-slate-800 opacity-60";
-        let buttonAction = "";
 
         if (isAvail) {
           badge = `<span class="bg-volt/20 text-volt border border-volt/30 text-xs px-3 py-1 rounded-full font-bold uppercase flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-volt animate-ping"></span> Available</span>`;
           borderClass = "border-volt/40 hover:border-volt bg-surface hover:shadow-volt/10 hover:shadow-xl cursor-pointer";
-          buttonAction = `onclick="selectCourt(${court.id})"`;
         } else if (isPlay) {
           badge = `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs px-3 py-1 rounded-full font-bold uppercase">In Play (${court.timeRemaining}m left)</span>`;
           borderClass = "border-slate-800 bg-surface/80";
@@ -424,26 +419,26 @@
             <h3 class="text-xl font-black text-white mb-2">${court.name}</h3>
             
             ${isPlay ? `
-              <div class="bg-darkbg/80 rounded-xl p-3 border border-slate-800 my-3">
-                <p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Active Players</p>
+              <div class="bg-darkbg/90 rounded-xl p-3 border border-slate-800 my-3">
+                <p class="text-[10px] uppercase font-bold text-slate-400 mb-1">Active Players</p>
                 <p class="text-xs font-semibold text-slate-300 truncate">${court.currentPlayers.join(' • ')}</p>
               </div>
             ` : ''}
           </div>
 
-          <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+          <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
             ${isAvail ? `
               <span class="text-xs text-volt font-bold flex items-center gap-1">
-                <i data-lucide="touchpad" class="w-4 h-4"></i> Tap to Book
+                <i data-lucide="touchpad" class="w-4 h-4"></i> Tap to Claim
               </span>
               <button class="bg-volt text-darkbg font-black text-xs px-4 py-2 rounded-xl uppercase tracking-wider shadow-md hover:bg-volt-dark">
                 Claim Court
               </button>
             ` : isPlay ? `
-              <span class="text-xs text-slate-400 font-medium">Est. Next Open: ~${court.timeRemaining} min</span>
-              <button onclick="event.stopPropagation(); alert('Queue alert set! We will notify the board when Court ${court.id} finishes.');" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3 py-1.5 rounded-lg">Notify</button>
+              <span class="text-xs text-slate-400 font-medium">Estimated: ~${court.timeRemaining} min</span>
+              <button onclick="event.stopPropagation(); alert('Alert registered for Court ${court.id}');" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3 py-1.5 rounded-lg border border-slate-700">Notify Me</button>
             ` : `
-              <span class="text-xs text-slate-500 font-medium">Under routine maintenance</span>
+              <span class="text-xs text-slate-500 font-medium">Scheduled Court Maintenance</span>
             `}
           </div>
         `;
@@ -460,7 +455,7 @@
 
       state.queue.forEach(p => {
         const item = document.createElement('div');
-        item.className = "bg-darkbg/90 hover:bg-darkbg border border-slate-800 hover:border-slate-700 p-4 rounded-2xl flex items-center justify-between transition group";
+        item.className = "bg-darkbg/90 hover:bg-darkbg border border-slate-800 hover:border-slate-700 p-4 rounded-2xl flex items-center justify-between transition";
         item.innerHTML = `
           <div class="flex items-center space-x-3.5">
             <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-black text-volt text-sm">
@@ -471,10 +466,10 @@
                 ${p.name}
                 <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-semibold">${p.format}</span>
               </p>
-              <p class="text-xs text-slate-500">Waiting for: <span class="text-slate-300">${p.waitTime}</span></p>
+              <p class="text-xs text-slate-400">Waiting for: <span class="text-slate-300 font-semibold">${p.waitTime}</span></p>
             </div>
           </div>
-          <button onclick="challengePlayer('${p.name}')" class="bg-court hover:bg-sky-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition active:scale-95 uppercase tracking-wider">
+          <button onclick="challengePlayer('${p.name}')" class="bg-court hover:bg-sky-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition active:scale-95 uppercase tracking-wider border border-sky-600/30">
             Match Up
           </button>
         `;
@@ -482,7 +477,7 @@
       });
     }
 
-    // --- Court & Flow Navigation ---
+    // --- Navigation & Filtering ---
     function filterCourts(type) {
       state.activeFilter = type;
       document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -533,7 +528,7 @@
       lucide.createIcons();
     }
 
-    // --- Keypad & Pin Entry ---
+    // --- Keypad & Input Handling ---
     function pressNum(num) {
       if (state.currentPin.length < 8) {
         state.currentPin += num;
@@ -561,29 +556,26 @@
       renderPin();
     }
 
-    // --- Finalize & Issue Ticket ---
+    // --- Confirmation & Reset ---
     function confirmBooking() {
       const playerName = state.currentPin.trim() || 'Court Member #402';
       
-      // Update state
       if (state.selectedCourt) {
         state.selectedCourt.status = 'in-play';
         state.selectedCourt.timeRemaining = 25;
         state.selectedCourt.currentPlayers = [playerName, state.selectedOpponent];
       }
 
-      // Populate Ticket
       document.getElementById('ticket-court-name').textContent = state.selectedCourt ? state.selectedCourt.name : 'Court 1';
       document.getElementById('ticket-player').textContent = playerName;
       document.getElementById('ticket-opponent').textContent = state.selectedOpponent;
       document.getElementById('ticket-format').textContent = state.selectedFormat;
-      document.getElementById('ticket-id').textContent = `#PKL-${Math.floor(1000 + Math.random() * 9000)}`;
+      document.getElementById('ticket-id').textContent = `#CG-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      // Update counters
       updateHeaderStats();
       goToStep(4);
 
-      // Auto-reset Countdown for Kiosk UI
+      // Auto-reset countdown
       let timeLeft = 12;
       const counterEl = document.getElementById('reset-counter');
       counterEl.textContent = timeLeft;
@@ -610,7 +602,6 @@
       goToStep(1);
     }
 
-    // Initialize on page load
     window.onload = init;
   </script>
 </body>
