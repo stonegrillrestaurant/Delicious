@@ -2,219 +2,232 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>LIVE QUEUE | Court Availability</title>
-  <meta name="theme-color" content="#065f46">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pick All AD-Ventures | TV Display</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-    .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
-    .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
-    .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
-    .badge-open { background-color: #1e293b; color: #64748b; border: 1px dashed #334155; }
+    /* TV specific cleanups: hide scrollbars, prevent text selection */
+    body { user-select: none; overflow: hidden; }
     ::-webkit-scrollbar { display: none; }
-    body { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Smooth fade in for data updates */
+    .fade-in { animation: fadeIn 0.5s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col">
 
-  <header class="bg-slate-900 border-b border-slate-800 py-2.5 px-3 sm:px-5 flex justify-between items-center shrink-0 sticky top-0 z-50">
-    <div class="flex items-center gap-2 sm:gap-3 overflow-hidden">
-      <div class="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded text-[9px] sm:text-[11px] tracking-wider uppercase shadow-sm whitespace-nowrap">DISPLAY</div>
-      <h1 class="text-sm sm:text-xl font-black tracking-widest text-white truncate">PUBLIC QUEUE & COURTS</h1>
-    </div>
-    <div class="flex items-center gap-3 sm:gap-5 flex-shrink-0 ml-2">
-      <div id="sync-status" class="flex text-[10px] text-slate-500 font-black uppercase tracking-widest items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse" id="sync-dot"></span> 
-        <span id="sync-text">CONNECTING...</span>
+  <!-- TV HEADER -->
+  <header class="bg-slate-900 border-b-4 border-emerald-500 shadow-2xl py-4 px-8 flex justify-between items-center z-10">
+    <div class="flex items-center gap-4">
+      <div class="bg-emerald-500 text-slate-950 font-black px-4 py-2 rounded-xl text-xl tracking-widest uppercase shadow-lg shadow-emerald-500/20">Live</div>
+      <div>
+        <h1 class="text-3xl font-black tracking-widest text-white uppercase">Pick All AD-Ventures</h1>
+        <p class="text-slate-400 font-bold text-sm tracking-widest">COURT & QUEUE STATUS</p>
       </div>
-      <div id="clock" class="text-xl sm:text-3xl font-black text-emerald-400 tabular-nums tracking-tight">00:00</div>
+    </div>
+    <div class="text-right">
+      <div id="clock-time" class="text-4xl font-black text-white tracking-wider">00:00</div>
+      <div id="clock-date" class="text-slate-400 font-bold text-sm tracking-widest uppercase">Date</div>
     </div>
   </header>
 
-  <main class="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-5 p-3 sm:p-5 overflow-y-auto lg:overflow-hidden">
-    <section class="w-full lg:w-[60%] flex flex-col gap-3 flex-shrink-0">
-      <div class="flex items-center gap-2 mb-1 pl-1">
-        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
-        <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">Active Courts</h2>
+  <!-- TV MAIN CONTENT GRID -->
+  <main class="flex-1 grid grid-cols-12 gap-6 p-6 overflow-hidden">
+    
+    <!-- LEFT: LIVE COURTS (Spans 7 columns) -->
+    <section class="col-span-7 flex flex-col gap-4">
+      <h2 class="text-2xl font-black text-slate-300 uppercase tracking-widest flex items-center gap-3">
+        <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        Active Courts
+      </h2>
+      <div id="tv-courts" class="grid grid-cols-2 gap-4 flex-1">
+        <!-- Courts injected here -->
+        <div class="flex items-center justify-center h-full text-slate-500 text-xl font-bold animate-pulse">Loading Live Courts...</div>
       </div>
-      <div id="courts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-1"></div>
     </section>
 
-    <section class="w-full lg:w-[40%] flex flex-col gap-3 flex-1 lg:flex-none lg:overflow-hidden mt-2 lg:mt-0 pb-6 lg:pb-0">
-      <div class="flex items-center gap-2 mb-1 pl-1">
-        <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div>
-        <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">On Deck / Waiting Line</h2>
-      </div>
-      <div class="bg-slate-900/80 rounded-2xl border border-slate-700 flex-1 overflow-hidden flex flex-col shadow-2xl">
-        <div class="flex-1 overflow-y-auto">
-          <div id="waiting-list" class="flex flex-col"></div>
+    <!-- RIGHT: WAITING QUEUE (Spans 5 columns) -->
+    <section class="col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col relative overflow-hidden">
+      <h2 class="text-2xl font-black text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-3">
+        <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        Up Next (Queue)
+      </h2>
+      
+      <div class="flex-1 overflow-hidden flex flex-col gap-6">
+        
+        <!-- Beginner Queue -->
+        <div class="flex-1 flex flex-col">
+          <div class="bg-emerald-900/30 border border-emerald-500/30 text-emerald-400 font-black px-4 py-2 rounded-t-xl text-lg uppercase tracking-wider">Beginner</div>
+          <div id="tv-queue-beginner" class="bg-slate-950/50 border border-t-0 border-emerald-500/20 rounded-b-xl flex-1 p-4 flex flex-col gap-2">
+            <!-- Queue injected here -->
+          </div>
         </div>
+
+        <!-- Professional Queue -->
+        <div class="flex-1 flex flex-col">
+          <div class="bg-indigo-900/30 border border-indigo-500/30 text-indigo-400 font-black px-4 py-2 rounded-t-xl text-lg uppercase tracking-wider">Professional</div>
+          <div id="tv-queue-pro" class="bg-slate-950/50 border border-t-0 border-indigo-500/20 rounded-b-xl flex-1 p-4 flex flex-col gap-2">
+            <!-- Queue injected here -->
+          </div>
+        </div>
+
       </div>
     </section>
+
   </main>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  <!-- Disconnected Warning -->
+  <div id="connection-warning" class="fixed bottom-0 left-0 w-full bg-red-600 text-white text-center py-2 font-bold tracking-widest hidden z-50">
+    SYSTEM OFFLINE - RECONNECTING TO SERVER...
+  </div>
 
-    setInterval(() => {
-      document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }, 1000);
+  <script>
+    // ==================================================
+    // CONFIGURATION
+    // ==================================================
+    // Your specific Google Apps Script URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydJGXl1wH8znoVnR4ys1X0wX0X2rXo9zYfIZWCN3NGjXKInTyE6TDiKFPJnypzl8TX/exec";
+    
+    // How often the TV checks for new data (in milliseconds. 10000 = 10 seconds)
+    const REFRESH_RATE = 10000; 
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
-      authDomain: "payroll-c4f0c.firebaseapp.com",
-      projectId: "payroll-c4f0c",
-      storageBucket: "payroll-c4f0c.firebasestorage.app",
-      messagingSenderId: "427050362534",
-      appId: "1:427050362534:web:35d3b1c5eee26b3c417667"
-    };
+    // ==================================================
+    // CLOCK LOGIC
+    // ==================================================
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock-time').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('clock-date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const stateRef = doc(db, 'pickleball', 'currentState');
-
-    onSnapshot(stateRef, (docSnap) => {
-      const syncDot = document.getElementById('sync-dot');
-      const syncText = document.getElementById('sync-text');
-      syncDot.classList.replace('bg-slate-500', 'bg-emerald-500');
-      syncDot.classList.replace('bg-red-500', 'bg-emerald-500');
-      syncText.innerText = "🔥 CLOUD SYNC ACTIVE";
-      syncText.classList.replace('text-slate-500', 'text-emerald-500');
-      syncText.classList.replace('text-red-500', 'text-emerald-500');
-
-      if (docSnap.exists()) {
-        renderTVDisplay(docSnap.data());
-      } else {
-        renderTVDisplay({ courts: [], players: [], queues: { Beginner: [], Intermediate: [], Advanced: [], Professional: [] }});
+    // ==================================================
+    // FETCH & RENDER LOGIC
+    // ==================================================
+    async function fetchLiveData() {
+      try {
+        const response = await fetch(SCRIPT_URL);
+        if (!response.ok) throw new Error("Network not OK");
+        
+        const data = await response.json();
+        renderTV(data);
+        
+        document.getElementById('connection-warning').classList.add('hidden');
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        document.getElementById('connection-warning').classList.remove('hidden');
       }
-    }, (err) => {
-        const syncDot = document.getElementById('sync-dot');
-        const syncText = document.getElementById('sync-text');
-        syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
-        syncDot.classList.replace('bg-slate-500', 'bg-red-500');
-        syncText.innerText = "ERROR: DB BLOCKED";
-        syncText.classList.replace('text-emerald-500', 'text-red-500');
-        syncText.classList.replace('text-slate-500', 'text-red-500');
-    });
-
-    function getBadgeClass(cat) {
-      if (cat === 'Beginner') return 'badge-beginner';
-      if (cat === 'Intermediate') return 'badge-intermediate';
-      if (cat === 'Advanced') return 'badge-advanced';
-      return 'badge-pro';
     }
 
-    function renderTVDisplay(state) {
-      let courtsList = Array.isArray(state.courts) ? state.courts : [];
-      if (courtsList.length < 4) {
-         courtsList = [
-            { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
-            { id: 2, name: "Court 2", assignedCategory: "Intermediate", currentMatch: null, isExclusive: false, Renter: "" },
-            { id: 3, name: "Court 3", assignedCategory: "Advanced", currentMatch: null, isExclusive: false, Renter: "" },
-            { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
-         ];
+    function renderTV(data) {
+      const courtsContainer = document.getElementById('tv-courts');
+      const bgqContainer = document.getElementById('tv-queue-beginner');
+      const proqContainer = document.getElementById('tv-queue-pro');
+
+      // Add fade effect for smooth transition
+      courtsContainer.classList.remove('fade-in'); void courtsContainer.offsetWidth; courtsContainer.classList.add('fade-in');
+      bgqContainer.classList.remove('fade-in'); void bgqContainer.offsetWidth; bgqContainer.classList.add('fade-in');
+      proqContainer.classList.remove('fade-in'); void proqContainer.offsetWidth; proqContainer.classList.add('fade-in');
+
+      // 1. RENDER COURTS
+      let courtsHTML = "";
+      if (data.courts) {
+        data.courts.forEach(court => {
+          let content = "";
+          let bgColor = court.assignedCategory === 'Beginner' ? 'border-emerald-500/20 bg-emerald-950/10' : 'border-indigo-500/20 bg-indigo-950/10';
+          let badgeColor = court.assignedCategory === 'Beginner' ? 'bg-emerald-500 text-slate-900' : 'bg-indigo-500 text-slate-900';
+
+          if (court.isExclusive) {
+            bgColor = 'border-amber-500/40 bg-amber-900/20';
+            content = `
+              <div class="flex-1 flex flex-col items-center justify-center text-center p-4">
+                <span class="text-amber-500 font-black text-xl tracking-widest uppercase mb-2">Exclusive Rent</span>
+                <span class="text-white font-black text-4xl">${court.Renter}</span>
+                <span class="text-amber-500/80 font-bold text-lg mt-4 border border-amber-500/30 px-3 py-1 rounded-lg">Until ${court.timeOut}</span>
+              </div>
+            `;
+          } else if (court.currentMatch) {
+             // Map Player IDs to Names
+             const players = court.currentMatch.map(id => {
+                const p = data.players.find(x => x.id === id);
+                return p ? p.name : "Unknown Player";
+             });
+             content = `
+              <div class="flex-1 grid grid-cols-2 gap-4 p-4 content-center h-full">
+                 ${players.map(name => `<div class="bg-slate-800/80 border border-slate-700 rounded-xl flex items-center justify-center p-4 text-center"><span class="text-white font-black text-2xl leading-tight line-clamp-2">${name}</span></div>`).join('')}
+              </div>
+             `;
+          } else {
+             content = `
+              <div class="flex-1 flex items-center justify-center">
+                <span class="text-slate-600 font-black text-4xl tracking-widest uppercase italic opacity-50">OPEN</span>
+              </div>
+             `;
+          }
+
+          courtsHTML += `
+            <div class="border-2 ${bgColor} rounded-3xl flex flex-col overflow-hidden shadow-xl relative">
+              <div class="px-6 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-2xl font-black text-white">${court.name}</h3>
+                <span class="${badgeColor} px-3 py-1 rounded-lg text-sm font-black uppercase tracking-widest">${court.assignedCategory}</span>
+              </div>
+              ${content}
+            </div>
+          `;
+        });
       }
+      courtsContainer.innerHTML = courtsHTML;
+
+      // 2. RENDER QUEUES
+      const now = Date.now();
       
-      const playersList = Array.isArray(state.players) ? state.players : [];
-      const queues = state.queues || { Beginner: [], Intermediate: [], Advanced: [], Professional: [] };
+      const renderQueueList = (categoryArray, containerElement) => {
+        if (!categoryArray || categoryArray.length === 0) {
+          containerElement.innerHTML = `<div class="text-slate-600 font-bold text-xl italic text-center mt-4">Queue Empty</div>`;
+          return;
+        }
 
-      const courtsHTML = courtsList.map(c => {
-         if (c.isExclusive) {
-             return `
-              <div class="bg-slate-800/90 rounded-2xl border-2 border-amber-500/40 p-4 sm:p-5 flex flex-col shadow-[0_0_15px_rgba(245,158,11,0.15)] relative overflow-hidden h-full">
-                 <div class="absolute inset-0 bg-amber-500/5"></div>
-                 <div class="flex justify-between items-center mb-4 pl-1 relative z-10">
-                    <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
-                    <span class="bg-amber-500/20 text-amber-300 font-bold text-[9px] sm:text-[10px] px-2 py-0.5 rounded uppercase border border-amber-500/30">Exclusive</span>
-                 </div>
-                 <div class="flex flex-col items-center justify-center flex-1 relative z-10 py-2">
-                    <p class="text-[9px] sm:text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-1.5 opacity-80">Rented By</p>
-                    <p class="text-xl sm:text-2xl font-black text-white truncate px-2 text-center w-full">${c.Renter}</p>
-                 </div>
-              </div>`;
-         }
+        // Get actual players and filter out expired ones
+        let validPlayers = categoryArray
+          .map(id => data.players.find(p => p.id === id))
+          .filter(p => p && p.expireTimestamp > now);
 
-         let badge = `<span class="badge-open text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">OPEN</span>`;
-         if (c.assignedCategory) badge = `<span class="${getBadgeClass(c.assignedCategory)} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">${c.assignedCategory.toUpperCase()}</span>`;
+        if(validPlayers.length === 0) {
+            containerElement.innerHTML = `<div class="text-slate-600 font-bold text-xl italic text-center mt-4">Queue Empty</div>`;
+            return;
+        }
 
-         let playersHTML = '';
-         if (!c.currentMatch || c.currentMatch.length === 0) {
-            playersHTML = `<div class="col-span-2 flex items-center justify-center text-slate-600 font-black text-xs sm:text-sm border-2 border-slate-700/50 border-dashed rounded-xl bg-slate-800/20 uppercase tracking-widest min-h-[60px] h-full">Court Available</div>`;
-         } else {
-            for(let i = 0; i < 4; i++) {
-               const pId = c.currentMatch[i];
-               const playerObj = pId ? playersList.find(p => p.id === pId) : null;
-               const pName = playerObj ? playerObj.name : '---';
-               const textStyle = playerObj ? 'text-white bg-slate-700/80 shadow-md border-slate-600' : 'text-slate-600 bg-slate-800/30 border-slate-700/50 border-dashed';
-               playersHTML += `<div class="border rounded-lg flex items-center justify-center p-2 sm:p-3 text-xs sm:text-sm font-black uppercase text-center truncate ${textStyle}">${pName}</div>`;
-            }
-         }
+        // Show max 6 players so it doesn't overflow the TV screen
+        const listToShow = validPlayers.slice(0, 6);
+        let qHTML = listToShow.map((p, index) => `
+          <div class="flex items-center gap-4 bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+            <div class="bg-slate-950 text-slate-400 font-black text-xl w-10 h-10 flex items-center justify-center rounded-lg border border-slate-700">
+              ${index + 1}
+            </div>
+            <div class="text-white font-bold text-2xl truncate">${p.name}</div>
+          </div>
+        `).join('');
 
-         return `
-          <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 sm:p-5 flex flex-col shadow-xl h-full">
-             <div class="flex justify-between items-center mb-3 sm:mb-4 pl-1">
-                <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
-                ${badge}
-             </div>
-             <div class="grid grid-cols-2 gap-2 sm:gap-3 flex-1">
-                ${playersHTML}
-             </div>
-          </div>`;
-      }).join('');
+        if (validPlayers.length > 6) {
+           qHTML += `<div class="text-center text-slate-500 font-bold mt-2 italic">+ ${validPlayers.length - 6} more waiting...</div>`;
+        }
 
-      document.getElementById('courts-grid').innerHTML = courtsHTML;
+        containerElement.innerHTML = qHTML;
+      };
 
-      const playingIds = new Set();
-      courtsList.forEach(c => {
-         if (c.currentMatch) c.currentMatch.forEach(id => playingIds.add(id));
-      });
-
-      let waiting = playersList.filter(p => !p.isExpired && !playingIds.has(p.id));
-
-      waiting.sort((a, b) => {
-          let idxA = queues[a.category] ? queues[a.category].indexOf(a.id) : 999;
-          let idxB = queues[b.category] ? queues[b.category].indexOf(b.id) : 999;
-          if (idxA !== idxB) return idxA - idxB;
-          return (a.id || '').localeCompare(b.id || '');
-      });
-
-      if (waiting.length === 0) {
-         document.getElementById('waiting-list').innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-slate-600 p-10 text-center min-h-[200px] flex-1">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 sm:w-16 sm:h-16 mb-4 opacity-50 mx-auto" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M4.285 12.433a.5.5 0 0 0 .683-.183A3.498 3.498 0 0 1 8 10.5c1.295 0 2.426.703 3.032 1.75a.5.5 0 0 0 .866-.5A4.498 4.498 0 0 0 8 9.5a4.5 4.5 0 0 0-3.898 2.25.5.5 0 0 0 .183.683zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm4 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5z"/></svg>
-              <h3 class="font-black text-lg sm:text-xl tracking-widest uppercase">Queue is Empty</h3>
-            </div>`;
-      } else {
-         document.getElementById('waiting-list').innerHTML = waiting.map((p, index) => {
-            const rank = index + 1;
-            const isTop4 = rank <= 4;
-            
-            const rankStyle = isTop4 
-               ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]' 
-               : 'bg-slate-800 text-slate-500 border-slate-700';
-            
-            const bgStyle = isTop4 ? 'bg-slate-800/80 border-l-4 border-l-amber-500' : 'bg-transparent border-l-4 border-l-transparent';
-            const catBadge = getBadgeClass(p.category);
-
-            return `
-            <div class="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border-b border-slate-800 ${bgStyle} transition-colors">
-               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 flex-shrink-0 flex items-center justify-center font-black text-lg sm:text-xl ${rankStyle}">
-                 #${rank}
-               </div>
-               <div class="flex-1 min-w-0">
-                  <div class="font-black text-white text-lg sm:text-2xl leading-tight uppercase truncate tracking-wide">${p.name}</div>
-                  <div class="flex items-center gap-2 sm:gap-3 mt-1 sm:mt-1.5 flex-wrap">
-                     <span class="${catBadge} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${p.category.toUpperCase()}</span>
-                     <span class="text-slate-400 text-xs sm:text-sm font-bold whitespace-nowrap">TIME IN: <span class="text-slate-300">${p.timeIn}</span></span>
-                  </div>
-               </div>
-            </div>`;
-         }).join('');
+      if (data.queues) {
+        renderQueueList(data.queues.Beginner, bgqContainer);
+        renderQueueList(data.queues.Professional, proqContainer);
       }
     }
+
+    // Start fetching data immediately, then repeat based on REFRESH_RATE
+    fetchLiveData();
+    setInterval(fetchLiveData, REFRESH_RATE);
+
   </script>
 </body>
 </html>
+
