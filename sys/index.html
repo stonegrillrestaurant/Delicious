@@ -17,7 +17,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -34,7 +34,7 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
-        window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+        window.fb = { db, auth, appId, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
     </script>
 
     <style>
@@ -96,7 +96,6 @@
             return parsed.toISOString().slice(0, 7);
         };
 
-        // NEW: Visual Translator to change YYYY-MM-DD into "Mar-1"
         const formatDisplayDate = (dateStr) => {
             if (!dateStr) return '';
             const parsed = new Date(dateStr);
@@ -142,7 +141,7 @@
         const ChevronRight = (p) => <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>;
         const HistoryIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></Icon>;
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
-        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
             const [activeTab, setActiveTab] = useState('payslip');
@@ -329,8 +328,39 @@
             const [emailInput, setEmailInput] = useState('');
             const [passwordInput, setPasswordInput] = useState('');
 
-            const handleGoogleLogin = async () => { setLoading(true); try { await window.fb.signInWithPopup(window.fb.auth, new window.fb.GoogleAuthProvider()); } catch (err) { alert("Error: " + err.message); setLoading(false); } };
-            const handleFacebookLogin = async () => { setLoading(true); const p = new window.fb.FacebookAuthProvider(); p.addScope('email'); try { await window.fb.signInWithPopup(window.fb.auth, p); } catch (err) { alert("Error: " + err.message); setLoading(false); } };
+            const handleGoogleLogin = async () => { 
+                setLoading(true); 
+                try { 
+                    const p = new window.fb.GoogleAuthProvider();
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        await window.fb.signInWithRedirect(window.fb.auth, p);
+                    } else {
+                        await window.fb.signInWithPopup(window.fb.auth, p); 
+                    }
+                } catch (err) { 
+                    alert("Error: " + err.message); 
+                    setLoading(false); 
+                } 
+            };
+            
+            const handleFacebookLogin = async () => { 
+                setLoading(true); 
+                const p = new window.fb.FacebookAuthProvider(); 
+                p.addScope('email'); 
+                try { 
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        await window.fb.signInWithRedirect(window.fb.auth, p);
+                    } else {
+                        await window.fb.signInWithPopup(window.fb.auth, p); 
+                    }
+                } catch (err) { 
+                    alert("Error: " + err.message); 
+                    setLoading(false); 
+                } 
+            };
+            
             const handleEmailSubmit = async (e) => { e.preventDefault(); setLoading(true); try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); } catch (err) { alert("Login failed."); setLoading(false); } };
 
             return (
@@ -558,7 +588,6 @@
                 setIsEditing(true); setShowAddStaff(true); setViewProfile(null); 
             };
 
-            // NEW: INTELLIGENT MATHEMATICAL DATE IMPORTER
             const handleProcessLogs = async () => {
                 if (!isAdmin || !rawInput.trim()) return;
                 const lines = rawInput.trim().split('\n'); let count = 0; const map = {};
@@ -579,8 +608,8 @@
                             y = parts[2];
                             let p0 = parseInt(parts[0], 10);
                             let p1 = parseInt(parts[1], 10);
-                            if (p0 > 12) { d = p0; m = p1; } // Math Check: First number must be Day
-                            else if (p1 > 12) { m = p0; d = p1; } // Math Check: Second number must be Day
+                            if (p0 > 12) { d = p0; m = p1; } 
+                            else if (p1 > 12) { m = p0; d = p1; } 
                             else { m = p0; d = p1; } 
                         } else if (parts[0].length === 4) { 
                             y = parts[0];
