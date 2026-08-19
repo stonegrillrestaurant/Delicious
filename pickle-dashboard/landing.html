@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courtside Gatherings | Your Court is Waiting</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            green: '#9ec23f', // Pickleball green
+                            dark: '#161a1d',  // Charcoal black
+                            gray: '#f5f6f8',  // Light background
+                            card: '#ffffff'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        heading: ['Montserrat', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 10px 30px -10px rgba(0, 0, 0, 0.08)',
+                        'glow': '0 0 25px rgba(158, 194, 63, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Animations and Styles */
+        body {
+            -webkit-font-smoothing: antialiased;
+            background-color: #f5f6f8;
+            overflow-x: hidden;
+        }
+
+        /* Hero Background with Parallax effect and blend */
+        .hero-bg {
+            /* Updated hero image path to /pickle-dashboard/IMG_4223.png */
+            background-image: linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.1) 60%, rgba(245,246,248,1) 100%), 
+                              url('/pickle-dashboard/IMG_4223.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        /* Fade-in up animation for scroll reveals */
+        .reveal-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal-up.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Staggered delays for cards */
+        .delay-100 { transition-delay: 100ms; }
+        .delay-200 { transition-delay: 200ms; }
+        .delay-300 { transition-delay: 300ms; }
+        .delay-400 { transition-delay: 400ms; }
+
+        /* Card Hover Effects */
+        .amenity-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        .amenity-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px -10px rgba(158, 194, 63, 0.3);
+            border-color: #9ec23f;
+        }
+
+        /* Modal Animations */
+        #modal-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(5px);
+        }
+        #modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        #modal-content {
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #modal-overlay.active #modal-content {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        /* Ambient floating particles for modal background */
+        .particle {
+            position: absolute;
+            background-color: #9ec23f;
+            border-radius: 50%;
+            opacity: 0.4;
+            pointer-events: none;
+            animation: float 6s infinite ease-in-out;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-20px) translateX(10px); }
+        }
+    </style>
+</head>
+<body class="text-brand-dark">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-40 top-0 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center bg-white/80 backdrop-blur-md rounded-b-3xl shadow-sm">
+            
+            <!-- Logo Section with Updated Logo Path -->
+            <a href="/" class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative w-12 h-12 rounded-full border-2 border-brand-dark flex items-center justify-center group-hover:border-brand-green transition-colors">
+                    <!-- Updated to use the clean logo /pagibig-form/IMG_4180.jpeg -->
+                    <img src="/pagibig-form/IMG_4180.jpeg" alt="Courtside Gatherings Logo" class="h-10 w-auto group-hover:opacity-80 transition-opacity">
+                    <div class="absolute -top-1 -right-1 w-4 h-4 bg-brand-green rounded-full border-2 border-white"></div>
+                </div>
+                <div class="hidden sm:flex flex-col">
+                    <span class="font-heading font-bold text-lg tracking-widest leading-none">COURTSIDE</span>
+                    <span class="text-[10px] tracking-[0.3em] text-brand-green font-semibold">GATHERINGS</span>
+                </div>
+            </a>
+
+            <!-- Right Nav -->
+            <div class="flex items-center gap-6">
+                <a href="#" class="hidden md:block font-semibold hover:text-brand-green transition-colors underline-offset-4 hover:underline">Book Now</a>
+                <button class="px-6 py-2.5 rounded-full border border-brand-dark font-medium hover:bg-brand-dark hover:text-white transition-all duration-300 flex items-center gap-2">
+                    MENU
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-bg min-h-[85vh] flex flex-col justify-center items-center pt-24 px-4 text-center relative">
+        <div class="max-w-4xl mx-auto z-10">
+            <h1 class="font-heading text-5xl md:text-7xl font-extrabold text-brand-dark tracking-tight mb-2 reveal-up">
+                YOUR COURT IS WAITING.
+            </h1>
+            <p class="font-heading text-3xl md:text-5xl font-bold text-brand-dark mb-10 reveal-up delay-100">
+                Play. Connect. Gather.
+            </p>
+            
+            <button class="reveal-up delay-200 bg-white text-brand-dark font-semibold text-lg px-8 py-4 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-transparent hover:border-brand-green flex items-center gap-2 mx-auto">
+                Reserve your Time
+                <i data-lucide="arrow-right" class="w-5 h-5 text-brand-green"></i>
+            </button>
+        </div>
+        
+        <!-- Gradient overlay to blend into the next section -->
+        <div class="absolute bottom-0 w-full h-32 bg-gradient-to-t from-brand-gray to-transparent"></div>
+    </section>
+
+    <!-- Amenities Section -->
+    <section class="py-20 px-4 md:px-8 max-w-6xl mx-auto relative z-10 -mt-10">
+        <div class="text-center mb-16 reveal-up">
+            <h2 class="font-heading text-4xl md:text-5xl font-bold text-brand-dark">Services and Amenities</h2>
+        </div>
+
+        <!-- Amenities Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="amenities-grid">
+            <!-- Cards will be injected here by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-brand-dark text-white py-12 border-t-4 border-brand-green">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="text-brand-green font-medium tracking-wide">
+                courtsidegatherings.com
+            </div>
+            <div class="flex gap-6">
+                <a href="#" class="hover:text-brand-green transition-colors"><i data-lucide="instagram"></i></a>
+                <a href="#" class="hover:text-brand-green transition-colors"><i data-lucide="facebook"></i></a>
+                <a href="#" class="hover:text-brand-green transition-colors"><i data-lucide="youtube"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive Modal -->
+    <div id="modal-overlay" class="fixed inset-0 bg-brand-dark/80 z-50 flex items-center justify-center p-4">
+        <!-- Modal Content Container -->
+        <div id="modal-content" class="bg-[#1A1F24] rounded-3xl w-full max-w-md relative overflow-hidden shadow-glow border border-brand-green/30">
+            
+            <!-- Ambient Particles Container -->
+            <div id="particles-container" class="absolute inset-0 z-0 overflow-hidden"></div>
+
+            <!-- Close Button -->
+            <button id="close-modal" class="absolute top-6 right-6 z-20 text-gray-400 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+
+            <div class="p-8 relative z-10 flex flex-col h-full min-h-[300px]">
+                
+                <!-- Modal Header with Updated Logo Path -->
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center text-white" id="modal-icon-container">
+                        <!-- Icon injected here -->
+                    </div>
+                    <div>
+                        <h3 class="font-heading font-bold text-white text-xl uppercase tracking-wide" id="modal-title">Title</h3>
+                        <p class="text-brand-green font-medium text-sm tracking-wider">COURTSIDE GATHERINGS</p>
+                    </div>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="mt-4 mb-12">
+                    <p class="text-gray-300 text-lg leading-relaxed" id="modal-desc">
+                        Description goes here.
+                    </p>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="mt-auto text-center">
+                    <p class="text-gray-400 text-sm font-medium tracking-widest uppercase">Tap to close</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Data for Amenities
+        const amenities = [
+            { id: 1, title: 'CHANGING ROOMS', icon: 'shower-head', desc: 'Private, pristine changing areas equipped with premium toiletries to freshen up after your match.' },
+            { id: 2, title: 'RESTROOMS', icon: 'droplet', desc: 'Fully equipped, hygienic, and constantly maintained restrooms available for all guests and members.' },
+            { id: 3, title: 'PLAYER LOUNGE', icon: 'armchair', desc: 'Relax in recliners with private lockers, complimentary refreshments, and live match streaming on large screens.' },
+            { id: 4, title: 'GUEST WI-FI', icon: 'wifi', desc: 'High-speed, uninterrupted internet access to stay connected, stream, or work off the court.' },
+            { id: 5, title: 'EXPERT COACHING', icon: 'users', desc: 'Professional, certified instructors available for 1-on-1 sessions or group clinics to elevate your game.' },
+            { id: 6, title: 'NEARBY PARKING', icon: 'car', desc: 'Ample, secure, and brightly lit parking spaces located right outside our facility doors.' },
+            { id: 7, title: 'SOUND SYSTEM', icon: 'music', desc: 'Premium surround audio system playing curated energetic playlists to keep your momentum going.' }
+        ];
+
+        // Generate Amenity Cards
+        const grid = document.getElementById('amenities-grid');
+        
+        amenities.forEach((amenity, index) => {
+            // Calculate delay for staggered animation
+            const delayClass = `delay-${(index % 3 + 1) * 100}`;
+            const numStr = amenity.id.toString().padStart(2, '0');
+
+            const cardHTML = `
+                <div class="amenity-card bg-brand-card rounded-3xl p-6 flex items-center gap-5 shadow-card reveal-up ${delayClass}" 
+                     onclick="openModal(${amenity.id})">
+                    
+                    <div class="w-14 h-14 rounded-full bg-brand-gray flex items-center justify-center text-brand-dark shrink-0">
+                        <i data-lucide="${amenity.icon}" class="w-6 h-6"></i>
+                    </div>
+                    
+                    <div class="flex-grow">
+                        <h3 class="font-heading font-bold text-brand-dark text-sm md:text-base uppercase tracking-wide">${amenity.title}</h3>
+                        <p class="text-gray-500 text-xs md:text-sm font-medium tracking-wider mt-0.5">INCLUDED</p>
+                    </div>
+
+                    <div class="text-4xl font-heading font-black text-gray-200 shrink-0">
+                        ${numStr}
+                    </div>
+                </div>
+            `;
+            grid.insertAdjacentHTML('beforeend', cardHTML);
+        });
+
+        // Re-initialize icons for newly added HTML
+        lucide.createIcons();
+
+        // Scroll Animation Observer
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target); // Run once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal-up').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Modal Logic
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const modalIconContainer = document.getElementById('modal-icon-container');
+        const closeModalBtn = document.getElementById('close-modal');
+
+        function openModal(id) {
+            const data = amenities.find(a => a.id === id);
+            if(!data) return;
+
+            // Populate Data
+            modalTitle.textContent = data.title;
+            modalDesc.textContent = data.desc;
+            modalIconContainer.innerHTML = `<i data-lucide="${data.icon}" class="w-7 h-7"></i>`;
+            
+            // Re-render icon
+            lucide.createIcons();
+
+            // Show Modal
+            modalOverlay.classList.add('active');
+            
+            // Generate Particles
+            generateParticles();
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+            // Clear particles after transition
+            setTimeout(() => {
+                document.getElementById('particles-container').innerHTML = '';
+            }, 400);
+        }
+
+        // Close events
+        closeModalBtn.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                closeModal();
+            }
+        });
+
+        // Background Particles Generator for Modal
+        function generateParticles() {
+            const container = document.getElementById('particles-container');
+            container.innerHTML = ''; // Clear existing
+            
+            for(let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // Randomize properties
+                const size = Math.random() * 4 + 2; // 2px to 6px
+                const posX = Math.random() * 100; // 0% to 100%
+                const posY = Math.random() * 100;
+                const delay = Math.random() * 2;
+                const duration = Math.random() * 3 + 4; // 4s to 7s
+
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${posX}%`;
+                particle.style.top = `${posY}%`;
+                particle.style.animationDelay = `${delay}s`;
+                particle.style.animationDuration = `${duration}s`;
+
+                container.appendChild(particle);
+            }
+        }
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('shadow-md');
+                nav.querySelector('div').classList.add('bg-white/95');
+                nav.querySelector('div').classList.remove('bg-white/80');
+            } else {
+                nav.classList.remove('shadow-md');
+                nav.querySelector('div').classList.add('bg-white/80');
+                nav.querySelector('div').classList.remove('bg-white/95');
+            }
+        });
+    </script>
+</body>
+</html>
