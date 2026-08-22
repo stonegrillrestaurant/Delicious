@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>COURTSIDE GATHERINGS | Live Queue</title>
+  <meta name="theme-color" content="#065f46">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .badge-beginner { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-intermediate { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+    .badge-advanced { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+    .badge-pro { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .badge-open { background-color: #1e293b; color: #64748b; border: 1px dashed #334155; }
+    ::-webkit-scrollbar { display: none; }
+    body { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
+
+  <header class="bg-slate-900 border-b border-slate-800 py-2.5 px-3 sm:px-5 flex justify-between items-center shrink-0 sticky top-0 z-50">
+    <div class="flex items-center gap-2 sm:gap-3 overflow-hidden">
+      <div class="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded text-[9px] sm:text-[11px] tracking-wider uppercase shadow-sm whitespace-nowrap">DISPLAY</div>
+      <h1 class="text-sm sm:text-xl font-black tracking-widest text-white truncate">COURTSIDE GATHERINGS</h1>
+    </div>
+    <div class="flex items-center gap-3 sm:gap-5 flex-shrink-0 ml-2">
+      <!-- ⚠️ CONNECTION STATUS INDICATOR -->
+      <div id="sync-status" class="flex text-[10px] text-slate-500 font-black uppercase tracking-widest items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse" id="sync-dot"></span> 
+        <span id="sync-text">CONNECTING...</span>
+      </div>
+      <div id="clock" class="text-xl sm:text-3xl font-black text-emerald-400 tabular-nums tracking-tight">00:00</div>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-5 p-3 sm:p-5 overflow-y-auto lg:overflow-hidden">
+    <section class="w-full lg:w-[60%] flex flex-col gap-3 flex-shrink-0">
+      <div class="flex items-center gap-2 mb-1 pl-1">
+        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+        <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">Active Courts</h2>
+      </div>
+      <div id="courts-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-1"></div>
+    </section>
+
+    <section class="w-full lg:w-[40%] flex flex-col gap-3 flex-1 lg:flex-none lg:overflow-hidden mt-2 lg:mt-0 pb-6 lg:pb-0">
+      <div class="flex items-center gap-2 mb-1 pl-1">
+        <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div>
+        <h2 class="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-widest">On Deck / Waiting Lines</h2>
+      </div>
+      <div class="bg-slate-900/80 rounded-2xl border border-slate-700 flex-1 overflow-hidden flex flex-col shadow-2xl relative">
+        <div class="flex-1 overflow-y-auto">
+          <div id="waiting-list" class="flex flex-col"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    setInterval(() => {
+      document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }, 1000);
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
+      authDomain: "stone-grill-payroll.firebaseapp.com",
+      projectId: "stone-grill-payroll",
+      storageBucket: "stone-grill-payroll.firebasestorage.app",
+      messagingSenderId: "255528914541",
+      appId: "1:255528914541:web:d58d9731a29d27fc253964"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const stateRef = doc(db, 'pickleball', 'currentState');
+
+    onSnapshot(stateRef, (docSnap) => {
+      const syncDot = document.getElementById('sync-dot');
+      const syncText = document.getElementById('sync-text');
+      syncDot.classList.replace('bg-slate-500', 'bg-emerald-500');
+      syncDot.classList.replace('bg-red-500', 'bg-emerald-500');
+      syncText.innerText = "🔥 CLOUD SYNC ACTIVE";
+      syncText.classList.replace('text-slate-500', 'text-emerald-500');
+      syncText.classList.replace('text-red-500', 'text-emerald-500');
+
+      if (docSnap.exists()) {
+        renderTVDisplay(docSnap.data());
+      } else {
+        renderTVDisplay({ courts: [], players: [], queues: { "1": [], "2": [], "3": [], "4": [] }});
+      }
+    }, (err) => {
+        const syncDot = document.getElementById('sync-dot');
+        const syncText = document.getElementById('sync-text');
+        syncDot.classList.replace('bg-emerald-500', 'bg-red-500');
+        syncDot.classList.replace('bg-slate-500', 'bg-red-500');
+        syncText.innerText = "ERROR: DB BLOCKED";
+        syncText.classList.replace('text-emerald-500', 'text-red-500');
+        syncText.classList.replace('text-slate-500', 'text-red-500');
+    });
+
+    function getBadgeClass(cat) {
+      if (cat === 'Beginner') return 'badge-beginner';
+      if (cat === 'Intermediate') return 'badge-intermediate';
+      if (cat === 'Advanced') return 'badge-advanced';
+      return 'badge-pro';
+    }
+
+    function renderTVDisplay(state) {
+      let courtsList = Array.isArray(state.courts) ? state.courts : [];
+      if (courtsList.length < 4) {
+         courtsList = [
+            { id: 1, name: "Court 1", assignedCategory: "Beginner", currentMatch: null, isExclusive: false, Renter: "" },
+            { id: 2, name: "Court 2", assignedCategory: "Intermediate", currentMatch: null, isExclusive: false, Renter: "" },
+            { id: 3, name: "Court 3", assignedCategory: "Advanced", currentMatch: null, isExclusive: false, Renter: "" },
+            { id: 4, name: "Court 4", assignedCategory: "Professional", currentMatch: null, isExclusive: false, Renter: "" }
+         ];
+      }
+      
+      const playersList = Array.isArray(state.players) ? state.players : [];
+      const queues = state.queues || { "1": [], "2": [], "3": [], "4": [] };
+
+      // Render Active Courts
+      const courtsHTML = courtsList.map(c => {
+         if (c.isExclusive) {
+             return `
+              <div class="bg-slate-800/90 rounded-2xl border-2 border-amber-500/40 p-4 sm:p-5 flex flex-col shadow-[0_0_15px_rgba(245,158,11,0.15)] relative overflow-hidden h-full">
+                 <div class="absolute inset-0 bg-amber-500/5"></div>
+                 <div class="flex justify-between items-center mb-4 pl-1 relative z-10">
+                    <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
+                    <span class="bg-amber-500/20 text-amber-300 font-bold text-[9px] sm:text-[10px] px-2 py-0.5 rounded uppercase border border-amber-500/30">Exclusive</span>
+                 </div>
+                 <div class="flex flex-col items-center justify-center flex-1 relative z-10 py-2">
+                    <p class="text-[9px] sm:text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-1.5 opacity-80">Rented By</p>
+                    <p class="text-xl sm:text-2xl font-black text-white truncate px-2 text-center w-full">${c.Renter}</p>
+                 </div>
+              </div>`;
+         }
+
+         let badge = `<span class="badge-open text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">OPEN</span>`;
+         if (c.assignedCategory) badge = `<span class="${getBadgeClass(c.assignedCategory)} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase">${c.assignedCategory.toUpperCase()}</span>`;
+
+         let playersHTML = '';
+         if (!c.currentMatch || c.currentMatch.length === 0) {
+            playersHTML = `<div class="col-span-2 flex items-center justify-center text-slate-600 font-black text-xs sm:text-sm border-2 border-slate-700/50 border-dashed rounded-xl bg-slate-800/20 uppercase tracking-widest min-h-[60px] h-full">Court Available</div>`;
+         } else {
+            for(let i = 0; i < 4; i++) {
+               const pId = c.currentMatch[i];
+               const playerObj = pId ? playersList.find(p => p.id === pId) : null;
+               const pName = playerObj ? playerObj.name : '---';
+               const textStyle = playerObj ? 'text-white bg-slate-700/80 shadow-md border-slate-600' : 'text-slate-600 bg-slate-800/30 border-slate-700/50 border-dashed';
+               playersHTML += `<div class="border rounded-lg flex items-center justify-center p-2 sm:p-3 text-xs sm:text-sm font-black uppercase text-center truncate ${textStyle}">${pName}</div>`;
+            }
+         }
+
+         return `
+          <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 sm:p-5 flex flex-col shadow-xl h-full">
+             <div class="flex justify-between items-center mb-3 sm:mb-4 pl-1">
+                <h3 class="font-black text-white text-lg sm:text-xl tracking-wide">${c.name}</h3>
+                ${badge}
+             </div>
+             <div class="grid grid-cols-2 gap-2 sm:gap-3 flex-1">
+                ${playersHTML}
+             </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('courts-grid').innerHTML = courtsHTML;
+
+      const playingIds = new Set();
+      courtsList.forEach(c => {
+         if (c.currentMatch) c.currentMatch.forEach(id => playingIds.add(id));
+      });
+
+      // 🔄 NEW: Render Waiting Line grouped by Court
+      let waitingHTML = '';
+      let totalWaiting = 0;
+
+      ['1', '2', '3', '4'].forEach(courtId => {
+          const q = queues[courtId] || [];
+          const validWaiting = q.filter(pId => {
+              const p = playersList.find(pl => pl.id === pId);
+              return p && !p.isExpired && !playingIds.has(p.id);
+          });
+
+          if (validWaiting.length > 0) {
+              totalWaiting += validWaiting.length;
+              const courtName = courtsList.find(c => c.id == courtId)?.name || `Court ${courtId}`;
+              
+              // Court Header Badge
+              waitingHTML += `<div class="bg-slate-950/80 text-amber-400 font-black text-xs px-4 py-2 uppercase tracking-widest sticky top-0 z-10 border-b border-t border-slate-700">${courtName} LINE</div>`;
+              
+              validWaiting.forEach((pId, index) => {
+                  const p = playersList.find(pl => pl.id === pId);
+                  const rank = index + 1;
+                  const isTop4 = rank <= 4;
+                  
+                  const rankStyle = isTop4 
+                     ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]' 
+                     : 'bg-slate-800 text-slate-500 border-slate-700';
+                  
+                  const bgStyle = isTop4 ? 'bg-slate-800/80 border-l-4 border-l-amber-500' : 'bg-transparent border-l-4 border-l-transparent';
+                  const catBadge = getBadgeClass(p.category);
+
+                  waitingHTML += `
+                  <div class="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border-b border-slate-800 ${bgStyle} transition-colors">
+                     <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 flex-shrink-0 flex items-center justify-center font-black text-lg sm:text-xl ${rankStyle}">
+                       #${rank}
+                     </div>
+                     <div class="flex-1 min-w-0">
+                        <div class="font-black text-white text-lg sm:text-2xl leading-tight uppercase truncate tracking-wide">${p.name}</div>
+                        <div class="flex items-center gap-2 sm:gap-3 mt-1 sm:mt-1.5 flex-wrap">
+                           <span class="${catBadge} text-[9px] sm:text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${p.category.toUpperCase()}</span>
+                           <span class="text-slate-400 text-xs sm:text-sm font-bold whitespace-nowrap">TIME IN: <span class="text-slate-300">${p.timeIn}</span></span>
+                        </div>
+                     </div>
+                  </div>`;
+              });
+          }
+      });
+
+      if (totalWaiting === 0) {
+         document.getElementById('waiting-list').innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-slate-600 p-10 text-center min-h-[200px] flex-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 sm:w-16 sm:h-16 mb-4 opacity-50 mx-auto" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M4.285 12.433a.5.5 0 0 0 .683-.183A3.498 3.498 0 0 1 8 10.5c1.295 0 2.426.703 3.032 1.75a.5.5 0 0 0 .866-.5A4.498 4.498 0 0 0 8 9.5a4.5 4.5 0 0 0-3.898 2.25.5.5 0 0 0 .183.683zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm4 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5z"/></svg>
+              <h3 class="font-black text-lg sm:text-xl tracking-widest uppercase">All Queues Empty</h3>
+            </div>`;
+      } else {
+         document.getElementById('waiting-list').innerHTML = waitingHTML;
+      }
+    }
+  </script>
+</body>
+</html>
+
+
