@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Courtside Ledger</title>
+    
+    <!-- App Icon & Home Screen Meta Tags -->
+    <link rel="apple-touch-icon" href="/ledger/app-icon.PNG">
+    <link rel="icon" type="image/png" href="/ledger/app-icon.PNG">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ledger">
+    <meta name="theme-color" content="#f1f5f9">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Hide scrollbar for clean horizontal scrolling */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md w-full">
+            <div class="flex justify-center mb-6">
+                <div class="bg-blue-100 p-4 rounded-full">
+                    <i data-lucide="lock" class="text-blue-700 w-8 h-8"></i>
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold text-center text-slate-900 mb-2">Admin Login</h1>
+            <p id="login-subtitle" class="text-center text-slate-500 mb-6 text-sm">Enter your authorized email to access the ledger.</p>
+            
+            <div id="login-error" class="text-red-500 text-sm font-medium mb-4 text-center hidden"></div>
+
+            <!-- Email Form (Step 0) -->
+            <form id="email-form" class="space-y-4">
+                <div>
+                    <input type="email" id="login-email" required placeholder="Email Address" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                </div>
+                <button type="submit" id="email-submit-btn" disabled class="w-full py-3 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-bold rounded-lg shadow-sm transition-all">
+                    Continue
+                </button>
+            </form>
+
+            <!-- Password Form (Step 1 & 2) -->
+            <form id="password-form" class="space-y-4 hidden">
+                <div>
+                    <input type="email" id="locked-email" disabled class="w-full px-4 py-3 bg-slate-100 border border-slate-200 text-slate-500 rounded-lg text-sm mb-3">
+                    <input type="password" id="login-password" required placeholder="Password" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" id="btn-back" class="w-1/3 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg shadow-sm transition-all">Back</button>
+                    <button type="submit" id="btn-password-submit" class="w-2/3 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="main-screen" class="max-w-6xl mx-auto space-y-6 p-4 sm:p-6 md:p-8 hidden">
+        
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="wallet" class="text-blue-700 w-7 h-7"></i>
+                    Courtside Ledger
+                </h1>
+                <p class="text-slate-500 text-sm mt-1">Cloud Synced • Live Updates</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100">
+                    <i data-lucide="user" class="w-4 h-4"></i>
+                    <span id="active-admin-name" class="text-sm font-bold uppercase"></span>
+                </div>
+                <button id="btn-logout" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Log out">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Ledger Table Section -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex flex-col h-full">
+            
+            <!-- Toolbar -->
+            <div class="p-4 border-b border-slate-300 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h3 class="text-lg font-bold text-slate-800">Detailed Ledger Entries</h3>
+                
+                <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
+                        <input type="text" id="search-input" placeholder="Search description..." class="w-full sm:w-48 pl-9 pr-4 py-1.5 bg-white border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <select id="filter-admin" class="w-full sm:w-auto px-3 py-1.5 bg-white border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                        <option value="All">All Admins</option>
+                        <option value="Liezl">Liezl</option>
+                        <option value="Dodong">Dodong</option>
+                        <option value="Ninox">Ninox</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto w-full no-scrollbar">
+                <table class="w-full text-sm text-left border-collapse min-w-[850px]">
+                    <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
+                        <tr>
+                            <th class="border-b border-r border-slate-300 p-3 whitespace-nowrap w-32">Date</th>
+                            <th class="border-b border-r border-slate-300 p-3 whitespace-nowrap w-48">Name of Admin</th>
+                            <th class="border-b border-r border-slate-300 p-3 min-w-[200px]">Description</th>
+                            <th class="border-b border-r border-slate-300 p-3 text-center whitespace-nowrap w-32">Cash In (+)</th>
+                            <th class="border-b border-r border-slate-300 p-3 text-center whitespace-nowrap w-32">Cash Out (-)</th>
+                            <th class="border-b border-r border-slate-300 p-3 text-center whitespace-nowrap w-32">Current Bal</th>
+                            <th class="border-b border-slate-300 p-3 text-center w-12"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Dynamic Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-bold uppercase mb-1">Total Balance</p>
+                    <h2 id="card-balance" class="text-3xl font-bold text-slate-900">...</h2>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-bold uppercase mb-1">Total Cash In</p>
+                    <h2 id="card-income" class="text-2xl font-bold text-emerald-600">...</h2>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-bold uppercase mb-1">Total Cash Out</p>
+                    <h2 id="card-expense" class="text-2xl font-bold text-red-600">...</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================
+        // FIREBASE CONFIGURATION (INJECTED)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
+            authDomain: "payroll-c4f0c.firebaseapp.com",
+            projectId: "payroll-c4f0c",
+            storageBucket: "payroll-c4f0c.firebasestorage.app",
+            messagingSenderId: "427050362534",
+            appId: "1:427050362534:web:75b99c661720affa417667",
+            measurementId: "G-TD88WH28ZD"
+        };
+        const ledgerAppId = "courtside-ledger-prod"; // Identifier used in db paths
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // System Constants
+        const ALLOWED_ADMINS = {
+            "izl.lopez@yahoo.com": "Liezl",
+            "antolihao75@gmail.com": "Dodong",
+            "ninoxx@gmail.com": "Ninox"
+        };
+
+        // State Variables
+        let firebaseUser = null;
+        let activeAdmin = null;
+        let transactions = [];
+        let loginStep = 0; // 0: Email, 1: Create Pass, 2: Enter Pass
+        let currentEmail = "";
+        let isDbLoading = true;
+        let activeUnsubscribe = null;
+
+        // DOM Elements
+        const loginScreen = document.getElementById('login-screen');
+        const mainScreen = document.getElementById('main-screen');
+        const emailForm = document.getElementById('email-form');
+        const passwordForm = document.getElementById('password-form');
+        const errorText = document.getElementById('login-error');
+        const tableBody = document.getElementById('table-body');
+
+        // 1. Authenticate Firebase Environment
+        async function initAuth() {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Firebase Auth Error:", error);
+            }
+        }
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            firebaseUser = user;
+            if (user) {
+                document.getElementById('email-submit-btn').disabled = false;
+            }
+        });
+
+        // 2. Load Database when Logged In
+        function loadDatabase() {
+            if (!firebaseUser) return;
+            
+            // Using the specific ledgerAppId to keep this app's data organized in your payroll DB
+            const q = query(collection(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions'));
+            
+            activeUnsubscribe = onSnapshot(q, (snapshot) => {
+                transactions = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                isDbLoading = false;
+                renderApp();
+            }, (error) => {
+                console.error("Sync error:", error);
+                isDbLoading = false;
+                renderApp();
+            });
+        }
+
+        // --- AUTHENTICATION LOGIC ---
+        function showLoginError(msg) {
+            errorText.innerText = msg;
+            errorText.classList.remove('hidden');
+        }
+
+        emailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('login-email').value.toLowerCase().trim();
+            
+            if (ALLOWED_ADMINS[emailInput]) {
+                currentEmail = emailInput;
+                errorText.classList.add('hidden');
+                
+                // Check if profile has password
+                try {
+                    const docRef = doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'admin_profiles', currentEmail);
+                    const docSnap = await getDoc(docRef);
+                    
+                    document.getElementById('locked-email').value = currentEmail;
+                    emailForm.classList.add('hidden');
+                    passwordForm.classList.remove('hidden');
+                    
+                    if (docSnap.exists() && docSnap.data().password) {
+                        loginStep = 2;
+                        document.getElementById('login-subtitle').innerText = "Enter your password to continue.";
+                        document.getElementById('login-password').placeholder = "Enter Password";
+                        document.getElementById('btn-password-submit').innerText = "Login";
+                    } else {
+                        loginStep = 1;
+                        document.getElementById('login-subtitle').innerText = "Create a secure password for your account.";
+                        document.getElementById('login-password').placeholder = "Create Password";
+                        document.getElementById('btn-password-submit').innerText = "Save Password";
+                    }
+                } catch (err) {
+                    showLoginError("Network error. Check connection.");
+                    console.error(err);
+                }
+            } else {
+                showLoginError("Unauthorized email address.");
+            }
+        });
+
+        passwordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pwd = document.getElementById('login-password').value;
+            const docRef = doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'admin_profiles', currentEmail);
+
+            if (loginStep === 1) {
+                if (pwd.length < 4) {
+                    showLoginError("Password must be at least 4 characters.");
+                    return;
+                }
+                await setDoc(docRef, { password: pwd });
+                loginSuccess();
+            } else if (loginStep === 2) {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().password === pwd) {
+                    loginSuccess();
+                } else {
+                    showLoginError("Incorrect password.");
+                }
+            }
+        });
+
+        document.getElementById('btn-back').addEventListener('click', () => {
+            loginStep = 0;
+            currentEmail = "";
+            document.getElementById('login-password').value = "";
+            errorText.classList.add('hidden');
+            passwordForm.classList.add('hidden');
+            emailForm.classList.remove('hidden');
+            document.getElementById('login-subtitle').innerText = "Enter your authorized email to access the ledger.";
+        });
+
+        function loginSuccess() {
+            activeAdmin = { email: currentEmail, name: ALLOWED_ADMINS[currentEmail] };
+            loginScreen.classList.add('hidden');
+            mainScreen.classList.remove('hidden');
+            document.getElementById('active-admin-name').innerText = activeAdmin.name;
+            loadDatabase();
+        }
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            if (activeUnsubscribe) activeUnsubscribe();
+            activeAdmin = null;
+            transactions = [];
+            loginStep = 0;
+            document.getElementById('login-email').value = "";
+            document.getElementById('login-password').value = "";
+            passwordForm.classList.add('hidden');
+            emailForm.classList.remove('hidden');
+            mainScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        });
+
+        // --- RENDER LOGIC ---
+        const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
+        const formatNum = (val) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+        const getToday = () => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        function renderApp() {
+            if (!activeAdmin) return;
+            
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filterAdmin = document.getElementById('filter-admin').value;
+
+            // Sort & Filter
+            let filtered = transactions.filter(t => filterAdmin === "All" || t.admin.includes(filterAdmin));
+            if (searchTerm) {
+                filtered = filtered.filter(t => t.description.toLowerCase().includes(searchTerm));
+            }
+            filtered.sort((a, b) => new Date(a.date) - new Date(b.date) || a.createdAt - b.createdAt);
+
+            // Calculate overall totals
+            let totalIncome = 0, totalExpense = 0;
+            transactions.forEach(t => {
+                if (t.type === 'income') totalIncome += t.amount;
+                else totalExpense += t.amount;
+            });
+            const balance = totalIncome - totalExpense;
+
+            // Calculate running balances
+            let currentBalance = 0;
+            filtered = filtered.map(t => {
+                if (t.type === 'income') currentBalance += t.amount;
+                else currentBalance -= t.amount;
+                return { ...t, runningBalance: currentBalance };
+            });
+
+            // Update Cards
+            const balEl = document.getElementById('card-balance');
+            balEl.innerText = isDbLoading ? '...' : formatCurrency(balance);
+            balEl.className = `text-3xl font-bold ${balance >= 0 ? 'text-slate-900' : 'text-red-600'}`;
+            document.getElementById('card-income').innerText = isDbLoading ? '...' : formatCurrency(totalIncome);
+            document.getElementById('card-expense').innerText = isDbLoading ? '...' : formatCurrency(totalExpense);
+
+            // Render Table
+            tableBody.innerHTML = "";
+            
+            if (isDbLoading) {
+                tableBody.innerHTML = `<tr><td colSpan="7" class="text-center py-12 text-slate-500 font-medium">Loading cloud database...</td></tr>`;
+            } else if (filtered.length === 0 && filterAdmin === "All" && !searchTerm) {
+                tableBody.innerHTML = `<tr><td colSpan="7" class="text-center py-12 text-slate-500">No transactions yet. Type below to add the first one.</td></tr>`;
+            }
+
+            filtered.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50";
+                
+                const dateStr = new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const inAmt = t.type === 'income' ? formatNum(t.amount) : '';
+                const outAmt = t.type === 'expense' ? formatNum(t.amount) : '';
+
+                tr.innerHTML = `
+                    <td class="border-b border-r border-slate-300 p-3 text-slate-600 whitespace-nowrap">${dateStr}</td>
+                    <td class="border-b border-r border-slate-300 p-3 text-slate-600 whitespace-nowrap">${t.admin}</td>
+                    <td class="border-b border-r border-slate-300 p-3"><div class="font-medium text-slate-900">${t.description}</div></td>
+                    <td class="border-b border-r border-slate-300 p-3 text-right font-semibold text-emerald-600 tracking-wide">${inAmt}</td>
+                    <td class="border-b border-r border-slate-300 p-3 text-right font-semibold text-red-700 tracking-wide">${outAmt}</td>
+                    <td class="border-b border-r border-slate-300 p-3 text-right font-bold text-slate-800 tracking-wide bg-slate-50/50">${formatNum(t.runningBalance)}</td>
+                    <td class="border-b border-slate-300 p-3 text-center bg-white">
+                        <button data-id="${t.id}" class="btn-delete bg-[#b33939] hover:bg-red-800 text-white w-6 h-6 rounded-sm flex items-center justify-center text-xs font-bold mx-auto transition-colors shadow-sm" title="Delete">x</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            // Inline Input Row
+            if (filterAdmin === "All" && !searchTerm) {
+                const trInput = document.createElement('tr');
+                trInput.className = "bg-blue-50/30";
+                trInput.innerHTML = `
+                    <td class="border-b border-r border-slate-300 p-3 text-slate-400 italic whitespace-nowrap">${getToday()}</td>
+                    <td class="border-b border-r border-slate-300 p-3 text-blue-600 font-medium whitespace-nowrap">${activeAdmin.name}</td>
+                    <td class="border-b border-r border-slate-300 p-0">
+                        <input type="text" id="inline-desc" placeholder="Type description..." class="w-full h-full p-3 bg-transparent border-none focus:ring-inset focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-medium">
+                    </td>
+                    <td class="border-b border-r border-slate-300 p-0">
+                        <input type="number" id="inline-in" min="0" step="0.01" placeholder="0.00" class="w-full h-full p-3 bg-transparent border-none focus:ring-inset focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm text-right font-semibold text-emerald-600">
+                    </td>
+                    <td class="border-b border-r border-slate-300 p-0">
+                        <input type="number" id="inline-out" min="0" step="0.01" placeholder="0.00" class="w-full h-full p-3 bg-transparent border-none focus:ring-inset focus:ring-2 focus:ring-red-500 focus:outline-none text-sm text-right font-semibold text-red-700">
+                    </td>
+                    <td class="border-b border-r border-slate-300 p-3 text-right text-slate-400 bg-slate-50/50">-</td>
+                    <td class="border-b border-slate-300 p-3 text-center bg-white">
+                        <button id="btn-save-inline" class="bg-slate-200 text-slate-400 w-6 h-6 rounded-sm flex items-center justify-center text-xs font-bold mx-auto transition-colors shadow-sm" disabled>
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(trInput);
+                attachInlineListeners();
+            }
+
+            lucide.createIcons();
+        }
+
+        // --- INTERACTION LOGIC ---
+        document.getElementById('search-input').addEventListener('input', renderApp);
+        document.getElementById('filter-admin').addEventListener('change', renderApp);
+
+        function attachInlineListeners() {
+            const descIn = document.getElementById('inline-desc');
+            const cashIn = document.getElementById('inline-in');
+            const cashOut = document.getElementById('inline-out');
+            const saveBtn = document.getElementById('btn-save-inline');
+
+            const validate = () => {
+                if (descIn.value.trim() && (cashIn.value || cashOut.value)) {
+                    saveBtn.disabled = false;
+                    saveBtn.className = "bg-emerald-600 hover:bg-emerald-700 text-white w-6 h-6 rounded-sm flex items-center justify-center text-xs font-bold mx-auto transition-colors shadow-sm";
+                } else {
+                    saveBtn.disabled = true;
+                    saveBtn.className = "bg-slate-200 text-slate-400 w-6 h-6 rounded-sm flex items-center justify-center text-xs font-bold mx-auto transition-colors shadow-sm";
+                }
+            };
+
+            descIn.addEventListener('input', validate);
+            cashIn.addEventListener('input', () => {
+                if(cashIn.value) cashOut.value = "";
+                validate();
+            });
+            cashOut.addEventListener('input', () => {
+                if(cashOut.value) cashIn.value = "";
+                validate();
+            });
+
+            const handleSave = async () => {
+                if (saveBtn.disabled) return;
+                const isIncome = !!cashIn.value;
+                const amount = isIncome ? parseFloat(cashIn.value) : parseFloat(cashOut.value);
+                
+                if (isNaN(amount) || amount <= 0) return;
+
+                const newTransaction = {
+                    date: new Date().toISOString().split('T')[0], 
+                    createdAt: Date.now(),
+                    description: descIn.value.trim(),
+                    amount: amount,
+                    type: isIncome ? 'income' : 'expense',
+                    admin: `${activeAdmin.name} (${activeAdmin.email})`
+                };
+
+                try {
+                    await addDoc(collection(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions'), newTransaction);
+                } catch (error) {
+                    console.error("Error saving document: ", error);
+                }
+            };
+
+            saveBtn.addEventListener('click', handleSave);
+            
+            const enterCheck = (e) => { if (e.key === 'Enter') handleSave(); };
+            descIn.addEventListener('keydown', enterCheck);
+            cashIn.addEventListener('keydown', enterCheck);
+            cashOut.addEventListener('keydown', enterCheck);
+        }
+
+        // Handle Deletes via Event Delegation
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.btn-delete');
+            if (btn && firebaseUser) {
+                const id = btn.getAttribute('data-id');
+                try {
+                    await deleteDoc(doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions', id));
+                } catch (error) {
+                    console.error("Delete error:", error);
+                }
+            }
+        });
+
+        // Initialize UI State
+        lucide.createIcons();
+        loginScreen.classList.remove('hidden');
+    </script>
+</body>
+</html>
