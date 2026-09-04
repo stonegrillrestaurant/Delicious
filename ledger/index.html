@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Courtside Ledger</title>
+    <title>Courtside Ledger - Smart</title>
     
-    <!-- App Icon & Home Screen Meta Tags -->
     <link rel="apple-touch-icon" href="/ledger/app-icon.PNG">
     <link rel="icon" type="image/png" href="/ledger/app-icon.PNG">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,49 +12,41 @@
     <meta name="apple-mobile-web-app-title" content="Ledger">
     <meta name="theme-color" content="#f1f5f9">
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        /* Hide scrollbar for clean horizontal scrolling */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
     <!-- LOGIN SCREEN -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 hidden">
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md w-full">
             <div class="flex justify-center mb-6">
                 <div class="bg-blue-100 p-4 rounded-full">
                     <i data-lucide="lock" class="text-blue-700 w-8 h-8"></i>
                 </div>
             </div>
+            
             <h1 class="text-2xl font-bold text-center text-slate-900 mb-2">Admin Login</h1>
             <p id="login-subtitle" class="text-center text-slate-500 mb-6 text-sm">Enter your authorized email to access the ledger.</p>
             
-            <div id="login-error" class="text-red-500 text-sm font-medium mb-4 text-center hidden"></div>
+            <div id="login-error" class="text-red-500 text-sm font-medium mb-4 text-center hidden bg-red-50 p-3 rounded-lg border border-red-100"></div>
 
-            <!-- Email Form (Step 0) -->
+            <!-- Email Form -->
             <form id="email-form" class="space-y-4">
                 <div>
                     <input type="email" id="login-email" required placeholder="Email Address" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
                 </div>
-                <button type="submit" id="email-submit-btn" disabled class="w-full py-3 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-bold rounded-lg shadow-sm transition-all">
-                    Continue
+                <button type="submit" id="email-submit-btn" disabled class="w-full py-3 bg-slate-300 text-slate-500 font-bold rounded-lg shadow-sm transition-all">
+                    Initializing Environment...
                 </button>
             </form>
 
-            <!-- Password Form (Step 1 & 2) -->
+            <!-- Password Form -->
             <form id="password-form" class="space-y-4 hidden">
                 <div>
                     <input type="email" id="locked-email" disabled class="w-full px-4 py-3 bg-slate-100 border border-slate-200 text-slate-500 rounded-lg text-sm mb-3">
@@ -66,20 +57,20 @@
                     <button type="submit" id="btn-password-submit" class="w-2/3 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all">Login</button>
                 </div>
             </form>
+            
+            <p id="system-status" class="text-center mt-6 text-xs text-slate-400 font-medium tracking-wide uppercase">Checking Network...</p>
         </div>
     </div>
 
     <!-- MAIN APP SCREEN -->
     <div id="main-screen" class="max-w-6xl mx-auto space-y-6 p-4 sm:p-6 md:p-8 hidden">
-        
-        <!-- Header -->
         <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
                     <i data-lucide="wallet" class="text-blue-700 w-7 h-7"></i>
                     Courtside Ledger
                 </h1>
-                <p class="text-slate-500 text-sm mt-1">Cloud Synced • Live Updates</p>
+                <p class="text-slate-500 text-sm mt-1" id="connection-status">Cloud Synced • Live Updates</p>
             </div>
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100">
@@ -92,13 +83,9 @@
             </div>
         </header>
 
-        <!-- Ledger Table Section -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex flex-col h-full">
-            
-            <!-- Toolbar -->
             <div class="p-4 border-b border-slate-300 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h3 class="text-lg font-bold text-slate-800">Detailed Ledger Entries</h3>
-                
                 <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <div class="relative">
                         <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
@@ -109,11 +96,11 @@
                         <option value="Liezl">Liezl</option>
                         <option value="Dodong">Dodong</option>
                         <option value="Ninox">Ninox</option>
+                        <option value="Stonegrill Admin">Stonegrill Admin</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Table Container -->
             <div class="overflow-x-auto w-full no-scrollbar">
                 <table class="w-full text-sm text-left border-collapse min-w-[850px]">
                     <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
@@ -127,14 +114,11 @@
                             <th class="border-b border-slate-300 p-3 text-center w-12"></th>
                         </tr>
                     </thead>
-                    <tbody id="table-body">
-                        <!-- Dynamic Rows injected here -->
-                    </tbody>
+                    <tbody id="table-body"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
@@ -157,107 +141,131 @@
         </div>
     </div>
 
-    <!-- MAIN LOGIC -->
+    <!-- MAIN LOGIC (Modern Firebase SDK) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ==========================================
-        // FIREBASE CONFIGURATION (INJECTED)
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
-            authDomain: "payroll-c4f0c.firebaseapp.com",
-            projectId: "payroll-c4f0c",
-            storageBucket: "payroll-c4f0c.firebasestorage.app",
-            messagingSenderId: "427050362534",
-            appId: "1:427050362534:web:75b99c661720affa417667",
-            measurementId: "G-TD88WH28ZD"
-        };
-        const ledgerAppId = "courtside-ledger-prod"; // Identifier used in db paths
+        lucide.createIcons();
+
+        // --- SMART ENVIRONMENT DETECTION ---
+        let firebaseConfig;
+        let ledgerAppId = "courtside-ledger-prod";
+        let isCanvasPreview = false;
+
+        if (typeof __firebase_config !== 'undefined') {
+            // We are running inside the Gemini Canvas preview
+            firebaseConfig = JSON.parse(__firebase_config);
+            ledgerAppId = typeof __app_id !== 'undefined' ? __app_id : ledgerAppId;
+            isCanvasPreview = true;
+            document.getElementById('system-status').innerText = "Canvas Preview Mode Active";
+        } else {
+            // We are running live on stonegrillresto.net or GitHub
+            firebaseConfig = {
+                apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
+                authDomain: "payroll-c4f0c.firebaseapp.com",
+                projectId: "payroll-c4f0c",
+                storageBucket: "payroll-c4f0c.firebasestorage.app",
+                messagingSenderId: "427050362534",
+                appId: "1:427050362534:web:75b99c661720affa417667",
+                measurementId: "G-TD88WH28ZD"
+            };
+            document.getElementById('system-status').innerText = "Live Production Mode Active";
+        }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // System Constants
         const ALLOWED_ADMINS = {
             "izl.lopez@yahoo.com": "Liezl",
             "antolihao75@gmail.com": "Dodong",
-            "ninoxx@gmail.com": "Ninox"
+            "ninoxx@gmail.com": "Ninox",
+            "stonegrill2014@gmail.com": "Stonegrill Admin"
         };
 
-        // State Variables
-        let firebaseUser = null;
         let activeAdmin = null;
         let transactions = [];
-        let loginStep = 0; // 0: Email, 1: Create Pass, 2: Enter Pass
+        let loginStep = 0; 
         let currentEmail = "";
         let isDbLoading = true;
         let activeUnsubscribe = null;
 
-        // DOM Elements
         const loginScreen = document.getElementById('login-screen');
         const mainScreen = document.getElementById('main-screen');
         const emailForm = document.getElementById('email-form');
         const passwordForm = document.getElementById('password-form');
         const errorText = document.getElementById('login-error');
         const tableBody = document.getElementById('table-body');
+        const submitBtn = document.getElementById('email-submit-btn');
+        const systemStatus = document.getElementById('system-status');
 
-        // 1. Authenticate Firebase Environment
-        async function initAuth() {
-            try {
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Firebase Auth Error:", error);
-            }
+        function showLoginError(msg) {
+            errorText.innerText = msg;
+            errorText.classList.remove('hidden');
+            submitBtn.innerText = "Continue";
+            submitBtn.disabled = false;
+            submitBtn.className = "w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all";
         }
+
+        const initAuth = async () => {
+            try {
+                if (isCanvasPreview && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth Error:", error);
+                systemStatus.innerText = "Auth Error: Check Firebase settings";
+                systemStatus.classList.add("text-red-500");
+            }
+        };
         initAuth();
 
         onAuthStateChanged(auth, (user) => {
-            firebaseUser = user;
             if (user) {
-                document.getElementById('email-submit-btn').disabled = false;
+                submitBtn.innerText = "Continue";
+                submitBtn.disabled = false;
+                submitBtn.className = "w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all";
+                systemStatus.innerText = "System Online & Secure";
+                systemStatus.classList.remove("text-red-500");
+                systemStatus.classList.add("text-emerald-500");
             }
         });
 
-        // 2. Load Database when Logged In
         function loadDatabase() {
-            if (!firebaseUser) return;
+            if (!auth.currentUser) return;
             
-            // Using the specific ledgerAppId to keep this app's data organized in your payroll DB
             const q = query(collection(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions'));
             
             activeUnsubscribe = onSnapshot(q, (snapshot) => {
-                transactions = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
+                transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 isDbLoading = false;
+                document.getElementById('connection-status').innerText = isCanvasPreview ? "Canvas Test DB Active" : "Cloud Synced • Live Updates";
+                document.getElementById('connection-status').classList.remove('text-red-500');
                 renderApp();
             }, (error) => {
                 console.error("Sync error:", error);
+                document.getElementById('connection-status').innerText = "Connection Error - Check Database Rules";
+                document.getElementById('connection-status').classList.add('text-red-500');
                 isDbLoading = false;
                 renderApp();
             });
         }
 
-        // --- AUTHENTICATION LOGIC ---
-        function showLoginError(msg) {
-            errorText.innerText = msg;
-            errorText.classList.remove('hidden');
-        }
-
-        emailForm.addEventListener('submit', async (e) => {
+        emailForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const emailInput = document.getElementById('login-email').value.toLowerCase().trim();
             
             if (ALLOWED_ADMINS[emailInput]) {
                 currentEmail = emailInput;
                 errorText.classList.add('hidden');
+                submitBtn.innerText = "Checking Profile...";
+                submitBtn.disabled = true;
+                submitBtn.className = "w-full py-3 bg-slate-300 text-slate-500 font-bold rounded-lg shadow-sm transition-all";
                 
-                // Check if profile has password
                 try {
                     const docRef = doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'admin_profiles', currentEmail);
                     const docSnap = await getDoc(docRef);
@@ -277,38 +285,56 @@
                         document.getElementById('login-password').placeholder = "Create Password";
                         document.getElementById('btn-password-submit').innerText = "Save Password";
                     }
+                    
+                    submitBtn.innerText = "Continue";
+                    submitBtn.disabled = false;
+                    submitBtn.className = "w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all";
                 } catch (err) {
-                    showLoginError("Network error. Check connection.");
                     console.error(err);
+                    showLoginError("Error connecting to database. Please check connection.");
                 }
             } else {
                 showLoginError("Unauthorized email address.");
             }
         });
 
-        passwordForm.addEventListener('submit', async (e) => {
+        passwordForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const pwd = document.getElementById('login-password').value;
             const docRef = doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'admin_profiles', currentEmail);
+            const passBtn = document.getElementById('btn-password-submit');
+            
+            passBtn.innerText = "Verifying...";
+            passBtn.disabled = true;
 
-            if (loginStep === 1) {
-                if (pwd.length < 4) {
-                    showLoginError("Password must be at least 4 characters.");
-                    return;
-                }
-                await setDoc(docRef, { password: pwd });
-                loginSuccess();
-            } else if (loginStep === 2) {
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists() && docSnap.data().password === pwd) {
+            try {
+                if (loginStep === 1) {
+                    if (pwd.length < 4) {
+                        showLoginError("Password must be at least 4 characters.");
+                        passBtn.innerText = "Save Password";
+                        passBtn.disabled = false;
+                        return;
+                    }
+                    await setDoc(docRef, { password: pwd });
                     loginSuccess();
-                } else {
-                    showLoginError("Incorrect password.");
+                } else if (loginStep === 2) {
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists() && docSnap.data().password === pwd) {
+                        loginSuccess();
+                    } else {
+                        showLoginError("Incorrect password.");
+                        passBtn.innerText = "Login";
+                        passBtn.disabled = false;
+                    }
                 }
+            } catch(err) {
+                 showLoginError("Authentication Error. Try again.");
+                 passBtn.innerText = loginStep === 1 ? "Save Password" : "Login";
+                 passBtn.disabled = false;
             }
         });
 
-        document.getElementById('btn-back').addEventListener('click', () => {
+        document.getElementById('btn-back').addEventListener('click', function() {
             loginStep = 0;
             currentEmail = "";
             document.getElementById('login-password').value = "";
@@ -326,7 +352,7 @@
             loadDatabase();
         }
 
-        document.getElementById('btn-logout').addEventListener('click', () => {
+        document.getElementById('btn-logout').addEventListener('click', function() {
             if (activeUnsubscribe) activeUnsubscribe();
             activeAdmin = null;
             transactions = [];
@@ -339,7 +365,6 @@
             loginScreen.classList.remove('hidden');
         });
 
-        // --- RENDER LOGIC ---
         const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
         const formatNum = (val) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
         const getToday = () => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -350,14 +375,12 @@
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             const filterAdmin = document.getElementById('filter-admin').value;
 
-            // Sort & Filter
-            let filtered = transactions.filter(t => filterAdmin === "All" || t.admin.includes(filterAdmin));
+            let filtered = transactions.filter(t => filterAdmin === "All" || (t.admin && t.admin.includes(filterAdmin)));
             if (searchTerm) {
                 filtered = filtered.filter(t => t.description.toLowerCase().includes(searchTerm));
             }
             filtered.sort((a, b) => new Date(a.date) - new Date(b.date) || a.createdAt - b.createdAt);
 
-            // Calculate overall totals
             let totalIncome = 0, totalExpense = 0;
             transactions.forEach(t => {
                 if (t.type === 'income') totalIncome += t.amount;
@@ -365,7 +388,6 @@
             });
             const balance = totalIncome - totalExpense;
 
-            // Calculate running balances
             let currentBalance = 0;
             filtered = filtered.map(t => {
                 if (t.type === 'income') currentBalance += t.amount;
@@ -373,14 +395,12 @@
                 return { ...t, runningBalance: currentBalance };
             });
 
-            // Update Cards
             const balEl = document.getElementById('card-balance');
             balEl.innerText = isDbLoading ? '...' : formatCurrency(balance);
             balEl.className = `text-3xl font-bold ${balance >= 0 ? 'text-slate-900' : 'text-red-600'}`;
             document.getElementById('card-income').innerText = isDbLoading ? '...' : formatCurrency(totalIncome);
             document.getElementById('card-expense').innerText = isDbLoading ? '...' : formatCurrency(totalExpense);
 
-            // Render Table
             tableBody.innerHTML = "";
             
             if (isDbLoading) {
@@ -411,7 +431,6 @@
                 tableBody.appendChild(tr);
             });
 
-            // Inline Input Row
             if (filterAdmin === "All" && !searchTerm) {
                 const trInput = document.createElement('tr');
                 trInput.className = "bg-blue-50/30";
@@ -441,7 +460,6 @@
             lucide.createIcons();
         }
 
-        // --- INTERACTION LOGIC ---
         document.getElementById('search-input').addEventListener('input', renderApp);
         document.getElementById('filter-admin').addEventListener('change', renderApp);
 
@@ -462,14 +480,8 @@
             };
 
             descIn.addEventListener('input', validate);
-            cashIn.addEventListener('input', () => {
-                if(cashIn.value) cashOut.value = "";
-                validate();
-            });
-            cashOut.addEventListener('input', () => {
-                if(cashOut.value) cashIn.value = "";
-                validate();
-            });
+            cashIn.addEventListener('input', () => { if(cashIn.value) cashOut.value = ""; validate(); });
+            cashOut.addEventListener('input', () => { if(cashOut.value) cashIn.value = ""; validate(); });
 
             const handleSave = async () => {
                 if (saveBtn.disabled) return;
@@ -491,33 +503,29 @@
                     await addDoc(collection(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions'), newTransaction);
                 } catch (error) {
                     console.error("Error saving document: ", error);
+                    alert("Error saving transaction. Check permissions.");
                 }
             };
 
             saveBtn.addEventListener('click', handleSave);
-            
             const enterCheck = (e) => { if (e.key === 'Enter') handleSave(); };
             descIn.addEventListener('keydown', enterCheck);
             cashIn.addEventListener('keydown', enterCheck);
             cashOut.addEventListener('keydown', enterCheck);
         }
 
-        // Handle Deletes via Event Delegation
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('.btn-delete');
-            if (btn && firebaseUser) {
+            if (btn && auth.currentUser) {
                 const id = btn.getAttribute('data-id');
                 try {
                     await deleteDoc(doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions', id));
                 } catch (error) {
                     console.error("Delete error:", error);
+                    alert("Error deleting transaction.");
                 }
             }
         });
-
-        // Initialize UI State
-        lucide.createIcons();
-        loginScreen.classList.remove('hidden');
     </script>
 </body>
 </html>
