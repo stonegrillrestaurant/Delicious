@@ -1,5 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+<!--
+STONE GRILL COMMENTS — FACEBOOK LOGIN HANDOFF (2026-09-08)
+Publish this complete file as /comments/index.html beside your existing images.
+Chosen Meta app: stone grill comments app — 1692304098526935.
+Login method: Facebook JavaScript SDK FB.login; public_profile only.
+Meta settings: App domain stonegrillresto.net; enable Client OAuth Login,
+Web OAuth Login and JavaScript SDK Login; allow the Stone Grill domain;
+existing redirect entry https://stonegrillresto.net/comments/.
+After business review: check public_profile Advanced Access, resolve any
+remaining Meta requirements, switch to Live, test with a non-role account.
+A successful business review alone does not prove public login is enabled.
+No App Secret belongs in this HTML. No Firebase auth handler is used here.
+Firebase project: stone-grill-app (724825019953). Its employee Facebook
+provider 1931174884373345 is NOT changed or used by this page.
+LIMITATIONS: This retains your direct Firestore writes and existing schema.
+Firestore rules have not been supplied or verified. The facebookVerified
+field is a client claim, NOT server-verified proof. Phone numbers share the
+review documents in the original schema; public document readers can read
+all fields. Separate private contacts and verify identity on a trusted
+backend before treating this as a secure identity or private-contact system.
+No email, phone, address, Messenger permission or contactable profile link
+is obtained by this Facebook request. No access tokens are saved to Firestore.
+Login resilience checks are simulated; real Meta login and Firestore writes
+must be tested on the published HTTPS site.
+-->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -536,6 +561,7 @@
               </button>
             </div>
 
+            <p id="facebookStatus" role="status" aria-live="polite" style="font-size:12px;color:#687078;margin:10px 0"></p>
             <div class="identity-user hidden" id="identityUser">
               <div class="identity-left">
                 <div class="person-avatar">
@@ -851,8 +877,8 @@
       <div class="modal-icon">❤️</div>
       <h2 style="margin:0">Thank you for helping us improve.</h2>
       <p style="color:var(--muted);font-size:12px">
-        Your feedback and category ratings were received. After review,
-        your experience may appear in the community comments.
+        Your feedback and category ratings were received.
+        Thank you for sharing your experience with Stone Grill.
       </p>
       <button class="btn btn-fb" id="closeModal" type="button">
         Continue Reading
@@ -862,7 +888,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
     import {
       getFirestore,
       collection,
@@ -888,11 +914,15 @@
     };
   
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+    // Analytics is optional: a blocked/unsupported analytics service must not stop login.
+    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js")
+      .then(async ({ getAnalytics, isSupported }) => {
+        if (await isSupported()) getAnalytics(app);
+      }).catch(() => {});
     const db = getFirestore(app);
     const commentsCollection = collection(db, "comments");
   
-    const FACEBOOK_APP_ID = "2861007324270282";
+    const FACEBOOK_APP_ID = "1692304098526935";
     const GRAPH_API_VERSION = "v26.0";
   
     const GUEST_AVATAR =
@@ -931,68 +961,139 @@
     /* =====================================================
        FACEBOOK SDK
     ===================================================== */
+    let facebookReady = false;
+    let loginAttempt = 0;
+    let loginTimer;
+    let sdkTimer;
+    const facebookButton = $("facebookLogin");
+    const facebookButtonLabel = facebookButton.innerHTML;
+
+    function facebookMessage(message) {
+      $("facebookStatus").textContent = message;
+    }
+    function endFacebookAttempt() {
+      loginAttempt++;
+      clearTimeout(loginTimer);
+      facebookButton.disabled = false;
+      facebookButton.removeAttribute("aria-busy");
+      facebookButton.innerHTML = facebookButtonLabel;
+    }
+    function facebookFailure(attempt, message) {
+      if (attempt !== loginAttempt) return;
+      endFacebookAttempt();
+      facebookAccessToken = "";
+      facebookProfile = null;
+      facebookMessage(message + " You can continue as a guest without losing your feedback.");
+    }
+
     window.fbAsyncInit = function () {
-      FB.init({
-        appId: FACEBOOK_APP_ID,
-        cookie: true,
-        xfbml: true,
-        version: GRAPH_API_VERSION
-      });
-  
-      FB.getLoginStatus(response => {
-        if (response.status === "connected" && response.authResponse) {
-          facebookAccessToken = response.authResponse.accessToken;
-          loadFacebookProfile(false);
-        }
-      });
+      try {
+        FB.init({
+          appId: FACEBOOK_APP_ID,
+          cookie: true,
+          xfbml: true,
+          version: GRAPH_API_VERSION
+        });
+        facebookReady = true;
+        clearTimeout(sdkTimer);
+        if (!identityMode) facebookMessage("");
+        // Sign in only after the visitor clicks. A delayed automatic status
+        // check must never replace a guest identity or move an unfinished form.
+      } catch (_) {
+        facebookReady = false;
+        clearTimeout(sdkTimer);
+        facebookMessage("Facebook sign-in could not start. Please continue as a guest.");
+      }
     };
-  
-    (function loadSdk(documentObject, scriptTag, sdkId) {
-      const firstScript = documentObject.getElementsByTagName(scriptTag)[0];
-      if (documentObject.getElementById(sdkId)) return;
-      const script = documentObject.createElement(scriptTag);
-      script.id = sdkId;
+
+    (function loadSdk() {
+      sdkTimer = setTimeout(() => {
+        if (!facebookReady && !identityMode) {
+          facebookMessage("Facebook is taking longer to load. You can continue as a guest.");
+        }
+      }, 12000);
+      if (document.getElementById("facebook-jssdk")) return;
+      const script = document.createElement("script");
+      script.id = "facebook-jssdk";
       script.async = true;
       script.defer = true;
       script.crossOrigin = "anonymous";
       script.src = "https://connect.facebook.net/en_US/sdk.js";
-      firstScript.parentNode.insertBefore(script, firstScript);
-    })(document, "script", "facebook-jssdk");
-  
-    $("facebookLogin").addEventListener("click", () => {
-      if (typeof FB === "undefined") {
-        showToast("Facebook Login is still loading. Please try again.", "error");
+      script.onerror = () => {
+        clearTimeout(sdkTimer);
+        if (!identityMode) facebookMessage("Facebook could not load. Please check your connection or continue as a guest.");
+      };
+      document.head.appendChild(script);
+    })();
+
+    facebookButton.addEventListener("click", () => {
+      if (!facebookReady || typeof FB === "undefined") {
+        facebookMessage("Facebook is not ready. Please try again shortly or continue as a guest.");
         return;
       }
-      FB.login(response => {
-        if (response.authResponse) {
+      endFacebookAttempt();
+      const attempt = loginAttempt;
+      facebookButton.disabled = true;
+      facebookButton.setAttribute("aria-busy", "true");
+      facebookButton.textContent = "Connecting to Facebook…";
+      facebookMessage("Complete sign-in in the Facebook window. You can also continue as a guest below.");
+      loginTimer = setTimeout(() => {
+        facebookFailure(attempt, "Facebook sign-in has not completed. Close the Facebook window, then retry if you wish.");
+      }, 90000);
+      try {
+        // Keep this synchronous in the click handler so browsers can open the popup.
+        FB.login(response => {
+          if (attempt !== loginAttempt) return;
+          if (response?.status !== "connected" || !response.authResponse?.accessToken) {
+            facebookFailure(attempt, "Facebook sign-in was cancelled or unavailable.");
+            return;
+          }
           facebookAccessToken = response.authResponse.accessToken;
-          loadFacebookProfile(true);
-        } else {
-          showToast("Facebook Login was cancelled or not completed.", "error");
-        }
-      }, { scope: "public_profile", return_scopes: true });
+          loadFacebookProfile(attempt);
+        }, { scope: "public_profile", return_scopes: true });
+      } catch (_) {
+        facebookFailure(attempt, "Facebook sign-in could not open. Try allowing popups or opening this page in Safari or Chrome.");
+      }
     });
-  
-    function loadFacebookProfile(showWelcome) {
-      FB.api("/me", { fields: "id,name,picture.type(large)" }, profile => {
-        if (!profile || profile.error || !profile.id) {
-          if (showWelcome) showToast("We could not load your Facebook profile.", "error");
-          return;
-        }
-        facebookProfile = profile;
-        identityMode = "facebook";
-        $("identityName").textContent = profile.name || "Facebook Customer";
-        $("identityPhoto").src = profile.picture?.data?.url || GUEST_AVATAR;
-        $("identityStatus").textContent = "✓ Authenticated with Facebook";
-        $("customerName").value = profile.name || "";
-        $("guestNameField").classList.add("hidden");
-        showForm();
-        if (showWelcome) showToast("Welcome, " + (profile.name || "Facebook Customer") + "!", "success");
-      });
+
+    function loadFacebookProfile(attempt) {
+      clearTimeout(loginTimer);
+      facebookMessage("Loading your name and photo…");
+      loginTimer = setTimeout(() => {
+        facebookFailure(attempt, "Your Facebook profile did not finish loading.");
+      }, 15000);
+      try {
+        FB.api("/me", {
+          fields: "id,name,picture.type(large)",
+          access_token: facebookAccessToken
+        }, profile => {
+          if (attempt !== loginAttempt) return;
+          if (!profile || profile.error || !profile.id || !profile.name) {
+            facebookFailure(attempt, "We could not load your Facebook profile. Please try signing in again.");
+            return;
+          }
+          endFacebookAttempt();
+          facebookProfile = profile;
+          identityMode = "facebook";
+          $("identityName").textContent = profile.name;
+          $("identityPhoto").src = safeUrl(profile.picture?.data?.url)
+            ? profile.picture.data.url : GUEST_AVATAR;
+          $("identityPhoto").onerror = function () { this.onerror = null; this.src = GUEST_AVATAR; };
+          $("identityStatus").textContent = "Name and photo from Facebook";
+          $("customerName").value = profile.name;
+          $("guestNameField").classList.add("hidden");
+          facebookMessage("");
+          showForm();
+          showToast("Welcome, " + profile.name + "!", "success");
+        });
+      } catch (_) {
+        facebookFailure(attempt, "We could not load your Facebook profile.");
+      }
     }
-  
+
     $("guestLogin").addEventListener("click", () => {
+      endFacebookAttempt();
+      facebookMessage("");
       identityMode = "guest";
       facebookAccessToken = "";
       facebookProfile = null;
@@ -1011,6 +1112,8 @@
     }
   
     $("changeIdentity").addEventListener("click", () => {
+      endFacebookAttempt();
+      facebookMessage("");
       identityMode = "";
       facebookAccessToken = "";
       facebookProfile = null;
@@ -1125,7 +1228,7 @@
         favoriteItem: $("favoriteItem").value.trim(),
         anonymous: isAnonymous,
         contactPermission: !isAnonymous && $("contactPermission").checked,
-        approved: true, // Defaulted to false so you can approve manually
+        approved: true, // Existing immediate-publication behavior retained; rules must enforce your policy.
         managementReply: "",
         createdAt: serverTimestamp()
       };
@@ -1258,7 +1361,7 @@
             <div class="review-main">
               <div class="review-name-row">
                 <span class="review-name">${escapeHtml(review.customerName)}</span>
-                ${isFacebook ? '<span class="fb-badge">✓ Authenticated with Facebook</span>' : ""}
+                ${isFacebook ? '<span class="fb-badge">Facebook profile</span>' : ""}
               </div>
               <div class="review-meta">${escapeHtml(review.serviceType || "Stone Grill experience")} ${review.submittedAt ? " · " + formatDate(review.submittedAt) : ""}</div>
               <div class="review-overall">
