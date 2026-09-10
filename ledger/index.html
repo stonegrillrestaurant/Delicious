@@ -18,6 +18,8 @@
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Custom dropdown arrow to look better on iOS/Android */
+        select { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; -webkit-print-color-adjust: exact; color-adjust: exact; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
@@ -27,35 +29,37 @@
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md w-full">
             <div class="flex justify-center mb-6">
                 <div class="bg-blue-100 p-4 rounded-full">
-                    <i data-lucide="lock" class="text-blue-700 w-8 h-8"></i>
+                    <i data-lucide="shield-check" class="text-blue-700 w-8 h-8"></i>
                 </div>
             </div>
             
-            <h1 class="text-2xl font-bold text-center text-slate-900 mb-2">Admin Login</h1>
-            <p id="login-subtitle" class="text-center text-slate-500 mb-6 text-sm">Enter your authorized email to access the ledger.</p>
+            <h1 class="text-2xl font-bold text-center text-slate-900 mb-2">Admin Access</h1>
+            <p id="login-subtitle" class="text-center text-slate-500 mb-6 text-sm">Select your profile and enter your PIN.</p>
             
             <div id="login-error" class="text-red-500 text-sm font-medium mb-4 text-center hidden bg-red-50 p-3 rounded-lg border border-red-100"></div>
 
-            <!-- Email Form -->
-            <form id="email-form" class="space-y-4">
+            <!-- PIN Form -->
+            <form id="login-form" class="space-y-5">
                 <div>
-                    <input type="email" id="login-email" required placeholder="Email Address" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Select Admin Profile</label>
+                    <select id="login-admin-select" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm appearance-none font-medium text-slate-700">
+                        <option value="" disabled selected>-- Select your name --</option>
+                        <option value="Liezl">Liezl</option>
+                        <option value="Dodong">Dodong</option>
+                        <option value="Ninox">Ninox</option>
+                        <option value="Stonegrill Admin">Stonegrill Admin</option>
+                    </select>
                 </div>
-                <button type="submit" id="email-submit-btn" disabled class="w-full py-3 bg-slate-300 text-slate-500 font-bold rounded-lg shadow-sm transition-all">
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Security PIN</label>
+                    <input type="password" id="login-pin" required placeholder="••••••" pattern="[0-9]*" inputmode="numeric" maxlength="6" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-2xl tracking-[0.5em] text-center font-bold text-slate-800">
+                    <p class="text-xs text-slate-400 mt-2 text-center">4-6 digits. Setting a PIN for the first time will save it automatically.</p>
+                </div>
+                
+                <button type="submit" id="btn-login-submit" disabled class="w-full py-3 bg-slate-300 text-slate-500 font-bold rounded-lg shadow-sm transition-all mt-2">
                     Initializing Environment...
                 </button>
-            </form>
-
-            <!-- Password Form -->
-            <form id="password-form" class="space-y-4 hidden">
-                <div>
-                    <input type="email" id="locked-email" disabled class="w-full px-4 py-3 bg-slate-100 border border-slate-200 text-slate-500 rounded-lg text-sm mb-3">
-                    <input type="password" id="login-password" required placeholder="Password" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" id="btn-back" class="w-1/3 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg shadow-sm transition-all">Back</button>
-                    <button type="submit" id="btn-password-submit" class="w-2/3 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all">Login</button>
-                </div>
             </form>
             
             <p id="system-status" class="text-center mt-6 text-xs text-slate-400 font-medium tracking-wide uppercase">Checking Network...</p>
@@ -140,6 +144,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- MAIN LOGIC (Modern Firebase SDK) -->
     <script type="module">
@@ -149,19 +156,16 @@
 
         lucide.createIcons();
 
-        // --- SMART ENVIRONMENT DETECTION ---
         let firebaseConfig;
         let ledgerAppId = "courtside-ledger-prod";
         let isCanvasPreview = false;
 
         if (typeof __firebase_config !== 'undefined') {
-            // We are running inside the Gemini Canvas preview
             firebaseConfig = JSON.parse(__firebase_config);
             ledgerAppId = typeof __app_id !== 'undefined' ? __app_id : ledgerAppId;
             isCanvasPreview = true;
             document.getElementById('system-status').innerText = "Canvas Preview Mode Active";
         } else {
-            // We are running live on stonegrillresto.net
             firebaseConfig = {
                 apiKey: "AIzaSyC1ZubFOxcjhcQkR5MgSR50PZdYba0r2Wc",
                 authDomain: "payroll-c4f0c.firebaseapp.com",
@@ -178,35 +182,59 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const ALLOWED_ADMINS = {
-            "izl.lopez@yahoo.com": "Liezl",
-            "antolihao75@gmail.com": "Dodong",
-            "ninoxx@gmail.com": "Ninox",
-            "stonegrill2014@gmail.com": "Stonegrill Admin"
+        // Map UI display names to document IDs safely
+        const ADMIN_IDS = {
+            "Liezl": "profile_liezl",
+            "Dodong": "profile_dodong",
+            "Ninox": "profile_ninox",
+            "Stonegrill Admin": "profile_stonegrill"
         };
 
         let activeAdmin = null;
         let transactions = [];
-        let loginStep = 0; 
-        let currentEmail = "";
         let isDbLoading = true;
         let activeUnsubscribe = null;
 
         const loginScreen = document.getElementById('login-screen');
         const mainScreen = document.getElementById('main-screen');
-        const emailForm = document.getElementById('email-form');
-        const passwordForm = document.getElementById('password-form');
+        const loginForm = document.getElementById('login-form');
         const errorText = document.getElementById('login-error');
         const tableBody = document.getElementById('table-body');
-        const submitBtn = document.getElementById('email-submit-btn');
+        const submitBtn = document.getElementById('btn-login-submit');
         const systemStatus = document.getElementById('system-status');
+        const pinInput = document.getElementById('login-pin');
+        const adminSelect = document.getElementById('login-admin-select');
+
+        
+        // Securely hash the PIN using SHA-256 before saving/comparing
+        async function hashPIN(pin) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pin);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         function showLoginError(msg) {
             errorText.innerText = msg;
             errorText.classList.remove('hidden');
-            submitBtn.innerText = "Continue";
-            submitBtn.disabled = false;
-            submitBtn.className = "w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all";
+        }
+
+        // Custom Toast Notification System (replaces alert)
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-lg shadow-lg text-white text-sm font-bold transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-red-600' : 'bg-slate-800'}`;
+            toast.innerText = message;
+            document.getElementById('toast-container').appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         const initAuth = async () => {
@@ -226,13 +254,82 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                submitBtn.innerText = "Continue";
+                submitBtn.innerText = "Access Ledger";
                 submitBtn.disabled = false;
                 submitBtn.className = "w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all";
                 systemStatus.innerText = "System Online & Secure";
                 systemStatus.classList.remove("text-red-500");
                 systemStatus.classList.add("text-emerald-500");
             }
+        });
+
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const selectedName = adminSelect.value;
+            const pin = pinInput.value;
+
+            if (!selectedName) return showLoginError("Please select your profile.");
+            if (pin.length < 4) return showLoginError("PIN must be at least 4 digits.");
+
+            errorText.classList.add('hidden');
+            submitBtn.innerText = "Verifying...";
+            submitBtn.disabled = true;
+            submitBtn.className = "w-full py-3 bg-slate-300 text-slate-500 font-bold rounded-lg shadow-sm transition-all";
+            
+            try {
+                const adminId = ADMIN_IDS[selectedName];
+                const hashedPin = await hashPIN(pin); // Hash it!
+                
+                const docRef = doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'admin_profiles', adminId);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists() && docSnap.data().pinHash) {
+                    // Profile exists, verify the hash
+                    if (docSnap.data().pinHash === hashedPin) {
+                        loginSuccess(selectedName);
+                    } else {
+                        showLoginError("Incorrect PIN.");
+                        resetLoginButton();
+                    }
+                } else {
+                    // Profile does not exist yet, let's create and set the PIN hash
+                    await setDoc(docRef, { pinHash: hashedPin, name: selectedName });
+                    showToast("New PIN successfully securely saved.");
+                    loginSuccess(selectedName);
+                }
+            } catch (err) {
+                console.error(err);
+                showLoginError("Error connecting to database.");
+                resetLoginButton();
+            }
+        });
+
+        function resetLoginButton() {
+            submitBtn.innerText = "Access Ledger";
+            submitBtn.disabled = false;
+            submitBtn.className = "w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all";
+            pinInput.value = "";
+        }
+
+        function loginSuccess(name) {
+            activeAdmin = { name: name };
+            loginScreen.classList.add('hidden');
+            mainScreen.classList.remove('hidden');
+            document.getElementById('active-admin-name').innerText = activeAdmin.name;
+            loadDatabase();
+            pinInput.value = ""; // Clear for security
+            resetLoginButton();
+        }
+
+        document.getElementById('btn-logout').addEventListener('click', function() {
+            if (activeUnsubscribe) activeUnsubscribe();
+            activeAdmin = null;
+            transactions = [];
+            adminSelect.value = "";
+            pinInput.value = "";
+            mainScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            showToast("Successfully logged out.");
         });
 
         function loadDatabase() {
@@ -254,116 +351,6 @@
                 renderApp();
             });
         }
-
-        emailForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const emailInput = document.getElementById('login-email').value.toLowerCase().trim();
-            
-            if (ALLOWED_ADMINS[emailInput]) {
-                currentEmail = emailInput;
-                errorText.classList.add('hidden');
-                submitBtn.innerText = "Checking Profile...";
-                submitBtn.disabled = true;
-                submitBtn.className = "w-full py-3 bg-slate-300 text-slate-500 font-bold rounded-lg shadow-sm transition-all";
-                
-                try {
-                    const docRef = doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'admin_profiles', currentEmail);
-                    const docSnap = await getDoc(docRef);
-                    
-                    document.getElementById('locked-email').value = currentEmail;
-                    emailForm.classList.add('hidden');
-                    passwordForm.classList.remove('hidden');
-                    
-                    if (docSnap.exists() && docSnap.data().password) {
-                        loginStep = 2;
-                        document.getElementById('login-subtitle').innerText = "Enter your password to continue.";
-                        document.getElementById('login-password').placeholder = "Enter Password";
-                        document.getElementById('btn-password-submit').innerText = "Login";
-                    } else {
-                        loginStep = 1;
-                        document.getElementById('login-subtitle').innerText = "Create a secure password for your account.";
-                        document.getElementById('login-password').placeholder = "Create Password";
-                        document.getElementById('btn-password-submit').innerText = "Save Password";
-                    }
-                    
-                    submitBtn.innerText = "Continue";
-                    submitBtn.disabled = false;
-                    submitBtn.className = "w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-sm transition-all";
-                } catch (err) {
-                    console.error(err);
-                    showLoginError("Error connecting to database. Please check connection.");
-                }
-            } else {
-                showLoginError("Unauthorized email address.");
-            }
-        });
-
-        passwordForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const pwd = document.getElementById('login-password').value;
-            const docRef = doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'admin_profiles', currentEmail);
-            const passBtn = document.getElementById('btn-password-submit');
-            
-            passBtn.innerText = "Verifying...";
-            passBtn.disabled = true;
-
-            try {
-                if (loginStep === 1) {
-                    if (pwd.length < 4) {
-                        showLoginError("Password must be at least 4 characters.");
-                        passBtn.innerText = "Save Password";
-                        passBtn.disabled = false;
-                        return;
-                    }
-                    await setDoc(docRef, { password: pwd });
-                    loginSuccess();
-                } else if (loginStep === 2) {
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists() && docSnap.data().password === pwd) {
-                        loginSuccess();
-                    } else {
-                        showLoginError("Incorrect password.");
-                        passBtn.innerText = "Login";
-                        passBtn.disabled = false;
-                    }
-                }
-            } catch(err) {
-                 showLoginError("Authentication Error. Try again.");
-                 passBtn.innerText = loginStep === 1 ? "Save Password" : "Login";
-                 passBtn.disabled = false;
-            }
-        });
-
-        document.getElementById('btn-back').addEventListener('click', function() {
-            loginStep = 0;
-            currentEmail = "";
-            document.getElementById('login-password').value = "";
-            errorText.classList.add('hidden');
-            passwordForm.classList.add('hidden');
-            emailForm.classList.remove('hidden');
-            document.getElementById('login-subtitle').innerText = "Enter your authorized email to access the ledger.";
-        });
-
-        function loginSuccess() {
-            activeAdmin = { email: currentEmail, name: ALLOWED_ADMINS[currentEmail] };
-            loginScreen.classList.add('hidden');
-            mainScreen.classList.remove('hidden');
-            document.getElementById('active-admin-name').innerText = activeAdmin.name;
-            loadDatabase();
-        }
-
-        document.getElementById('btn-logout').addEventListener('click', function() {
-            if (activeUnsubscribe) activeUnsubscribe();
-            activeAdmin = null;
-            transactions = [];
-            loginStep = 0;
-            document.getElementById('login-email').value = "";
-            document.getElementById('login-password').value = "";
-            passwordForm.classList.add('hidden');
-            emailForm.classList.remove('hidden');
-            mainScreen.classList.add('hidden');
-            loginScreen.classList.remove('hidden');
-        });
 
         const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
         const formatNum = (val) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
@@ -419,7 +406,7 @@
 
                 tr.innerHTML = `
                     <td class="border-b border-r border-slate-300 p-3 text-slate-600 whitespace-nowrap">${dateStr}</td>
-                    <td class="border-b border-r border-slate-300 p-3 text-slate-600 whitespace-nowrap">${t.admin}</td>
+                    <td class="border-b border-r border-slate-300 p-3 text-slate-600 font-medium whitespace-nowrap">${t.admin}</td>
                     <td class="border-b border-r border-slate-300 p-3"><div class="font-medium text-slate-900">${t.description}</div></td>
                     <td class="border-b border-r border-slate-300 p-3 text-right font-semibold text-emerald-600 tracking-wide">${inAmt}</td>
                     <td class="border-b border-r border-slate-300 p-3 text-right font-semibold text-red-700 tracking-wide">${outAmt}</td>
@@ -436,7 +423,7 @@
                 trInput.className = "bg-blue-50/30";
                 trInput.innerHTML = `
                     <td class="border-b border-r border-slate-300 p-3 text-slate-400 italic whitespace-nowrap">${getToday()}</td>
-                    <td class="border-b border-r border-slate-300 p-3 text-blue-600 font-medium whitespace-nowrap">${activeAdmin.name}</td>
+                    <td class="border-b border-r border-slate-300 p-3 text-blue-600 font-bold whitespace-nowrap">${activeAdmin.name}</td>
                     <td class="border-b border-r border-slate-300 p-0">
                         <input type="text" id="inline-desc" placeholder="Type description..." class="w-full h-full p-3 bg-transparent border-none focus:ring-inset focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-medium">
                     </td>
@@ -496,14 +483,15 @@
                     description: descIn.value.trim(),
                     amount: amount,
                     type: isIncome ? 'income' : 'expense',
-                    admin: `${activeAdmin.name} (${activeAdmin.email})`
+                    admin: activeAdmin.name
                 };
 
                 try {
                     await addDoc(collection(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions'), newTransaction);
+                    showToast("Transaction saved.");
                 } catch (error) {
                     console.error("Error saving document: ", error);
-                    alert("Error saving transaction. Check permissions.");
+                    showToast("Error saving transaction. Check permissions.", true);
                 }
             };
 
@@ -520,12 +508,13 @@
                 const id = btn.getAttribute('data-id');
                 try {
                     await deleteDoc(doc(db, 'artifacts', ledgerAppId, 'public', 'data', 'transactions', id));
+                    showToast("Transaction deleted.");
                 } catch (error) {
                     console.error("Delete error:", error);
-                    alert("Error deleting transaction.");
+                    showToast("Error deleting transaction.", true);
                 }
             }
         });
     </script>
 </body>
-</html>
+</html> 
