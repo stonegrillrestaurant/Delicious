@@ -51,7 +51,7 @@
         </div>
         <div class="border-r border-slate-800">
           <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Active Courts</div>
-          <div id="stat-active-courts" class="text-lg font-black text-emerald-400">0 / 4</div>
+          <div id="stat-active-courts" class="text-lg font-black text-emerald-400">0 / 6</div>
         </div>
         <div class="border-r border-slate-800">
           <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Matches Played</div>
@@ -79,7 +79,6 @@
             
             <div>
               <label class="block text-[10px] font-black tracking-wider uppercase text-emerald-400 mb-1.5">Assign To Court</label>
-              <!-- Options are dynamically generated based on which courts are Open Play -->
               <select id="player-court" class="w-full px-3 py-3 bg-slate-950 border border-emerald-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-emerald-400 font-bold shadow-inner transition">
                 <option value="" disabled>Loading courts...</option>
               </select>
@@ -98,19 +97,22 @@
                 <div>
                   <label class="block text-[10px] font-black tracking-wider uppercase text-slate-400 mb-1.5">Payment</label>
                   <select id="payment-status" class="w-full px-2 py-2.5 bg-slate-900 border border-slate-700 rounded-lg outline-none text-xs text-white">
-                    <option value="Paid">Paid ₱150</option>
+                    <option value="Paid">Paid ₱100</option>
                     <option value="Unpaid">Unpaid</option>
                   </select>
                 </div>
             </div>
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest py-3.5 rounded-lg text-sm transition shadow-lg mt-2">Add Player</button>
+            
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest py-3.5 rounded-lg text-sm transition shadow-lg mt-2">Add Walk-In</button>
           </form>
         </div>
 
+        <button onclick="requestResetDailyData()" class="w-full bg-slate-800 hover:bg-amber-600 border border-slate-700 hover:border-amber-500 text-slate-400 hover:text-white font-black tracking-widest uppercase py-4 rounded-2xl text-xs transition shadow-lg">End Day & Archive</button>
+
         <!-- EXPIRED PLAYERS TABLE -->
-        <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-xl flex flex-col max-h-[350px] overflow-hidden">
-          <div class="p-4 border-b border-slate-700 bg-slate-900/30">
-             <h2 class="text-xs font-black tracking-widest text-red-400">EXPIRED PLAYERS (5 HRS)</h2>
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-xl flex flex-col max-h-[350px] overflow-hidden mt-auto">
+          <div class="p-4 border-b border-slate-700 bg-slate-900/30 flex justify-between items-center">
+             <h2 class="text-xs font-black tracking-widest text-red-400">EXPIRED PLAYERS</h2>
           </div>
           <div class="overflow-y-auto flex-1 p-2">
             <table class="w-full text-left text-xs">
@@ -119,12 +121,11 @@
           </div>
         </div>
 
-        <button onclick="requestResetDailyData()" class="w-full bg-slate-800 hover:bg-amber-600 border border-slate-700 hover:border-amber-500 text-slate-400 hover:text-white font-black tracking-widest uppercase py-4 rounded-2xl text-xs transition shadow-lg mt-auto">End Day & Archive</button>
       </aside>
 
-      <!-- RIGHT MAIN AREA: THE 4 KANBAN COURTS -->
+      <!-- RIGHT MAIN AREA: 6 COURTS -->
       <section class="flex-1">
-          <div id="courts-and-queues-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 xl:gap-5 items-start">
+          <div id="courts-and-queues-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-5 items-start">
               <!-- Rendered by JavaScript -->
           </div>
       </section>
@@ -161,8 +162,8 @@
 
   <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
   <div id="custom-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-[70] flex items-center justify-center opacity-0 transition-opacity duration-200 p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform duration-200" id="modal-content-box">
-      <div class="p-6" id="modal-body"></div>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform duration-200 flex flex-col max-h-[90vh]" id="modal-content-box">
+      <div class="p-6 overflow-y-auto" id="modal-body"></div>
     </div>
   </div>
 
@@ -183,17 +184,21 @@
     const db = getFirestore(app);
 
     const DEFAULT_COURTS = [
-      { id: 1, name: "Court 1", currentMatch: null, isExclusive: false, Renter: "" },
-      { id: 2, name: "Court 2", currentMatch: null, isExclusive: false, Renter: "" },
-      { id: 3, name: "Court 3", currentMatch: null, isExclusive: false, Renter: "" },
-      { id: 4, name: "Court 4", currentMatch: null, isExclusive: false, Renter: "" }
+      { id: 1, name: "Court 1", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
+      { id: 2, name: "Court 2", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
+      { id: 3, name: "Court 3", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
+      { id: 4, name: "Court 4", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
+      { id: 5, name: "Court 5", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
+      { id: 6, name: "Court 6", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false }
     ];
 
     let state = {
       players: [],
-      queues: { "1": [], "2": [], "3": [], "4": [] },
+      queues: { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] },
       courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)), 
-      totalMatchesPlayed: 0
+      totalMatchesPlayed: 0,
+      dailyRentals: [],
+      dailyOpenPlayLogs: []
     };
     let historyVault = [];
     let isConnected = false;
@@ -208,25 +213,30 @@
         const fetchedData = docSnap.data();
         state.players = fetchedData.players || [];
         state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
+        state.dailyRentals = fetchedData.dailyRentals || [];
+        state.dailyOpenPlayLogs = fetchedData.dailyOpenPlayLogs || [];
         
-        if (fetchedData.courts && Array.isArray(fetchedData.courts) && fetchedData.courts.length >= 4) {
-           state.courts = fetchedData.courts;
+        if (fetchedData.courts && Array.isArray(fetchedData.courts)) {
+           let updatedCourts = fetchedData.courts;
+           if(updatedCourts.length < 6) {
+               for(let i = updatedCourts.length + 1; i <= 6; i++) {
+                   updatedCourts.push({ id: i, name: "Court " + i, currentMatch: null, mode: 'open_play', renterName: '', timeStart: '', timeEnd: '', rentalRevenue: 0, isConfigured: false });
+               }
+           }
+           updatedCourts.forEach(c => {
+               if(c.isExclusive === true && !c.mode) c.mode = 'rental';
+               if(c.isExclusive === false && !c.mode) c.mode = 'open_play';
+               if(c.Renter && !c.renterName) c.renterName = c.Renter;
+               if(c.isConfigured === undefined) c.isConfigured = !!(c.timeStart && c.timeEnd);
+           });
+           state.courts = updatedCourts;
         } else {
            state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
         }
 
-        if (fetchedData.queues && fetchedData.queues['Beginner']) {
-            state.queues = { "1": [], "2": [], "3": [], "4": [] };
-            const oldQ = fetchedData.queues;
-            const combined = [...(oldQ.Beginner||[]), ...(oldQ.Intermediate||[]), ...(oldQ.Advanced||[]), ...(oldQ.Professional||[])];
-            state.queues["1"] = combined;
-            combined.forEach(id => {
-                const p = state.players.find(pl => pl.id === id);
-                if(p) p.queueCourt = "1";
-            });
-            saveState(); 
-        } else {
-            state.queues = fetchedData.queues || { "1": [], "2": [], "3": [], "4": [] };
+        state.queues = fetchedData.queues || {};
+        for(let i=1; i<=6; i++) {
+            if(!state.queues[i.toString()]) state.queues[i.toString()] = [];
         }
 
         render();
@@ -278,6 +288,13 @@
       return 'badge-pro';
     }
 
+    function formatTime(t) {
+        if(!t) return '--:--';
+        const [h, m] = t.split(':');
+        const d = new Date(); d.setHours(h); d.setMinutes(m);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
+    }
+
     window.switchTab = function(tabId) {
       if (tabId === 'dashboard') {
         document.getElementById('view-dashboard').classList.remove('hidden-section');
@@ -322,6 +339,7 @@
       setTimeout(() => modal.classList.add('hidden'), 200);
     };
 
+    // CHECK-IN Logic
     document.getElementById('player-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const nameInput = document.getElementById('player-name');
@@ -332,13 +350,25 @@
 
       if(!name) return;
       if(!targetCourt) {
-         window.showToast("No open courts available. Wait or end an exclusive rental.", "warn");
+         window.showToast("No courts are currently configured for Open Play.", "warn");
          return;
+      }
+
+      const court = state.courts.find(c => c.id.toString() === targetCourt);
+      if(!court || !court.timeEnd) {
+          window.showToast("This court's end time is not set. Configure court first.", "warn");
+          return;
       }
 
       const now = new Date();
       const timeInStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const expireTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); 
+      
+      // Calculate expiration time based on Court's End Time
+      const [endH, endM] = court.timeEnd.split(':').map(Number);
+      const expireTime = new Date();
+      expireTime.setHours(endH, endM, 0, 0);
+      if (expireTime < now) expireTime.setDate(expireTime.getDate() + 1);
+
       const timeOutStr = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const newPlayer = {
@@ -359,7 +389,7 @@
       state.queues[targetCourt].push(newPlayer.id);
       
       nameInput.value = '';
-      window.showToast(`${name} added to Court ${targetCourt} queue.`);
+      window.showToast(`${name} checked in. Time ends at ${formatTime(court.timeEnd)}.`);
       saveState(); 
     });
 
@@ -367,10 +397,10 @@
       const player = state.players.find(p => p.id === playerId);
       if(!player) return;
       
-      const openCourts = state.courts.filter(c => !c.isExclusive);
+      const openCourts = state.courts.filter(c => c.mode === 'open_play' && c.isConfigured);
       const optionsHTML = openCourts.length > 0 
-          ? openCourts.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
-          : `<option value="" disabled selected>No Open Courts Available</option>`;
+          ? openCourts.map(c => `<option value="${c.id}">${c.name} (${formatTime(c.timeStart)} - ${formatTime(c.timeEnd)})</option>`).join('')
+          : `<option value="" disabled selected>No Open Courts Configured</option>`;
 
       const content = `
         <h3 class="text-lg font-black text-white mb-2">Transfer Player</h3>
@@ -387,24 +417,37 @@
     };
 
     window.executeTransfer = function(playerId) {
-      const newCourt = document.getElementById('transfer-court-select').value;
-      if (!newCourt) return;
+      const newCourtId = document.getElementById('transfer-court-select').value;
+      if (!newCourtId) return;
       
       const player = state.players.find(p => p.id === playerId);
-      if(!player) return;
+      const newCourt = state.courts.find(c => c.id.toString() === newCourtId);
+      
+      if(!player || !newCourt) return;
       
       if(player.queueCourt && state.queues[player.queueCourt]) {
          const idx = state.queues[player.queueCourt].indexOf(playerId);
          if(idx > -1) state.queues[player.queueCourt].splice(idx, 1);
       }
       
-      player.queueCourt = newCourt;
-      if(!state.queues[newCourt]) state.queues[newCourt] = [];
-      state.queues[newCourt].push(playerId);
+      if(newCourt.timeEnd) {
+          const [endH, endM] = newCourt.timeEnd.split(':').map(Number);
+          const now = new Date();
+          const expireTime = new Date();
+          expireTime.setHours(endH, endM, 0, 0);
+          if (expireTime < now) expireTime.setDate(expireTime.getDate() + 1);
+          
+          player.expireTimestamp = expireTime.getTime();
+          player.timeOut = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      player.queueCourt = newCourtId;
+      if(!state.queues[newCourtId]) state.queues[newCourtId] = [];
+      state.queues[newCourtId].push(playerId);
       
       saveState();
       window.hideModal();
-      window.showToast(`Transferred to Court ${newCourt}.`);
+      window.showToast(`Transferred to Court ${newCourtId}.`);
     };
 
     window.passTurn = function(playerId) {
@@ -472,15 +515,36 @@
       });
       if (changed) {
         saveState(); 
-        window.showToast("Player(s) auto-removed (5 hours).", "warn");
+        window.showToast("Player(s) auto-removed based on Court End Time.", "warn");
       }
     }, 60000);
 
+    // Dynamic Time Extension
+    window.openExtendModal = function(playerId) {
+       const player = state.players.find(p => p.id === playerId);
+       if(!player) return;
+
+       const content = `
+        <h3 class="text-lg font-black text-emerald-400 mb-2">Extend Player Time</h3>
+        <p class="text-sm text-slate-300 mb-4">Add more hours for <b class="text-white">${player.name}</b>.</p>
+        <label class="block text-[10px] font-black text-slate-500 mb-1 tracking-widest uppercase">Hours to Extend</label>
+        <input type="number" id="extend-hours" value="1" min="1" max="24" class="w-full px-3 py-3 bg-slate-900 rounded-lg text-white mb-5 border border-slate-700 outline-none focus:border-emerald-500 transition">
+        <div class="flex justify-end gap-3">
+          <button onclick="hideModal()" class="px-4 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold transition text-sm">Cancel</button>
+          <button onclick="extendTime('${playerId}')" class="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-sm">Confirm Extension</button>
+        </div>
+       `;
+       window.showModal(content);
+    };
+
     window.extendTime = function(playerId) {
       const player = state.players.find(p => p.id === playerId);
+      const hoursInput = document.getElementById('extend-hours');
+      const addedHours = hoursInput ? parseInt(hoursInput.value) || 1 : 1;
+
       if (player) {
         const now = new Date();
-        player.expireTimestamp = now.getTime() + (5 * 60 * 60 * 1000);
+        player.expireTimestamp = now.getTime() + (addedHours * 60 * 60 * 1000);
         player.timeOut = new Date(player.expireTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         player.isExpired = false;
         
@@ -489,13 +553,14 @@
         state.queues[player.queueCourt].push(player.id);
         
         saveState();
-        window.showToast(`Extended 5 hours.`);
+        window.hideModal();
+        window.showToast(`Extended by ${addedHours} hour(s).`);
       }
     };
 
     window.assignNextMatch = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
-      if(!court || court.isExclusive) return;
+      if(!court || court.mode === 'rental') return;
       
       const queue = state.queues[courtId.toString()] || [];
       
@@ -534,57 +599,231 @@
       window.showToast("Match finished.");
     };
 
-    window.toggleExclusive = function(courtId) {
+    // --- COURT CONFIGURATION ---
+
+    window.openCourtConfig = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
-      if(!court) return;
+      const isRental = court.mode === 'rental';
       
-      if(!court.isExclusive) {
-        const content = `
-          <h3 class="text-lg font-black text-white mb-2">Exclusive Rental</h3>
-          <input type="text" id="renter-input" class="w-full px-3 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white mb-5 outline-none focus:border-amber-500 transition" placeholder="Client Name">
-          <div class="flex justify-end gap-3">
-            <button onclick="hideModal()" class="px-4 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold transition">Cancel</button>
-            <button onclick="executeExclusiveRent(${courtId})" class="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold transition">Confirm Rental</button>
+      const content = `
+        <h3 class="text-lg font-black text-white mb-2">Configure ${court.name}</h3>
+        <p class="text-[10px] text-slate-400 mb-4 leading-tight">Activating a court requires setting a time range. For rentals, this calculates revenue. For open play, this defines when the queue ends.</p>
+        
+        <div class="space-y-4 mb-5">
+          <div>
+            <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Court Mode</label>
+            <div class="flex gap-2">
+              <button id="btn-mode-open" onclick="selectMode('open_play')" class="flex-1 py-2 rounded border ${!isRental ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-400'} text-xs font-bold transition">Open Play</button>
+              <button id="btn-mode-rent" onclick="selectMode('rental')" class="flex-1 py-2 rounded border ${isRental ? 'bg-amber-600 border-amber-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-400'} text-xs font-bold transition">Rental</button>
+            </div>
+            <input type="hidden" id="config-mode" value="${court.mode || 'open_play'}">
           </div>
-        `;
-        window.showModal(content);
-        setTimeout(() => document.getElementById('renter-input').focus(), 100);
+          
+          <div id="config-renter-div" class="${!isRental ? 'hidden' : ''}">
+            <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Renter Name</label>
+            <input type="text" id="config-renter" value="${court.renterName || ''}" placeholder="Enter client name" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-amber-500 outline-none">
+          </div>
+
+          <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+             <div class="grid grid-cols-2 gap-3">
+               <div>
+                 <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Start Time</label>
+                 <input type="time" id="config-start" value="${court.timeStart || ''}" required class="w-full px-3 py-2 bg-slate-950 border border-slate-600 rounded text-sm text-white outline-none focus:border-indigo-500">
+               </div>
+               <div>
+                 <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">End Time</label>
+                 <input type="time" id="config-end" value="${court.timeEnd || ''}" required class="w-full px-3 py-2 bg-slate-950 border border-slate-600 rounded text-sm text-white outline-none focus:border-indigo-500">
+               </div>
+             </div>
+             <p id="time-diff-preview" class="text-center text-[10px] text-indigo-400 mt-2 font-bold hidden"></p>
+          </div>
+        </div>
+
+        <div class="flex justify-between gap-3">
+          <button onclick="clearCourtConfig(${courtId})" class="px-3 py-2 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 rounded text-xs font-bold transition border border-transparent hover:border-red-500/30">Reset Court</button>
+          <div class="flex gap-2">
+            <button onclick="hideModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition">Cancel</button>
+            <button onclick="saveCourtConfig(${courtId})" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm font-bold transition">Save Config</button>
+          </div>
+        </div>
+      `;
+      window.showModal(content);
+
+      document.getElementById('config-start').addEventListener('change', updateTimePreview);
+      document.getElementById('config-end').addEventListener('change', updateTimePreview);
+      updateTimePreview(); 
+    };
+    
+    window.selectMode = function(mode) {
+      document.getElementById('config-mode').value = mode;
+      const btnOpen = document.getElementById('btn-mode-open');
+      const btnRent = document.getElementById('btn-mode-rent');
+      const renterDiv = document.getElementById('config-renter-div');
+      
+      if(mode === 'open_play') {
+        btnOpen.className = "flex-1 py-2 rounded border bg-emerald-600 border-emerald-500 text-white text-xs font-bold transition";
+        btnRent.className = "flex-1 py-2 rounded border bg-slate-800 border-slate-600 text-slate-400 text-xs font-bold transition";
+        renterDiv.classList.add('hidden');
       } else {
-        court.isExclusive = false;
-        court.Renter = "";
-        saveState();
+        btnRent.className = "flex-1 py-2 rounded border bg-amber-600 border-amber-500 text-white text-xs font-bold transition";
+        btnOpen.className = "flex-1 py-2 rounded border bg-slate-800 border-slate-600 text-slate-400 text-xs font-bold transition";
+        renterDiv.classList.remove('hidden');
       }
+      updateTimePreview();
     };
 
-    window.executeExclusiveRent = function(courtId) {
-      const court = state.courts.find(c => c.id === courtId);
-      const input = document.getElementById('renter-input');
-      const renterName = input ? input.value.trim() : '';
-      if (!renterName) return;
+    function updateTimePreview() {
+       const start = document.getElementById('config-start').value;
+       const end = document.getElementById('config-end').value;
+       const mode = document.getElementById('config-mode').value;
+       const preview = document.getElementById('time-diff-preview');
 
-      if(court.currentMatch) {
-        court.currentMatch.reverse().forEach(pId => {
-          const player = state.players.find(p => p.id === pId);
-          if(player) {
-              player.queueCourt = courtId.toString();
-              state.queues[player.queueCourt].unshift(pId);
-          }
-        });
-        court.currentMatch = null;
+       if (start && end) {
+           let diff = calculateHourDifference(start, end);
+           preview.classList.remove('hidden');
+           if (mode === 'rental') {
+               preview.innerHTML = `Rental Duration: ${diff.toFixed(1)} Hours (~ ₱${(diff * 250).toFixed(0)})`;
+           } else {
+               preview.innerHTML = `Open Play Session: ${diff.toFixed(1)} Hours`;
+           }
+       } else {
+           preview.classList.add('hidden');
+       }
+    }
+
+    function calculateHourDifference(startStr, endStr) {
+       const [sh, sm] = startStr.split(':').map(Number);
+       const [eh, em] = endStr.split(':').map(Number);
+       let diff = (eh + em/60) - (sh + sm/60);
+       if (diff < 0) diff += 24; 
+       return diff;
+    }
+
+    window.saveCourtConfig = function(courtId) {
+      const court = state.courts.find(c => c.id === courtId);
+      const mode = document.getElementById('config-mode').value;
+      const renter = document.getElementById('config-renter').value.trim();
+      const tStart = document.getElementById('config-start').value;
+      const tEnd = document.getElementById('config-end').value;
+
+      if (!tStart || !tEnd) {
+          window.showToast("Both Start and End times are required.", "warn");
+          return;
       }
-      
-      court.isExclusive = true;
-      court.Renter = renterName;
+      if (mode === 'rental' && !renter) {
+          window.showToast("Renter name is required for rental mode.", "warn");
+          return;
+      }
+
+      let revenue = 0;
+      if (mode === 'rental') {
+         let diff = calculateHourDifference(tStart, tEnd);
+         revenue = diff * 250;
+      }
+
+      if(mode === 'rental' && court.currentMatch) {
+           court.currentMatch.reverse().forEach(pId => {
+             const player = state.players.find(p => p.id === pId);
+             if(player) {
+                 player.queueCourt = courtId.toString();
+                 state.queues[player.queueCourt].unshift(pId);
+             }
+           });
+           court.currentMatch = null;
+      }
+
+      court.mode = mode;
+      court.renterName = renter;
+      court.timeStart = tStart;
+      court.timeEnd = tEnd;
+      court.rentalRevenue = revenue;
+      court.isConfigured = true;
+
+      if (mode === 'open_play') {
+          const [endH, endM] = tEnd.split(':').map(Number);
+          const qList = state.queues[courtId.toString()] || [];
+          qList.forEach(pId => {
+             const p = state.players.find(pl => pl.id === pId);
+             if(p) {
+                const now = new Date();
+                const expireTime = new Date();
+                expireTime.setHours(endH, endM, 0, 0);
+                if (expireTime < now) expireTime.setDate(expireTime.getDate() + 1);
+                
+                p.expireTimestamp = expireTime.getTime();
+                p.timeOut = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+             }
+          });
+      }
+
       saveState();
       window.hideModal();
+      window.showToast(`${court.name} is now active.`);
     };
 
+    window.clearCourtConfig = function(courtId) {
+       const court = state.courts.find(c => c.id === courtId);
+       court.mode = 'open_play';
+       court.renterName = '';
+       court.timeStart = '';
+       court.timeEnd = '';
+       court.rentalRevenue = 0;
+       court.isConfigured = false;
+       court.currentMatch = null;
+
+       saveState();
+       window.hideModal();
+       window.showToast(`${court.name} configuration reset.`);
+    }
+
+    window.endSession = function(courtId) {
+        const court = state.courts.find(c => c.id === courtId);
+        
+        if (court.mode === 'rental') {
+            if (!state.dailyRentals) state.dailyRentals = [];
+            state.dailyRentals.push({
+                court: court.name,
+                renter: court.renterName || 'Unknown',
+                revenue: court.rentalRevenue || 0,
+                time: `${formatTime(court.timeStart)} - ${formatTime(court.timeEnd)}`
+            });
+            window.showToast("Rental ended & logged for today.");
+        } else {
+            if (!state.dailyOpenPlayLogs) state.dailyOpenPlayLogs = [];
+            state.dailyOpenPlayLogs.push({
+                court: court.name,
+                time: `${formatTime(court.timeStart)} - ${formatTime(court.timeEnd)}`,
+                queueClearedCount: (state.queues[court.id.toString()] || []).length
+            });
+            window.showToast("Open Play session ended & logged.");
+        }
+
+        court.mode = 'open_play';
+        court.renterName = '';
+        court.timeStart = '';
+        court.timeEnd = '';
+        court.rentalRevenue = 0;
+        court.isConfigured = false;
+        if(court.currentMatch) court.currentMatch = null;
+        
+        state.queues[court.id.toString()] = [];
+        
+        saveState();
+    };
+
+
+    // --- END OF DAY / ARCHIVE LOGIC ---
+
     window.requestResetDailyData = function() {
-      if (state.players.length === 0) return;
+      if (state.players.length === 0 && (!state.dailyRentals || state.dailyRentals.length === 0) && (!state.dailyOpenPlayLogs || state.dailyOpenPlayLogs.length === 0)) {
+          window.showToast("No data to archive yet.", "warn");
+          return;
+      }
+
       const localDate = new Date().toISOString().split('T')[0];
       const content = `
         <h3 class="text-lg font-black text-red-400 mb-2">End Day Archive</h3>
-        <p class="text-sm text-slate-300 mb-4">This packages all active logs into the cloud Vault and clears the board.</p>
+        <p class="text-sm text-slate-300 mb-4">Package all registries, verify discrepancies, log rentals, and calculate daily revenue. This will clear the active board.</p>
         <label class="block text-[10px] font-black text-slate-500 mb-1 tracking-widest uppercase">Archive Date</label>
         <input type="date" id="archive-date" value="${localDate}" class="w-full px-3 py-3 bg-slate-900 rounded-lg text-white mb-5 border border-slate-700 outline-none focus:border-red-500 transition">
         <div class="flex justify-end gap-3">
@@ -602,23 +841,61 @@
       const selectedDate = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
       const dateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
       
+      const walkInPlayers = state.players;
+      const walkInCount = walkInPlayers.length;
+      const paidWalkIns = walkInPlayers.filter(p => p.paid).length;
+      const walkInRevenue = paidWalkIns * 100;
+      
+      let finalRentals = [...(state.dailyRentals || [])];
+      let finalOpenPlays = [...(state.dailyOpenPlayLogs || [])];
+
+      state.courts.forEach(c => {
+          if(c.isConfigured) {
+              if(c.mode === 'rental') {
+                  finalRentals.push({
+                      court: c.name,
+                      renter: c.renterName,
+                      revenue: c.rentalRevenue,
+                      time: `${formatTime(c.timeStart)} - ${formatTime(c.timeEnd)}`
+                  });
+              } else {
+                  finalOpenPlays.push({
+                     court: c.name,
+                     time: `${formatTime(c.timeStart)} - ${formatTime(c.timeEnd)}`,
+                     queueClearedCount: (state.queues[c.id.toString()] || []).length
+                  });
+              }
+          }
+      });
+
+      const rentalRevenue = finalRentals.reduce((sum, r) => sum + (r.revenue || 0), 0);
+      const totalRevenue = walkInRevenue + rentalRevenue;
+      const discrepancies = walkInPlayers.filter(p => !p.paid).map(p => p.name);
+
       historyVault.unshift({
         id: 'ARCHIVE-' + Date.now(),
         date: dateStr,
         timestamp: Date.now(),
-        totalPlayers: state.players.length,
+        totalPlayers: walkInCount,
         totalMatches: state.totalMatchesPlayed,
-        revenue: state.players.filter(p => p.paid).length * 150,
-        players: [...state.players] 
+        walkInRevenue: walkInRevenue,
+        rentalRevenue: rentalRevenue,
+        totalRevenue: totalRevenue,
+        players: [...walkInPlayers],
+        rentals: finalRentals,
+        openPlaySessions: finalOpenPlays,
+        discrepancies: discrepancies
       });
 
       saveHistory();
 
       state = {
         players: [],
-        queues: { "1": [], "2": [], "3": [], "4": [] },
+        queues: { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] },
         courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)),
-        totalMatchesPlayed: 0
+        totalMatchesPlayed: 0,
+        dailyRentals: [],
+        dailyOpenPlayLogs: []
       };
       saveState();
     };
@@ -645,7 +922,10 @@
           const contents = JSON.parse(e.target.result);
           if (contents && contents.currentState) {
             state = contents.currentState;
-            if(!state.queues["1"]) state.queues = { "1": [], "2": [], "3": [], "4": [] }; 
+            if(!state.queues["1"]) {
+                state.queues = {};
+                for(let i=1; i<=6; i++) state.queues[i.toString()] = [];
+            }
             historyVault = contents.history || [];
             saveState();
             saveHistory();
@@ -666,7 +946,7 @@
       container.innerHTML = historyVault.map(archive => `
         <div class="bg-slate-900 border border-slate-700 p-4 rounded-lg flex justify-between items-center">
           <div><h3 class="font-bold text-white text-sm">${archive.date}</h3></div>
-          <button onclick="viewArchivePlayers('${archive.id}')" class="bg-slate-800 text-white px-3 py-2 rounded text-xs font-bold">View</button>
+          <button onclick="viewArchivePlayers('${archive.id}')" class="bg-slate-800 hover:bg-slate-700 transition text-white px-3 py-2 rounded text-xs font-bold border border-slate-600">View Summary</button>
         </div>
       `).join('');
     }
@@ -674,11 +954,95 @@
     window.viewArchivePlayers = function(archiveId) {
       const archive = historyVault.find(a => a.id === archiveId);
       if (!archive) return;
-      const rows = archive.players.map(p => `<tr><td class="p-2 text-white">${p.name}</td><td class="p-2 text-slate-400">${p.category}</td></tr>`).join('');
+      
+      let courtsHTML = '';
+      for (let i = 1; i <= 6; i++) {
+        const courtId = i.toString();
+        // Assuming player.queueCourt tracks the court they primarily played/ended up on
+        const playersInCourt = archive.players.filter(p => p.queueCourt === courtId);
+        const courtRentals = (archive.rentals || []).filter(r => r.court === "Court " + i);
+        
+        if (playersInCourt.length > 0 || courtRentals.length > 0) {
+            courtsHTML += `<div class="mb-4">
+                <h4 class="text-[11px] font-bold text-emerald-400 mb-2 sticky top-0 bg-slate-800 py-1.5 z-10 border-b border-slate-700 uppercase tracking-widest">Court ${i} Log</h4>`;
+            
+            if (courtRentals.length > 0) {
+                courtsHTML += `<div class="mb-2"><span class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Rentals:</span>`;
+                courtRentals.forEach(r => {
+                    courtsHTML += `<div class="text-xs text-slate-300 ml-2 border-l-2 border-slate-600 pl-2 mt-1 py-0.5">
+                        <span class="font-bold text-white">${r.renter}</span> <span class="text-slate-500 ml-1">(${r.time})</span><span class="float-right text-amber-400 font-bold">₱${Math.round(r.revenue)}</span>
+                    </div>`;
+                });
+                courtsHTML += `</div>`;
+            }
+
+            if (playersInCourt.length > 0) {
+                const playerRows = playersInCourt.map(p => `<tr>
+                    <td class="py-1.5 border-b border-slate-700/50 text-white font-medium">${p.name} <span class="text-slate-500 text-[9px] ml-1 uppercase">(Games: ${p.gamesPlayed || 0})</span></td>
+                    <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱100' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
+                </tr>`).join('');
+                courtsHTML += `<table class="w-full text-left text-xs mb-1"><tbody>${playerRows}</tbody></table>`;
+            }
+            courtsHTML += `</div>`;
+        } else {
+             courtsHTML += `<div class="mb-4">
+                <h4 class="text-[11px] font-bold text-slate-500 mb-2 sticky top-0 bg-slate-800 py-1.5 z-10 border-b border-slate-700 uppercase tracking-widest">Court ${i} Log</h4>
+                <p class="text-[10px] text-slate-600 italic px-2">No activity recorded.</p>
+             </div>`;
+        }
+      }
+
+      // Fallback for players completely unassigned (should be rare)
+      const unassignedPlayers = archive.players.filter(p => !p.queueCourt);
+      if (unassignedPlayers.length > 0) {
+          const uRows = unassignedPlayers.map(p => `<tr>
+              <td class="py-1.5 border-b border-slate-700/50 text-white font-medium">${p.name}</td>
+              <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱100' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
+          </tr>`).join('');
+          courtsHTML += `<div class="mb-4">
+              <h4 class="text-[11px] font-bold text-red-400 mb-2 sticky top-0 bg-slate-800 py-1.5 z-10 border-b border-slate-700 uppercase tracking-widest">Unassigned Logs</h4>
+              <table class="w-full text-left text-xs"><tbody>${uRows}</tbody></table>
+          </div>`;
+      }
+
+      const discHTML = (archive.discrepancies && archive.discrepancies.length > 0) 
+        ? `<div class="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg"><h4 class="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">Unpaid Check-In Discrepancies</h4><p class="text-xs text-white">${archive.discrepancies.join(', ')}</p></div>` 
+        : `<div class="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg"><h4 class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Registry Check</h4><p class="text-xs text-white">All entries paid & matched.</p></div>`;
+
       window.showModal(`
-        <div class="flex justify-between items-center mb-4"><h3 class="text-white font-bold">${archive.date}</h3></div>
-        <div class="max-h-64 overflow-y-auto"><table class="w-full text-left text-xs">${rows}</table></div>
-        <div class="mt-4 flex justify-end"><button onclick="hideModal()" class="px-4 py-2 bg-slate-700 text-white rounded font-bold">Close</button></div>
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h3 class="text-white font-black text-xl tracking-tight">${archive.date} Summary</h3>
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest">End of Day Archive Report</p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3 mb-5 text-center">
+           <div class="bg-slate-900/50 border border-slate-700/80 p-3 rounded-xl shadow-inner">
+              <div class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-1">Total Players</div>
+              <div class="text-indigo-400 font-black text-2xl">${archive.totalPlayers || archive.players.length}</div>
+           </div>
+           <div class="bg-slate-900/50 border border-slate-700/80 p-3 rounded-xl shadow-inner">
+              <div class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-1">Total Matches</div>
+              <div class="text-sky-400 font-black text-2xl">${archive.totalMatches || 0}</div>
+           </div>
+        </div>
+        
+        <div class="text-center mb-6 pb-6 border-b border-slate-700">
+           <div class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-1">Total Event Revenue</div>
+           <div class="text-4xl text-emerald-400 font-black tracking-tight">₱${Math.round(archive.totalRevenue || 0)}</div>
+           <div class="text-[10px] text-slate-500 mt-2 font-medium">Walk-ins: <span class="text-emerald-500/80">₱${archive.walkInRevenue || 0}</span> <span class="mx-1">|</span> Rentals: <span class="text-amber-500/80">₱${Math.round(archive.rentalRevenue || 0)}</span></div>
+        </div>
+        
+        <div class="max-h-[350px] overflow-y-auto mb-2 pr-3 -mr-3 pb-4">
+          ${courtsHTML}
+        </div>
+        
+        ${discHTML}
+        
+        <div class="mt-6 flex justify-end">
+            <button onclick="hideModal()" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 transition shadow-lg text-white rounded-lg font-bold text-sm tracking-wide">Close Summary</button>
+        </div>
       `);
     };
 
@@ -686,16 +1050,15 @@
       let activeCount = 0;
       const safeCourts = Array.isArray(state.courts) ? state.courts : JSON.parse(JSON.stringify(DEFAULT_COURTS));
       
-      // Update check-in dropdown dynamically
       const courtSelect = document.getElementById('player-court');
       if (courtSelect) {
         const currentVal = courtSelect.value;
-        const openCourts = safeCourts.filter(c => !c.isExclusive);
+        const openCourts = safeCourts.filter(c => c.mode === 'open_play' && c.isConfigured);
         if (openCourts.length > 0) {
           courtSelect.innerHTML = openCourts.map(c => `<option value="${c.id}">${c.name} Line</option>`).join('');
           if (openCourts.find(c => c.id.toString() === currentVal)) courtSelect.value = currentVal;
         } else {
-          courtSelect.innerHTML = `<option value="" disabled selected>All Courts Exclusive</option>`;
+          courtSelect.innerHTML = `<option value="" disabled selected>No Open Courts Configured</option>`;
         }
       }
 
@@ -703,56 +1066,83 @@
       if (courtsContainer) {
         courtsContainer.innerHTML = safeCourts.map(court => {
           const courtIdStr = court.id.toString();
-          if(court.currentMatch || court.isExclusive) activeCount++;
+          if(court.isConfigured) activeCount++;
           
-          // 1. COURT CARD HTML (Top Half)
+          const timeRangeStr = (court.timeStart && court.timeEnd) ? `${formatTime(court.timeStart)} - ${formatTime(court.timeEnd)}` : 'Not Configured';
+          
           let courtCardHTML = '';
-          if(court.isExclusive) {
+          
+          if (!court.isConfigured) {
+              courtCardHTML = `
+              <div class="p-4 bg-slate-800/30 border-b border-slate-700 flex flex-col min-h-[170px] items-center justify-center relative">
+                <span class="absolute top-4 left-4 font-black text-white text-base">${court.name}</span>
+                <span class="absolute top-4 right-4 bg-slate-700 text-slate-300 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-sm">
+                  Standby
+                </span>
+                
+                <div class="text-center mt-4">
+                  <div class="text-slate-500 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="mx-auto opacity-50" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
+                  </div>
+                  <button onclick="openCourtConfig(${court.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition py-2 px-5 shadow-lg">Configure Court Time</button>
+                </div>
+              </div>
+            `;
+          } else if(court.mode === 'rental') {
             courtCardHTML = `
-              <div class="p-5 bg-amber-500/10 relative border-b border-slate-700">
-                <div class="flex justify-between items-center mb-3">
+              <div class="p-4 bg-amber-500/10 relative border-b border-slate-700 flex flex-col min-h-[170px]">
+                <div class="flex justify-between items-center mb-1">
                   <span class="font-black text-white text-base">${court.name}</span>
-                  <span class="bg-amber-500/20 text-amber-300 font-bold text-[10px] px-2 py-0.5 rounded uppercase">Exclusive</span>
+                  <span class="bg-amber-500/20 text-amber-300 font-bold text-[10px] px-2 py-0.5 rounded uppercase">Rental</span>
                 </div>
-                <div class="text-center py-4">
+                <div class="text-[10px] text-amber-400/80 font-bold mb-3 bg-amber-500/10 inline-block px-1.5 py-0.5 rounded self-start border border-amber-500/20">${timeRangeStr}</div>
+                <div class="text-center flex-1 flex flex-col justify-center">
                   <p class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-1">Rented By</p>
-                  <p class="text-lg font-black text-white truncate px-2">${court.Renter}</p>
+                  <p class="text-lg font-black text-white truncate px-2">${court.renterName || 'Unknown'}</p>
                 </div>
-                <button onclick="toggleExclusive(${court.id})" class="w-full bg-slate-900/50 hover:bg-slate-900 border border-amber-500/30 text-amber-400 font-bold py-2 rounded-lg text-xs transition mt-2">End Rent</button>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                  <button onclick="endSession(${court.id})" class="w-full bg-amber-600/80 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">End & Log</button>
+                  <button onclick="openCourtConfig(${court.id})" class="w-full bg-slate-900/50 hover:bg-slate-900 border border-amber-500/30 text-amber-400 font-bold py-2 rounded-lg text-[10px] transition">Adjust Time</button>
+                </div>
               </div>
             `;
           } else {
             const matchPlayers = court.currentMatch ? court.currentMatch.map(id => state.players.find(p => p.id === id)) : null;
             courtCardHTML = `
-              <div class="p-4 bg-slate-900/50 border-b border-slate-700">
-                <div class="flex justify-between items-center mb-3">
+              <div class="p-4 bg-slate-900/50 border-b border-slate-700 flex flex-col min-h-[170px]">
+                <div class="flex justify-between items-center mb-1">
                   <span class="font-black text-white text-base">${court.name}</span>
                   <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-sm">
                     Open Play
                   </span>
                 </div>
-                
-                <div class="my-3 min-h-[64px] flex flex-col justify-center">
-                  ${matchPlayers ? `
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                      <div class="bg-slate-800 border border-slate-600 text-white p-2 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[0]?.name || 'P1'}</div>
-                      <div class="bg-slate-800 border border-slate-600 text-white p-2 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[1]?.name || 'P2'}</div>
-                      <div class="bg-slate-800 border border-slate-600 text-white p-2 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[2]?.name || 'P3'}</div>
-                      <div class="bg-slate-800 border border-slate-600 text-white p-2 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[3]?.name || 'P4'}</div>
-                    </div>
-                  ` : `<div class="flex items-center justify-center h-full border-2 border-dashed border-slate-700 rounded-lg text-slate-500 text-xs font-bold uppercase tracking-widest py-4">Court Open</div>`}
+                <div class="flex justify-between items-center mb-2">
+                    <div class="text-[10px] text-emerald-400/80 font-bold bg-emerald-500/10 inline-block px-1.5 py-0.5 rounded border border-emerald-500/20">${timeRangeStr}</div>
                 </div>
                 
-                <div class="space-y-2 mt-3">
-                  ${matchPlayers ? `<button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-md">Finish Match</button>` 
-                  : `<button onclick="assignNextMatch(${court.id})" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-md">Assign Next 4</button>`}
-                  <button onclick="toggleExclusive(${court.id})" class="w-full text-slate-400 hover:text-white text-[10px] font-semibold transition py-1">Reserve Exclusively</button>
+                <div class="my-1 flex-1 flex flex-col justify-center">
+                  ${matchPlayers ? `
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                      <div class="bg-slate-800 border border-slate-600 text-white p-1.5 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[0]?.name || 'P1'}</div>
+                      <div class="bg-slate-800 border border-slate-600 text-white p-1.5 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[1]?.name || 'P2'}</div>
+                      <div class="bg-slate-800 border border-slate-600 text-white p-1.5 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[2]?.name || 'P3'}</div>
+                      <div class="bg-slate-800 border border-slate-600 text-white p-1.5 rounded-md font-bold text-center truncate shadow-sm">${matchPlayers[3]?.name || 'P4'}</div>
+                    </div>
+                  ` : `<div class="flex items-center justify-center h-full border-2 border-dashed border-slate-700 rounded-lg text-slate-500 text-xs font-bold uppercase tracking-widest py-3">Court Open</div>`}
+                </div>
+                
+                <div class="grid grid-cols-4 gap-2 mt-2">
+                  <div class="col-span-2">
+                    ${matchPlayers ? `<button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">Finish Match</button>` 
+                    : `<button onclick="assignNextMatch(${court.id})" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">Assign Next 4</button>`}
+                  </div>
+                  <button onclick="openCourtConfig(${court.id})" class="w-full col-span-1 bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold rounded-lg transition py-2" title="Adjust Time"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="mx-auto" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/></svg></button>
+                  <button onclick="endSession(${court.id})" class="w-full col-span-1 bg-red-900/50 hover:bg-red-800 text-red-300 text-[10px] font-bold rounded-lg transition py-2" title="End Session"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="mx-auto" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button>
                 </div>
               </div>
             `;
           }
 
-          // 2. SIMPLE QUEUE LIST HTML (Bottom Half)
           const qList = state.queues[courtIdStr] || [];
           const waitingPlayers = qList.map((pId, index) => {
               const p = state.players.find(pl => pl.id === pId);
@@ -780,7 +1170,6 @@
                     </div>
                   </div>
                   
-                  <!-- Ghost Buttons - Appear on Hover -->
                   <div class="flex justify-end gap-1.5 opacity-20 group-hover:opacity-100 transition mt-1 pr-1">
                     <button onclick="showTransferModal('${p.id}')" class="text-indigo-400 hover:bg-indigo-500/20 px-2 py-0.5 rounded text-[9px] font-bold transition">Transfer</button>
                     ${index < qList.length - 1 ? `<button onclick="passTurn('${p.id}')" class="text-amber-400 hover:bg-amber-500/20 px-2 py-0.5 rounded text-[9px] font-bold transition">Pass</button>` : ''}
@@ -792,7 +1181,6 @@
 
           const emptyQueue = qList.length === 0 ? `<div class="text-center text-slate-500 text-[11px] font-medium py-8">Line is empty</div>` : '';
 
-          // COMBINE COLUMN
           return `
             <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-xl overflow-hidden flex flex-col h-full min-h-[500px]">
                ${courtCardHTML}
@@ -810,13 +1198,15 @@
         }).join('');
       }
 
-      // Update Sidebar Stats
       if (document.getElementById('stat-players')) document.getElementById('stat-players').innerText = (state.players || []).length;
-      if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 4`;
+      if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 6`;
       if (document.getElementById('stat-matches')) document.getElementById('stat-matches').innerText = state.totalMatchesPlayed || 0;
-      if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${(state.players||[]).filter(p => p.paid).length * 150}`;
+      
+      const walkInRev = (state.players||[]).filter(p => p.paid).length * 100;
+      const rentalRev = (state.dailyRentals||[]).reduce((sum, r) => sum + (r.revenue||0), 0) + 
+                        safeCourts.filter(c => c.mode === 'rental' && c.isConfigured).reduce((sum, c) => sum + (c.rentalRevenue||0), 0);
+      if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${Math.round(walkInRev + rentalRev)}`;
 
-      // Expired Players (Left Sidebar)
       const expiredTableBody = document.getElementById('expired-log-table');
       if (expiredTableBody) {
          let expiredList = Array.isArray(state.players) ? state.players.filter(p => p.isExpired) : [];
@@ -828,7 +1218,7 @@
               </td>
               <td class="p-2 text-right">
                 <div class="flex flex-col gap-1 items-end opacity-60 group-hover:opacity-100 transition">
-                  <button onclick="extendTime('${p.id}')" class="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1.5 rounded text-[9px] font-bold transition">Extend (+5h)</button>
+                  <button onclick="openExtendModal('${p.id}')" class="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1.5 rounded text-[9px] font-bold transition">Extend Time</button>
                   <button onclick="removePlayerFromQueue('${p.id}')" class="bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 px-2 py-1.5 rounded text-[9px] font-bold transition">Delete</button>
                 </div>
               </td>
@@ -839,5 +1229,3 @@
   </script>
 </body>
 </html>
-
-
