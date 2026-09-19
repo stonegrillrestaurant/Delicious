@@ -97,7 +97,7 @@
                 <div>
                   <label class="block text-[10px] font-black tracking-wider uppercase text-slate-400 mb-1.5">Payment</label>
                   <select id="payment-status" class="w-full px-2 py-2.5 bg-slate-900 border border-slate-700 rounded-lg outline-none text-xs text-white">
-                    <option value="Paid">Paid ₱100</option>
+                    <option value="Paid">Paid ₱120</option>
                     <option value="Unpaid">Unpaid</option>
                   </select>
                 </div>
@@ -617,6 +617,7 @@
               <button id="btn-mode-rent" onclick="selectMode('rental')" class="flex-1 py-2 rounded border ${isRental ? 'bg-amber-600 border-amber-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-400'} text-xs font-bold transition">Rental</button>
             </div>
             <input type="hidden" id="config-mode" value="${court.mode || 'open_play'}">
+            <input type="hidden" id="config-court-id" value="${courtId}">
           </div>
           
           <div id="config-renter-div" class="${!isRental ? 'hidden' : ''}">
@@ -677,12 +678,15 @@
        const end = document.getElementById('config-end').value;
        const mode = document.getElementById('config-mode').value;
        const preview = document.getElementById('time-diff-preview');
+       const courtIdInput = document.getElementById('config-court-id');
+       const courtId = courtIdInput ? parseInt(courtIdInput.value) : 1;
+       const rate = (courtId === 5 || courtId === 6) ? 350 : 250;
 
        if (start && end) {
            let diff = calculateHourDifference(start, end);
            preview.classList.remove('hidden');
            if (mode === 'rental') {
-               preview.innerHTML = `Rental Duration: ${diff.toFixed(1)} Hours (~ ₱${(diff * 250).toFixed(0)})`;
+               preview.innerHTML = `Rental Duration: ${diff.toFixed(1)} Hours (~ ₱${(diff * rate).toFixed(0)})`;
            } else {
                preview.innerHTML = `Open Play Session: ${diff.toFixed(1)} Hours`;
            }
@@ -717,8 +721,9 @@
 
       let revenue = 0;
       if (mode === 'rental') {
+         const rate = (courtId === 5 || courtId === 6) ? 350 : 250;
          let diff = calculateHourDifference(tStart, tEnd);
-         revenue = diff * 250;
+         revenue = diff * rate;
       }
 
       if(mode === 'rental' && court.currentMatch) {
@@ -844,7 +849,7 @@
       const walkInPlayers = state.players;
       const walkInCount = walkInPlayers.length;
       const paidWalkIns = walkInPlayers.filter(p => p.paid).length;
-      const walkInRevenue = paidWalkIns * 100;
+      const walkInRevenue = paidWalkIns * 120;
       
       let finalRentals = [...(state.dailyRentals || [])];
       let finalOpenPlays = [...(state.dailyOpenPlayLogs || [])];
@@ -979,7 +984,7 @@
             if (playersInCourt.length > 0) {
                 const playerRows = playersInCourt.map(p => `<tr>
                     <td class="py-1.5 border-b border-slate-700/50 text-white font-medium">${p.name} <span class="text-slate-500 text-[9px] ml-1 uppercase">(Games: ${p.gamesPlayed || 0})</span></td>
-                    <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱100' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
+                    <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱120' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
                 </tr>`).join('');
                 courtsHTML += `<table class="w-full text-left text-xs mb-1"><tbody>${playerRows}</tbody></table>`;
             }
@@ -997,7 +1002,7 @@
       if (unassignedPlayers.length > 0) {
           const uRows = unassignedPlayers.map(p => `<tr>
               <td class="py-1.5 border-b border-slate-700/50 text-white font-medium">${p.name}</td>
-              <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱100' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
+              <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱120' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
           </tr>`).join('');
           courtsHTML += `<div class="mb-4">
               <h4 class="text-[11px] font-bold text-red-400 mb-2 sticky top-0 bg-slate-800 py-1.5 z-10 border-b border-slate-700 uppercase tracking-widest">Unassigned Logs</h4>
@@ -1202,7 +1207,7 @@
       if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 6`;
       if (document.getElementById('stat-matches')) document.getElementById('stat-matches').innerText = state.totalMatchesPlayed || 0;
       
-      const walkInRev = (state.players||[]).filter(p => p.paid).length * 100;
+      const walkInRev = (state.players||[]).filter(p => p.paid).length * 120;
       const rentalRev = (state.dailyRentals||[]).reduce((sum, r) => sum + (r.revenue||0), 0) + 
                         safeCourts.filter(c => c.mode === 'rental' && c.isConfigured).reduce((sum, c) => sum + (c.rentalRevenue||0), 0);
       if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${Math.round(walkInRev + rentalRev)}`;
