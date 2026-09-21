@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-STONE GRILL COMMENTS — FACEBOOK LOGIN HANDOFF (2026-09-08)
+STONE GRILL COMMENTS — FACEBOOK LOGIN (2026-09-21)
 Publish this complete file as /comments/index.html beside your existing images.
 Chosen Meta app: stone grill comments app — 1692304098526935.
 Login method: Facebook JavaScript SDK FB.login; public_profile only.
@@ -138,6 +138,7 @@ must be tested on the published HTTPS site.
       gap:7px;padding:9px 14px;border:0;border-radius:10px;
       font-weight:800;transition:.16s ease
     }
+    button:disabled{cursor:wait;opacity:.65}
     .btn:hover{transform:translateY(-1px)}
     .btn-fb{color:#fff;background:var(--fb)}
     .btn-fb:hover{background:var(--fb-dark)}
@@ -553,8 +554,8 @@ must be tested on the published HTTPS site.
             </div>
 
             <div class="identity-choices" id="identityChoices">
-              <button class="identity-btn btn-fb" id="facebookLogin" type="button">
-                <span style="font-size:19px">f</span> Continue with Facebook
+              <button class="identity-btn btn-fb" id="facebookLogin" type="button" aria-describedby="facebookStatus">
+                <span aria-hidden="true" style="font-size:22px;font-weight:900">f</span> Continue with Facebook
               </button>
               <button class="identity-btn btn-soft" id="guestLogin" type="button">
                 👤 Continue as Guest
@@ -886,19 +887,10 @@ must be tested on the published HTTPS site.
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      query,
-      where,
-      onSnapshot,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  
+  <script>
+    // Facebook and the form start independently of the Firebase CDN.
+    let commentsCollection, addDoc, query, where, onSnapshot, serverTimestamp;
+    let databaseReady = false;
     /* =====================================================
        FIREBASE CONFIGURATION
     ===================================================== */
@@ -912,15 +904,6 @@ must be tested on the published HTTPS site.
       appId: "1:724825019953:web:da9e0afd3bfef3c78ba710",
       measurementId: "G-007GQC2ZKJ"
     };
-  
-    const app = initializeApp(firebaseConfig);
-    // Analytics is optional: a blocked/unsupported analytics service must not stop login.
-    import("https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js")
-      .then(async ({ getAnalytics, isSupported }) => {
-        if (await isSupported()) getAnalytics(app);
-      }).catch(() => {});
-    const db = getFirestore(app);
-    const commentsCollection = collection(db, "comments");
   
     const FACEBOOK_APP_ID = "1692304098526935";
     const GRAPH_API_VERSION = "v26.0";
@@ -967,6 +950,8 @@ must be tested on the published HTTPS site.
     let sdkTimer;
     const facebookButton = $("facebookLogin");
     const facebookButtonLabel = facebookButton.innerHTML;
+    facebookButton.disabled = true;
+    facebookButton.textContent = "Loading Facebook…";
 
     function facebookMessage(message) {
       $("facebookStatus").textContent = message;
@@ -995,20 +980,27 @@ must be tested on the published HTTPS site.
           version: GRAPH_API_VERSION
         });
         facebookReady = true;
+        facebookButton.disabled = false;
+        facebookButton.innerHTML = facebookButtonLabel;
         clearTimeout(sdkTimer);
         if (!identityMode) facebookMessage("");
         // Sign in only after the visitor clicks. A delayed automatic status
         // check must never replace a guest identity or move an unfinished form.
       } catch (_) {
         facebookReady = false;
+        facebookButton.disabled = false;
+        facebookButton.textContent = "Retry Facebook";
         clearTimeout(sdkTimer);
         facebookMessage("Facebook sign-in could not start. Please continue as a guest.");
       }
     };
 
-    (function loadSdk() {
+    function loadSdk() {
+      clearTimeout(sdkTimer);
       sdkTimer = setTimeout(() => {
         if (!facebookReady && !identityMode) {
+          facebookButton.disabled = false;
+          facebookButton.textContent = "Retry Facebook";
           facebookMessage("Facebook is taking longer to load. You can continue as a guest.");
         }
       }, 12000);
@@ -1021,14 +1013,23 @@ must be tested on the published HTTPS site.
       script.src = "https://connect.facebook.net/en_US/sdk.js";
       script.onerror = () => {
         clearTimeout(sdkTimer);
+        script.remove();
+        facebookButton.disabled = false;
+        facebookButton.textContent = "Retry Facebook";
         if (!identityMode) facebookMessage("Facebook could not load. Please check your connection or continue as a guest.");
       };
       document.head.appendChild(script);
-    })();
+    }
+    loadSdk();
 
     facebookButton.addEventListener("click", () => {
       if (!facebookReady || typeof FB === "undefined") {
-        facebookMessage("Facebook is not ready. Please try again shortly or continue as a guest.");
+        if (typeof FB !== "undefined") window.fbAsyncInit();
+        else {
+          document.getElementById("facebook-jssdk")?.remove();
+          loadSdk();
+        }
+        facebookMessage("Loading Facebook. Please click Continue with Facebook when ready, or continue as a guest.");
         return;
       }
       endFacebookAttempt();
@@ -1198,6 +1199,10 @@ must be tested on the published HTTPS site.
     form.addEventListener("submit", async event => {
       event.preventDefault();
       if (!validateForm()) return;
+      if (!databaseReady) {
+        showToast("Feedback service is unavailable. Your feedback is still here; please retry shortly.", "error");
+        return;
+      }
   
       $("submitButton").disabled = true;
       $("submitButton").textContent = "Submitting…";
@@ -1419,8 +1424,30 @@ must be tested on the published HTTPS site.
     $("closeModal").addEventListener("click", closeModal);
     $("thankYouModal").addEventListener("click", e => { if (e.target === $("thankYouModal")) closeModal(); });
   
-    // Start live sync
-    listenToApprovedReviews();
+    // A failed database download must not disable Facebook or guest login.
+    async function startDatabase() {
+      try {
+        const [core, firestore] = await Promise.all([
+          import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js")
+        ]);
+        const app = core.initializeApp(firebaseConfig);
+        ({addDoc, query, where, onSnapshot, serverTimestamp} = firestore);
+        commentsCollection = firestore.collection(firestore.getFirestore(app), "comments");
+        databaseReady = true;
+        listenToApprovedReviews();
+        import("https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js")
+          .then(async ({getAnalytics, isSupported}) => {
+            if (await isSupported()) getAnalytics(app);
+          }).catch(() => {});
+      } catch (error) {
+        databaseReady = false;
+        console.error("Feedback service unavailable", error);
+        $("bestReviews").innerHTML = '<div class="empty">Best reviews are temporarily unavailable.</div>';
+        $("reviewFeed").innerHTML = '<div class="empty">Comments could not load. Check your connection and reload to retry.</div>';
+      }
+    }
+    startDatabase();
   </script>
 
 </body>
