@@ -60,7 +60,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
-  getFirestore, collection, query, where, onSnapshot,
+  getFirestore, collection, query, where, onSnapshot, getDocs,
   doc, setDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -275,6 +275,20 @@ $("confirmJoinBtn").addEventListener("click", async () => {
 
   try {
     const user = await ensureSignedIn();
+    const existingQ = query(
+      collection(db, "openPlayRegistrations"),
+      where("sessionId", "==", selectedOpenPlay.id),
+      where("customerUid", "==", user.uid)
+    );
+    const existingSnap = await getDocs(existingQ);
+
+    if (!existingSnap.empty) {
+      joinStatus.className = "mt-4 rounded-xl border border-amber-600 bg-amber-950/40 p-3 text-sm text-amber-100";
+      joinStatus.textContent = "You are already registered for this Open Play session.";
+      showStatus("info", "Already registered", "This Google account already has an Open Play registration for this session.");
+      return;
+    }
+
     const registrationId = `${selectedOpenPlay.id}_${user.uid}`;
     const registrationRef = doc(db, "openPlayRegistrations", registrationId);
 
@@ -307,7 +321,7 @@ $("confirmJoinBtn").addEventListener("click", async () => {
   } catch (err) {
     if (err?.code === "permission-denied" && auth.currentUser) {
       joinStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
-      joinStatus.textContent = "Google sign-in worked, but Firestore rejected this registration. This can also happen if this Google account already has a registration for this Open Play.";
+      joinStatus.textContent = "Google sign-in worked, but Firestore rejected this registration. Please send the diagnostic below if this continues.";
       showStatus(
         "error",
         "Registration not saved",
