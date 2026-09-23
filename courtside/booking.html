@@ -1,72 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Book a Court | Courtside Gatherings</title>
-<meta name="theme-color" content="#0f172a">
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
- body{background:#020617}.slot{min-height:54px}.selected{outline:2px solid #34d399;background:#064e3b!important}.openplay{background:#0f766e!important}.private{background:#7c2d12!important}.unavailable{opacity:.45;cursor:not-allowed}.modal{backdrop-filter:blur(8px)}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Courtside Gatherings Booking</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
-<header class="sticky top-0 z-30 bg-slate-900/95 border-b border-slate-800">
- <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-  <div><h1 class="font-black text-white">Courtside Gatherings</h1><p class="text-[11px] text-slate-400">Pickleball Booking · Brgy. Lunang, Hilongos, Leyte</p></div>
-  <button id="authBtn" class="bg-white text-slate-900 px-3 py-2 rounded-lg text-xs font-black">Sign in with Google</button>
- </div>
-</header>
-<main class="max-w-6xl mx-auto p-4 pb-24">
- <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4">
-  <div class="flex flex-wrap items-end justify-between gap-3">
-   <div><label class="text-[10px] uppercase tracking-widest font-black text-slate-500">Choose date</label><input id="datePicker" type="date" class="block mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white"></div>
-   <div class="text-right"><div class="text-[10px] text-slate-500 uppercase font-black">Private Rental</div><div class="text-xs text-slate-300">Courts 1–4 ₱250/hr · Courts 5–6 ₱350/hr</div></div>
-  </div>
- </section>
- <div class="mb-3 flex gap-2 text-[10px] font-bold flex-wrap"><span class="px-2 py-1 rounded bg-emerald-900 text-emerald-300">AVAILABLE</span><span class="px-2 py-1 rounded bg-teal-700">OPEN PLAY · TAP TO JOIN</span><span class="px-2 py-1 rounded bg-orange-900">PRIVATE · UNAVAILABLE</span></div>
- <div id="loading" class="py-16 text-center text-slate-500">Loading schedule…</div>
- <div id="courts" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-</main>
-<div id="modal" class="hidden fixed inset-0 z-50 bg-black/70 modal p-4 items-center justify-center"><div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5" id="modalBody"></div></div>
-<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60]"></div>
+<body class="bg-slate-950 text-white min-h-screen">
+  <main class="max-w-3xl mx-auto p-5">
+    <header class="flex items-start justify-between gap-4 py-6 border-b border-slate-800">
+      <div>
+        <h1 class="text-3xl font-bold">Courtside Gatherings</h1>
+        <p class="text-slate-400 mt-1">Pickleball Booking · Brgy. Lunang, Hilongos, Leyte</p>
+      </div>
+      <button id="googleBtn" class="bg-white text-slate-900 font-semibold rounded-xl px-5 py-3">Sign in with Google</button>
+    </header>
+
+    <section class="mt-6 bg-slate-900 border border-slate-800 rounded-3xl p-5">
+      <label class="block text-xs tracking-[.25em] font-bold text-slate-400 mb-3">CHOOSE DATE</label>
+      <input id="dateInput" type="date" class="bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-lg" />
+      <div class="mt-5 text-sm text-slate-300">
+        <div class="font-semibold text-slate-400">PRIVATE RENTAL</div>
+        <div>Courts 1–4 ₱250/hr · Courts 5–6 ₱350/hr</div>
+      </div>
+    </section>
+
+    <section class="mt-5 flex flex-wrap gap-3 text-sm font-semibold">
+      <span class="bg-emerald-700 px-4 py-2 rounded-lg">AVAILABLE</span>
+      <span class="bg-teal-600 px-4 py-2 rounded-lg">OPEN PLAY · TAP TO JOIN</span>
+      <span class="bg-orange-700 px-4 py-2 rounded-lg">PRIVATE · UNAVAILABLE</span>
+    </section>
+
+    <section id="statusBox" class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4 hidden"></section>
+    <section id="schedule" class="mt-8">
+      <div class="text-center text-slate-500 text-xl py-12">Loading schedule…</div>
+    </section>
+  </main>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, where, onSnapshot, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-const firebaseConfig={apiKey:"AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",authDomain:"stone-grill-payroll.firebaseapp.com",projectId:"stone-grill-payroll",storageBucket:"stone-grill-payroll.firebasestorage.app",messagingSenderId:"255528914541",appId:"1:255528914541:web:d58d9731a29d27fc253964"};
-const app=initializeApp(firebaseConfig), db=getFirestore(app), auth=getAuth(app), provider=new GoogleAuthProvider();
-const COURTS=[1,2,3,4,5,6].map(id=>({id,name:`Court ${id}`,rate:id>=5?350:250}));
-const HOURS=Array.from({length:15},(_,i)=>i+8); // 8AM-10PM start slots
-let currentUser=null, bookings=[], openPlays=[], selectedDate='', unsubs=[];
-const $=id=>document.getElementById(id);
-function isoLocal(d=new Date()){const z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
-function fmtHour(h){const d=new Date();d.setHours(h,0,0,0);return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}
-function toast(msg,type='ok'){ $('toast').innerHTML=`<div class="${type==='err'?'bg-red-600':'bg-emerald-600'} text-white px-4 py-3 rounded-xl shadow-xl text-sm font-bold">${msg}</div>`;setTimeout(()=>$('toast').innerHTML='',3000)}
-function closeModal(){$('modal').classList.add('hidden');$('modal').classList.remove('flex')}
-window.closeModal=closeModal;
-async function ensureProfile(user){const ref=doc(db,'users',user.uid), snap=await getDoc(ref);if(!snap.exists()) await setDoc(ref,{uid:user.uid,name:user.displayName||'',email:user.email||'',photoURL:user.photoURL||'',phone:'',role:'customer',status:'active',createdAt:serverTimestamp(),lastLoginAt:serverTimestamp()});else await setDoc(ref,{name:user.displayName||'',email:user.email||'',photoURL:user.photoURL||'',lastLoginAt:serverTimestamp()},{merge:true});}
-$('authBtn').onclick=async()=>{try{if(currentUser) await signOut(auth); else await signInWithPopup(auth,provider)}catch(e){toast(e.message,'err')}};
-onAuthStateChanged(auth,async u=>{currentUser=u;if(u){await ensureProfile(u);$('authBtn').textContent=`${u.displayName?.split(' ')[0]||'Account'} · Sign out`;}else $('authBtn').textContent='Sign in with Google';});
-$('datePicker').value=isoLocal(); selectedDate=$('datePicker').value; $('datePicker').min=isoLocal();
-$('datePicker').onchange=()=>{selectedDate=$('datePicker').value;listenDate()};
-function listenDate(){unsubs.forEach(f=>f());unsubs=[];$('loading').classList.remove('hidden');
- const qb=query(collection(db,'bookings'),where('date','==',selectedDate));
- const qo=query(collection(db,'openPlaySessions'),where('date','==',selectedDate));
- unsubs.push(onSnapshot(qb,s=>{bookings=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
- unsubs.push(onSnapshot(qo,s=>{openPlays=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
+  authDomain: "stone-grill-payroll.firebaseapp.com",
+  projectId: "stone-grill-payroll",
+  storageBucket: "stone-grill-payroll.firebasestorage.app",
+  messagingSenderId: "255528914541",
+  appId: "1:255528914541:web:d58d9731a29d27fc253964"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+const $ = (id) => document.getElementById(id);
+const statusBox = $("statusBox");
+const schedule = $("schedule");
+const dateInput = $("dateInput");
+
+function showStatus(type, title, detail) {
+  statusBox.classList.remove("hidden");
+  statusBox.innerHTML = `
+    <div class="font-bold">${title}</div>
+    <div class="mt-1 text-sm text-slate-300 break-words">${detail || ""}</div>
+  `;
+  statusBox.className = "mt-8 rounded-2xl border p-4 " +
+    (type === "error" ? "border-red-700 bg-red-950/50" : "border-slate-700 bg-slate-900");
 }
-function overlap(start,end,h){return h>=Number(start.split(':')[0]) && h<Number(end.split(':')[0])}
-function findOpen(courtId,h){return openPlays.find(x=>Number(x.courtId)===courtId && x.status!=='cancelled' && overlap(x.startTime,x.endTime,h));}
-function findPrivate(courtId,h){return bookings.find(x=>Number(x.courtId)===courtId && ['held','pending_payment','confirmed'].includes(x.status) && overlap(x.startTime,x.endTime,h));}
-function render(){ $('loading').classList.add('hidden');$('courts').innerHTML=COURTS.map(c=>`<section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden"><div class="p-4 border-b border-slate-800 flex justify-between"><div><div class="font-black">${c.name}</div><div class="text-[10px] text-slate-500">Private ₱${c.rate}/hour</div></div></div><div class="p-3 grid grid-cols-2 gap-2">${HOURS.map(h=>{const op=findOpen(c.id,h),pr=findPrivate(c.id,h);if(op)return `<button onclick="joinOpen('${op.id}')" class="slot openplay rounded-lg p-2 text-left"><b class="text-xs">🏓 ${fmtHour(h)}</b><div class="text-[10px]">OPEN PLAY · ₱${op.pricePerPlayer||120}</div></button>`;if(pr)return `<button disabled class="slot private unavailable rounded-lg p-2 text-left"><b class="text-xs">🔒 ${fmtHour(h)}</b><div class="text-[10px]">PRIVATE</div></button>`;return `<button onclick="rentCourt(${c.id},${h})" class="slot bg-emerald-950 hover:bg-emerald-900 border border-emerald-900 rounded-lg p-2 text-left"><b class="text-xs text-emerald-300">${fmtHour(h)}</b><div class="text-[10px] text-emerald-500">Available</div></button>`}).join('')}</div></section>`).join('');}
-async function requireUser(){if(currentUser)return true;try{await signInWithPopup(auth,provider);return !!auth.currentUser}catch(e){toast('Sign in is required to continue.','err');return false}}
-window.joinOpen=async id=>{if(!await requireUser())return;const op=openPlays.find(x=>x.id===id);if(!op)return;const regsQ=query(collection(db,'openPlayRegistrations'),where('sessionId','==',id),where('status','==','confirmed')); // display count later
- $('modalBody').innerHTML=`<h2 class="text-xl font-black text-teal-300">Join Open Play</h2><p class="text-sm text-slate-400 mt-1">${selectedDate} · Court ${op.courtId}</p><div class="my-5 bg-slate-950 rounded-xl p-4"><div class="font-bold">${op.startTime} – ${op.endTime}</div><div class="text-2xl font-black mt-1">₱${op.pricePerPlayer||120}<span class="text-xs text-slate-500"> / player</span></div><div class="text-xs text-slate-500 mt-2">${currentUser.displayName}<br>${currentUser.email}</div></div><button onclick="createOpenRegistration('${id}')" class="w-full bg-teal-600 py-3 rounded-xl font-black">Continue to Payment</button><button onclick="closeModal()" class="w-full mt-2 py-2 text-slate-500 text-sm">Cancel</button>`;$('modal').classList.remove('hidden');$('modal').classList.add('flex');}
-window.createOpenRegistration=async id=>{const op=openPlays.find(x=>x.id===id);if(!op||!currentUser)return;await addDoc(collection(db,'openPlayRegistrations'),{sessionId:id,date:selectedDate,courtId:op.courtId,userId:currentUser.uid,name:currentUser.displayName||'',email:currentUser.email||'',amount:op.pricePerPlayer||120,paymentStatus:'pending',status:'pending_payment',createdAt:serverTimestamp()});closeModal();toast('Registration created. Payment step is next.')}
-window.rentCourt=async(courtId,startHour)=>{if(!await requireUser())return;const court=COURTS.find(c=>c.id===courtId);let max=0;for(let h=startHour;h<=22;h++){if(findOpen(courtId,h)||findPrivate(courtId,h))break;max++;}max=Math.max(1,max);$('modalBody').innerHTML=`<h2 class="text-xl font-black">Rent ${court.name}</h2><p class="text-sm text-slate-400 mt-1">${selectedDate} · starts ${fmtHour(startHour)}</p><label class="block text-[10px] uppercase font-black text-slate-500 mt-5 mb-1">Duration</label><select id="duration" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3" onchange="updateRentTotal(${court.rate})">${Array.from({length:max},(_,i)=>`<option value="${i+1}">${i+1} hour${i?'s':''}</option>`).join('')}</select><div class="my-4 bg-slate-950 rounded-xl p-4 flex justify-between"><span>Total</span><b id="rentTotal" class="text-emerald-400 text-xl">₱${court.rate}</b></div><div class="text-xs text-slate-500 mb-4">Booking as ${currentUser.displayName} · ${currentUser.email}</div><button onclick="createRental(${courtId},${startHour})" class="w-full bg-emerald-600 py-3 rounded-xl font-black">Continue to Payment</button><button onclick="closeModal()" class="w-full mt-2 py-2 text-slate-500 text-sm">Cancel</button>`;$('modal').classList.remove('hidden');$('modal').classList.add('flex');}
-window.updateRentTotal=rate=>{$('rentTotal').textContent=`₱${Number($('duration').value)*rate}`}
-window.createRental=async(courtId,startHour)=>{if(!currentUser)return;const duration=Number($('duration').value),endHour=startHour+duration,court=COURTS.find(c=>c.id===courtId), bookingRef=doc(collection(db,'bookings'));
- try{await runTransaction(db,async tx=>{for(let h=startHour;h<endHour;h++){const lockId=`${selectedDate}_C${courtId}_${String(h).padStart(2,'0')}00`, lockRef=doc(db,'slotLocks',lockId), snap=await tx.get(lockRef);if(snap.exists())throw new Error(`The ${fmtHour(h)} slot was just taken.`);tx.set(lockRef,{date:selectedDate,courtId,startHour:h,type:'private',bookingId:bookingRef.id,userId:currentUser.uid,createdAt:serverTimestamp()});}tx.set(bookingRef,{date:selectedDate,courtId,startTime:`${String(startHour).padStart(2,'0')}:00`,endTime:`${String(endHour).padStart(2,'0')}:00`,duration,rate:court.rate,amount:duration*court.rate,type:'private',source:'online',userId:currentUser.uid,customerName:currentUser.displayName||'',customerEmail:currentUser.email||'',status:'pending_payment',paymentStatus:'pending',createdAt:serverTimestamp()});});closeModal();toast('Court held. Payment step is next.');}catch(e){toast(e.message,'err')}}
-listenDate();
+
+function todayLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+
+dateInput.value = todayLocal();
+
+$("googleBtn").addEventListener("click", async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    showStatus("error", "Google sign-in error", `${err.code || "unknown"}: ${err.message}`);
+  }
+});
+
+onAuthStateChanged(auth, (user) => {
+  $("googleBtn").textContent = user ? (user.displayName || "Signed in") : "Sign in with Google";
+});
+
+let unsubOpen = null;
+let unsubBookings = null;
+let openLoaded = false;
+let bookingsLoaded = false;
+let openItems = [];
+let bookingItems = [];
+
+function stopListeners() {
+  if (unsubOpen) unsubOpen();
+  if (unsubBookings) unsubBookings();
+  unsubOpen = null;
+  unsubBookings = null;
+}
+
+function render() {
+  if (!openLoaded || !bookingsLoaded) return;
+
+  const courts = [1,2,3,4,5,6];
+  schedule.innerHTML = courts.map(courtId => {
+    const ops = openItems.filter(x => Number(x.courtId) === courtId);
+    const bks = bookingItems.filter(x => Number(x.courtId) === courtId && x.status !== "cancelled");
+
+    let body = '<div class="text-emerald-400 font-semibold">Available</div>';
+    if (ops.length) {
+      body = ops.map(x => `<div class="mt-2 bg-teal-700/40 border border-teal-600 rounded-xl p-3">
+        <div class="font-semibold">Open Play</div>
+        <div class="text-sm text-slate-300">${x.startTime || "?"}–${x.endTime || "?"} · ₱${x.pricePerPlayer ?? "?"}/player</div>
+      </div>`).join("");
+    } else if (bks.length) {
+      body = bks.map(x => `<div class="mt-2 bg-orange-800/40 border border-orange-700 rounded-xl p-3">
+        <div class="font-semibold">Private Booking</div>
+        <div class="text-sm text-slate-300">${x.startTime || "?"}–${x.endTime || "?"}</div>
+      </div>`).join("");
+    }
+
+    return `<article class="mb-4 bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-bold">Court ${courtId}</h2>
+        <span class="text-slate-400">₱${courtId >= 5 ? 350 : 250}/hr</span>
+      </div>
+      <div class="mt-3">${body}</div>
+    </article>`;
+  }).join("");
+
+  showStatus("info", "Firebase connected", `Loaded schedule for ${dateInput.value}. Open Play: ${openItems.length}, private bookings: ${bookingItems.length}.`);
+}
+
+function loadSchedule() {
+  stopListeners();
+  openLoaded = false;
+  bookingsLoaded = false;
+  openItems = [];
+  bookingItems = [];
+  schedule.innerHTML = '<div class="text-center text-slate-500 text-xl py-12">Loading schedule…</div>';
+  statusBox.classList.add("hidden");
+
+  const selectedDate = dateInput.value;
+
+  const openQ = query(collection(db, "openPlaySessions"), where("date", "==", selectedDate));
+  unsubOpen = onSnapshot(openQ,
+    (snap) => {
+      openItems = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      openLoaded = true;
+      render();
+    },
+    (err) => {
+      openLoaded = true;
+      showStatus("error", "Open Play read failed", `${err.code || "unknown"}: ${err.message}`);
+      schedule.innerHTML = '<div class="text-red-400 text-center py-10">Firebase could not read Open Play data.</div>';
+    }
+  );
+
+  const bookingQ = query(collection(db, "bookings"), where("date", "==", selectedDate));
+  unsubBookings = onSnapshot(bookingQ,
+    (snap) => {
+      bookingItems = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      bookingsLoaded = true;
+      render();
+    },
+    (err) => {
+      bookingsLoaded = true;
+      showStatus("error", "Private booking read failed", `${err.code || "unknown"}: ${err.message}`);
+      schedule.innerHTML = '<div class="text-red-400 text-center py-10">Firebase could not read private booking data.</div>';
+    }
+  );
+}
+
+dateInput.addEventListener("change", loadSchedule);
+loadSchedule();
 </script>
-</body></html>
+</body>
+</html>
