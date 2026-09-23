@@ -60,7 +60,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
   getFirestore, collection, query, where, onSnapshot,
-  doc, getDoc, setDoc, serverTimestamp
+  doc, setDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -265,14 +265,6 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     const user = await ensureSignedIn();
     const registrationId = `${selectedOpenPlay.id}_${user.uid}`;
     const registrationRef = doc(db, "openPlayRegistrations", registrationId);
-    const existing = await getDoc(registrationRef);
-
-    if (existing.exists()) {
-      joinModal.classList.add("hidden");
-      joinModal.classList.remove("flex");
-      showStatus("info", "Already registered", "This Google account already has a registration for this Open Play session.");
-      return;
-    }
 
     await setDoc(registrationRef, {
       sessionId: selectedOpenPlay.id,
@@ -300,8 +292,23 @@ $("confirmJoinBtn").addEventListener("click", async () => {
       `${user.displayName || user.email} is registered for Court ${selectedOpenPlay.courtId}, ${selectedOpenPlay.date}, ${selectedOpenPlay.startTime}–${selectedOpenPlay.endTime}. Status: pending payment.`
     );
   } catch (err) {
-    showStatus("error", "Could not join Open Play", `${err.code || "unknown"}: ${err.message}`);
-    showAuthDebug(formatAuthError(err));
+    if (err?.code === "permission-denied" && auth.currentUser) {
+      showStatus(
+        "error",
+        "Registration not saved",
+        "Google sign-in worked, but Firestore rejected the registration. If this account already joined this Open Play, the existing registration is protected from being overwritten."
+      );
+    } else {
+      showStatus("error", "Could not join Open Play", `${err.code || "unknown"}: ${err.message}`);
+    }
+    showAuthDebug([
+      `Code: ${err?.code || "unknown"}`,
+      `Message: ${err?.message || "No message"}`,
+      `Signed in: ${auth.currentUser ? "yes" : "no"}`,
+      `UID: ${auth.currentUser?.uid || "none"}`,
+      `Current page: ${location.origin}`,
+      `Firebase authDomain: ${firebaseConfig.authDomain}`
+    ]);
   } finally {
     btn.disabled = false;
     btn.textContent = "Continue";
