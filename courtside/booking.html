@@ -47,6 +47,7 @@
     <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl p-6">
       <h2 class="text-2xl font-bold">Join Open Play</h2>
       <div id="joinDetails" class="mt-4 text-slate-300 space-y-1"></div>
+      <div id="joinStatus" class="mt-4 hidden rounded-xl border p-3 text-sm"></div>
       <div class="mt-6 flex gap-3">
         <button id="cancelJoinBtn" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
         <button id="confirmJoinBtn" class="flex-1 rounded-xl bg-teal-600 px-4 py-3 font-semibold">Continue</button>
@@ -83,6 +84,7 @@ const schedule = $("schedule");
 const dateInput = $("dateInput");
 const joinModal = $("joinModal");
 const joinDetails = $("joinDetails");
+const joinStatus = $("joinStatus");
 const authDebug = $("authDebug");
 const authDebugText = $("authDebugText");
 
@@ -244,6 +246,8 @@ schedule.addEventListener("click", (event) => {
     <div><strong>Capacity:</strong> Maximum ${selectedOpenPlay.maxPlayers || "—"} players</div>
   `;
 
+  joinStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+  joinStatus.textContent = "";
   joinModal.classList.remove("hidden");
   joinModal.classList.add("flex");
 });
@@ -252,6 +256,8 @@ $("cancelJoinBtn").addEventListener("click", () => {
   joinModal.classList.add("hidden");
   joinModal.classList.remove("flex");
   selectedOpenPlay = null;
+  joinStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+  joinStatus.textContent = "";
 });
 
 $("confirmJoinBtn").addEventListener("click", async () => {
@@ -260,6 +266,12 @@ $("confirmJoinBtn").addEventListener("click", async () => {
   const btn = $("confirmJoinBtn");
   btn.disabled = true;
   btn.textContent = "Please wait…";
+  joinStatus.className = "mt-4 rounded-xl border border-slate-600 bg-slate-800 p-3 text-sm text-slate-200";
+  joinStatus.textContent = auth.currentUser
+    ? "Saving your Open Play registration…"
+    : "Opening Google sign-in…";
+
+  let savedSuccessfully = false;
 
   try {
     const user = await ensureSignedIn();
@@ -286,6 +298,7 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     joinModal.classList.add("hidden");
     joinModal.classList.remove("flex");
 
+    savedSuccessfully = true;
     showStatus(
       "success",
       "Open Play registration created",
@@ -293,12 +306,16 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     );
   } catch (err) {
     if (err?.code === "permission-denied" && auth.currentUser) {
+      joinStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+      joinStatus.textContent = "Google sign-in worked, but Firestore rejected this registration. This can also happen if this Google account already has a registration for this Open Play.";
       showStatus(
         "error",
         "Registration not saved",
-        "Google sign-in worked, but Firestore rejected the registration. If this account already joined this Open Play, the existing registration is protected from being overwritten."
+        "Google sign-in worked, but Firestore rejected the registration."
       );
     } else {
+      joinStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+      joinStatus.textContent = `${err?.code || "unknown"}: ${err?.message || "Could not complete registration."}`;
       showStatus("error", "Could not join Open Play", `${err.code || "unknown"}: ${err.message}`);
     }
     showAuthDebug([
@@ -312,7 +329,9 @@ $("confirmJoinBtn").addEventListener("click", async () => {
   } finally {
     btn.disabled = false;
     btn.textContent = "Continue";
-    selectedOpenPlay = null;
+    if (savedSuccessfully) {
+      selectedOpenPlay = null;
+    }
   }
 });
 
