@@ -32,6 +32,12 @@
     </section>
 
     <section id="statusBox" class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4 hidden"></section>
+
+    <section id="authDebug" class="mt-4 rounded-2xl border border-amber-700/60 bg-amber-950/20 p-4 hidden">
+      <div class="font-bold text-amber-300">Authentication diagnostic</div>
+      <div id="authDebugText" class="mt-2 text-sm text-slate-300 whitespace-pre-wrap break-words"></div>
+    </section>
+
     <section id="schedule" class="mt-8">
       <div class="text-center text-slate-500 text-xl py-12">Loading schedule…</div>
     </section>
@@ -77,10 +83,13 @@ const schedule = $("schedule");
 const dateInput = $("dateInput");
 const joinModal = $("joinModal");
 const joinDetails = $("joinDetails");
+const authDebug = $("authDebug");
+const authDebugText = $("authDebugText");
 
 let selectedOpenPlay = null;
 let unsubscribeSchedule = null;
 let currentItems = [];
+let authTimer = null;
 
 function showStatus(type, title, detail) {
   statusBox.classList.remove("hidden");
@@ -96,6 +105,28 @@ function showStatus(type, title, detail) {
       : "border-slate-700 bg-slate-900");
 }
 
+function showAuthDebug(lines) {
+  authDebug.classList.remove("hidden");
+  authDebugText.textContent = Array.isArray(lines) ? lines.join("\n") : String(lines);
+}
+
+function clearAuthTimer() {
+  if (authTimer) {
+    clearTimeout(authTimer);
+    authTimer = null;
+  }
+}
+
+function formatAuthError(err) {
+  return [
+    `Code: ${err?.code || "unknown"}`,
+    `Message: ${err?.message || "No message"}`,
+    `Current page: ${location.origin}`,
+    `Firebase authDomain: ${firebaseConfig.authDomain}`,
+    `Browser: ${navigator.userAgent}`
+  ];
+}
+
 function todayLocal() {
   const d = new Date();
   const y = d.getFullYear();
@@ -108,8 +139,40 @@ dateInput.value = todayLocal();
 
 async function ensureSignedIn() {
   if (auth.currentUser) return auth.currentUser;
-  const result = await signInWithPopup(auth, provider);
-  return result.user;
+
+  showStatus("info", "Opening Google sign-in", "Waiting for the Google/Firebase popup to return...");
+  showAuthDebug([
+    "Sign-in started.",
+    `Current page: ${location.origin}`,
+    `Firebase authDomain: ${firebaseConfig.authDomain}`,
+    "If the popup stays blank, leave it open for about 10 seconds."
+  ]);
+
+  clearAuthTimer();
+  authTimer = setTimeout(() => {
+    showAuthDebug([
+      "The popup has not returned after 10 seconds.",
+      "This means signInWithPopup() is still waiting on the Firebase auth handler.",
+      `Current page: ${location.origin}`,
+      `Firebase authDomain: ${firebaseConfig.authDomain}`,
+      "Close the popup manually if it remains blank. The page should then show the Firebase error code."
+    ]);
+  }, 10000);
+
+  try {
+    const result = await signInWithPopup(auth, provider);
+    clearAuthTimer();
+    showAuthDebug([
+      "Google sign-in completed successfully.",
+      `UID: ${result.user.uid}`,
+      `Email: ${result.user.email || "not returned"}`
+    ]);
+    return result.user;
+  } catch (err) {
+    clearAuthTimer();
+    showAuthDebug(formatAuthError(err));
+    throw err;
+  }
 }
 
 $("googleBtn").addEventListener("click", async () => {
@@ -122,6 +185,9 @@ $("googleBtn").addEventListener("click", async () => {
 
 onAuthStateChanged(auth, (user) => {
   $("googleBtn").textContent = user ? (user.displayName || user.email || "Signed in") : "Sign in with Google";
+  if (user) {
+    showStatus("success", "Google account connected", `${user.displayName || user.email} · UID ${user.uid}`);
+  }
 });
 
 function render(items) {
@@ -235,6 +301,7 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     );
   } catch (err) {
     showStatus("error", "Could not join Open Play", `${err.code || "unknown"}: ${err.message}`);
+    showAuthDebug(formatAuthError(err));
   } finally {
     btn.disabled = false;
     btn.textContent = "Continue";
