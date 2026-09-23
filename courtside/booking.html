@@ -77,7 +77,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
-  getFirestore, collection, query, where, onSnapshot, getDocs,
+  getFirestore, collection, query, where, onSnapshot,
   doc, setDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -108,7 +108,9 @@ const authDebugText = $("authDebugText");
 
 let selectedOpenPlay = null;
 let unsubscribeSchedule = null;
+let unsubscribeRegistrations = null;
 let currentItems = [];
+let currentRegistrations = [];
 let authTimer = null;
 
 function showStatus(type, title, detail) {
@@ -214,8 +216,34 @@ $("googleBtn").addEventListener("click", async () => {
 
 onAuthStateChanged(auth, (user) => {
   $("googleBtn").textContent = user ? (user.displayName || user.email || "Signed in") : "Sign in with Google";
+
+  if (unsubscribeRegistrations) {
+    unsubscribeRegistrations();
+    unsubscribeRegistrations = null;
+  }
+
+  currentRegistrations = [];
+
   if (user) {
     showStatus("success", "Google account connected", `${user.displayName || user.email} · UID ${user.uid}`);
+
+    const myRegistrationsQ = query(
+      collection(db, "openPlayRegistrations"),
+      where("customerUid", "==", user.uid)
+    );
+
+    unsubscribeRegistrations = onSnapshot(
+      myRegistrationsQ,
+      (snap) => {
+        currentRegistrations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render(currentItems);
+      },
+      (err) => {
+        showStatus("error", "Could not load your registrations", `${err.code || "unknown"}: ${err.message}`);
+      }
+    );
+  } else {
+    render(currentItems);
   }
 });
 
@@ -275,6 +303,32 @@ function render(items) {
       const startsHere = toMinutes(occupying.startTime) >= rowStart && toMinutes(occupying.startTime) < rowEnd;
 
       if (occupying.type === "open_play") {
+        const myRegistration = currentRegistrations.find(r => r.sessionId === occupying.id);
+        const isConfirmed = myRegistration &&
+          (myRegistration.status === "confirmed" || myRegistration.paymentStatus === "verified");
+        const isPending = myRegistration && !isConfirmed;
+
+        if (myRegistration) {
+          return `
+            <div class="slot-cell p-2 bg-slate-900/50">
+              <button disabled
+                class="h-full min-h-[48px] w-full cursor-default rounded-lg border px-2 py-2 text-left
+                  ${isConfirmed
+                    ? "border-emerald-500 bg-emerald-800/40"
+                    : "border-amber-500 bg-amber-900/30"}">
+                <div class="text-xs font-bold ${isConfirmed ? "text-emerald-200" : "text-amber-200"}">
+                  ${isConfirmed ? "✓ Already Joined" : "✓ Joined · Pending"}
+                </div>
+                ${startsHere ? `
+                  <div class="mt-1 text-[11px] text-slate-300">
+                    ${occupying.startTime}–${occupying.endTime}<br>
+                    ₱${occupying.pricePerPlayer ?? "?"}/player<br>
+                    ${isConfirmed ? "Confirmed" : "Awaiting payment verification"}
+                  </div>` : ""}
+              </button>
+            </div>`;
+        }
+
         return `
           <div class="slot-cell p-2 bg-slate-900/50">
             <button class="join-open-play h-full min-h-[48px] w-full rounded-lg border border-teal-600 bg-teal-700/30 px-2 py-2 text-left hover:bg-teal-700/50"
@@ -359,14 +413,11 @@ $("confirmJoinBtn").addEventListener("click", async () => {
 
   try {
     const user = await ensureSignedIn();
-    const existingQ = query(
-      collection(db, "openPlayRegistrations"),
-      where("sessionId", "==", selectedOpenPlay.id),
-      where("customerUid", "==", user.uid)
+    const existingRegistration = currentRegistrations.find(
+      r => r.sessionId === selectedOpenPlay.id && r.customerUid === user.uid
     );
-    const existingSnap = await getDocs(existingQ);
 
-    if (!existingSnap.empty) {
+    if (existingRegistration) {
       joinStatus.className = "mt-4 rounded-xl border border-amber-600 bg-amber-950/40 p-3 text-sm text-amber-100";
       joinStatus.textContent = "You are already registered for this Open Play session.";
       showStatus("info", "Already registered", "This Google account already has an Open Play registration for this session.");
