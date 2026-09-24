@@ -21,7 +21,10 @@
         <h1 class="text-3xl font-bold">Courtside Gatherings</h1>
         <p class="text-slate-400 mt-1">Pickleball Booking · Brgy. Lunang, Hilongos, Leyte</p>
       </div>
-      <button id="googleBtn" class="bg-white text-slate-900 font-semibold rounded-xl px-5 py-3">Sign in with Google</button>
+      <div class="text-right">
+        <div id="signedInAs" class="mb-2 hidden text-xs text-slate-400"></div>
+        <button id="googleBtn" class="bg-white text-slate-900 font-semibold rounded-xl px-5 py-3">Sign in with Google</button>
+      </div>
     </header>
 
     <section class="mt-6 bg-slate-900 border border-slate-800 rounded-3xl p-5">
@@ -139,7 +142,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
   getFirestore, collection, query, where, onSnapshot,
   doc, setDoc, serverTimestamp
@@ -289,6 +292,11 @@ async function ensureSignedIn() {
 
 $("googleBtn").addEventListener("click", async () => {
   try {
+    if (auth.currentUser) {
+      await signOut(auth);
+      showStatus("info", "Signed out", "Choose the same Google account you used when you made the payment, then sign in again.");
+      return;
+    }
     await ensureSignedIn();
   } catch (err) {
     showStatus("error", "Google sign-in error", `${err.code || "unknown"}: ${err.message}`);
@@ -296,7 +304,15 @@ $("googleBtn").addEventListener("click", async () => {
 });
 
 onAuthStateChanged(auth, (user) => {
-  $("googleBtn").textContent = user ? (user.displayName || user.email || "Signed in") : "Sign in with Google";
+  const signedInAs = $("signedInAs");
+  $("googleBtn").textContent = user ? "Switch Google Account" : "Sign in with Google";
+  if (user) {
+    signedInAs.classList.remove("hidden");
+    signedInAs.textContent = `Signed in as ${user.email || user.displayName || "Google user"}`;
+  } else {
+    signedInAs.classList.add("hidden");
+    signedInAs.textContent = "";
+  }
 
   if (unsubscribeRegistrations) {
     unsubscribeRegistrations();
@@ -344,6 +360,7 @@ onAuthStateChanged(auth, (user) => {
       },
       (err) => {
         console.warn("Could not load payment submissions:", err);
+        showStatus("error", "Could not load your payment status", `${err.code || "unknown"}: ${err.message}`);
       }
     );
   } else {
@@ -828,6 +845,29 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   if (!paymentRegistration || !auth.currentUser) return;
 
   const mobile = paymentMobile.value.trim();
+
+  const existingPaymentForSession = currentPayments.find(
+    p => p.sessionId === paymentRegistration.sessionId
+  );
+
+  if (existingPaymentForSession) {
+    const sessionId = paymentRegistration.sessionId;
+    closePaymentModal();
+    renderCustomerPasses();
+
+    const pass = document.getElementById(`pass-${sessionId}`);
+    if (pass) {
+      pass.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    showStatus(
+      "info",
+      "Payment already submitted",
+      `Reference ${existingPaymentForSession.reference || "saved"}. No new payment is needed; this transaction is waiting for staff verification.`
+    );
+    return;
+  }
+
   const playersCovered = Math.floor(Number(paymentPlayers.value || 0));
   const price = Number(paymentRegistration.pricePerPlayer || 0);
   const amount = price * playersCovered;
