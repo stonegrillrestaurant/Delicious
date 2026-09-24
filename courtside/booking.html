@@ -87,7 +87,7 @@
         <button id="cancelRentalBtn" type="button" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
         <button id="continueRentalBtn" type="button" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Continue to Payment</button>
       </div>
-      <p class="mt-4 text-xs text-slate-500">This reserves the selected one-hour slot while payment is pending. A verified payment permanently blocks the slot.</p>
+      <p class="mt-4 text-xs text-slate-500">Choose a start time, then an end time. Only consecutive available hours can be rented. Open Play and existing private bookings cannot be selected.</p>
     </div>
   </div>
 
@@ -213,6 +213,7 @@ const PAYMENT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoOPIwuXbdA
 
 let selectedOpenPlay = null;
 let selectedRentalSlot = null;
+let rentalSelectionStart = null;
 let unsubscribeSchedule = null;
 let unsubscribeQueueSchedule = null;
 let unsubscribeRegistrations = null;
@@ -541,6 +542,25 @@ function toMinutes(time) {
   return (h * 60) + (m || 0);
 }
 
+function rangeIsAvailable(courtId, startTime, endTime, items = currentItems) {
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  if (!(end > start)) return false;
+
+  return !items.some(item => {
+    if (Number(item.courtId) !== Number(courtId)) return false;
+    const itemStart = toMinutes(item.startTime);
+    const itemEnd = toMinutes(item.endTime);
+    return itemStart < end && itemEnd > start;
+  });
+}
+
+function clearRentalSelection() {
+  rentalSelectionStart = null;
+  selectedRentalSlot = null;
+  render(currentItems);
+}
+
 function render(items) {
   currentItems = items;
   const courts = [1,2,3,4,5,6];
@@ -582,6 +602,63 @@ function render(items) {
 
       if (!occupying) {
         const rate = courtId >= 5 ? 350 : 250;
+        const selectingThisCourt =
+          rentalSelectionStart &&
+          Number(rentalSelectionStart.courtId) === Number(courtId);
+
+        const startMinutes = selectingThisCourt
+          ? toMinutes(rentalSelectionStart.startTime)
+          : null;
+
+        const isStartCell =
+          selectingThisCourt &&
+          row.start === rentalSelectionStart.startTime;
+
+        const canBeEnd =
+          selectingThisCourt &&
+          rowEnd > startMinutes &&
+          rangeIsAvailable(
+            courtId,
+            rentalSelectionStart.startTime,
+            row.end,
+            items
+          );
+
+        const inPreviewRange =
+          selectingThisCourt &&
+          rowStart >= startMinutes &&
+          canBeEnd;
+
+        if (isStartCell) {
+          return `
+            <div class="slot-cell p-2 bg-slate-900/50">
+              <button
+                class="rent-hour h-full min-h-[48px] w-full rounded-lg border-2 border-sky-400 bg-sky-900/40 px-2 py-2 text-left"
+                data-court-id="${courtId}"
+                data-start="${row.start}"
+                data-end="${row.end}"
+                data-rate="${rate}">
+                <div class="text-xs font-black text-sky-200">START SELECTED</div>
+                <div class="mt-1 text-[11px] text-slate-200">${formatTime12(row.start)}<br>Choose an end time below</div>
+              </button>
+            </div>`;
+        }
+
+        if (canBeEnd && rowStart >= startMinutes) {
+          return `
+            <div class="slot-cell p-2 ${inPreviewRange ? 'bg-sky-950/20' : 'bg-slate-900/50'}">
+              <button
+                class="rent-hour h-full min-h-[48px] w-full rounded-lg border border-sky-700 bg-sky-950/25 px-2 py-2 text-left hover:bg-sky-900/40"
+                data-court-id="${courtId}"
+                data-start="${row.start}"
+                data-end="${row.end}"
+                data-rate="${rate}">
+                <div class="text-xs font-bold text-sky-300">Choose End</div>
+                <div class="mt-1 text-[11px] text-slate-300">End ${formatTime12(row.end)}<br>₱${rate}/hour</div>
+              </button>
+            </div>`;
+        }
+
         return `
           <div class="slot-cell p-2 bg-slate-900/50">
             <button
@@ -722,20 +799,70 @@ schedule.addEventListener("click", (event) => {
   const rentalButton = event.target.closest(".rent-hour");
   if (rentalButton) {
     const courtId = Number(rentalButton.dataset.courtId);
+    const rate = Number(rentalButton.dataset.rate || (courtId >= 5 ? 350 : 250));
+    const clickedStart = rentalButton.dataset.start;
+    const clickedEnd = rentalButton.dataset.end;
+
+    if (
+      !rentalSelectionStart ||
+      Number(rentalSelectionStart.courtId) !== courtId
+    ) {
+      rentalSelectionStart = {
+        courtId,
+        startTime: clickedStart,
+        hourlyRate: rate
+      };
+      selectedRentalSlot = null;
+      render(currentItems);
+      showStatus(
+        "info",
+        "Rental start selected",
+        "Court " + courtId + " · " + formatTime12(clickedStart) +
+        ". Now click the available hour where you want the rental to END."
+      );
+      return;
+    }
+
+    if (clickedStart === rentalSelectionStart.startTime) {
+      clearRentalSelection();
+      showStatus("info", "Rental selection cleared", "Choose another available start time.");
+      return;
+    }
+
+    const rangeEnd = clickedEnd;
+    if (
+      toMinutes(rangeEnd) <= toMinutes(rentalSelectionStart.startTime) ||
+      !rangeIsAvailable(courtId, rentalSelectionStart.startTime, rangeEnd, currentItems)
+    ) {
+      showStatus(
+        "error",
+        "That range is not available",
+        "Open Play or another booking blocks part of the selected time. Choose an earlier available end time."
+      );
+      return;
+    }
+
+    const hours = (toMinutes(rangeEnd) - toMinutes(rentalSelectionStart.startTime)) / 60;
+    const total = rate * hours;
+
     selectedRentalSlot = {
       bookingType: "private_rental",
       date: dateInput.value,
       courtId,
-      startTime: rentalButton.dataset.start,
-      endTime: rentalButton.dataset.end,
-      hourlyRate: Number(rentalButton.dataset.rate || (courtId >= 5 ? 350 : 250))
+      startTime: rentalSelectionStart.startTime,
+      endTime: rangeEnd,
+      hourlyRate: rate,
+      hours,
+      amountDue: total
     };
 
     rentalDetails.innerHTML = `
       <div><strong>Date:</strong> ${selectedRentalSlot.date}</div>
       <div><strong>Court:</strong> ${selectedRentalSlot.courtId}</div>
       <div><strong>Time:</strong> ${formatTime12(selectedRentalSlot.startTime)}–${formatTime12(selectedRentalSlot.endTime)}</div>
-      <div><strong>Rental:</strong> ₱${selectedRentalSlot.hourlyRate} for 1 hour</div>
+      <div><strong>Duration:</strong> ${hours} hour${hours === 1 ? "" : "s"}</div>
+      <div><strong>Rate:</strong> ₱${rate}/hour</div>
+      <div class="pt-2 text-xl font-black text-emerald-300">Total: ₱${total}</div>
     `;
     rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
     rentalStatus.textContent = "";
@@ -768,6 +895,8 @@ $("cancelRentalBtn").addEventListener("click", () => {
   rentalModal.classList.add("hidden");
   rentalModal.classList.remove("flex");
   selectedRentalSlot = null;
+  rentalSelectionStart = null;
+  render(currentItems);
 });
 
 $("continueRentalBtn").addEventListener("click", async () => {
@@ -777,7 +906,7 @@ $("continueRentalBtn").addEventListener("click", async () => {
   btn.disabled = true;
   btn.textContent = "Reserving…";
   rentalStatus.className = "mt-4 rounded-xl border border-slate-600 bg-slate-800 p-3 text-sm text-slate-200";
-  rentalStatus.textContent = "Checking and reserving this one-hour slot…";
+  rentalStatus.textContent = "Checking and reserving the selected time range…";
 
   try {
     const user = await ensureSignedIn();
@@ -799,7 +928,8 @@ $("continueRentalBtn").addEventListener("click", async () => {
       startTime: selectedRentalSlot.startTime,
       endTime: selectedRentalSlot.endTime,
       hourlyRate: selectedRentalSlot.hourlyRate,
-      amountDue: selectedRentalSlot.hourlyRate,
+      hours: selectedRentalSlot.hours,
+      amountDue: selectedRentalSlot.amountDue,
       status: "pending_payment",
       paymentStatus: "pending",
       createdAt: serverTimestamp()
@@ -819,12 +949,15 @@ $("continueRentalBtn").addEventListener("click", async () => {
       endTime: selectedRentalSlot.endTime,
       pricePerPlayer: selectedRentalSlot.hourlyRate,
       hourlyRate: selectedRentalSlot.hourlyRate,
-      amountDue: selectedRentalSlot.hourlyRate
+      hours: selectedRentalSlot.hours,
+      amountDue: selectedRentalSlot.amountDue
     };
 
     rentalModal.classList.add("hidden");
     rentalModal.classList.remove("flex");
     selectedRentalSlot = null;
+    rentalSelectionStart = null;
+    render(currentItems);
     openPaymentModal(rentalRegistration);
   } catch (err) {
     rentalStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
@@ -955,7 +1088,9 @@ function openPaymentModal(registration) {
     <div><strong>${registration.customerName || auth.currentUser?.displayName || "Customer"}</strong></div>
     <div>Private Rental · Court ${registration.courtId}</div>
     <div>${registration.date} · ${formatTime12(registration.startTime)}–${formatTime12(registration.endTime)}</div>
-    <div>Rental Total: ₱${price}</div>
+    <div>Duration: ${registration.hours || 1} hour${Number(registration.hours || 1) === 1 ? "" : "s"}</div>
+    <div>Rate: ₱${registration.hourlyRate || price}/hour</div>
+    <div>Rental Total: ₱${registration.amountDue || price}</div>
   ` : `
     <div><strong>${registration.customerName || auth.currentUser?.displayName || "Customer"}</strong></div>
     <div>Open Play · Court ${registration.courtId}</div>
@@ -1024,7 +1159,8 @@ function updatePlayersCoveredHint() {
     const total = Number(paymentRegistration.amountDue || paymentRegistration.hourlyRate || paymentRegistration.pricePerPlayer || 0);
     paymentPlayers.value = "1";
     paymentAmount.value = String(total);
-    paymentCalculation.textContent = "Private court rental · 1 hour";
+    const hours = Number(paymentRegistration.hours || 1);
+    paymentCalculation.textContent = "Private court rental · " + hours + " hour" + (hours === 1 ? "" : "s");
     paymentTotal.textContent = `₱${total}`;
     playersCoveredHint.textContent = "This payment reserves the selected court for the selected one-hour slot.";
     playersCoveredHint.className = "mt-2 text-xs text-emerald-400";
@@ -1149,7 +1285,7 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       amount: String(amount),
       reference,
       notes: isRentalPayment
-        ? `Courtside Private Rental | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime} | Booking ${paymentRegistration.id}`
+        ? `Courtside Private Rental | ${paymentRegistration.hours || 1} hour(s) | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime} | Booking ${paymentRegistration.id}`
         : `Courtside Open Play | ${playersCovered} player(s) | Players: ${playerNames.join(", ")} | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
       fileName: file.name,
       fileType: file.type,
@@ -1315,7 +1451,11 @@ function loadSchedule() {
   );
 }
 
-dateInput.addEventListener("change", loadSchedule);
+dateInput.addEventListener("change", () => {
+  rentalSelectionStart = null;
+  selectedRentalSlot = null;
+  loadSchedule();
+});
 loadSchedule();
 
 // Keep active payment/entry cards current even if the page stays open past the session end time.
