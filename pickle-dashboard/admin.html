@@ -46,7 +46,10 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
         </button>
         <button id="admin-signout-btn" type="button" class="hidden bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Sign out</button>
-        <button onclick="openPaymentVerification()" id="btn-payment-verification" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold py-2 px-3 rounded-lg transition" title="Admin sign-in required">Admin Payment 🔒</button>
+        <button onclick="openPaymentVerification()" id="btn-payment-verification" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition flex items-center gap-2" title="Payment verification">
+          <span>Admin Payment</span>
+          <span id="pending-payment-count" class="hidden min-w-[20px] h-5 px-1.5 rounded-full bg-white text-amber-700 text-[11px] font-black leading-5 text-center shadow-sm">0</span>
+        </button>
         <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Live Panel</button>
         <button onclick="switchTab('history')" id="btn-tab-history" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Vault & History</button>
       </div>
@@ -181,7 +184,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc, collection, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { firebaseConfig, isAuthorizedAdmin } from "../courtside/courtside-config.js";
 
     const app = initializeApp(firebaseConfig);
@@ -215,6 +218,7 @@
 
     let unsubscribeState = null;
     let unsubscribeHistory = null;
+    let unsubscribePendingPayments = null;
 
     function scheduleRecordId(court) {
       if (!court || !court.isConfigured || !court.scheduleDate || !court.timeStart || !court.timeEnd) return null;
@@ -270,14 +274,42 @@
       }
     }
 
+    function updatePendingPaymentButton(count) {
+      const button = document.getElementById("btn-payment-verification");
+      const badge = document.getElementById("pending-payment-count");
+      if (!button || !badge) return;
+
+      const pending = Math.max(0, Number(count || 0));
+
+      if (pending > 0) {
+        badge.textContent = pending > 99 ? "99+" : String(pending);
+        badge.classList.remove("hidden");
+
+        button.className =
+          "bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-200 " +
+          "text-xs font-black py-2 px-3 rounded-lg transition flex items-center gap-2 shadow-lg shadow-amber-500/20";
+        button.title = pending + (pending === 1 ? " payment needs verification" : " payments need verification");
+      } else {
+        badge.textContent = "0";
+        badge.classList.add("hidden");
+
+        button.className =
+          "bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 " +
+          "rounded-lg transition flex items-center gap-2";
+        button.title = "Payment verification";
+      }
+    }
+
     function stopRealtimeListeners() {
       if (unsubscribeState) { unsubscribeState(); unsubscribeState = null; }
       if (unsubscribeHistory) { unsubscribeHistory(); unsubscribeHistory = null; }
+      if (unsubscribePendingPayments) { unsubscribePendingPayments(); unsubscribePendingPayments = null; }
+      updatePendingPaymentButton(0);
       isConnected = false;
     }
 
     function startRealtimeListeners() {
-      if (unsubscribeState || unsubscribeHistory) return;
+      if (unsubscribeState || unsubscribeHistory || unsubscribePendingPayments) return;
         unsubscribeState = onSnapshot(stateRef, (docSnap) => {
         document.getElementById('admin-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> DB LIVE`;
         
@@ -335,6 +367,22 @@
           renderHistory();
         } else { saveHistory(); }
       });
+
+      const pendingPaymentsQuery = query(
+        collection(db, "paymentSubmissions"),
+        where("status", "==", "pending_verification")
+      );
+
+      unsubscribePendingPayments = onSnapshot(
+        pendingPaymentsQuery,
+        (snapshot) => {
+          updatePendingPaymentButton(snapshot.size);
+        },
+        (err) => {
+          console.error("Pending payment count listener failed:", err);
+          updatePendingPaymentButton(0);
+        }
+      );
   
   
     }
