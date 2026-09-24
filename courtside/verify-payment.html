@@ -309,7 +309,9 @@ function batchRow(p, label) {
     '<div><div class="font-mono font-bold">' + esc(p.reference) + '</div>' +
     '<div class="text-sm text-slate-300">' +
     esc(p.customerName || "Customer") + " · " + money(p.amountPaid) + " · " +
-    players + " player" + (players === 1 ? "" : "s") +
+    (p.bookingType === "private_rental"
+      ? ("Court " + esc(p.courtId) + " rental")
+      : (players + " player" + (players === 1 ? "" : "s"))) +
     '</div></div>' +
     '<div class="text-xs font-bold text-emerald-300">' + esc(label) + '</div>' +
     '</div></div>'
@@ -410,6 +412,65 @@ async function confirmPayment(paymentId, options = {}) {
       }
       if (!payment.registrationId) {
         throw new Error("Payment has no linked registration ID.");
+      }
+
+      if (payment.bookingType === "private_rental") {
+        const bookingRef = doc(db, "privateRentalBookings", payment.registrationId);
+        const bookingSnap = await tx.get(bookingRef);
+        if (!bookingSnap.exists()) {
+          throw new Error("Linked private-rental booking does not exist.");
+        }
+
+        const booking = bookingSnap.data();
+        if (booking.customerUid !== payment.customerUid) {
+          throw new Error("Rental booking owner does not match the payment owner.");
+        }
+
+        const publicRef = doc(db, "publicSchedule", payment.registrationId);
+        const publicSnap = await tx.get(publicRef);
+
+        if (publicSnap.exists()) {
+          const existing = publicSnap.data();
+          const sameBooking =
+            existing.type === "private" &&
+            Number(existing.courtId) === Number(booking.courtId) &&
+            existing.date === booking.date &&
+            existing.startTime === booking.startTime &&
+            existing.endTime === booking.endTime;
+
+          if (!sameBooking) {
+            throw new Error("This rental slot is already occupied.");
+          }
+        }
+
+        tx.update(paymentRef, {
+          status: "verified",
+          verifiedAt: serverTimestamp(),
+          verifiedBy: auth.currentUser.uid,
+          verifiedByEmail: auth.currentUser.email || ""
+        });
+
+        tx.update(bookingRef, {
+          status: "confirmed",
+          paymentStatus: "verified",
+          verifiedAt: serverTimestamp(),
+          verifiedBy: auth.currentUser.uid,
+          verifiedReferenceLast6: String(payment.reference || "").slice(-6)
+        });
+
+        tx.set(publicRef, {
+          type: "private",
+          bookingType: "private_rental",
+          bookingId: payment.registrationId,
+          courtId: Number(booking.courtId),
+          date: booking.date,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          hourlyRate: Number(booking.hourlyRate || payment.amountPaid || 0),
+          status: "confirmed"
+        });
+
+        return;
       }
 
       const registrationRef = doc(db, "openPlayRegistrations", payment.registrationId);
