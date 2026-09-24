@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Courtside Payment Verification</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-white">
+  <main class="mx-auto max-w-2xl p-5">
+    <header class="border-b border-slate-800 py-6">
+      <p class="text-xs font-bold tracking-[.22em] text-emerald-400">COURTSIDE GATHERINGS</p>
+      <h1 class="mt-2 text-3xl font-black">Payment Verification</h1>
+      <p class="mt-2 text-sm text-slate-400">Manual merchant-reference verification. Customer submissions remain pending until confirmed here.</p>
+    </header>
+
+    <section class="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <div id="authState" class="text-sm text-slate-400">Checking sign-in…</div>
+      <button id="googleBtn" class="mt-3 w-full rounded-xl bg-white px-4 py-3 font-bold text-slate-900">Sign in with Google</button>
+    </section>
+
+    <section id="adminPanel" class="mt-6 hidden">
+      <div class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+        <label for="referenceInput" class="block text-sm font-bold text-slate-300">Merchant GCash Reference Number</label>
+        <div class="mt-2 flex gap-2">
+          <input id="referenceInput" inputmode="numeric" autocomplete="off"
+            placeholder="Enter reference from merchant SMS"
+            class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-lg font-mono" />
+          <button id="searchBtn" class="rounded-xl bg-emerald-600 px-5 py-3 font-bold">Search</button>
+        </div>
+        <p class="mt-2 text-xs text-slate-500">The system searches the saved customer reference. It does not trust the customer screenshot by itself.</p>
+      </div>
+
+      <div id="messageBox" class="mt-4 hidden rounded-2xl border p-4 text-sm"></div>
+      <div id="results" class="mt-4 space-y-4"></div>
+    </section>
+  </main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import {
+  getFirestore, collection, query, where, getDocs, doc,
+  runTransaction, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAz4ZsYAJkn8XzDrMb78oLc7szxXBxB-zo",
+  authDomain: "stone-grill-payroll.firebaseapp.com",
+  projectId: "stone-grill-payroll",
+  storageBucket: "stone-grill-payroll.firebasestorage.app",
+  messagingSenderId: "255528914541",
+  appId: "1:255528914541:web:882c6b9d42bd03df253964"
+};
+
+const ADMIN_UIDS = new Set([
+  "xqFeiAnYOjOW9VwqTLFBS8n82nM2",
+  "wtqmtdILKPVyufqoHnkIsu3tmwB3"
+]);
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+const $ = id => document.getElementById(id);
+const authState = $("authState");
+const googleBtn = $("googleBtn");
+const adminPanel = $("adminPanel");
+const referenceInput = $("referenceInput");
+const searchBtn = $("searchBtn");
+const results = $("results");
+const messageBox = $("messageBox");
+
+function esc(v) {
+  return String(v ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function money(v) {
+  const n = Number(v || 0);
+  return "₱" + n.toLocaleString("en-PH");
+}
+
+function showMessage(type, text) {
+  messageBox.classList.remove("hidden");
+  messageBox.className = "mt-4 rounded-2xl border p-4 text-sm " +
+    (type === "error"
+      ? "border-red-700 bg-red-950/40 text-red-100"
+      : type === "success"
+      ? "border-emerald-700 bg-emerald-950/40 text-emerald-100"
+      : "border-amber-700 bg-amber-950/30 text-amber-100");
+  messageBox.textContent = text;
+}
+
+onAuthStateChanged(auth, user => {
+  results.innerHTML = "";
+  messageBox.classList.add("hidden");
+
+  if (!user) {
+    authState.textContent = "Not signed in.";
+    googleBtn.textContent = "Sign in with Google";
+    adminPanel.classList.add("hidden");
+    return;
+  }
+
+  const admin = ADMIN_UIDS.has(user.uid);
+  authState.textContent = `Signed in as ${user.email || user.displayName || user.uid}`;
+  googleBtn.textContent = "Sign out";
+
+  if (admin) {
+    adminPanel.classList.remove("hidden");
+  } else {
+    adminPanel.classList.add("hidden");
+    showMessage("error", "This Google account is not authorized for Courtside payment verification.");
+  }
+});
+
+googleBtn.addEventListener("click", async () => {
+  if (auth.currentUser) {
+    await signOut(auth);
+    return;
+  }
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    showMessage("error", `${err.code || "error"}: ${err.message || "Sign-in failed."}`);
+  }
+});
+
+async function findPayments() {
+  const reference = referenceInput.value.trim();
+  results.innerHTML = "";
+  messageBox.classList.add("hidden");
+
+  if (!reference) {
+    showMessage("error", "Enter the merchant reference number first.");
+    return;
+  }
+
+  searchBtn.disabled = true;
+  searchBtn.textContent = "Searching…";
+
+  try {
+    const q = query(
+      collection(db, "paymentSubmissions"),
+      where("reference", "==", reference)
+    );
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      showMessage("error", "No customer payment submission matches this merchant reference.");
+      return;
+    }
+
+    const matches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (matches.length > 1) {
+      showMessage("info", `Found ${matches.length} records with this reference. Review carefully before confirming; these may include legacy/test duplicates.`);
+    } else {
+      showMessage("success", "Matching customer submission found. Check the details before confirming.");
+    }
+
+    results.innerHTML = matches.map(p => paymentCard(p)).join("");
+  } catch (err) {
+    showMessage("error", `${err.code || "error"}: ${err.message || "Search failed."}`);
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = "Search";
+  }
+}
+
+function paymentCard(p) {
+  const verified = p.status === "verified";
+  const last6 = String(p.reference || "").slice(-6);
+
+  return `
+    <article class="rounded-3xl border ${verified ? "border-emerald-600" : "border-amber-600"} bg-slate-900 p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-xs font-bold tracking-[.18em] ${verified ? "text-emerald-400" : "text-amber-400"}">
+            ${verified ? "VERIFIED" : "PENDING VERIFICATION"}
+          </div>
+          <div class="mt-2 text-2xl font-black">${esc(p.customerName || "Customer")}</div>
+          <div class="text-sm text-slate-400">${esc(p.customerEmail || "")}</div>
+        </div>
+        <div class="rounded-xl bg-slate-950 px-3 py-2 text-right">
+          <div class="text-xs text-slate-500">Players</div>
+          <div class="text-2xl font-black">${Number(p.playersCovered || 0)}</div>
+        </div>
+      </div>
+
+      <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
+        <div class="rounded-xl bg-slate-950 p-3">
+          <div class="text-slate-500">Amount</div>
+          <div class="font-bold">${money(p.amountPaid)}</div>
+        </div>
+        <div class="rounded-xl bg-slate-950 p-3">
+          <div class="text-slate-500">Reference</div>
+          <div class="break-all font-mono font-bold">${esc(p.reference)}</div>
+        </div>
+        <div class="rounded-xl bg-slate-950 p-3">
+          <div class="text-slate-500">Court</div>
+          <div class="font-bold">Court ${esc(p.courtId)}</div>
+        </div>
+        <div class="rounded-xl bg-slate-950 p-3">
+          <div class="text-slate-500">Schedule</div>
+          <div class="font-bold">${esc(p.date)} · ${esc(p.startTime)}–${esc(p.endTime)}</div>
+        </div>
+      </div>
+
+      <div class="mt-3 text-xs text-slate-500">Payment document: ${esc(p.id)}</div>
+
+      ${p.receiptUrl ? `
+        <a href="${esc(p.receiptUrl)}" target="_blank" rel="noopener"
+          class="mt-4 block w-full rounded-xl border border-slate-600 px-4 py-3 text-center font-semibold">
+          View Customer Receipt
+        </a>
+      ` : ""}
+
+      ${verified ? `
+        <div class="mt-4 rounded-xl border border-emerald-700 bg-emerald-950/30 p-3 text-center font-bold text-emerald-300">
+          Payment already verified · Ref ••••••${esc(last6)}
+        </div>
+      ` : `
+        <button class="confirm-payment mt-4 w-full rounded-xl bg-emerald-600 px-4 py-4 text-lg font-black"
+          data-payment-id="${esc(p.id)}">
+          CONFIRM PAYMENT
+        </button>
+      `}
+    </article>
+  `;
+}
+
+async function confirmPayment(paymentId) {
+  if (!auth.currentUser || !ADMIN_UIDS.has(auth.currentUser.uid)) {
+    showMessage("error", "Admin authorization required.");
+    return;
+  }
+
+  const paymentRef = doc(db, "paymentSubmissions", paymentId);
+
+  try {
+    await runTransaction(db, async tx => {
+      const paymentSnap = await tx.get(paymentRef);
+      if (!paymentSnap.exists()) throw new Error("Payment record no longer exists.");
+
+      const payment = paymentSnap.data();
+      if (payment.status === "verified") {
+        throw new Error("This payment has already been verified.");
+      }
+      if (payment.status !== "pending_verification") {
+        throw new Error(`Unexpected payment status: ${payment.status || "missing"}`);
+      }
+      if (!payment.registrationId) {
+        throw new Error("Payment has no linked registration ID.");
+      }
+
+      const registrationRef = doc(db, "openPlayRegistrations", payment.registrationId);
+      const registrationSnap = await tx.get(registrationRef);
+      if (!registrationSnap.exists()) {
+        throw new Error("Linked Open Play registration does not exist.");
+      }
+
+      const registration = registrationSnap.data();
+      const players = Number(payment.playersCovered || 0);
+      if (!Number.isInteger(players) || players < 1) {
+        throw new Error("Invalid playersCovered value. Review this payment manually.");
+      }
+
+      const alreadyPaid = Number(registration.paidPlayers || 0);
+      const newPaidTotal = alreadyPaid + players;
+      const last6 = String(payment.reference || "").slice(-6);
+
+      tx.update(paymentRef, {
+        status: "verified",
+        verifiedAt: serverTimestamp(),
+        verifiedBy: auth.currentUser.uid,
+        verifiedByEmail: auth.currentUser.email || ""
+      });
+
+      tx.update(registrationRef, {
+        paymentStatus: "verified",
+        status: "confirmed",
+        paidPlayers: newPaidTotal,
+        verifiedReferenceLast6: last6,
+        verifiedAt: serverTimestamp(),
+        verifiedBy: auth.currentUser.uid
+      });
+    });
+
+    showMessage("success", "Payment confirmed. The customer's page should update to VERIFIED in real time.");
+    await findPayments();
+  } catch (err) {
+    showMessage("error", err.message || "Could not confirm payment.");
+  }
+}
+
+searchBtn.addEventListener("click", findPayments);
+referenceInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") findPayments();
+});
+
+results.addEventListener("click", event => {
+  const btn = event.target.closest(".confirm-payment");
+  if (!btn) return;
+
+  const ok = confirm(
+    "Confirm this payment only if the reference matches the merchant-side GCash/SMS notification. Continue?"
+  );
+  if (!ok) return;
+
+  btn.disabled = true;
+  btn.textContent = "Confirming…";
+  confirmPayment(btn.dataset.paymentId);
+});
+</script>
+</body>
+</html>
