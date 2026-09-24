@@ -1,0 +1,169 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && (
+          request.auth.token.email == "courtsidegatherings@gmail.com"
+          || request.auth.token.email == "lzl.lopez@yahoo.com"
+          || request.auth.token.email == "dod_ong@yahoo.com"
+        );
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Private customer profile.
+    match /customers/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      allow create: if isAdmin()
+        || (
+          isOwner(uid)
+          && request.resource.data.keys().hasOnly([
+            "uid", "displayName", "email", "photoURL",
+            "communityVisible", "createdAt", "updatedAt"
+          ])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email == request.auth.token.email
+        );
+
+      allow update: if isAdmin()
+        || (
+          isOwner(uid)
+          && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "displayName", "photoURL",
+              "communityVisible", "updatedAt"
+            ])
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // Privacy-safe community leaderboard/profile.
+    match /communityProfiles/{uid} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Public schedule: no customer email/phone/payment data here.
+    match /publicSchedule/{scheduleId} {
+      allow read: if true;
+
+      allow create: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.type == "private"
+          && request.resource.data.bookingType == "private_rental"
+          && request.resource.data.status == "pending_payment"
+          && request.resource.data.bookingId == scheduleId
+          && get(/databases/$(database)/documents/privateRentalBookings/$(scheduleId))
+               .data.customerUid == request.auth.uid
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // Actual Open Play session definition.
+    match /openPlaySessions/{sessionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Customer Open Play joins.
+    match /openPlayRegistrations/{registrationId} {
+      allow create: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.customerUid == request.auth.uid
+          && request.resource.data.status == "pending_payment"
+          && request.resource.data.paymentStatus == "pending"
+        );
+
+      allow read: if signedIn()
+        && (
+          resource.data.customerUid == request.auth.uid
+          || isAdmin()
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // Actual private-rental booking.
+    match /privateRentalBookings/{bookingId} {
+      allow create: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.customerUid == request.auth.uid
+          && request.resource.data.status == "pending_payment"
+          && request.resource.data.paymentStatus == "pending"
+        );
+
+      allow read: if signedIn()
+        && (
+          resource.data.customerUid == request.auth.uid
+          || isAdmin()
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // Customer payment claim + admin verification.
+    match /paymentSubmissions/{paymentId} {
+      allow create: if signedIn()
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.status == "pending_verification";
+
+      allow read: if signedIn()
+        && (
+          resource.data.customerUid == request.auth.uid
+          || isAdmin()
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // Confirmed attendance/activity. Customers cannot award themselves.
+    match /playerActivity/{activityId} {
+      allow read: if signedIn()
+        && (
+          resource.data.customerUid == request.auth.uid
+          || isAdmin()
+        );
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Auditable loyalty/reward ledger.
+    match /rewardTransactions/{transactionId} {
+      allow read: if signedIn()
+        && (
+          resource.data.customerUid == request.auth.uid
+          || isAdmin()
+        );
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Operations status only — never the booking authority.
+    match /pickleball/currentState {
+      allow read, write: if isAdmin();
+    }
+
+    match /pickleball/historyVault {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
