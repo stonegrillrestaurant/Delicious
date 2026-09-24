@@ -92,10 +92,24 @@
       </div>
 
       <div class="mt-4">
-        <label class="block text-sm font-semibold text-slate-300 mb-1" for="paymentAmount">Amount Paid *</label>
-        <input id="paymentAmount" type="number" min="1" step="1"
-          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white" />
-        <div id="playersCoveredHint" class="mt-1 text-xs text-slate-500"></div>
+        <label class="block text-sm font-semibold text-slate-300 mb-2">How many players are you paying for?</label>
+        <div class="flex items-center gap-3">
+          <button id="decreasePlayersBtn" type="button"
+            class="h-12 w-12 shrink-0 rounded-xl border border-slate-600 bg-slate-800 text-2xl font-bold">−</button>
+          <input id="paymentPlayers" type="number" min="1" step="1" value="1"
+            class="h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 text-center text-xl font-bold text-white" />
+          <button id="increasePlayersBtn" type="button"
+            class="h-12 w-12 shrink-0 rounded-xl border border-slate-600 bg-slate-800 text-2xl font-bold">+</button>
+        </div>
+
+        <div class="mt-3 rounded-2xl border border-emerald-800 bg-emerald-950/30 p-4 text-center">
+          <div id="paymentCalculation" class="text-sm text-slate-300"></div>
+          <div class="mt-1 text-xs font-bold tracking-[.18em] text-emerald-400">TOTAL TO PAY</div>
+          <div id="paymentTotal" class="mt-1 text-3xl font-black text-emerald-200">₱0</div>
+        </div>
+
+        <input id="paymentAmount" type="hidden" />
+        <div id="playersCoveredHint" class="mt-2 text-xs text-slate-500"></div>
       </div>
 
       <div class="mt-4">
@@ -159,6 +173,9 @@ const paymentModal = $("paymentModal");
 const paymentDetails = $("paymentDetails");
 const paymentMobile = $("paymentMobile");
 const paymentAmount = $("paymentAmount");
+const paymentPlayers = $("paymentPlayers");
+const paymentCalculation = $("paymentCalculation");
+const paymentTotal = $("paymentTotal");
 const paymentReference = $("paymentReference");
 const paymentReceipt = $("paymentReceipt");
 const paymentStatusBox = $("paymentStatusBox");
@@ -742,6 +759,7 @@ function openPaymentModal(registration) {
     <div>Rate: ₱${price}/player</div>
   `;
 
+  paymentPlayers.value = "1";
   paymentAmount.value = price || "";
   paymentMobile.value = "";
   paymentReference.value = "";
@@ -762,28 +780,38 @@ function closePaymentModal() {
 function updatePlayersCoveredHint() {
   if (!paymentRegistration) {
     playersCoveredHint.textContent = "";
+    paymentCalculation.textContent = "";
+    paymentTotal.textContent = "₱0";
+    paymentAmount.value = "";
     return;
   }
 
-  const amount = Number(paymentAmount.value || 0);
   const price = Number(paymentRegistration.pricePerPlayer || 0);
+  let count = Math.floor(Number(paymentPlayers.value || 1));
 
-  if (!amount || !price) {
-    playersCoveredHint.textContent = "";
-    return;
-  }
+  if (!Number.isFinite(count) || count < 1) count = 1;
+  paymentPlayers.value = String(count);
 
-  const count = amount / price;
-  if (Number.isInteger(count) && count > 0) {
-    playersCoveredHint.textContent = `This payment covers ${count} player${count === 1 ? "" : "s"}.`;
-    playersCoveredHint.className = "mt-1 text-xs text-emerald-400";
-  } else {
-    playersCoveredHint.textContent = `Amount is not an exact multiple of ₱${price}/player. Staff will review it manually.`;
-    playersCoveredHint.className = "mt-1 text-xs text-amber-400";
-  }
+  const total = price * count;
+  paymentAmount.value = String(total);
+
+  paymentCalculation.textContent = `₱${price} × ${count} player${count === 1 ? "" : "s"}`;
+  paymentTotal.textContent = `₱${total}`;
+  playersCoveredHint.textContent = `This payment will be recorded for exactly ${count} player${count === 1 ? "" : "s"}.`;
+  playersCoveredHint.className = "mt-2 text-xs text-emerald-400";
 }
 
-paymentAmount.addEventListener("input", updatePlayersCoveredHint);
+paymentPlayers.addEventListener("input", updatePlayersCoveredHint);
+$("decreasePlayersBtn").addEventListener("click", () => {
+  const current = Math.max(1, Math.floor(Number(paymentPlayers.value || 1)));
+  paymentPlayers.value = String(Math.max(1, current - 1));
+  updatePlayersCoveredHint();
+});
+$("increasePlayersBtn").addEventListener("click", () => {
+  const current = Math.max(1, Math.floor(Number(paymentPlayers.value || 1)));
+  paymentPlayers.value = String(current + 1);
+  updatePlayersCoveredHint();
+});
 $("closePaymentBtn").addEventListener("click", closePaymentModal);
 
 function fileToBase64(file) {
@@ -799,14 +827,15 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   if (!paymentRegistration || !auth.currentUser) return;
 
   const mobile = paymentMobile.value.trim();
-  const amount = Number(paymentAmount.value || 0);
+  const playersCovered = Math.floor(Number(paymentPlayers.value || 0));
+  const price = Number(paymentRegistration.pricePerPlayer || 0);
+  const amount = price * playersCovered;
   const reference = paymentReference.value.trim();
   const file = paymentReceipt.files[0];
-  const price = Number(paymentRegistration.pricePerPlayer || 0);
 
-  if (!mobile || !amount || !reference || !file) {
+  if (!mobile || playersCovered < 1 || !price || !reference || !file) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
-    paymentStatusBox.textContent = "Please complete mobile number, amount, GCash reference number, and payment screenshot.";
+    paymentStatusBox.textContent = "Please complete mobile number, number of players, GCash reference number, and payment screenshot.";
     return;
   }
 
@@ -830,15 +859,13 @@ $("submitPaymentBtn").addEventListener("click", async () => {
 
   try {
     const base64Receipt = await fileToBase64(file);
-    const exactPlayerCount = price > 0 ? amount / price : 0;
-    const playersCovered = Number.isInteger(exactPlayerCount) && exactPlayerCount > 0 ? exactPlayerCount : 0;
 
     const payload = {
       customerName: paymentRegistration.customerName || auth.currentUser.displayName || "",
       mobile,
       amount: String(amount),
       reference,
-      notes: `Courtside Open Play | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
+      notes: `Courtside Open Play | ${playersCovered} player(s) | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
       fileName: file.name,
       fileType: file.type,
       receiptBase64: base64Receipt,
