@@ -46,9 +46,9 @@
     </section>
 
     <section class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300" aria-label="Schedule legend">
-      <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>Available</span>
-      <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-teal-400"></span>Open Play</span>
-      <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-orange-500"></span>Private / Unavailable</span>
+      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-lime-400 ring-2 ring-lime-200/70"></span>Available</span>
+      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-cyan-400 ring-2 ring-cyan-200/70"></span>Open Play</span>
+      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-fuchsia-500 ring-2 ring-fuchsia-200/70"></span>Occupied / Private</span>
     </section>
 
     <section id="statusBox" class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4 hidden"></section>
@@ -630,12 +630,12 @@ function render(items) {
         return `
           <div class="slot-cell p-2 bg-slate-900/50">
             <button
-              class="rent-hour h-full min-h-[48px] w-full rounded-lg border border-emerald-700 bg-emerald-950/20 px-2 py-2 text-left hover:bg-emerald-900/30"
+              class="rent-hour h-full min-h-[48px] w-full rounded-lg border-2 border-lime-300 bg-lime-400/20 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(190,242,100,.25)] hover:bg-lime-400/30"
               data-court-id="${courtId}"
               data-start="${row.start}"
               data-end="${row.end}"
               data-rate="${rate}">
-              <div class="text-xs font-bold text-emerald-300">Available · Rent</div>
+              <div class="text-xs font-bold text-lime-200">Available · Rent</div>
               <div class="mt-1 text-[11px] text-slate-300">${formatTime12(row.start)}–${formatTime12(row.end)}<br>₱${rate}/hour</div>
             </button>
           </div>`;
@@ -663,7 +663,7 @@ function render(items) {
             return `
               <div class="slot-cell p-2 bg-slate-900/50">
                 ${startsHere ? `
-                  <div class="h-full min-h-[48px] w-full rounded-lg border border-emerald-500 bg-emerald-800/40 px-2 py-2 text-left">
+                  <div class="h-full min-h-[48px] w-full rounded-lg border-2 border-green-300 bg-green-500/35 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(134,239,172,.25)]">
                     <div class="text-xs font-bold text-emerald-200">✓ VERIFIED FOR ${paidCount}</div>
                     <div class="mt-1 text-[11px] text-slate-300">
                       ${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>
@@ -683,7 +683,7 @@ function render(items) {
             <div class="slot-cell p-2 bg-slate-900/50">
               ${startsHere ? `
                 <button
-                  class="${hasSubmittedPayment ? "payment-status-open" : "pay-open-play"} h-full min-h-[48px] w-full rounded-lg border border-amber-500 bg-amber-900/30 px-2 py-2 text-left hover:bg-amber-900/50"
+                  class="${hasSubmittedPayment ? "payment-status-open" : "pay-open-play"} h-full min-h-[48px] w-full rounded-lg border-2 border-yellow-300 bg-yellow-400/25 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(253,224,71,.22)] hover:bg-yellow-400/35"
                   data-registration-id="${myRegistration.id}"
                   data-session-id="${occupying.id}">
                   <div class="text-xs font-bold text-amber-200">
@@ -707,9 +707,9 @@ function render(items) {
 
         return `
           <div class="slot-cell p-2 bg-slate-900/50">
-            <button class="join-open-play h-full min-h-[48px] w-full rounded-lg border border-teal-600 bg-teal-700/30 px-2 py-2 text-left hover:bg-teal-700/50"
+            <button class="join-open-play h-full min-h-[48px] w-full rounded-lg border-2 border-cyan-300 bg-cyan-500/30 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(103,232,249,.25)] hover:bg-cyan-500/45"
               data-session-id="${occupying.id}">
-              <div class="text-xs font-bold text-teal-200">${startsHere ? "Open Play · Join" : "Open Play"}</div>
+              <div class="text-xs font-black text-cyan-100">${startsHere ? "Open Play · Join" : "Open Play"}</div>
               ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>₱${occupying.pricePerPlayer ?? "?"}/player</div>` : ""}
             </button>
           </div>`;
@@ -721,8 +721,8 @@ function render(items) {
 
       return `
         <div class="slot-cell p-2 bg-slate-900/50">
-          <div class="h-full min-h-[48px] rounded-lg border border-orange-700 bg-orange-900/30 px-2 py-2">
-            <div class="text-xs font-bold text-orange-200">${startsHere ? privateLabel : "Unavailable"}</div>
+          <div class="h-full min-h-[48px] rounded-lg border-2 border-fuchsia-300 bg-fuchsia-600/35 px-2 py-2 shadow-[0_0_0_1px_rgba(240,171,252,.25)]">
+            <div class="text-xs font-black text-fuchsia-100">${startsHere ? privateLabel : "OCCUPIED"}</div>
             ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}</div>` : ""}
           </div>
         </div>`;
@@ -730,7 +730,7 @@ function render(items) {
 
     return `
       <div class="schedule-grid">
-        <div class="time-cell bg-slate-950/80 p-3 text-xs font-semibold text-slate-400">${formatTime12(row.start)}</div>
+        <div class="time-cell bg-slate-950 p-3 text-xs font-black text-white">${formatTime12(row.start)}</div>
         ${cells}
       </div>`;
   }).join("");
