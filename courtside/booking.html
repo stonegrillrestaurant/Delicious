@@ -113,6 +113,12 @@
 
         <input id="paymentAmount" type="hidden" />
         <div id="playersCoveredHint" class="mt-2 text-xs text-slate-500"></div>
+
+        <div class="mt-4">
+          <div class="text-sm font-semibold text-slate-300">Player Name${Number(paymentPlayers?.value || 1) === 1 ? "" : "s"}</div>
+          <p class="mt-1 text-xs text-slate-500">Enter the actual players who will play. The payer does not have to be one of the players.</p>
+          <div id="paymentPlayerNames" class="mt-3 space-y-2"></div>
+        </div>
       </div>
 
       <div class="mt-4">
@@ -184,6 +190,7 @@ const paymentReference = $("paymentReference");
 const paymentReceipt = $("paymentReceipt");
 const paymentStatusBox = $("paymentStatusBox");
 const playersCoveredHint = $("playersCoveredHint");
+const paymentPlayerNames = $("paymentPlayerNames");
 
 const PAYMENT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoOPIwuXbdA9V_vMjx_-3mELKQPyojUmmCGvXVbhfxcn1kfAxw02KeqQ9zXOy_7HFY/exec";
 
@@ -813,6 +820,34 @@ function closePaymentModal() {
   paymentRegistration = null;
 }
 
+function renderPlayerNameInputs(count) {
+  if (!paymentPlayerNames) return;
+
+  const existing = Array.from(paymentPlayerNames.querySelectorAll("input"))
+    .map(input => input.value);
+
+  paymentPlayerNames.innerHTML = Array.from({ length: count }, (_, index) => `
+    <div>
+      <label class="mb-1 block text-xs font-bold text-slate-400" for="paymentPlayerName${index}">
+        Player ${index + 1} Full Name *
+      </label>
+      <input
+        id="paymentPlayerName${index}"
+        class="payment-player-name w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+        type="text"
+        autocomplete="name"
+        placeholder="Actual player's full name"
+        value="${(existing[index] || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}"
+      />
+    </div>
+  `).join("");
+}
+
+function getPlayerNames() {
+  return Array.from(document.querySelectorAll(".payment-player-name"))
+    .map(input => input.value.trim());
+}
+
 function updatePlayersCoveredHint() {
   if (!paymentRegistration) {
     playersCoveredHint.textContent = "";
@@ -835,6 +870,7 @@ function updatePlayersCoveredHint() {
   paymentTotal.textContent = `₱${total}`;
   playersCoveredHint.textContent = `This payment will be recorded for exactly ${count} player${count === 1 ? "" : "s"}.`;
   playersCoveredHint.className = "mt-2 text-xs text-emerald-400";
+  renderPlayerNameInputs(count);
 }
 
 paymentPlayers.addEventListener("input", updatePlayersCoveredHint);
@@ -891,10 +927,17 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   const amount = price * playersCovered;
   const reference = paymentReference.value.trim();
   const file = paymentReceipt.files[0];
+  const playerNames = getPlayerNames();
 
   if (!mobile || playersCovered < 1 || !price || !reference || !file) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
     paymentStatusBox.textContent = "Please complete mobile number, number of players, GCash reference number, and payment screenshot.";
+    return;
+  }
+
+  if (playerNames.length !== playersCovered || playerNames.some(name => !name)) {
+    paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+    paymentStatusBox.textContent = `Please enter the full name of all ${playersCovered} player${playersCovered === 1 ? "" : "s"}.`;
     return;
   }
 
@@ -923,9 +966,10 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       customerName: paymentRegistration.customerName || auth.currentUser.displayName || "",
       mobile,
       playersCovered,
+      playerNames,
       amount: String(amount),
       reference,
-      notes: `Courtside Open Play | ${playersCovered} player(s) | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
+      notes: `Courtside Open Play | ${playersCovered} player(s) | Players: ${playerNames.join(", ")} | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
       fileName: file.name,
       fileType: file.type,
       receiptBase64: base64Receipt,
@@ -967,6 +1011,7 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       amountPaid: amount,
       reference,
       playersCovered,
+      playerNames,
       receiptUrl: result.receiptUrl || "",
       status: "pending_verification",
       submittedAt: serverTimestamp()
