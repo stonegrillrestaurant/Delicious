@@ -20,6 +20,15 @@
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-10">
 
+  <div id="admin-auth-gate" class="fixed inset-0 z-[100] bg-slate-950/95 flex items-center justify-center p-5">
+    <div class="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl text-center">
+      <div class="text-xs font-black tracking-[.2em] text-emerald-400">COURTSIDE ADMIN</div>
+      <h2 class="mt-2 text-2xl font-black text-white">Authorized staff only</h2>
+      <p id="admin-auth-message" class="mt-3 text-sm text-slate-400">Sign in with an authorized Courtside Google account to open the live operations panel.</p>
+      <button id="admin-signin-btn" type="button" class="mt-6 w-full rounded-xl bg-white px-4 py-3 font-black text-slate-900">Sign in with Google</button>
+    </div>
+  </div>
+
   <header class="bg-slate-800 border-b border-slate-700 shadow-xl sticky top-0 z-40">
     <div class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-3">
@@ -36,6 +45,7 @@
         <button onclick="exportFullBackup(false, true)" class="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/30 p-2 rounded-lg transition" title="Quick Save to Drive">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
         </button>
+        <button id="admin-signout-btn" type="button" class="hidden bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Sign out</button>
         <button onclick="openPaymentVerification()" id="btn-payment-verification" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold py-2 px-3 rounded-lg transition" title="Admin sign-in required">Admin Payment 🔒</button>
         <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Live Panel</button>
         <button onclick="switchTab('history')" id="btn-tab-history" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Vault & History</button>
@@ -170,19 +180,15 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
-      authDomain: "stone-grill-payroll.firebaseapp.com",
-      projectId: "stone-grill-payroll",
-      storageBucket: "stone-grill-payroll.firebasestorage.app",
-      messagingSenderId: "255528914541",
-      appId: "1:255528914541:web:d58d9731a29d27fc253964"
-    };
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { firebaseConfig, isAuthorizedAdmin } from "../courtside/courtside-config.js";
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
 
     const DEFAULT_COURTS = [
       { id: 1, name: "Court 1", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 },
@@ -207,62 +213,171 @@
     const stateRef = doc(db, 'pickleball', 'currentState');
     const historyRef = doc(db, 'pickleball', 'historyVault');
 
-    onSnapshot(stateRef, (docSnap) => {
-      document.getElementById('admin-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> DB LIVE`;
-      
-      if (docSnap.exists()) {
-        const fetchedData = docSnap.data();
-        state.players = fetchedData.players || [];
-        state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
-        state.dailyRentals = fetchedData.dailyRentals || [];
-        state.dailyOpenPlayLogs = fetchedData.dailyOpenPlayLogs || [];
+    let unsubscribeState = null;
+    let unsubscribeHistory = null;
+
+    function scheduleRecordId(court) {
+      if (!court || !court.isConfigured || !court.scheduleDate || !court.timeStart || !court.timeEnd) return null;
+      return [
+        court.scheduleDate,
+        "C" + court.id,
+        String(court.timeStart).replace(":", ""),
+        String(court.timeEnd).replace(":", "")
+      ].join("_");
+    }
+
+    async function publishCourtSchedule(court, previousScheduleId = null) {
+      const scheduleId = scheduleRecordId(court);
+      if (!scheduleId) return;
+
+      if (previousScheduleId && previousScheduleId !== scheduleId) {
+        await deleteDoc(doc(db, "publicSchedule", previousScheduleId)).catch(() => {});
+        await deleteDoc(doc(db, "openPlaySessions", previousScheduleId)).catch(() => {});
+      }
+
+      const publicData = {
+        courtId: Number(court.id),
+        date: court.scheduleDate,
+        startTime: court.timeStart,
+        endTime: court.timeEnd,
+        source: "admin_schedule",
+        status: "confirmed",
+        type: court.mode === "open_play" ? "open_play" : "private"
+      };
+
+      if (court.mode === "open_play") {
+        publicData.pricePerPlayer = Number(court.openPlayPrice || 120);
+        publicData.maxPlayers = Number(court.maxPlayers || 12);
+        await setDoc(doc(db, "openPlaySessions", scheduleId), {
+          ...publicData,
+          sessionId: scheduleId,
+          status: "active"
+        });
+      } else {
+        publicData.bookingType = "private_rental";
+        publicData.hourlyRate = (Number(court.id) === 5 || Number(court.id) === 6) ? 350 : 250;
+      }
+
+      await setDoc(doc(db, "publicSchedule", scheduleId), publicData);
+    }
+
+    async function removePublishedSchedule(court) {
+      const scheduleId = scheduleRecordId(court);
+      if (!scheduleId) return;
+      await deleteDoc(doc(db, "publicSchedule", scheduleId)).catch(() => {});
+      if (court.mode === "open_play") {
+        await deleteDoc(doc(db, "openPlaySessions", scheduleId)).catch(() => {});
+      }
+    }
+
+    function stopRealtimeListeners() {
+      if (unsubscribeState) { unsubscribeState(); unsubscribeState = null; }
+      if (unsubscribeHistory) { unsubscribeHistory(); unsubscribeHistory = null; }
+      isConnected = false;
+    }
+
+    function startRealtimeListeners() {
+      if (unsubscribeState || unsubscribeHistory) return;
+        unsubscribeState = onSnapshot(stateRef, (docSnap) => {
+        document.getElementById('admin-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> DB LIVE`;
         
-        if (fetchedData.courts && Array.isArray(fetchedData.courts)) {
-           let updatedCourts = fetchedData.courts;
-           if(updatedCourts.length < 6) {
-               for(let i = updatedCourts.length + 1; i <= 6; i++) {
-                   updatedCourts.push({ id: i, name: "Court " + i, currentMatch: null, mode: 'open_play', renterName: '', timeStart: '', timeEnd: '', rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 });
-               }
-           }
-           updatedCourts.forEach(c => {
-               if(c.isExclusive === true && !c.mode) c.mode = 'rental';
-               if(c.isExclusive === false && !c.mode) c.mode = 'open_play';
-               if(c.Renter && !c.renterName) c.renterName = c.Renter;
-               if(c.isConfigured === undefined) c.isConfigured = !!(c.timeStart && c.timeEnd);
-               if(c.scheduleDate === undefined) c.scheduleDate = "";
-               if(c.openPlayPrice === undefined) c.openPlayPrice = 120;
-               if(c.maxPlayers === undefined) c.maxPlayers = 12;
-           });
-           state.courts = updatedCourts;
-        } else {
-           state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
+        if (docSnap.exists()) {
+          const fetchedData = docSnap.data();
+          state.players = fetchedData.players || [];
+          state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
+          state.dailyRentals = fetchedData.dailyRentals || [];
+          state.dailyOpenPlayLogs = fetchedData.dailyOpenPlayLogs || [];
+          
+          if (fetchedData.courts && Array.isArray(fetchedData.courts)) {
+             let updatedCourts = fetchedData.courts;
+             if(updatedCourts.length < 6) {
+                 for(let i = updatedCourts.length + 1; i <= 6; i++) {
+                     updatedCourts.push({ id: i, name: "Court " + i, currentMatch: null, mode: 'open_play', renterName: '', timeStart: '', timeEnd: '', rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 });
+                 }
+             }
+             updatedCourts.forEach(c => {
+                 if(c.isExclusive === true && !c.mode) c.mode = 'rental';
+                 if(c.isExclusive === false && !c.mode) c.mode = 'open_play';
+                 if(c.Renter && !c.renterName) c.renterName = c.Renter;
+                 if(c.isConfigured === undefined) c.isConfigured = !!(c.timeStart && c.timeEnd);
+                 if(c.scheduleDate === undefined) c.scheduleDate = "";
+                 if(c.openPlayPrice === undefined) c.openPlayPrice = 120;
+                 if(c.maxPlayers === undefined) c.maxPlayers = 12;
+             });
+             state.courts = updatedCourts;
+          } else {
+             state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
+          }
+  
+          state.queues = fetchedData.queues || {};
+          for(let i=1; i<=6; i++) {
+              if(!state.queues[i.toString()]) state.queues[i.toString()] = [];
+          }
+  
+          render();
+        } else { 
+          saveState(); 
         }
-
-        state.queues = fetchedData.queues || {};
-        for(let i=1; i<=6; i++) {
-            if(!state.queues[i.toString()]) state.queues[i.toString()] = [];
+        
+        if (!isConnected) {
+            isConnected = true;
+            window.showToast("Connected to Cloud.");
         }
+      }, (err) => {
+          document.getElementById('admin-status-badge').innerHTML = `ERROR: DB BLOCKED`;
+          document.getElementById('admin-status-badge').classList.replace('bg-emerald-500', 'bg-red-500');
+          console.error("Firebase Sync Error:", err);
+      });
+  
+        unsubscribeHistory = onSnapshot(historyRef, (docSnap) => {
+        if (docSnap.exists()) {
+          historyVault = docSnap.data().history || [];
+          renderHistory();
+        } else { saveHistory(); }
+      });
+  
+  
+    }
 
-        render();
-      } else { 
-        saveState(); 
+    const authGate = document.getElementById("admin-auth-gate");
+    const authMessage = document.getElementById("admin-auth-message");
+    const signInBtn = document.getElementById("admin-signin-btn");
+    const signOutBtn = document.getElementById("admin-signout-btn");
+
+    signInBtn.addEventListener("click", async () => {
+      authMessage.textContent = "Opening Google sign-in…";
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        authMessage.textContent = (err.code || "error") + ": " + (err.message || "Sign-in failed.");
       }
-      
-      if (!isConnected) {
-          isConnected = true;
-          window.showToast("Connected to Cloud.");
-      }
-    }, (err) => {
-        document.getElementById('admin-status-badge').innerHTML = `ERROR: DB BLOCKED`;
-        document.getElementById('admin-status-badge').classList.replace('bg-emerald-500', 'bg-red-500');
-        console.error("Firebase Sync Error:", err);
     });
 
-    onSnapshot(historyRef, (docSnap) => {
-      if (docSnap.exists()) {
-        historyVault = docSnap.data().history || [];
-        renderHistory();
-      } else { saveHistory(); }
+    signOutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    onAuthStateChanged(auth, user => {
+      const authorized = isAuthorizedAdmin(user);
+
+      if (authorized) {
+        authGate.classList.add("hidden");
+        signOutBtn.classList.remove("hidden");
+        document.getElementById("admin-status-badge").innerHTML =
+          '<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> AUTHORIZED';
+        startRealtimeListeners();
+        return;
+      }
+
+      stopRealtimeListeners();
+      authGate.classList.remove("hidden");
+      signOutBtn.classList.add("hidden");
+
+      if (user) {
+        authMessage.textContent = "This Google account is signed in but is not authorized as a Courtside administrator.";
+      } else {
+        authMessage.textContent = "Sign in with an authorized Courtside Google account to open the live operations panel.";
+      }
     });
 
     async function saveState() {
@@ -755,8 +870,9 @@
        return diff;
     }
 
-    window.saveCourtConfig = function(courtId) {
+    window.saveCourtConfig = async function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
+      const previousScheduleId = scheduleRecordId(court);
       const mode = document.getElementById('config-mode').value;
       const renter = document.getElementById('config-renter').value.trim();
       const scheduleDate = document.getElementById('config-date').value;
@@ -819,13 +935,15 @@
           });
       }
 
-      saveState();
+      await saveState();
+      await publishCourtSchedule(court, previousScheduleId);
       window.hideModal();
-      window.showToast(`${court.name} is now active.`);
+      window.showToast(`${court.name} is now active and published to the booking schedule.`);
     };
 
-    window.clearCourtConfig = function(courtId) {
+    window.clearCourtConfig = async function(courtId) {
        const court = state.courts.find(c => c.id === courtId);
+       await removePublishedSchedule(court);
        court.mode = 'open_play';
        court.renterName = '';
        court.timeStart = '';
@@ -837,13 +955,14 @@
        court.isConfigured = false;
        court.currentMatch = null;
 
-       saveState();
+       await saveState();
        window.hideModal();
        window.showToast(`${court.name} configuration reset.`);
     }
 
-    window.endSession = function(courtId) {
+    window.endSession = async function(courtId) {
         const court = state.courts.find(c => c.id === courtId);
+        await removePublishedSchedule(court);
         
         if (court.mode === 'rental') {
             if (!state.dailyRentals) state.dailyRentals = [];
@@ -877,7 +996,7 @@
         
         state.queues[court.id.toString()] = [];
         
-        saveState();
+        await saveState();
     };
 
 
