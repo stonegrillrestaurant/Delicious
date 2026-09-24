@@ -16,6 +16,25 @@
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
     .hidden-section { display: none !important; }
+    .liquid-glass {
+      background: linear-gradient(135deg, rgba(255,255,255,.13), rgba(255,255,255,.045));
+      border: 1px solid rgba(255,255,255,.14);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 8px 24px rgba(2,6,23,.22);
+    }
+    body.view-only-mode #view-dashboard button,
+    body.view-only-mode #view-dashboard input,
+    body.view-only-mode #view-dashboard select,
+    body.view-only-mode #view-dashboard textarea,
+    body.view-only-mode #view-history button,
+    body.view-only-mode #view-history input,
+    body.view-only-mode #view-history select,
+    body.view-only-mode #view-history textarea {
+      pointer-events: none;
+      opacity: .5;
+    }
+    body.view-only-mode #view-dashboard { cursor: default; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-10">
@@ -55,6 +74,20 @@
       </div>
     </div>
   </header>
+
+  <section id="control-mode-bar" class="hidden border-b border-slate-800 bg-slate-950/80">
+    <div class="max-w-[1800px] mx-auto px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span id="control-mode-badge" class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black tracking-widest bg-slate-700 text-slate-200">CHECKING</span>
+        <div class="min-w-0 text-xs">
+          <span id="control-controller-label" class="text-slate-400">Current controller:</span>
+          <span id="control-controller-name" class="ml-1 font-bold text-white">—</span>
+          <span id="control-controller-email" class="ml-1 text-slate-400"></span>
+        </div>
+      </div>
+      <div id="control-mode-note" class="text-[11px] text-slate-500">Checking Live Panel control…</div>
+    </div>
+  </section>
 
   <div id="view-dashboard">
     <section class="bg-slate-800/50 border-b border-slate-800">
@@ -184,7 +217,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc, collection, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { firebaseConfig, isAuthorizedAdmin } from "../courtside/courtside-config.js";
 
     const app = initializeApp(firebaseConfig);
@@ -215,10 +248,175 @@
 
     const stateRef = doc(db, 'pickleball', 'currentState');
     const historyRef = doc(db, 'pickleball', 'historyVault');
+    const livePanelLockRef = doc(db, 'adminSessions', 'livePanel');
 
     let unsubscribeState = null;
     let unsubscribeHistory = null;
     let unsubscribePendingPayments = null;
+    let unsubscribeAdminLock = null;
+    let livePanelLockTimer = null;
+    let hasLivePanelControl = false;
+    let lockRulesReady = true;
+    let signedInAdmin = null;
+    const LIVE_PANEL_LEASE_MS = 90 * 1000;
+
+    function controllerDisplayName(data) {
+      return String(data?.activeName || data?.activeEmail || "Authorized admin");
+    }
+
+    function applyControlMode(hasControl, controller = null, options = {}) {
+      hasLivePanelControl = Boolean(hasControl);
+      document.body.classList.toggle("view-only-mode", !hasLivePanelControl);
+
+      const bar = document.getElementById("control-mode-bar");
+      const badge = document.getElementById("control-mode-badge");
+      const name = document.getElementById("control-controller-name");
+      const email = document.getElementById("control-controller-email");
+      const note = document.getElementById("control-mode-note");
+
+      bar.classList.remove("hidden");
+
+      if (hasLivePanelControl) {
+        badge.textContent = options.fallback ? "CONTROL*" : "CONTROL";
+        badge.className = "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black tracking-widest bg-lime-300 text-slate-950";
+        name.textContent = controllerDisplayName(controller || {
+          activeName: signedInAdmin?.displayName,
+          activeEmail: signedInAdmin?.email
+        });
+        email.textContent = controller?.activeEmail || signedInAdmin?.email
+          ? "(" + String(controller?.activeEmail || signedInAdmin?.email) + ")"
+          : "";
+        note.textContent = options.fallback
+          ? "Control lock rules are not published yet; compatibility mode is active."
+          : "You control the queue. Other admins are view only.";
+      } else {
+        badge.textContent = "VIEW ONLY";
+        badge.className = "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black tracking-widest bg-amber-400 text-slate-950";
+        name.textContent = controllerDisplayName(controller);
+        email.textContent = controller?.activeEmail ? "(" + controller.activeEmail + ")" : "";
+        note.textContent = "Live updates remain visible. Editing unlocks automatically when control becomes available.";
+      }
+    }
+
+    function requireLivePanelControl(actionLabel = "This action") {
+      if (hasLivePanelControl) return true;
+      window.showToast(actionLabel + " is unavailable in View Only mode.", "warn");
+      return false;
+    }
+
+    async function acquireOrRefreshLivePanelControl() {
+      if (!signedInAdmin || !isAuthorizedAdmin(signedInAdmin)) return false;
+
+      try {
+        const result = await runTransaction(db, async (tx) => {
+          const snap = await tx.get(livePanelLockRef);
+          const nowMs = Date.now();
+          const current = snap.exists() ? snap.data() : null;
+          const leaseMs = current?.leaseUntil?.toMillis ? current.leaseUntil.toMillis() : 0;
+          const available =
+            !current ||
+            !current.activeUid ||
+            leaseMs <= nowMs ||
+            current.activeUid === signedInAdmin.uid;
+
+          if (!available) return { acquired: false, controller: current };
+
+          const next = {
+            activeUid: signedInAdmin.uid,
+            activeName: signedInAdmin.displayName || signedInAdmin.email || "Authorized admin",
+            activeEmail: signedInAdmin.email || "",
+            lastSeen: serverTimestamp(),
+            leaseUntil: Timestamp.fromMillis(nowMs + LIVE_PANEL_LEASE_MS)
+          };
+
+          tx.set(livePanelLockRef, next);
+          return { acquired: true, controller: next };
+        });
+
+        lockRulesReady = true;
+        applyControlMode(result.acquired, result.controller);
+        return result.acquired;
+      } catch (err) {
+        if (err?.code === "permission-denied") {
+          // Safe compatibility until the new adminSessions rules are published.
+          lockRulesReady = false;
+          applyControlMode(true, {
+            activeName: signedInAdmin.displayName,
+            activeEmail: signedInAdmin.email
+          }, { fallback: true });
+          return true;
+        }
+        console.error("Live Panel lock failed:", err);
+        applyControlMode(false, null);
+        return false;
+      }
+    }
+
+    function startLivePanelControl(user) {
+      signedInAdmin = user;
+
+      if (unsubscribeAdminLock) unsubscribeAdminLock();
+      if (livePanelLockTimer) clearInterval(livePanelLockTimer);
+
+      unsubscribeAdminLock = onSnapshot(
+        livePanelLockRef,
+        (snap) => {
+          if (!snap.exists()) {
+            acquireOrRefreshLivePanelControl();
+            return;
+          }
+
+          lockRulesReady = true;
+          const data = snap.data();
+          const leaseMs = data?.leaseUntil?.toMillis ? data.leaseUntil.toMillis() : 0;
+          const expired = leaseMs <= Date.now();
+
+          if (expired) {
+            acquireOrRefreshLivePanelControl();
+            return;
+          }
+
+          applyControlMode(data.activeUid === user.uid, data);
+        },
+        (err) => {
+          if (err?.code === "permission-denied") {
+            lockRulesReady = false;
+            applyControlMode(true, {
+              activeName: user.displayName,
+              activeEmail: user.email
+            }, { fallback: true });
+            return;
+          }
+          console.error("Live Panel lock listener failed:", err);
+        }
+      );
+
+      acquireOrRefreshLivePanelControl();
+      livePanelLockTimer = setInterval(acquireOrRefreshLivePanelControl, 30000);
+    }
+
+    async function releaseLivePanelControl() {
+      if (!signedInAdmin || !hasLivePanelControl || !lockRulesReady) return;
+      try {
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(livePanelLockRef);
+          if (snap.exists() && snap.data().activeUid === signedInAdmin.uid) {
+            tx.delete(livePanelLockRef);
+          }
+        });
+      } catch (err) {
+        console.warn("Could not release Live Panel lock immediately:", err);
+      }
+    }
+
+    function stopLivePanelControl() {
+      if (unsubscribeAdminLock) { unsubscribeAdminLock(); unsubscribeAdminLock = null; }
+      if (livePanelLockTimer) { clearInterval(livePanelLockTimer); livePanelLockTimer = null; }
+      hasLivePanelControl = false;
+      signedInAdmin = null;
+      document.body.classList.remove("view-only-mode");
+      document.getElementById("control-mode-bar")?.classList.add("hidden");
+    }
 
     function scheduleRecordId(court) {
       if (!court || !court.isConfigured || !court.scheduleDate || !court.timeStart || !court.timeEnd) return null;
@@ -231,6 +429,7 @@
     }
 
     async function publishCourtSchedule(court, previousScheduleId = null) {
+      if (!requireLivePanelControl("Publishing the court schedule")) return;
       const scheduleId = scheduleRecordId(court);
       if (!scheduleId) return;
 
@@ -266,6 +465,7 @@
     }
 
     async function removePublishedSchedule(court) {
+      if (!requireLivePanelControl("Changing the court schedule")) return;
       const scheduleId = scheduleRecordId(court);
       if (!scheduleId) return;
       await deleteDoc(doc(db, "publicSchedule", scheduleId)).catch(() => {});
@@ -402,7 +602,12 @@
     });
 
     signOutBtn.addEventListener("click", async () => {
+      await releaseLivePanelControl();
       await signOut(auth);
+    });
+
+    window.addEventListener("pagehide", () => {
+      releaseLivePanelControl();
     });
 
     onAuthStateChanged(auth, user => {
@@ -414,10 +619,12 @@
         document.getElementById("admin-status-badge").innerHTML =
           '<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> AUTHORIZED';
         startRealtimeListeners();
+        startLivePanelControl(user);
         return;
       }
 
       stopRealtimeListeners();
+      stopLivePanelControl();
       authGate.classList.remove("hidden");
       signOutBtn.classList.add("hidden");
 
@@ -429,6 +636,7 @@
     });
 
     async function saveState() {
+      if (!requireLivePanelControl("Saving Live Panel changes")) return;
       try {
         const cleanState = JSON.parse(JSON.stringify(state)); 
         await setDoc(stateRef, cleanState);
@@ -442,6 +650,7 @@
     }
 
     async function saveHistory() {
+      if (!requireLivePanelControl("Saving history")) return;
       try { 
         const cleanHistory = JSON.parse(JSON.stringify(historyVault));
         await setDoc(historyRef, { history: cleanHistory }); 
@@ -514,6 +723,7 @@
     // CHECK-IN Logic
     document.getElementById('player-form').addEventListener('submit', (e) => {
       e.preventDefault();
+      if (!requireLivePanelControl("Adding a player")) return;
       const nameInput = document.getElementById('player-name');
       const name = nameInput.value.trim();
       const category = document.getElementById('player-category').value;
@@ -919,6 +1129,7 @@
     }
 
     window.saveCourtConfig = async function(courtId) {
+      if (!requireLivePanelControl("Court configuration")) return;
       const court = state.courts.find(c => c.id === courtId);
       const previousScheduleId = scheduleRecordId(court);
       const mode = document.getElementById('config-mode').value;
@@ -990,6 +1201,7 @@
     };
 
     window.clearCourtConfig = async function(courtId) {
+       if (!requireLivePanelControl("Court configuration")) return;
        const court = state.courts.find(c => c.id === courtId);
        await removePublishedSchedule(court);
        court.mode = 'open_play';
@@ -1009,6 +1221,7 @@
     }
 
     window.endSession = async function(courtId) {
+        if (!requireLivePanelControl("Ending a session")) return;
         const court = state.courts.find(c => c.id === courtId);
         await removePublishedSchedule(court);
         
@@ -1051,6 +1264,7 @@
     // --- END OF DAY / ARCHIVE LOGIC ---
 
     window.requestResetDailyData = function() {
+      if (!requireLivePanelControl("End Day & Archive")) return;
       if (state.players.length === 0 && (!state.dailyRentals || state.dailyRentals.length === 0) && (!state.dailyOpenPlayLogs || state.dailyOpenPlayLogs.length === 0)) {
           window.showToast("No data to archive yet.", "warn");
           return;
