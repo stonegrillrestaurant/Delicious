@@ -6,33 +6,53 @@
   <title>Courtside Gatherings Booking</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    #dateInput {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+    }
     #dateInput::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
-    .schedule-grid { min-width: 980px; display: grid; grid-template-columns: 92px repeat(6, minmax(138px, 1fr)); }
+    .liquid-glass {
+      background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+      border: 1px solid rgba(255,255,255,.16);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(2,6,23,.26);
+    }
+    .schedule-grid { min-width: 930px; display: grid; grid-template-columns: 118px repeat(6, minmax(132px, 1fr)); }
     .schedule-head { position: sticky; top: 0; z-index: 4; }
     .time-cell, .court-head, .slot-cell { border-right: 1px solid rgb(51 65 85); border-bottom: 1px solid rgb(51 65 85); }
     .time-cell { min-height: 64px; }
     .slot-cell { min-height: 64px; }
+    @media (max-width: 640px) {
+      main { padding-left: 14px !important; padding-right: 14px !important; }
+      header { gap: 12px !important; }
+      .schedule-grid { min-width: 860px; grid-template-columns: 112px repeat(6, minmax(124px, 1fr)); }
+      #dateInput { font-size: 16px; padding-right: 3.75rem; }
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-white min-h-screen">
   <main class="max-w-3xl mx-auto p-5">
-    <header class="flex items-start justify-between gap-4 py-6 border-b border-slate-800">
+    <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 py-6 border-b border-slate-800">
       <div>
         <h1 class="text-3xl font-bold">Courtside Gatherings</h1>
         <p class="text-slate-400 mt-1">Pickleball Booking · Brgy. Lunang, Hilongos, Leyte</p>
       </div>
-      <div class="text-right">
+      <div class="text-left sm:text-right w-full sm:w-auto">
         <div id="signedInAs" class="mb-2 hidden text-xs text-slate-400"></div>
-        <button id="googleBtn" class="bg-white text-slate-900 font-semibold rounded-xl px-5 py-3">Sign in with Google</button>
+        <button id="googleBtn" class="liquid-glass text-white font-semibold rounded-xl px-5 py-3">Sign in with Google</button>
       </div>
     </header>
 
     <section class="mt-6 bg-slate-900 border border-slate-800 rounded-3xl p-5">
       <label class="block text-xs tracking-[.25em] font-bold text-slate-400 mb-3">CHOOSE DATE</label>
-      <div class="relative inline-flex items-center">
-        <input id="dateInput" type="date" class="bg-slate-950 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-lg" />
+      <div class="relative flex w-full max-w-sm items-center">
+        <input id="dateInput" type="date" class="bg-slate-950 border border-slate-700 rounded-xl pl-4 pr-14 py-3 text-lg" />
         <button id="calendarBtn" type="button" aria-label="Open calendar"
-          class="absolute right-2 grid h-9 w-9 place-items-center rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white">
+          class="liquid-glass absolute right-2 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lime-200 hover:text-white">
           <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <rect x="3" y="5" width="18" height="16" rx="2"></rect>
             <path d="M16 3v4M8 3v4M3 10h18"></path>
@@ -46,9 +66,9 @@
     </section>
 
     <section class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300" aria-label="Schedule legend">
-      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-lime-400 ring-2 ring-lime-200/70"></span>Available</span>
-      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-cyan-400 ring-2 ring-cyan-200/70"></span>Open Play</span>
-      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-fuchsia-500 ring-2 ring-fuchsia-200/70"></span>Occupied / Private</span>
+      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full border border-slate-500 bg-slate-800"></span>Available</span>
+      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-cyan-400"></span>Open Play</span>
+      <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-orange-500"></span>Booked / Reserved</span>
     </section>
 
     <section id="statusBox" class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4 hidden"></section>
@@ -547,11 +567,13 @@ function render(items) {
 
   const header = `
     <div class="schedule-grid schedule-head bg-slate-950">
-      <div class="court-head p-3 text-xs font-bold tracking-wider text-slate-500">TIME</div>
+      <div class="court-head p-3 text-xs font-bold tracking-wider text-slate-400">
+        <div>TIME / RATE</div>
+        <div class="mt-1 text-[10px] font-medium leading-4 text-slate-500">C1–4 ₱250/hr<br>C5–6 ₱350/hr</div>
+      </div>
       ${courts.map(courtId => `
         <div class="court-head p-3 text-center">
           <div class="font-bold">Court ${courtId}</div>
-          <div class="mt-1 text-xs text-slate-400">₱${courtId >= 5 ? 350 : 250}/hr</div>
         </div>
       `).join("")}
     </div>`;
@@ -607,7 +629,7 @@ function render(items) {
                 data-end="${row.end}"
                 data-rate="${rate}">
                 <div class="text-xs font-black text-sky-200">START SELECTED</div>
-                <div class="mt-1 text-[11px] text-slate-200">${formatTime12(row.start)}<br>Choose an end time below</div>
+                <div class="mt-1 text-[11px] text-slate-200">Choose an end below</div>
               </button>
             </div>`;
         }
@@ -622,7 +644,6 @@ function render(items) {
                 data-end="${row.end}"
                 data-rate="${rate}">
                 <div class="text-xs font-bold text-sky-300">Choose End</div>
-                <div class="mt-1 text-[11px] text-slate-300">End ${formatTime12(row.end)}<br>₱${rate}/hour</div>
               </button>
             </div>`;
         }
@@ -630,13 +651,12 @@ function render(items) {
         return `
           <div class="slot-cell p-2 bg-slate-900/50">
             <button
-              class="rent-hour h-full min-h-[48px] w-full rounded-lg border-2 border-lime-300 bg-lime-400/20 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(190,242,100,.25)] hover:bg-lime-400/30"
+              class="rent-hour h-full min-h-[48px] w-full rounded-lg border border-slate-700 bg-slate-900/60 px-2 py-2 text-center text-slate-500 hover:border-lime-500/50 hover:text-lime-200 hover:bg-slate-800/80"
               data-court-id="${courtId}"
               data-start="${row.start}"
               data-end="${row.end}"
               data-rate="${rate}">
-              <div class="text-xs font-bold text-lime-200">Available · Rent</div>
-              <div class="mt-1 text-[11px] text-slate-300">${formatTime12(row.start)}–${formatTime12(row.end)}<br>₱${rate}/hour</div>
+              <div class="text-xs font-semibold">Rent</div>
             </button>
           </div>`;
       }
@@ -709,8 +729,8 @@ function render(items) {
           <div class="slot-cell p-2 bg-slate-900/50">
             <button class="join-open-play h-full min-h-[48px] w-full rounded-lg border-2 border-cyan-300 bg-cyan-500/30 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(103,232,249,.25)] hover:bg-cyan-500/45"
               data-session-id="${occupying.id}">
-              <div class="text-xs font-black text-cyan-100">${startsHere ? "Open Play · Join" : "Open Play"}</div>
-              ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>₱${occupying.pricePerPlayer ?? "?"}/player</div>` : ""}
+              <div class="text-xs font-black text-cyan-100">${startsHere ? "OPEN PLAY · JOIN" : "OPEN PLAY"}</div>
+              ${startsHere ? `<div class="mt-1 text-[11px] font-semibold text-cyan-50">₱${occupying.pricePerPlayer ?? "?"}/player</div>` : ""}
             </button>
           </div>`;
       }
@@ -721,16 +741,18 @@ function render(items) {
 
       return `
         <div class="slot-cell p-2 bg-slate-900/50">
-          <div class="h-full min-h-[48px] rounded-lg border-2 border-fuchsia-300 bg-fuchsia-600/35 px-2 py-2 shadow-[0_0_0_1px_rgba(240,171,252,.25)]">
-            <div class="text-xs font-black text-fuchsia-100">${startsHere ? privateLabel : "OCCUPIED"}</div>
-            ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}</div>` : ""}
+          <div class="h-full min-h-[48px] rounded-lg border-2 border-orange-300 bg-orange-500/35 px-2 py-2 shadow-[0_0_0_1px_rgba(253,186,116,.24)]">
+            <div class="text-xs font-black text-orange-50">${startsHere ? privateLabel.toUpperCase() : "BOOKED"}</div>
           </div>
         </div>`;
     }).join("");
 
     return `
       <div class="schedule-grid">
-        <div class="time-cell bg-slate-950 p-3 text-xs font-black text-white">${formatTime12(row.start)}</div>
+        <div class="time-cell bg-slate-950 p-3 text-xs font-black text-white">
+          <div>${formatTime12(row.start)}</div>
+          <div class="mt-1 text-[9px] font-medium leading-4 text-slate-500">C1–4 ₱250<br>C5–6 ₱350</div>
+        </div>
         ${cells}
       </div>`;
   }).join("");
