@@ -50,6 +50,8 @@
 
     <section id="statusBox" class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4 hidden"></section>
 
+    <section id="customerPasses" class="mt-5 hidden"></section>
+
     <section id="authDebug" class="mt-4 rounded-2xl border border-amber-700/60 bg-amber-950/20 p-4 hidden">
       <div class="font-bold text-amber-300">Authentication diagnostic</div>
       <div id="authDebugText" class="mt-2 text-sm text-slate-300 whitespace-pre-wrap break-words"></div>
@@ -144,6 +146,7 @@ const provider = new GoogleAuthProvider();
 
 const $ = (id) => document.getElementById(id);
 const statusBox = $("statusBox");
+const customerPasses = $("customerPasses");
 const schedule = $("schedule");
 const dateInput = $("dateInput");
 const calendarBtn = $("calendarBtn");
@@ -302,6 +305,7 @@ onAuthStateChanged(auth, (user) => {
       (snap) => {
         currentRegistrations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         render(currentItems);
+        renderCustomerPasses();
       },
       (err) => {
         showStatus("error", "Could not load your registrations", `${err.code || "unknown"}: ${err.message}`);
@@ -318,6 +322,7 @@ onAuthStateChanged(auth, (user) => {
       (snap) => {
         currentPayments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         render(currentItems);
+        renderCustomerPasses();
       },
       (err) => {
         console.warn("Could not load payment submissions:", err);
@@ -325,7 +330,100 @@ onAuthStateChanged(auth, (user) => {
     );
   } else {
     render(currentItems);
+    renderCustomerPasses();
   }
+});
+
+function renderCustomerPasses() {
+  if (!auth.currentUser) {
+    customerPasses.classList.add("hidden");
+    customerPasses.innerHTML = "";
+    return;
+  }
+
+  const registrationsWithPayments = currentRegistrations
+    .map(registration => {
+      const payments = currentPayments.filter(p => p.sessionId === registration.sessionId);
+      return { registration, payments };
+    })
+    .filter(x => x.payments.length > 0 || x.registration.paymentStatus === "verified" || x.registration.status === "confirmed");
+
+  if (!registrationsWithPayments.length) {
+    customerPasses.classList.add("hidden");
+    customerPasses.innerHTML = "";
+    return;
+  }
+
+  customerPasses.classList.remove("hidden");
+  customerPasses.innerHTML = `
+    <div class="mb-3">
+      <h2 class="text-lg font-bold">My Payment / Entry Status</h2>
+      <p class="text-sm text-slate-400">This stays available after refresh when you sign in with the same Google account.</p>
+    </div>
+    <div class="space-y-4">
+      ${registrationsWithPayments.map(({ registration, payments }) => {
+        const verified = payments.filter(p => p.status === "verified");
+        const pending = payments.filter(p => p.status === "pending_verification");
+        const verifiedPlayersFromPayments = verified.reduce((sum, p) => sum + Number(p.playersCovered || 0), 0);
+        const paidPlayers = Number(registration.paidPlayers || verifiedPlayersFromPayments || 0);
+        const isVerified = registration.paymentStatus === "verified" || registration.status === "confirmed" || paidPlayers > 0;
+        const refs = payments.map(p => p.reference).filter(Boolean);
+        const totalSubmittedPlayers = payments.reduce((sum, p) => sum + Number(p.playersCovered || 0), 0);
+
+        return `
+          <article id="pass-${registration.sessionId}"
+            class="rounded-3xl border ${isVerified ? "border-emerald-500 bg-emerald-950/30" : "border-amber-500 bg-amber-950/25"} p-5">
+            <div class="text-center">
+              <div class="text-sm font-bold tracking-[.18em] ${isVerified ? "text-emerald-300" : "text-amber-300"}">
+                ${isVerified ? "PAYMENT VERIFIED" : "PAYMENT SUBMITTED"}
+              </div>
+              <div class="mt-2 text-3xl font-black ${isVerified ? "text-emerald-200" : "text-amber-100"}">
+                ${isVerified
+                  ? `VERIFIED FOR ${paidPlayers || 1}`
+                  : `${totalSubmittedPlayers || "—"} PLAYER${totalSubmittedPlayers === 1 ? "" : "S"} PENDING`}
+              </div>
+              <div class="mt-2 text-sm text-slate-300">
+                Open Play · Court ${registration.courtId}<br>
+                ${registration.date} · ${registration.startTime}–${registration.endTime}
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-slate-700 bg-slate-950/60 p-4 text-sm">
+              <div class="text-slate-400">Customer</div>
+              <div class="font-semibold">${registration.customerName || auth.currentUser.displayName || auth.currentUser.email || "Customer"}</div>
+
+              ${refs.length ? `
+                <div class="mt-3 text-slate-400">GCash Reference${refs.length > 1 ? "s" : ""}</div>
+                ${refs.map(ref => `<div class="font-mono font-bold break-all">${ref}</div>`).join("")}
+              ` : ""}
+
+              <div class="mt-3 text-slate-400">Status</div>
+              <div class="font-semibold ${isVerified ? "text-emerald-300" : "text-amber-300"}">
+                ${isVerified
+                  ? `${paidPlayers || 1} paid · ready for entrance validation`
+                  : `${pending.length || payments.length} payment(s) awaiting staff verification`}
+              </div>
+            </div>
+
+            ${!isVerified ? `
+              <button type="button"
+                class="add-another-payment mt-4 w-full rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-sm font-semibold"
+                data-registration-id="${registration.id}">
+                Add Another Payment
+              </button>
+            ` : ""}
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+customerPasses.addEventListener("click", (event) => {
+  const addBtn = event.target.closest(".add-another-payment");
+  if (!addBtn) return;
+  const registration = currentRegistrations.find(r => r.id === addBtn.dataset.registrationId);
+  if (registration) openPaymentModal(registration);
 });
 
 function toMinutes(time) {
@@ -423,8 +521,9 @@ function render(items) {
             <div class="slot-cell p-2 bg-slate-900/50">
               ${startsHere ? `
                 <button
-                  class="pay-open-play h-full min-h-[48px] w-full rounded-lg border border-amber-500 bg-amber-900/30 px-2 py-2 text-left hover:bg-amber-900/50"
-                  data-registration-id="${myRegistration.id}">
+                  class="${hasSubmittedPayment ? "payment-status-open" : "pay-open-play"} h-full min-h-[48px] w-full rounded-lg border border-amber-500 bg-amber-900/30 px-2 py-2 text-left hover:bg-amber-900/50"
+                  data-registration-id="${myRegistration.id}"
+                  data-session-id="${occupying.id}">
                   <div class="text-xs font-bold text-amber-200">
                     ${hasSubmittedPayment ? "✓ Payment Submitted" : "✓ Joined · Pay Now"}
                   </div>
@@ -432,7 +531,7 @@ function render(items) {
                     ${occupying.startTime}–${occupying.endTime}<br>
                     ₱${occupying.pricePerPlayer ?? "?"}/player<br>
                     ${hasSubmittedPayment
-                      ? `${pendingPayments.length || mySessionPayments.length} payment(s) awaiting verification`
+                      ? `${pendingPayments.length || mySessionPayments.length} payment(s) awaiting verification · Tap to view status`
                       : "Tap to submit payment"}
                   </div>
                 </button>
@@ -485,6 +584,17 @@ function render(items) {
 }
 
 schedule.addEventListener("click", (event) => {
+  const statusButton = event.target.closest(".payment-status-open");
+  if (statusButton) {
+    const pass = document.getElementById(`pass-${statusButton.dataset.sessionId}`);
+    if (pass) {
+      pass.scrollIntoView({ behavior: "smooth", block: "center" });
+      pass.classList.add("ring-2", "ring-amber-300");
+      setTimeout(() => pass.classList.remove("ring-2", "ring-amber-300"), 1600);
+    }
+    return;
+  }
+
   const payButton = event.target.closest(".pay-open-play");
   if (payButton) {
     const registration = currentRegistrations.find(r => r.id === payButton.dataset.registrationId);
@@ -776,7 +886,7 @@ $("submitPaymentBtn").addEventListener("click", async () => {
     showStatus(
       "success",
       "Payment submitted — pending verification",
-      `Reference ${reference}. Keep this page or return later with the same Google account; your status will be restored from Firebase.`
+      `Reference ${reference}. Your payment/entry status will remain visible above the schedule after refresh.`
     );
 
     setTimeout(closePaymentModal, 1400);
