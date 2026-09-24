@@ -39,6 +39,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { firebaseConfig, isAuthorizedAdmin } from "./courtside-config.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -46,31 +47,6 @@ import {
   getFirestore, collection, query, where, getDocs, doc,
   runTransaction, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAz4ZsYAJkn8XzDrMb78oLc7szxXBxB-zo",
-  authDomain: "stone-grill-payroll.firebaseapp.com",
-  projectId: "stone-grill-payroll",
-  storageBucket: "stone-grill-payroll.firebasestorage.app",
-  messagingSenderId: "255528914541",
-  appId: "1:255528914541:web:882c6b9d42bd03df253964"
-};
-
-const ADMIN_UIDS = new Set([
-  "xqFeiAnYOjOW9VwqTLFBS8n82nM2",
-  "wtqmtdILKPVyufqoHnkIsu3tmwB3"
-]);
-
-const ADMIN_EMAILS = new Set([
-  "lzl.lopez@yahoo.com",
-  "dod_ong@yahoo.com"
-]);
-
-function isAuthorizedAdmin(user) {
-  if (!user) return false;
-  const email = String(user.email || "").trim().toLowerCase();
-  return isAuthorizedAdmin(user) || ADMIN_EMAILS.has(email);
-}
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
