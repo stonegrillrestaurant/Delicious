@@ -36,6 +36,7 @@
         <button onclick="exportFullBackup(false, true)" class="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/30 p-2 rounded-lg transition" title="Quick Save to Drive">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
         </button>
+        <button onclick="openPaymentVerification()" id="btn-payment-verification" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold py-2 px-3 rounded-lg transition" title="Admin sign-in required">Admin Payment 🔒</button>
         <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Live Panel</button>
         <button onclick="switchTab('history')" id="btn-tab-history" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Vault & History</button>
       </div>
@@ -285,8 +286,13 @@
       if (cat === 'Beginner') return 'badge-beginner';
       if (cat === 'Intermediate') return 'badge-intermediate';
       if (cat === 'Advanced') return 'badge-advanced';
-      return 'badge-pro';
+      if (cat === 'Professional') return 'badge-pro';
+      return 'bg-slate-700 text-slate-300 border border-slate-600';
     }
+
+    window.openPaymentVerification = function() {
+      window.open('/courtside/verify-payment.html', '_blank', 'noopener');
+    };
 
     function formatTime(t) {
         if(!t) return '--:--';
@@ -492,10 +498,31 @@
 
     window.togglePayment = function(playerId) {
       const player = state.players.find(p => p.id === playerId);
-      if(player) {
-        player.paid = !player.paid;
-        saveState();
+      if(!player) return;
+
+      if (player.source === 'online' && player.onlineVerified) {
+        window.showToast("Online payment was verified by admin and cannot be changed here.", "warn");
+        return;
       }
+
+      player.paid = !player.paid;
+      saveState();
+    };
+
+    window.toggleOnlineCheckIn = function(playerId) {
+      const player = state.players.find(p => p.id === playerId);
+      if(!player || player.source !== 'online' || !player.onlineVerified) return;
+
+      player.checkedIn = !player.checkedIn;
+      player.checkedInAt = player.checkedIn ? Date.now() : null;
+      saveState();
+
+      window.showToast(
+        player.checkedIn
+          ? player.name + " ID checked / entrance confirmed."
+          : player.name + " check-in was undone.",
+        player.checkedIn ? "success" : "warn"
+      );
     };
 
     setInterval(() => {
@@ -848,7 +875,7 @@
       
       const walkInPlayers = state.players;
       const walkInCount = walkInPlayers.length;
-      const paidWalkIns = walkInPlayers.filter(p => p.paid).length;
+      const paidWalkIns = walkInPlayers.filter(p => p.paid && p.source !== 'online').length;
       const walkInRevenue = paidWalkIns * 120;
       
       let finalRentals = [...(state.dailyRentals || [])];
@@ -984,7 +1011,7 @@
             if (playersInCourt.length > 0) {
                 const playerRows = playersInCourt.map(p => `<tr>
                     <td class="py-1.5 border-b border-slate-700/50 text-white font-medium">${p.name} <span class="text-slate-500 text-[9px] ml-1 uppercase">(Games: ${p.gamesPlayed || 0})</span></td>
-                    <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱120' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
+                    <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.source === 'online' ? '<span class="text-emerald-400 font-bold">ONLINE ✓</span>' : (p.paid ? '₱120' : '<span class="text-red-400 font-bold">Unpaid</span>')}</td>
                 </tr>`).join('');
                 courtsHTML += `<table class="w-full text-left text-xs mb-1"><tbody>${playerRows}</tbody></table>`;
             }
@@ -1002,7 +1029,7 @@
       if (unassignedPlayers.length > 0) {
           const uRows = unassignedPlayers.map(p => `<tr>
               <td class="py-1.5 border-b border-slate-700/50 text-white font-medium">${p.name}</td>
-              <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.paid ? '₱120' : '<span class="text-red-400 font-bold">Unpaid</span>'}</td>
+              <td class="py-1.5 border-b border-slate-700/50 text-slate-400 text-right">${p.source === 'online' ? '<span class="text-emerald-400 font-bold">ONLINE ✓</span>' : (p.paid ? '₱120' : '<span class="text-red-400 font-bold">Unpaid</span>')}</td>
           </tr>`).join('');
           courtsHTML += `<div class="mb-4">
               <h4 class="text-[11px] font-bold text-red-400 mb-2 sticky top-0 bg-slate-800 py-1.5 z-10 border-b border-slate-700 uppercase tracking-widest">Unassigned Logs</h4>
@@ -1163,14 +1190,22 @@
                         <div class="flex items-center gap-1.5 mt-0.5">
                           <span class="${getBadgeClass(p.category)} text-[8px] px-1 rounded uppercase font-bold opacity-80">${p.category}</span>
                           <span class="text-[9px] text-slate-500">In: ${p.timeIn}</span>
+                          ${p.source === 'online' ? '<span class="text-[8px] px-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold">ONLINE</span>' : ''}
                         </div>
                       </div>
                     </div>
                     <div class="flex flex-col items-end gap-1">
-                      <button onclick="togglePayment('${p.id}')" class="flex items-center gap-1 text-[9px] font-bold ${p.paid ? 'text-emerald-400' : 'text-red-400'}">
-                        <span class="w-1.5 h-1.5 rounded-full ${p.paid ? 'bg-emerald-400' : 'bg-red-400'}"></span>
-                        ${p.paid ? 'PAID' : 'UNPAID'}
-                      </button>
+                      ${p.source === 'online' && p.onlineVerified ? `
+                        <div class="text-[9px] font-bold text-emerald-400">● ONLINE VERIFIED</div>
+                        <button onclick="toggleOnlineCheckIn('${p.id}')" class="text-[9px] font-bold ${p.checkedIn ? 'text-sky-300' : 'text-amber-300'}">
+                          ${p.checkedIn ? '✓ ID CHECKED' : 'ID CHECK REQUIRED'}
+                        </button>
+                      ` : `
+                        <button onclick="togglePayment('${p.id}')" class="flex items-center gap-1 text-[9px] font-bold ${p.paid ? 'text-emerald-400' : 'text-red-400'}">
+                          <span class="w-1.5 h-1.5 rounded-full ${p.paid ? 'bg-emerald-400' : 'bg-red-400'}"></span>
+                          ${p.paid ? 'PAID' : 'UNPAID'}
+                        </button>
+                      `}
                       <div class="text-[9px] text-slate-500 font-medium whitespace-nowrap">Games: ${p.gamesPlayed}</div>
                     </div>
                   </div>
@@ -1207,7 +1242,7 @@
       if (document.getElementById('stat-active-courts')) document.getElementById('stat-active-courts').innerText = `${activeCount} / 6`;
       if (document.getElementById('stat-matches')) document.getElementById('stat-matches').innerText = state.totalMatchesPlayed || 0;
       
-      const walkInRev = (state.players||[]).filter(p => p.paid).length * 120;
+      const walkInRev = (state.players||[]).filter(p => p.paid && p.source !== 'online').length * 120;
       const rentalRev = (state.dailyRentals||[]).reduce((sum, r) => sum + (r.revenue||0), 0) + 
                         safeCourts.filter(c => c.mode === 'rental' && c.isConfigured).reduce((sum, c) => sum + (c.rentalRevenue||0), 0);
       if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${Math.round(walkInRev + rentalRev)}`;
