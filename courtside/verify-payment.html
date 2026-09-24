@@ -355,6 +355,15 @@ function paymentCard(p) {
         </div>
       </div>
 
+      ${Array.isArray(p.playerNames) && p.playerNames.length ? `
+        <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Players</div>
+          <div class="mt-2 space-y-1 text-sm font-semibold">
+            ${p.playerNames.map((name, index) => `<div>${index + 1}. ${esc(name)}</div>`).join("")}
+          </div>
+        </div>
+      ` : ""}
+
       <div class="mt-3 text-xs text-slate-500">Payment document: ${esc(p.id)}</div>
 
       ${p.receiptUrl ? `
@@ -385,6 +394,7 @@ async function confirmPayment(paymentId, options = {}) {
   }
 
   const paymentRef = doc(db, "paymentSubmissions", paymentId);
+  const queueStateRef = doc(db, "pickleball", "currentState");
 
   try {
     await runTransaction(db, async tx => {
@@ -414,9 +424,102 @@ async function confirmPayment(paymentId, options = {}) {
         throw new Error("Invalid playersCovered value. Review this payment manually.");
       }
 
+      let playerNames = Array.isArray(payment.playerNames)
+        ? payment.playerNames.map(name => String(name || "").trim()).filter(Boolean)
+        : [];
+
+      // Legacy one-player payments did not yet store playerNames.
+      if (playerNames.length === 0 && players === 1 && payment.customerName) {
+        playerNames = [String(payment.customerName).trim()];
+      }
+
+      if (playerNames.length !== players) {
+        throw new Error(
+          "Player names are incomplete. This payment covers " + players +
+          " player(s), but " + playerNames.length +
+          " valid player name(s) are saved. Do not auto-queue until the names are complete."
+        );
+      }
+
       const alreadyPaid = Number(registration.paidPlayers || 0);
       const newPaidTotal = alreadyPaid + players;
       const last6 = String(payment.reference || "").slice(-6);
+
+      // Read the existing working queue state inside the same transaction.
+      // This lets payment verification and queue insertion succeed or fail together.
+      const queueSnap = await tx.get(queueStateRef);
+      const queueState = queueSnap.exists()
+        ? queueSnap.data()
+        : {
+            players: [],
+            queues: { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] },
+            courts: [],
+            totalMatchesPlayed: 0,
+            dailyRentals: [],
+            dailyOpenPlayLogs: []
+          };
+
+      const queuePlayers = Array.isArray(queueState.players) ? [...queueState.players] : [];
+      const queues = queueState.queues && typeof queueState.queues === "object"
+        ? JSON.parse(JSON.stringify(queueState.queues))
+        : { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] };
+
+      const targetCourt = String(payment.courtId || registration.courtId || "");
+      if (!targetCourt || !["1","2","3","4","5","6"].includes(targetCourt)) {
+        throw new Error("This payment does not have a valid assigned court.");
+      }
+      if (!Array.isArray(queues[targetCourt])) queues[targetCourt] = [];
+
+      const sessionEnd = new Date(
+        String(payment.date || registration.date) + "T" +
+        String(payment.endTime || registration.endTime) + ":00"
+      );
+      const expireTimestamp = sessionEnd.getTime();
+      const sessionAlreadyEnded =
+        Number.isFinite(expireTimestamp) && Date.now() > expireTimestamp;
+
+      if (!sessionAlreadyEnded) {
+        const now = new Date();
+        const timeIn = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const timeOut = Number.isFinite(expireTimestamp)
+          ? sessionEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : formatTime12(payment.endTime || registration.endTime);
+
+        playerNames.forEach((name, index) => {
+          const stableId =
+            "ONL-" +
+            String(paymentId).replace(/[^A-Za-z0-9_-]/g, "") +
+            "-" + (index + 1);
+
+          const alreadyExists = queuePlayers.some(p => p.id === stableId);
+          if (alreadyExists) return;
+
+          queuePlayers.push({
+            id: stableId,
+            name,
+            category: "Unrated",
+            queueCourt: targetCourt,
+            gamesPlayed: 0,
+            timeIn,
+            timeOut,
+            expireTimestamp: Number.isFinite(expireTimestamp) ? expireTimestamp : null,
+            isExpired: false,
+            paid: true,
+            source: "online",
+            onlineVerified: true,
+            checkedIn: false,
+            paymentId,
+            paymentReference: payment.reference || "",
+            paymentAmount: Number(payment.amountPaid || 0),
+            registrationId: payment.registrationId || "",
+            payerName: payment.customerName || ""
+          });
+
+          if (!queues[targetCourt].includes(stableId)) {
+            queues[targetCourt].push(stableId);
+          }
+        });
+      }
 
       tx.update(paymentRef, {
         status: "verified",
@@ -429,9 +532,16 @@ async function confirmPayment(paymentId, options = {}) {
         paymentStatus: "verified",
         status: "confirmed",
         paidPlayers: newPaidTotal,
+        playerNames,
         verifiedReferenceLast6: last6,
         verifiedAt: serverTimestamp(),
         verifiedBy: auth.currentUser.uid
+      });
+
+      tx.set(queueStateRef, {
+        ...queueState,
+        players: queuePlayers,
+        queues
       });
     });
 
