@@ -747,10 +747,14 @@ function render(items) {
           </div>`;
       }
 
+      const privateLabel = occupying.status === "pending_payment"
+        ? "Reserved · Payment Pending"
+        : "Booked / Private";
+
       return `
         <div class="slot-cell p-2 bg-slate-900/50">
           <div class="h-full min-h-[48px] rounded-lg border border-orange-700 bg-orange-900/30 px-2 py-2">
-            <div class="text-xs font-bold text-orange-200">${startsHere ? "Private" : "Unavailable"}</div>
+            <div class="text-xs font-bold text-orange-200">${startsHere ? privateLabel : "Unavailable"}</div>
             ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}</div>` : ""}
           </div>
         </div>`;
@@ -933,6 +937,21 @@ $("continueRentalBtn").addEventListener("click", async () => {
       status: "pending_payment",
       paymentStatus: "pending",
       createdAt: serverTimestamp()
+    });
+
+    // Immediately publish a privacy-safe schedule block.
+    // This prevents the selected range from continuing to appear AVAILABLE
+    // while the customer's payment is waiting for admin verification.
+    await setDoc(doc(db, "publicSchedule", slotId), {
+      type: "private",
+      bookingType: "private_rental",
+      bookingId: slotId,
+      courtId: selectedRentalSlot.courtId,
+      date: selectedRentalSlot.date,
+      startTime: selectedRentalSlot.startTime,
+      endTime: selectedRentalSlot.endTime,
+      hourlyRate: selectedRentalSlot.hourlyRate,
+      status: "pending_payment"
     });
 
     const rentalRegistration = {
