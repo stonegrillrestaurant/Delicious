@@ -88,6 +88,15 @@ function money(v) {
   return "₱" + n.toLocaleString("en-PH");
 }
 
+function formatTime12(value) {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) return value || "?";
+  const [hRaw, m] = value.split(":");
+  const h = Number(hRaw);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${m} ${suffix}`;
+}
+
 function parseReferences(raw) {
   return [...new Set(
     String(raw || "")
@@ -342,7 +351,7 @@ function paymentCard(p) {
         </div>
         <div class="rounded-xl bg-slate-950 p-3">
           <div class="text-slate-500">Schedule</div>
-          <div class="font-bold">${esc(p.date)} · ${esc(p.startTime)}–${esc(p.endTime)}</div>
+          <div class="font-bold">${esc(p.date)} · ${esc(formatTime12(p.startTime))}–${esc(formatTime12(p.endTime))}</div>
         </div>
       </div>
 
