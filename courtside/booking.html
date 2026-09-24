@@ -925,7 +925,14 @@ $("submitPaymentBtn").addEventListener("click", async () => {
     }
 
     const cleanReference = reference.replace(/[^A-Za-z0-9_-]/g, "");
-    const paymentId = `${paymentRegistration.sessionId}_${cleanReference}`;
+    if (!cleanReference) {
+      throw new Error("Please enter a valid GCash reference number.");
+    }
+
+    // One GCash reference = one payment transaction across Courtside.
+    // Using the reference itself as the Firestore document ID prevents the
+    // same transaction from being claimed again for another session/account.
+    const paymentId = cleanReference;
 
     await setDoc(doc(db, "paymentSubmissions", paymentId), {
       registrationId: paymentRegistration.id,
@@ -961,7 +968,13 @@ $("submitPaymentBtn").addEventListener("click", async () => {
     setTimeout(closePaymentModal, 1400);
   } catch (err) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
-    paymentStatusBox.textContent = `${err?.code || "error"}: ${err?.message || "Could not submit payment."}`;
+
+    if (err?.code === "permission-denied") {
+      paymentStatusBox.textContent =
+        "This GCash reference may already have been submitted. Do not pay again. If this is your payment, use the same Google account that originally submitted it.";
+    } else {
+      paymentStatusBox.textContent = `${err?.code || "error"}: ${err?.message || "Could not submit payment."}`;
+    }
   } finally {
     btn.disabled = false;
     btn.textContent = "Submit Payment";
