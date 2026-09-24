@@ -233,6 +233,21 @@ function formatAuthError(err) {
   ];
 }
 
+function formatTime12(value) {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) return value || "?";
+  const [hRaw, m] = value.split(":");
+  const h = Number(hRaw);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${m} ${suffix}`;
+}
+
+function sessionHasEnded(registration) {
+  if (!registration?.date || !registration?.endTime) return false;
+  const end = new Date(`${registration.date}T${registration.endTime}:00`);
+  return Number.isFinite(end.getTime()) && Date.now() > end.getTime();
+}
+
 function todayLocal() {
   const d = new Date();
   const y = d.getFullYear();
@@ -381,7 +396,10 @@ function renderCustomerPasses() {
       const payments = currentPayments.filter(p => p.sessionId === registration.sessionId);
       return { registration, payments };
     })
-    .filter(x => x.payments.length > 0 || x.registration.paymentStatus === "verified" || x.registration.status === "confirmed");
+    .filter(x =>
+      !sessionHasEnded(x.registration) &&
+      (x.payments.length > 0 || x.registration.paymentStatus === "verified" || x.registration.status === "confirmed")
+    );
 
   if (!registrationsWithPayments.length) {
     customerPasses.classList.add("hidden");
@@ -419,7 +437,7 @@ function renderCustomerPasses() {
               </div>
               <div class="mt-2 text-sm text-slate-300">
                 Open Play · Court ${registration.courtId}<br>
-                ${registration.date} · ${registration.startTime}–${registration.endTime}
+                ${registration.date} · ${formatTime12(registration.startTime)}–${formatTime12(registration.endTime)}
               </div>
             </div>
 
@@ -539,7 +557,7 @@ function render(items) {
                   <div class="h-full min-h-[48px] w-full rounded-lg border border-emerald-500 bg-emerald-800/40 px-2 py-2 text-left">
                     <div class="text-xs font-bold text-emerald-200">✓ VERIFIED FOR ${paidCount}</div>
                     <div class="mt-1 text-[11px] text-slate-300">
-                      ${occupying.startTime}–${occupying.endTime}<br>
+                      ${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>
                       Court ${occupying.courtId}<br>
                       ${myRegistration.verifiedReferenceLast6 ? `Ref ••••••${myRegistration.verifiedReferenceLast6}` : "Payment confirmed"}
                     </div>
@@ -563,7 +581,7 @@ function render(items) {
                     ${hasSubmittedPayment ? "✓ Payment Submitted" : "✓ Joined · Pay Now"}
                   </div>
                   <div class="mt-1 text-[11px] text-slate-300">
-                    ${occupying.startTime}–${occupying.endTime}<br>
+                    ${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>
                     ₱${occupying.pricePerPlayer ?? "?"}/player<br>
                     ${hasSubmittedPayment
                       ? `${pendingPayments.length || mySessionPayments.length} payment(s) awaiting verification · Tap to view status`
@@ -583,7 +601,7 @@ function render(items) {
             <button class="join-open-play h-full min-h-[48px] w-full rounded-lg border border-teal-600 bg-teal-700/30 px-2 py-2 text-left hover:bg-teal-700/50"
               data-session-id="${occupying.id}">
               <div class="text-xs font-bold text-teal-200">${startsHere ? "Open Play · Join" : "Open Play"}</div>
-              ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${occupying.startTime}–${occupying.endTime}<br>₱${occupying.pricePerPlayer ?? "?"}/player</div>` : ""}
+              ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>₱${occupying.pricePerPlayer ?? "?"}/player</div>` : ""}
             </button>
           </div>`;
       }
@@ -592,14 +610,14 @@ function render(items) {
         <div class="slot-cell p-2 bg-slate-900/50">
           <div class="h-full min-h-[48px] rounded-lg border border-orange-700 bg-orange-900/30 px-2 py-2">
             <div class="text-xs font-bold text-orange-200">${startsHere ? "Private" : "Unavailable"}</div>
-            ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${occupying.startTime || "?"}–${occupying.endTime || "?"}</div>` : ""}
+            ${startsHere ? `<div class="mt-1 text-[11px] text-slate-300">${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}</div>` : ""}
           </div>
         </div>`;
     }).join("");
 
     return `
       <div class="schedule-grid">
-        <div class="time-cell bg-slate-950/80 p-3 text-xs font-semibold text-slate-400">${row.start}</div>
+        <div class="time-cell bg-slate-950/80 p-3 text-xs font-semibold text-slate-400">${formatTime12(row.start)}</div>
         ${cells}
       </div>`;
   }).join("");
@@ -646,7 +664,7 @@ schedule.addEventListener("click", (event) => {
   joinDetails.innerHTML = `
     <div><strong>Date:</strong> ${selectedOpenPlay.date}</div>
     <div><strong>Court:</strong> ${selectedOpenPlay.courtId}</div>
-    <div><strong>Time:</strong> ${selectedOpenPlay.startTime}–${selectedOpenPlay.endTime}</div>
+    <div><strong>Time:</strong> ${formatTime12(selectedOpenPlay.startTime)}–${formatTime12(selectedOpenPlay.endTime)}</div>
     <div><strong>Price:</strong> ₱${selectedOpenPlay.pricePerPlayer}/player</div>
     <div><strong>Capacity:</strong> Maximum ${selectedOpenPlay.maxPlayers || "—"} players</div>
   `;
@@ -773,7 +791,7 @@ function openPaymentModal(registration) {
   paymentDetails.innerHTML = `
     <div><strong>${registration.customerName || auth.currentUser?.displayName || "Customer"}</strong></div>
     <div>Open Play · Court ${registration.courtId}</div>
-    <div>${registration.date} · ${registration.startTime}–${registration.endTime}</div>
+    <div>${registration.date} · ${formatTime12(registration.startTime)}–${formatTime12(registration.endTime)}</div>
     <div>Rate: ₱${price}/player</div>
   `;
 
@@ -1005,6 +1023,14 @@ function loadSchedule() {
 
 dateInput.addEventListener("change", loadSchedule);
 loadSchedule();
+
+// Keep active payment/entry cards current even if the page stays open past the session end time.
+setInterval(() => {
+  if (auth.currentUser) {
+    renderCustomerPasses();
+    render(currentItems);
+  }
+}, 60000);
 </script>
 </body>
 </html>
