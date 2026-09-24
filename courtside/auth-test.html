@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Courtside Auth Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-white">
+  <main class="mx-auto max-w-xl p-5">
+    <header class="py-6 border-b border-slate-800">
+      <p class="text-xs font-bold tracking-[.2em] text-emerald-400">COURTSIDE PROJECT</p>
+      <h1 class="mt-2 text-3xl font-black">Authentication Test</h1>
+      <p class="mt-2 text-sm text-slate-400">Use this page only to initialize and verify customer/admin Google accounts in the new Firebase project.</p>
+    </header>
+
+    <section class="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <div id="status" class="rounded-2xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-300">
+        Checking authentication…
+      </div>
+
+      <button id="googleBtn" class="mt-4 w-full rounded-xl bg-white px-4 py-3 font-bold text-slate-900">
+        Sign in with Google
+      </button>
+
+      <button id="signOutBtn" class="mt-3 hidden w-full rounded-xl border border-slate-600 px-4 py-3 font-bold text-slate-200">
+        Sign out
+      </button>
+    </section>
+
+    <section id="details" class="mt-6 hidden rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <h2 class="text-lg font-black">Current Firebase User</h2>
+      <div class="mt-4 space-y-3 text-sm">
+        <div>
+          <div class="text-slate-500">Role test</div>
+          <div id="role" class="font-bold"></div>
+        </div>
+        <div>
+          <div class="text-slate-500">Name</div>
+          <div id="name" class="font-semibold break-words"></div>
+        </div>
+        <div>
+          <div class="text-slate-500">Email</div>
+          <div id="email" class="font-semibold break-words"></div>
+        </div>
+        <div>
+          <div class="text-slate-500">Firebase UID</div>
+          <div id="uid" class="font-mono text-xs break-all text-emerald-300"></div>
+        </div>
+        <div>
+          <div class="text-slate-500">Firebase project</div>
+          <div class="font-mono text-xs">courtside-project</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-3xl border border-amber-800 bg-amber-950/20 p-5 text-sm">
+      <div class="font-black text-amber-300">Admin test accounts</div>
+      <div class="mt-2 text-slate-300">These emails are recognized by this test page as intended admins:</div>
+      <ul class="mt-2 list-disc pl-5 text-slate-300">
+        <li>lzl.lopez@yahoo.com</li>
+        <li>dod_ong@yahoo.com</li>
+      </ul>
+      <p class="mt-3 text-xs text-slate-500">This page does not grant Firestore permissions by itself. It only confirms the Google/Firebase identity and shows the UID we can later place in the production admin rules.</p>
+    </section>
+  </main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBMKGhDmLs4PMMYgDwALQ5iuDJl-MSY9ls",
+  authDomain: "courtside-project.firebaseapp.com",
+  projectId: "courtside-project",
+  storageBucket: "courtside-project.firebasestorage.app",
+  messagingSenderId: "346137142476",
+  appId: "1:346137142476:web:c0a03cf5109c2d1fc0ce69"
+};
+
+const ADMIN_EMAILS = new Set([
+  "lzl.lopez@yahoo.com",
+  "dod_ong@yahoo.com"
+]);
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: "select_account" });
+
+const $ = id => document.getElementById(id);
+const status = $("status");
+const googleBtn = $("googleBtn");
+const signOutBtn = $("signOutBtn");
+const details = $("details");
+
+function isAdmin(user) {
+  return ADMIN_EMAILS.has(String(user?.email || "").trim().toLowerCase());
+}
+
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    status.className = "rounded-2xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-300";
+    status.textContent = "Not signed in to the new Courtside Firebase project.";
+    googleBtn.classList.remove("hidden");
+    signOutBtn.classList.add("hidden");
+    details.classList.add("hidden");
+    return;
+  }
+
+  const admin = isAdmin(user);
+  status.className = "rounded-2xl border p-4 text-sm " +
+    (admin
+      ? "border-emerald-700 bg-emerald-950/30 text-emerald-100"
+      : "border-sky-700 bg-sky-950/30 text-sky-100");
+
+  status.textContent = admin
+    ? "Google sign-in successful. This account matches the intended ADMIN email list."
+    : "Google sign-in successful. This account is currently treated as a CUSTOMER for this test.";
+
+  $("role").textContent = admin ? "ADMIN" : "CUSTOMER";
+  $("role").className = "font-bold " + (admin ? "text-emerald-300" : "text-sky-300");
+  $("name").textContent = user.displayName || "—";
+  $("email").textContent = user.email || "—";
+  $("uid").textContent = user.uid;
+
+  googleBtn.classList.add("hidden");
+  signOutBtn.classList.remove("hidden");
+  details.classList.remove("hidden");
+});
+
+googleBtn.addEventListener("click", async () => {
+  status.className = "rounded-2xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-300";
+  status.textContent = "Opening Google sign-in…";
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    status.className = "rounded-2xl border border-red-700 bg-red-950/30 p-4 text-sm text-red-100";
+    status.textContent = (err.code || "error") + ": " + (err.message || "Sign-in failed.");
+  }
+});
+
+signOutBtn.addEventListener("click", async () => {
+  await signOut(auth);
+});
+</script>
+</body>
+</html>
