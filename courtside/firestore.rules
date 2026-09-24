@@ -21,6 +21,13 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function hasLivePanelControl() {
+      return isAdmin()
+        && exists(/databases/$(database)/documents/adminSessions/livePanel)
+        && get(/databases/$(database)/documents/adminSessions/livePanel).data.activeUid == request.auth.uid
+        && get(/databases/$(database)/documents/adminSessions/livePanel).data.leaseUntil > request.time;
+    }
+
     // Private customer profile.
     match /customers/{uid} {
       allow read: if isOwner(uid) || isAdmin();
@@ -153,13 +160,37 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Live Panel controller lease. All admins may see who currently controls the panel.
+    // Only the current controller may refresh/release their lease; another admin can
+    // take control after the previous lease expires.
+    match /adminSessions/livePanel {
+      allow read: if isAdmin();
+
+      allow create: if isAdmin()
+        && request.resource.data.activeUid == request.auth.uid;
+
+      allow update: if isAdmin()
+        && request.resource.data.activeUid == request.auth.uid
+        && (
+          resource.data.activeUid == request.auth.uid
+          || resource.data.leaseUntil <= request.time
+        );
+
+      allow delete: if isAdmin()
+        && resource.data.activeUid == request.auth.uid;
+    }
+
     // Operations status only — never the booking authority.
+    // Every authorized admin can view it, but only the active Live Panel controller
+    // can change live queue/history state.
     match /pickleball/currentState {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if hasLivePanelControl();
     }
 
     match /pickleball/historyVault {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if hasLivePanelControl();
     }
 
     match /{document=**} {
