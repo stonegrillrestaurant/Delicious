@@ -217,7 +217,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { firebaseConfig, isAuthorizedAdmin } from "../courtside/courtside-config.js";
 
     const app = initializeApp(firebaseConfig);
@@ -304,6 +304,27 @@
       return false;
     }
 
+    async function initializeOperationalDocsIfNeeded() {
+      if (!hasLivePanelControl) return;
+      try {
+        const [stateSnap, historySnap] = await Promise.all([
+          getDoc(stateRef),
+          getDoc(historyRef)
+        ]);
+
+        if (!stateSnap.exists()) {
+          const cleanState = JSON.parse(JSON.stringify(state));
+          await setDoc(stateRef, cleanState);
+        }
+
+        if (!historySnap.exists()) {
+          await setDoc(historyRef, { history: [] });
+        }
+      } catch (err) {
+        console.warn("Operational document initialization skipped:", err);
+      }
+    }
+
     async function acquireOrRefreshLivePanelControl() {
       if (!signedInAdmin || !isAuthorizedAdmin(signedInAdmin)) return false;
 
@@ -335,6 +356,7 @@
 
         lockRulesReady = true;
         applyControlMode(result.acquired, result.controller);
+        if (result.acquired) await initializeOperationalDocsIfNeeded();
         return result.acquired;
       } catch (err) {
         if (err?.code === "permission-denied") {
