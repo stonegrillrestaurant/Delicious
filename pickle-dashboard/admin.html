@@ -185,12 +185,12 @@
     const db = getFirestore(app);
 
     const DEFAULT_COURTS = [
-      { id: 1, name: "Court 1", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
-      { id: 2, name: "Court 2", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
-      { id: 3, name: "Court 3", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
-      { id: 4, name: "Court 4", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
-      { id: 5, name: "Court 5", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false },
-      { id: 6, name: "Court 6", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false }
+      { id: 1, name: "Court 1", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 },
+      { id: 2, name: "Court 2", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 },
+      { id: 3, name: "Court 3", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 },
+      { id: 4, name: "Court 4", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 },
+      { id: 5, name: "Court 5", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 },
+      { id: 6, name: "Court 6", currentMatch: null, mode: 'open_play', renterName: "", timeStart: "", timeEnd: "", rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 }
     ];
 
     let state = {
@@ -221,7 +221,7 @@
            let updatedCourts = fetchedData.courts;
            if(updatedCourts.length < 6) {
                for(let i = updatedCourts.length + 1; i <= 6; i++) {
-                   updatedCourts.push({ id: i, name: "Court " + i, currentMatch: null, mode: 'open_play', renterName: '', timeStart: '', timeEnd: '', rentalRevenue: 0, isConfigured: false });
+                   updatedCourts.push({ id: i, name: "Court " + i, currentMatch: null, mode: 'open_play', renterName: '', timeStart: '', timeEnd: '', rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 });
                }
            }
            updatedCourts.forEach(c => {
@@ -229,6 +229,9 @@
                if(c.isExclusive === false && !c.mode) c.mode = 'open_play';
                if(c.Renter && !c.renterName) c.renterName = c.Renter;
                if(c.isConfigured === undefined) c.isConfigured = !!(c.timeStart && c.timeEnd);
+               if(c.scheduleDate === undefined) c.scheduleDate = "";
+               if(c.openPlayPrice === undefined) c.openPlayPrice = 120;
+               if(c.maxPlayers === undefined) c.maxPlayers = 12;
            });
            state.courts = updatedCourts;
         } else {
@@ -652,6 +655,25 @@
             <input type="text" id="config-renter" value="${court.renterName || ''}" placeholder="Enter client name" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-amber-500 outline-none">
           </div>
 
+          <div>
+            <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Schedule Date</label>
+            <input type="date" id="config-date" value="${court.scheduleDate || new Date().toISOString().split('T')[0]}" required
+              class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-indigo-500 outline-none">
+          </div>
+
+          <div id="config-openplay-options" class="${isRental ? 'hidden' : ''} grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Price / Player</label>
+              <input type="number" id="config-open-price" min="0" step="10" value="${court.openPlayPrice || 120}"
+                class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Max Players</label>
+              <input type="number" id="config-max-players" min="1" max="100" step="1" value="${court.maxPlayers || 12}"
+                class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-emerald-500 outline-none">
+            </div>
+          </div>
+
           <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
              <div class="grid grid-cols-2 gap-3">
                <div>
@@ -687,15 +709,18 @@
       const btnOpen = document.getElementById('btn-mode-open');
       const btnRent = document.getElementById('btn-mode-rent');
       const renterDiv = document.getElementById('config-renter-div');
+      const openPlayOptions = document.getElementById('config-openplay-options');
       
       if(mode === 'open_play') {
         btnOpen.className = "flex-1 py-2 rounded border bg-emerald-600 border-emerald-500 text-white text-xs font-bold transition";
         btnRent.className = "flex-1 py-2 rounded border bg-slate-800 border-slate-600 text-slate-400 text-xs font-bold transition";
         renterDiv.classList.add('hidden');
+        openPlayOptions?.classList.remove('hidden');
       } else {
         btnRent.className = "flex-1 py-2 rounded border bg-amber-600 border-amber-500 text-white text-xs font-bold transition";
         btnOpen.className = "flex-1 py-2 rounded border bg-slate-800 border-slate-600 text-slate-400 text-xs font-bold transition";
         renterDiv.classList.remove('hidden');
+        openPlayOptions?.classList.add('hidden');
       }
       updateTimePreview();
     };
@@ -734,11 +759,14 @@
       const court = state.courts.find(c => c.id === courtId);
       const mode = document.getElementById('config-mode').value;
       const renter = document.getElementById('config-renter').value.trim();
+      const scheduleDate = document.getElementById('config-date').value;
+      const openPlayPrice = Number(document.getElementById('config-open-price').value || 0);
+      const maxPlayers = Math.max(1, Math.floor(Number(document.getElementById('config-max-players').value || 12)));
       const tStart = document.getElementById('config-start').value;
       const tEnd = document.getElementById('config-end').value;
 
-      if (!tStart || !tEnd) {
-          window.showToast("Both Start and End times are required.", "warn");
+      if (!scheduleDate || !tStart || !tEnd) {
+          window.showToast("Schedule date, start time, and end time are required.", "warn");
           return;
       }
       if (mode === 'rental' && !renter) {
@@ -769,6 +797,9 @@
       court.timeStart = tStart;
       court.timeEnd = tEnd;
       court.rentalRevenue = revenue;
+      court.scheduleDate = scheduleDate;
+      court.openPlayPrice = openPlayPrice;
+      court.maxPlayers = maxPlayers;
       court.isConfigured = true;
 
       if (mode === 'open_play') {
@@ -800,6 +831,9 @@
        court.timeStart = '';
        court.timeEnd = '';
        court.rentalRevenue = 0;
+       court.scheduleDate = '';
+       court.openPlayPrice = 120;
+       court.maxPlayers = 12;
        court.isConfigured = false;
        court.currentMatch = null;
 
@@ -835,6 +869,9 @@
         court.timeStart = '';
         court.timeEnd = '';
         court.rentalRevenue = 0;
+        court.scheduleDate = '';
+        court.openPlayPrice = 120;
+        court.maxPlayers = 12;
         court.isConfigured = false;
         if(court.currentMatch) court.currentMatch = null;
         
@@ -1149,7 +1186,9 @@
                   </span>
                 </div>
                 <div class="flex justify-between items-center mb-2">
-                    <div class="text-[10px] text-emerald-400/80 font-bold bg-emerald-500/10 inline-block px-1.5 py-0.5 rounded border border-emerald-500/20">${timeRangeStr}</div>
+                    <div class="text-[10px] text-emerald-400/80 font-bold bg-emerald-500/10 inline-block px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      ${court.scheduleDate || 'Today'} · ${timeRangeStr} · ₱${court.openPlayPrice || 120}/player · Max ${court.maxPlayers || 12}
+                    </div>
                 </div>
                 
                 <div class="my-1 flex-1 flex flex-col justify-center">
