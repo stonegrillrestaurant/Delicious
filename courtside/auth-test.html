@@ -67,24 +67,10 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { firebaseConfig, ADMIN_EMAILS, isAuthorizedAdmin } from "./courtside-config.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBMKGhDmLs4PMMYgDwALQ5iuDJl-MSY9ls",
-  authDomain: "courtside-project.firebaseapp.com",
-  projectId: "courtside-project",
-  storageBucket: "courtside-project.firebasestorage.app",
-  messagingSenderId: "346137142476",
-  appId: "1:346137142476:web:c0a03cf5109c2d1fc0ce69"
-};
-
-const ADMIN_EMAILS = new Set([
-  "courtsidegatherings@gmail.com",
-  "lzl.lopez@yahoo.com",
-  "dod_ong@yahoo.com"
-]);
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -97,10 +83,6 @@ const googleBtn = $("googleBtn");
 const signOutBtn = $("signOutBtn");
 const details = $("details");
 
-function isAdmin(user) {
-  return ADMIN_EMAILS.has(String(user?.email || "").trim().toLowerCase());
-}
-
 onAuthStateChanged(auth, user => {
   if (!user) {
     status.className = "rounded-2xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-300";
@@ -111,7 +93,7 @@ onAuthStateChanged(auth, user => {
     return;
   }
 
-  const admin = isAdmin(user);
+  const admin = isAuthorizedAdmin(user);
   status.className = "rounded-2xl border p-4 text-sm " +
     (admin
       ? "border-emerald-700 bg-emerald-950/30 text-emerald-100"
