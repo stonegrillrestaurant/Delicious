@@ -61,6 +61,17 @@ const ADMIN_UIDS = new Set([
   "wtqmtdILKPVyufqoHnkIsu3tmwB3"
 ]);
 
+const ADMIN_EMAILS = new Set([
+  "lzl.lopez@yahoo.com",
+  "dod_ong@yahoo.com"
+]);
+
+function isAuthorizedAdmin(user) {
+  if (!user) return false;
+  const email = String(user.email || "").trim().toLowerCase();
+  return isAuthorizedAdmin(user) || ADMIN_EMAILS.has(email);
+}
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -128,7 +139,7 @@ onAuthStateChanged(auth, user => {
     return;
   }
 
-  const admin = ADMIN_UIDS.has(user.uid);
+  const admin = isAuthorizedAdmin(user);
   authState.textContent = `Signed in as ${user.email || user.displayName || user.uid}`;
   googleBtn.textContent = "Sign out";
 
@@ -162,7 +173,7 @@ async function findPayments() {
     return;
   }
 
-  if (!auth.currentUser || !ADMIN_UIDS.has(auth.currentUser.uid)) {
+  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
     showMessage("error", "Admin authorization required.");
     return;
   }
@@ -390,7 +401,7 @@ function paymentCard(p) {
 }
 
 async function confirmPayment(paymentId, options = {}) {
-  if (!auth.currentUser || !ADMIN_UIDS.has(auth.currentUser.uid)) {
+  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
     showMessage("error", "Admin authorization required.");
     return;
   }
