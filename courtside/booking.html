@@ -73,6 +73,53 @@
     </div>
   </div>
 
+  <div id="paymentModal" class="fixed inset-0 bg-black/70 hidden items-center justify-center p-4 z-50">
+    <div class="w-full max-w-md max-h-[92vh] overflow-y-auto bg-slate-900 border border-slate-700 rounded-3xl p-6">
+      <h2 class="text-2xl font-bold">Submit Payment</h2>
+      <div id="paymentDetails" class="mt-3 text-sm text-slate-300 space-y-1"></div>
+
+      <div class="mt-5 rounded-2xl border border-slate-700 bg-white p-3 text-center">
+        <img src="/payment/gcash-qr.jpg" alt="Payment QR code" class="mx-auto w-full max-w-[300px] rounded-xl">
+        <div class="mt-2 font-bold text-slate-900">Scan to Pay</div>
+      </div>
+
+      <div class="mt-5">
+        <label class="block text-sm font-semibold text-slate-300 mb-1" for="paymentMobile">Mobile Number *</label>
+        <input id="paymentMobile" type="tel" placeholder="09XXXXXXXXX"
+          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white" />
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-sm font-semibold text-slate-300 mb-1" for="paymentAmount">Amount Paid *</label>
+        <input id="paymentAmount" type="number" min="1" step="1"
+          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white" />
+        <div id="playersCoveredHint" class="mt-1 text-xs text-slate-500"></div>
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-sm font-semibold text-slate-300 mb-1" for="paymentReference">GCash Reference Number *</label>
+        <input id="paymentReference" type="text" placeholder="Enter GCash reference number"
+          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white" />
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-sm font-semibold text-slate-300 mb-1" for="paymentReceipt">Payment Screenshot *</label>
+        <input id="paymentReceipt" type="file" accept="image/*"
+          class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-300" />
+      </div>
+
+      <div id="paymentStatusBox" class="mt-4 hidden rounded-xl border p-3 text-sm"></div>
+
+      <div class="mt-6 flex gap-3">
+        <button id="closePaymentBtn" type="button" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Later</button>
+        <button id="submitPaymentBtn" type="button" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Submit Payment</button>
+      </div>
+      <p class="mt-4 text-xs text-slate-500">
+        After submission, your payment stays pending until staff matches the reference number with the merchant notification.
+      </p>
+    </div>
+  </div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -105,12 +152,25 @@ const joinDetails = $("joinDetails");
 const joinStatus = $("joinStatus");
 const authDebug = $("authDebug");
 const authDebugText = $("authDebugText");
+const paymentModal = $("paymentModal");
+const paymentDetails = $("paymentDetails");
+const paymentMobile = $("paymentMobile");
+const paymentAmount = $("paymentAmount");
+const paymentReference = $("paymentReference");
+const paymentReceipt = $("paymentReceipt");
+const paymentStatusBox = $("paymentStatusBox");
+const playersCoveredHint = $("playersCoveredHint");
+
+const PAYMENT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoOPIwuXbdA9V_vMjx_-3mELKQPyojUmmCGvXVbhfxcn1kfAxw02KeqQ9zXOy_7HFY/exec";
 
 let selectedOpenPlay = null;
 let unsubscribeSchedule = null;
 let unsubscribeRegistrations = null;
+let unsubscribePayments = null;
 let currentItems = [];
 let currentRegistrations = [];
+let currentPayments = [];
+let paymentRegistration = null;
 let authTimer = null;
 
 function showStatus(type, title, detail) {
@@ -221,8 +281,13 @@ onAuthStateChanged(auth, (user) => {
     unsubscribeRegistrations();
     unsubscribeRegistrations = null;
   }
+  if (unsubscribePayments) {
+    unsubscribePayments();
+    unsubscribePayments = null;
+  }
 
   currentRegistrations = [];
+  currentPayments = [];
 
   if (user) {
     showStatus("success", "Google account connected", `${user.displayName || user.email} · UID ${user.uid}`);
@@ -240,6 +305,22 @@ onAuthStateChanged(auth, (user) => {
       },
       (err) => {
         showStatus("error", "Could not load your registrations", `${err.code || "unknown"}: ${err.message}`);
+      }
+    );
+
+    const myPaymentsQ = query(
+      collection(db, "paymentSubmissions"),
+      where("customerUid", "==", user.uid)
+    );
+
+    unsubscribePayments = onSnapshot(
+      myPaymentsQ,
+      (snap) => {
+        currentPayments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render(currentItems);
+      },
+      (err) => {
+        console.warn("Could not load payment submissions:", err);
       }
     );
   } else {
@@ -309,21 +390,45 @@ function render(items) {
         const isPending = myRegistration && !isConfirmed;
 
         if (myRegistration) {
+          const mySessionPayments = currentPayments.filter(p =>
+            p.sessionId === occupying.id && p.customerUid === auth.currentUser?.uid
+          );
+          const verifiedPayments = mySessionPayments.filter(p => p.status === "verified");
+          const pendingPayments = mySessionPayments.filter(p => p.status === "pending_verification");
+          const verifiedPlayers = verifiedPayments.reduce((sum, p) => sum + Number(p.playersCovered || 0), 0);
+          const hasSubmittedPayment = mySessionPayments.length > 0;
+
+          if (isConfirmed || verifiedPlayers > 0) {
+            const paidCount = Number(myRegistration.paidPlayers || verifiedPlayers || 1);
+            return `
+              <div class="slot-cell p-2 bg-slate-900/50">
+                <div class="h-full min-h-[48px] w-full rounded-lg border border-emerald-500 bg-emerald-800/40 px-2 py-2 text-left">
+                  <div class="text-xs font-bold text-emerald-200">✓ VERIFIED FOR ${paidCount}</div>
+                  ${startsHere ? `
+                    <div class="mt-1 text-[11px] text-slate-300">
+                      ${occupying.startTime}–${occupying.endTime}<br>
+                      Court ${occupying.courtId}<br>
+                      ${myRegistration.verifiedReferenceLast6 ? `Ref ••••••${myRegistration.verifiedReferenceLast6}` : "Payment confirmed"}
+                    </div>` : ""}
+                </div>
+              </div>`;
+          }
+
           return `
             <div class="slot-cell p-2 bg-slate-900/50">
-              <button disabled
-                class="h-full min-h-[48px] w-full cursor-default rounded-lg border px-2 py-2 text-left
-                  ${isConfirmed
-                    ? "border-emerald-500 bg-emerald-800/40"
-                    : "border-amber-500 bg-amber-900/30"}">
-                <div class="text-xs font-bold ${isConfirmed ? "text-emerald-200" : "text-amber-200"}">
-                  ${isConfirmed ? "✓ Already Joined" : "✓ Joined · Pending"}
+              <button
+                class="pay-open-play h-full min-h-[48px] w-full rounded-lg border border-amber-500 bg-amber-900/30 px-2 py-2 text-left hover:bg-amber-900/50"
+                data-registration-id="${myRegistration.id}">
+                <div class="text-xs font-bold text-amber-200">
+                  ${hasSubmittedPayment ? "✓ Payment Submitted" : "✓ Joined · Pay Now"}
                 </div>
                 ${startsHere ? `
                   <div class="mt-1 text-[11px] text-slate-300">
                     ${occupying.startTime}–${occupying.endTime}<br>
                     ₱${occupying.pricePerPlayer ?? "?"}/player<br>
-                    ${isConfirmed ? "Confirmed" : "Awaiting payment verification"}
+                    ${hasSubmittedPayment
+                      ? `${pendingPayments.length || mySessionPayments.length} payment(s) awaiting verification`
+                      : "Tap to submit payment"}
                   </div>` : ""}
               </button>
             </div>`;
@@ -370,6 +475,13 @@ function render(items) {
 }
 
 schedule.addEventListener("click", (event) => {
+  const payButton = event.target.closest(".pay-open-play");
+  if (payButton) {
+    const registration = currentRegistrations.find(r => r.id === payButton.dataset.registrationId);
+    if (registration) openPaymentModal(registration);
+    return;
+  }
+
   const button = event.target.closest(".join-open-play");
   if (!button) return;
 
@@ -448,11 +560,26 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     joinModal.classList.remove("flex");
 
     savedSuccessfully = true;
+    const newRegistration = {
+      id: registrationId,
+      sessionId: selectedOpenPlay.id,
+      customerUid: user.uid,
+      customerName: user.displayName || "",
+      customerEmail: user.email || "",
+      date: selectedOpenPlay.date,
+      courtId: Number(selectedOpenPlay.courtId),
+      startTime: selectedOpenPlay.startTime,
+      endTime: selectedOpenPlay.endTime,
+      pricePerPlayer: Number(selectedOpenPlay.pricePerPlayer || 0),
+      paymentStatus: "pending",
+      status: "pending_payment"
+    };
     showStatus(
       "success",
       "Open Play registration created",
-      `${user.displayName || user.email} is registered for Court ${selectedOpenPlay.courtId}, ${selectedOpenPlay.date}, ${selectedOpenPlay.startTime}–${selectedOpenPlay.endTime}. Status: pending payment.`
+      `${user.displayName || user.email} is registered for Court ${selectedOpenPlay.courtId}. Next: submit your payment confirmation.`
     );
+    openPaymentModal(newRegistration);
   } catch (err) {
     if (err?.code === "permission-denied" && auth.currentUser) {
       joinStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
@@ -481,6 +608,174 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     if (savedSuccessfully) {
       selectedOpenPlay = null;
     }
+  }
+});
+
+function openPaymentModal(registration) {
+  paymentRegistration = registration;
+  const price = Number(registration.pricePerPlayer || 0);
+
+  paymentDetails.innerHTML = `
+    <div><strong>${registration.customerName || auth.currentUser?.displayName || "Customer"}</strong></div>
+    <div>Open Play · Court ${registration.courtId}</div>
+    <div>${registration.date} · ${registration.startTime}–${registration.endTime}</div>
+    <div>Rate: ₱${price}/player</div>
+  `;
+
+  paymentAmount.value = price || "";
+  paymentMobile.value = "";
+  paymentReference.value = "";
+  paymentReceipt.value = "";
+  paymentStatusBox.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+  updatePlayersCoveredHint();
+
+  paymentModal.classList.remove("hidden");
+  paymentModal.classList.add("flex");
+}
+
+function closePaymentModal() {
+  paymentModal.classList.add("hidden");
+  paymentModal.classList.remove("flex");
+  paymentRegistration = null;
+}
+
+function updatePlayersCoveredHint() {
+  if (!paymentRegistration) {
+    playersCoveredHint.textContent = "";
+    return;
+  }
+
+  const amount = Number(paymentAmount.value || 0);
+  const price = Number(paymentRegistration.pricePerPlayer || 0);
+
+  if (!amount || !price) {
+    playersCoveredHint.textContent = "";
+    return;
+  }
+
+  const count = amount / price;
+  if (Number.isInteger(count) && count > 0) {
+    playersCoveredHint.textContent = `This payment covers ${count} player${count === 1 ? "" : "s"}.`;
+    playersCoveredHint.className = "mt-1 text-xs text-emerald-400";
+  } else {
+    playersCoveredHint.textContent = `Amount is not an exact multiple of ₱${price}/player. Staff will review it manually.`;
+    playersCoveredHint.className = "mt-1 text-xs text-amber-400";
+  }
+}
+
+paymentAmount.addEventListener("input", updatePlayersCoveredHint);
+$("closePaymentBtn").addEventListener("click", closePaymentModal);
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+$("submitPaymentBtn").addEventListener("click", async () => {
+  if (!paymentRegistration || !auth.currentUser) return;
+
+  const mobile = paymentMobile.value.trim();
+  const amount = Number(paymentAmount.value || 0);
+  const reference = paymentReference.value.trim();
+  const file = paymentReceipt.files[0];
+  const price = Number(paymentRegistration.pricePerPlayer || 0);
+
+  if (!mobile || !amount || !reference || !file) {
+    paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+    paymentStatusBox.textContent = "Please complete mobile number, amount, GCash reference number, and payment screenshot.";
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+    paymentStatusBox.textContent = "Please upload an image screenshot.";
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+    paymentStatusBox.textContent = "Screenshot must be below 5MB.";
+    return;
+  }
+
+  const btn = $("submitPaymentBtn");
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+  paymentStatusBox.className = "mt-4 rounded-xl border border-slate-600 bg-slate-800 p-3 text-sm text-slate-200";
+  paymentStatusBox.textContent = "Uploading payment confirmation…";
+
+  try {
+    const base64Receipt = await fileToBase64(file);
+    const exactPlayerCount = price > 0 ? amount / price : 0;
+    const playersCovered = Number.isInteger(exactPlayerCount) && exactPlayerCount > 0 ? exactPlayerCount : 0;
+
+    const payload = {
+      customerName: paymentRegistration.customerName || auth.currentUser.displayName || "",
+      mobile,
+      amount: String(amount),
+      reference,
+      notes: `Courtside Open Play | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
+      fileName: file.name,
+      fileType: file.type,
+      receiptBase64: base64Receipt,
+      submittedAt: new Date().toLocaleString()
+    };
+
+    const response = await fetch(PAYMENT_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || "Payment submission failed.");
+    }
+
+    const cleanReference = reference.replace(/[^A-Za-z0-9_-]/g, "");
+    const paymentId = `${paymentRegistration.sessionId}_${cleanReference}`;
+
+    await setDoc(doc(db, "paymentSubmissions", paymentId), {
+      registrationId: paymentRegistration.id,
+      sessionId: paymentRegistration.sessionId,
+      customerUid: auth.currentUser.uid,
+      customerName: paymentRegistration.customerName || auth.currentUser.displayName || "",
+      customerEmail: auth.currentUser.email || "",
+      mobile,
+      date: paymentRegistration.date,
+      courtId: Number(paymentRegistration.courtId),
+      startTime: paymentRegistration.startTime,
+      endTime: paymentRegistration.endTime,
+      pricePerPlayer: price,
+      amountPaid: amount,
+      reference,
+      playersCovered,
+      receiptUrl: result.receiptUrl || "",
+      status: "pending_verification",
+      submittedAt: serverTimestamp()
+    });
+
+    paymentStatusBox.className = "mt-4 rounded-xl border border-emerald-700 bg-emerald-950/40 p-3 text-sm text-emerald-100";
+    paymentStatusBox.textContent = playersCovered > 0
+      ? `Payment submitted for ${playersCovered} player${playersCovered === 1 ? "" : "s"}. Waiting for staff verification.`
+      : "Payment submitted. Amount needs staff review before verification.";
+
+    showStatus(
+      "success",
+      "Payment submitted — pending verification",
+      `Reference ${reference}. Keep this page or return later with the same Google account; your status will be restored from Firebase.`
+    );
+
+    setTimeout(closePaymentModal, 1400);
+  } catch (err) {
+    paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+    paymentStatusBox.textContent = `${err?.code || "error"}: ${err?.message || "Could not submit payment."}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Submit Payment";
   }
 });
 
