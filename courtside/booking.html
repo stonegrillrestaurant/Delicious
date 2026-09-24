@@ -196,9 +196,12 @@ const PAYMENT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoOPIwuXbdA
 
 let selectedOpenPlay = null;
 let unsubscribeSchedule = null;
+let unsubscribeQueueSchedule = null;
 let unsubscribeRegistrations = null;
 let unsubscribePayments = null;
 let currentItems = [];
+let currentPublicItems = [];
+let currentQueueScheduleItems = [];
 let currentRegistrations = [];
 let currentPayments = [];
 let paymentRegistration = null;
@@ -390,6 +393,35 @@ onAuthStateChanged(auth, (user) => {
     renderCustomerPasses();
   }
 });
+
+function mergeScheduleSources() {
+  const byKey = new Map();
+
+  // Legacy/manual publicSchedule stays supported.
+  currentPublicItems.forEach(item => {
+    const key = [
+      item.date,
+      String(item.courtId),
+      item.startTime,
+      item.endTime
+    ].join("|");
+    byKey.set(key, item);
+  });
+
+  // Queue/admin court configuration is the preferred live source.
+  currentQueueScheduleItems.forEach(item => {
+    const key = [
+      item.date,
+      String(item.courtId),
+      item.startTime,
+      item.endTime
+    ].join("|");
+    byKey.set(key, item);
+  });
+
+  currentItems = Array.from(byKey.values());
+  render(currentItems);
+}
 
 function renderCustomerPasses() {
   if (!auth.currentUser) {
@@ -1045,23 +1077,90 @@ $("submitPaymentBtn").addEventListener("click", async () => {
 });
 
 function loadSchedule() {
-  if (unsubscribeSchedule) unsubscribeSchedule();
+  if (unsubscribeSchedule) {
+    unsubscribeSchedule();
+    unsubscribeSchedule = null;
+  }
+  if (unsubscribeQueueSchedule) {
+    unsubscribeQueueSchedule();
+    unsubscribeQueueSchedule = null;
+  }
 
   schedule.innerHTML = '<div class="text-center text-slate-500 text-xl py-12">Loading schedule…</div>';
   statusBox.classList.add("hidden");
 
   const selectedDate = dateInput.value;
-  const q = query(collection(db, "publicSchedule"), where("date", "==", selectedDate));
+  currentPublicItems = [];
+  currentQueueScheduleItems = [];
 
-  unsubscribeSchedule = onSnapshot(q,
+  const publicQ = query(
+    collection(db, "publicSchedule"),
+    where("date", "==", selectedDate)
+  );
+
+  unsubscribeSchedule = onSnapshot(
+    publicQ,
     (snap) => {
-      const items = snap.docs.map(d => ({id:d.id, ...d.data()}));
-      render(items);
-      showStatus("info", "Public schedule connected", `Loaded ${items.length} scheduled item(s) for ${selectedDate}. Customer private data is not exposed.`);
+      currentPublicItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      mergeScheduleSources();
+      showStatus(
+        "info",
+        "Schedule connected",
+        "Live court configuration and saved public schedule are synchronized for " + selectedDate + "."
+      );
     },
     (err) => {
-      showStatus("error", "Public schedule read failed", `${err.code || "unknown"}: ${err.message}`);
-      schedule.innerHTML = '<div class="text-red-400 text-center py-10">Firestore rules are blocking publicSchedule.</div>';
+      console.warn("publicSchedule read failed:", err);
+      currentPublicItems = [];
+      mergeScheduleSources();
+    }
+  );
+
+  const queueStateRef = doc(db, "pickleball", "currentState");
+
+  unsubscribeQueueSchedule = onSnapshot(
+    queueStateRef,
+    (snap) => {
+      if (!snap.exists()) {
+        currentQueueScheduleItems = [];
+        mergeScheduleSources();
+        return;
+      }
+
+      const data = snap.data();
+      const courts = Array.isArray(data.courts) ? data.courts : [];
+
+      currentQueueScheduleItems = courts
+        .filter(court =>
+          court &&
+          court.isConfigured &&
+          court.scheduleDate === selectedDate &&
+          court.timeStart &&
+          court.timeEnd
+        )
+        .map(court => ({
+          id: "queue-court-" + court.id + "-" + selectedDate,
+          source: "queue_admin",
+          courtId: Number(court.id),
+          date: selectedDate,
+          startTime: court.timeStart,
+          endTime: court.timeEnd,
+          type: court.mode === "open_play" ? "open_play" : "private",
+          pricePerPlayer: Number(court.openPlayPrice || 120),
+          maxPlayers: Number(court.maxPlayers || 12)
+        }));
+
+      mergeScheduleSources();
+    },
+    (err) => {
+      console.warn("Queue schedule read failed:", err);
+      currentQueueScheduleItems = [];
+      mergeScheduleSources();
+      showStatus(
+        "error",
+        "Live court schedule could not load",
+        (err.code || "unknown") + ": " + err.message
+      );
     }
   );
 }
