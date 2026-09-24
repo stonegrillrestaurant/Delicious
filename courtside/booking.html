@@ -402,35 +402,45 @@ function render(items) {
             const paidCount = Number(myRegistration.paidPlayers || verifiedPlayers || 1);
             return `
               <div class="slot-cell p-2 bg-slate-900/50">
-                <div class="h-full min-h-[48px] w-full rounded-lg border border-emerald-500 bg-emerald-800/40 px-2 py-2 text-left">
-                  <div class="text-xs font-bold text-emerald-200">✓ VERIFIED FOR ${paidCount}</div>
-                  ${startsHere ? `
+                ${startsHere ? `
+                  <div class="h-full min-h-[48px] w-full rounded-lg border border-emerald-500 bg-emerald-800/40 px-2 py-2 text-left">
+                    <div class="text-xs font-bold text-emerald-200">✓ VERIFIED FOR ${paidCount}</div>
                     <div class="mt-1 text-[11px] text-slate-300">
                       ${occupying.startTime}–${occupying.endTime}<br>
                       Court ${occupying.courtId}<br>
                       ${myRegistration.verifiedReferenceLast6 ? `Ref ••••••${myRegistration.verifiedReferenceLast6}` : "Payment confirmed"}
-                    </div>` : ""}
-                </div>
+                    </div>
+                  </div>
+                ` : `
+                  <div class="h-full min-h-[48px] w-full rounded-lg border border-emerald-900/50 bg-emerald-950/15 px-2 py-2 text-left">
+                    <div class="text-[11px] font-semibold text-emerald-300/70">Open Play continues</div>
+                  </div>
+                `}
               </div>`;
           }
 
           return `
             <div class="slot-cell p-2 bg-slate-900/50">
-              <button
-                class="pay-open-play h-full min-h-[48px] w-full rounded-lg border border-amber-500 bg-amber-900/30 px-2 py-2 text-left hover:bg-amber-900/50"
-                data-registration-id="${myRegistration.id}">
-                <div class="text-xs font-bold text-amber-200">
-                  ${hasSubmittedPayment ? "✓ Payment Submitted" : "✓ Joined · Pay Now"}
-                </div>
-                ${startsHere ? `
+              ${startsHere ? `
+                <button
+                  class="pay-open-play h-full min-h-[48px] w-full rounded-lg border border-amber-500 bg-amber-900/30 px-2 py-2 text-left hover:bg-amber-900/50"
+                  data-registration-id="${myRegistration.id}">
+                  <div class="text-xs font-bold text-amber-200">
+                    ${hasSubmittedPayment ? "✓ Payment Submitted" : "✓ Joined · Pay Now"}
+                  </div>
                   <div class="mt-1 text-[11px] text-slate-300">
                     ${occupying.startTime}–${occupying.endTime}<br>
                     ₱${occupying.pricePerPlayer ?? "?"}/player<br>
                     ${hasSubmittedPayment
                       ? `${pendingPayments.length || mySessionPayments.length} payment(s) awaiting verification`
                       : "Tap to submit payment"}
-                  </div>` : ""}
-              </button>
+                  </div>
+                </button>
+              ` : `
+                <div class="h-full min-h-[48px] w-full rounded-lg border border-amber-900/50 bg-amber-950/15 px-2 py-2 text-left">
+                  <div class="text-[11px] font-semibold text-amber-300/70">Open Play continues</div>
+                </div>
+              `}
             </div>`;
         }
 
