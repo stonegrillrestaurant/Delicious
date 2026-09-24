@@ -161,20 +161,12 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { firebaseConfig } from "./courtside-config.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
   getFirestore, collection, query, where, onSnapshot,
   doc, setDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAz4ZsYAJkn8XzDrMb78oLc7szxXBxB-zo",
-  authDomain: "stone-grill-payroll.firebaseapp.com",
-  projectId: "stone-grill-payroll",
-  storageBucket: "stone-grill-payroll.firebasestorage.app",
-  messagingSenderId: "255528914541",
-  appId: "1:255528914541:web:882c6b9d42bd03df253964"
-};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -215,12 +207,10 @@ let selectedOpenPlay = null;
 let selectedRentalSlot = null;
 let rentalSelectionStart = null;
 let unsubscribeSchedule = null;
-let unsubscribeQueueSchedule = null;
 let unsubscribeRegistrations = null;
 let unsubscribePayments = null;
 let currentItems = [];
 let currentPublicItems = [];
-let currentQueueScheduleItems = [];
 let currentRegistrations = [];
 let currentPayments = [];
 let paymentRegistration = null;
@@ -414,31 +404,9 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function mergeScheduleSources() {
-  const byKey = new Map();
-
-  // Legacy/manual publicSchedule stays supported.
-  currentPublicItems.forEach(item => {
-    const key = [
-      item.date,
-      String(item.courtId),
-      item.startTime,
-      item.endTime
-    ].join("|");
-    byKey.set(key, item);
-  });
-
-  // Queue/admin court configuration is the preferred live source.
-  currentQueueScheduleItems.forEach(item => {
-    const key = [
-      item.date,
-      String(item.courtId),
-      item.startTime,
-      item.endTime
-    ].join("|");
-    byKey.set(key, item);
-  });
-
-  currentItems = Array.from(byKey.values());
+  // Booking availability now comes only from booking/schedule records.
+  // pickleball/currentState is operations-only and no longer controls customer availability.
+  currentItems = [...currentPublicItems];
   render(currentItems);
 }
 
@@ -1386,17 +1354,11 @@ function loadSchedule() {
     unsubscribeSchedule();
     unsubscribeSchedule = null;
   }
-  if (unsubscribeQueueSchedule) {
-    unsubscribeQueueSchedule();
-    unsubscribeQueueSchedule = null;
-  }
-
   schedule.innerHTML = '<div class="text-center text-slate-500 text-xl py-12">Loading schedule…</div>';
   statusBox.classList.add("hidden");
 
   const selectedDate = dateInput.value;
   currentPublicItems = [];
-  currentQueueScheduleItems = [];
 
   const publicQ = query(
     collection(db, "publicSchedule"),
@@ -1411,7 +1373,7 @@ function loadSchedule() {
       showStatus(
         "info",
         "Schedule connected",
-        "Live court configuration and saved public schedule are synchronized for " + selectedDate + "."
+        "Booking schedule loaded for " + selectedDate + "."
       );
     },
     (err) => {
@@ -1421,53 +1383,7 @@ function loadSchedule() {
     }
   );
 
-  const queueStateRef = doc(db, "pickleball", "currentState");
 
-  unsubscribeQueueSchedule = onSnapshot(
-    queueStateRef,
-    (snap) => {
-      if (!snap.exists()) {
-        currentQueueScheduleItems = [];
-        mergeScheduleSources();
-        return;
-      }
-
-      const data = snap.data();
-      const courts = Array.isArray(data.courts) ? data.courts : [];
-
-      currentQueueScheduleItems = courts
-        .filter(court =>
-          court &&
-          court.isConfigured &&
-          court.scheduleDate === selectedDate &&
-          court.timeStart &&
-          court.timeEnd
-        )
-        .map(court => ({
-          id: "queue-court-" + court.id + "-" + selectedDate,
-          source: "queue_admin",
-          courtId: Number(court.id),
-          date: selectedDate,
-          startTime: court.timeStart,
-          endTime: court.timeEnd,
-          type: court.mode === "open_play" ? "open_play" : "private",
-          pricePerPlayer: Number(court.openPlayPrice || 120),
-          maxPlayers: Number(court.maxPlayers || 12)
-        }));
-
-      mergeScheduleSources();
-    },
-    (err) => {
-      console.warn("Queue schedule read failed:", err);
-      currentQueueScheduleItems = [];
-      mergeScheduleSources();
-      showStatus(
-        "error",
-        "Live court schedule could not load",
-        (err.code || "unknown") + ": " + err.message
-      );
-    }
-  );
 }
 
 dateInput.addEventListener("change", () => {
