@@ -199,7 +199,12 @@
         </div>
         <div class="w-full md:w-2/3">
           <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-            <h2 class="text-sm font-bold text-white mb-4">Daily Session Archives</h2>
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <h2 class="text-sm font-bold text-white">Daily Session Archives</h2>
+              <button onclick="printReportsSummary()" class="rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-xs font-bold text-white hover:bg-slate-600">
+                Print Reports
+              </button>
+            </div>
             <div id="history-list" class="space-y-3"></div>
           </div>
         </div>
@@ -1547,6 +1552,101 @@
       reader.readAsText(file);
     };
 
+    window.printReportsSummary = function() {
+      if (!historyVault.length) {
+        window.showToast("No archived reports available to print.", "warn");
+        return;
+      }
+
+      const rows = historyVault.map(archive => {
+        const playerCount = Number(archive.totalPlayers || (archive.players || []).length || 0);
+        const matches = Number(archive.totalMatches || 0);
+        const revenue = Math.round(Number(archive.totalRevenue || 0));
+        const walkIn = Math.round(Number(archive.walkInRevenue || 0));
+        const rental = Math.round(Number(archive.rentalRevenue || 0));
+
+        return `
+          <tr>
+            <td>${archive.date || ""}</td>
+            <td class="num">${playerCount}</td>
+            <td class="num">${matches}</td>
+            <td class="num">₱${revenue.toLocaleString("en-PH")}</td>
+            <td class="num">₱${walkIn.toLocaleString("en-PH")}</td>
+            <td class="num">₱${rental.toLocaleString("en-PH")}</td>
+          </tr>
+        `;
+      }).join("");
+
+      const totalPlayers = historyVault.reduce((sum,a) => sum + Number(a.totalPlayers || (a.players || []).length || 0), 0);
+      const totalMatches = historyVault.reduce((sum,a) => sum + Number(a.totalMatches || 0), 0);
+      const totalRevenue = Math.round(historyVault.reduce((sum,a) => sum + Number(a.totalRevenue || 0), 0));
+
+      const win = window.open("", "_blank", "width=1000,height=760");
+      if (!win) {
+        window.showToast("Popup blocked. Allow popups to print reports.", "warn");
+        return;
+      }
+
+      win.document.write(`
+        <!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Courtside Reports Summary</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 32px; color: #111; }
+            h1 { margin: 0 0 4px; font-size: 24px; }
+            .sub { color:#555; margin-bottom:22px; }
+            .summary { display:flex; gap:14px; margin:18px 0 24px; }
+            .box { border:1px solid #ccc; border-radius:8px; padding:12px 16px; min-width:150px; }
+            .box small { display:block; color:#666; margin-bottom:4px; }
+            .box strong { font-size:20px; }
+            table { width:100%; border-collapse:collapse; font-size:12px; }
+            th, td { border:1px solid #ccc; padding:8px; text-align:left; }
+            th { background:#f2f2f2; }
+            .num { text-align:right; }
+            @media print {
+              body { margin: 12mm; }
+              .no-print { display:none !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Courtside Gatherings</h1>
+          <div class="sub">Reports & Summaries</div>
+
+          <div class="summary">
+            <div class="box"><small>Total Archived Players</small><strong>${totalPlayers}</strong></div>
+            <div class="box"><small>Total Matches</small><strong>${totalMatches}</strong></div>
+            <div class="box"><small>Total Revenue</small><strong>₱${totalRevenue.toLocaleString("en-PH")}</strong></div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="num">Players</th>
+                <th class="num">Matches</th>
+                <th class="num">Total Revenue</th>
+                <th class="num">Walk-ins</th>
+                <th class="num">Rentals</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+
+          <script>
+            window.onload = () => {
+              window.focus();
+              window.print();
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      win.document.close();
+    };
+
     function renderHistory() {
       const container = document.getElementById('history-list');
       if (!container) return;
@@ -1651,10 +1751,105 @@
         
         ${discHTML}
         
-        <div class="mt-6 flex justify-end">
+        <div class="mt-6 flex justify-end gap-2">
+            <button onclick="printArchiveSummary('${archive.id}')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 transition shadow-lg text-white rounded-lg font-bold text-sm tracking-wide">Print Summary</button>
             <button onclick="hideModal()" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 transition shadow-lg text-white rounded-lg font-bold text-sm tracking-wide">Close Summary</button>
         </div>
       `);
+    };
+
+    window.printArchiveSummary = function(archiveId) {
+      const archive = historyVault.find(a => a.id === archiveId);
+      if (!archive) {
+        window.showToast("Archive not found.", "warn");
+        return;
+      }
+
+      const players = Array.isArray(archive.players) ? archive.players : [];
+      const rentals = Array.isArray(archive.rentals) ? archive.rentals : [];
+      const playerRows = players.map(p => `
+        <tr>
+          <td>${p.name || ""}</td>
+          <td>${p.queueCourt ? "Court " + p.queueCourt : "Unassigned"}</td>
+          <td>${p.source === "online" ? "Online" : "Walk-in"}</td>
+          <td class="num">${Number(p.gamesPlayed || 0)}</td>
+          <td>${p.paid ? "Paid" : "Unpaid"}</td>
+        </tr>
+      `).join("");
+
+      const rentalRows = rentals.map(r => `
+        <tr>
+          <td>${r.court || ""}</td>
+          <td>${r.renter || ""}</td>
+          <td>${r.time || ""}</td>
+          <td class="num">₱${Math.round(Number(r.revenue || 0)).toLocaleString("en-PH")}</td>
+        </tr>
+      `).join("");
+
+      const win = window.open("", "_blank", "width=1000,height=760");
+      if (!win) {
+        window.showToast("Popup blocked. Allow popups to print this summary.", "warn");
+        return;
+      }
+
+      win.document.write(`
+        <!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${archive.date || "Daily"} Summary</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin:32px; color:#111; }
+            h1,h2 { margin-bottom:6px; }
+            .sub { color:#555; margin-bottom:20px; }
+            .stats { display:flex; gap:12px; flex-wrap:wrap; margin:16px 0 22px; }
+            .stat { border:1px solid #ccc; border-radius:8px; padding:10px 14px; min-width:140px; }
+            .stat small { display:block; color:#666; }
+            .stat strong { font-size:18px; }
+            table { width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
+            th,td { border:1px solid #ccc; padding:7px; text-align:left; }
+            th { background:#f2f2f2; }
+            .num { text-align:right; }
+            section { margin-top:24px; }
+            @media print { body { margin:12mm; } }
+          </style>
+        </head>
+        <body>
+          <h1>Courtside Gatherings</h1>
+          <div class="sub">${archive.date || ""} · End of Day Summary</div>
+
+          <div class="stats">
+            <div class="stat"><small>Total Players</small><strong>${Number(archive.totalPlayers || players.length)}</strong></div>
+            <div class="stat"><small>Total Matches</small><strong>${Number(archive.totalMatches || 0)}</strong></div>
+            <div class="stat"><small>Total Revenue</small><strong>₱${Math.round(Number(archive.totalRevenue || 0)).toLocaleString("en-PH")}</strong></div>
+          </div>
+
+          <section>
+            <h2>Players</h2>
+            <table>
+              <thead><tr><th>Name</th><th>Court</th><th>Source</th><th class="num">Games</th><th>Payment</th></tr></thead>
+              <tbody>${playerRows || '<tr><td colspan="5">No players recorded.</td></tr>'}</tbody>
+            </table>
+          </section>
+
+          <section>
+            <h2>Rentals</h2>
+            <table>
+              <thead><tr><th>Court</th><th>Renter</th><th>Time</th><th class="num">Revenue</th></tr></thead>
+              <tbody>${rentalRows || '<tr><td colspan="4">No rentals recorded.</td></tr>'}</tbody>
+            </table>
+          </section>
+
+          <script>
+            window.onload = () => {
+              window.focus();
+              window.print();
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      win.document.close();
     };
 
     function render() {
