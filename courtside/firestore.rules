@@ -95,7 +95,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Actual Open Play session definition.
+    // Actual Open Play session definition + privacy-safe public capacity counter.
+    // The customer booking page may read joinedPlayers/maxPlayers, but only an
+    // authorized admin workflow may create or change the session. Manual walk-ins
+    // and verified online players update joinedPlayers through admin-authenticated
+    // pages; customers never write this counter directly.
     match /openPlaySessions/{sessionId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
@@ -139,6 +143,9 @@ service cloud.firestore {
     }
 
     // Customer Open Play joins.
+    // Registration/payment state is separate from live queue state. Verification
+    // does not write directly to pickleball/currentState; physical check-in remains
+    // a separate operations action.
     match /openPlayRegistrations/{registrationId} {
       allow create: if isAdmin()
         || (
