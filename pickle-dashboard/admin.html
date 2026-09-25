@@ -111,72 +111,22 @@
       </div>
     </section>
 
-    <main class="max-w-[1800px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
-      
-      <!-- LEFT SIDEBAR: FORMS & LOGS -->
-      <aside class="w-full lg:w-[300px] flex-shrink-0 flex flex-col gap-5">
-        
-        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-          <h2 class="text-sm font-black tracking-widest uppercase text-white mb-4">Check-In Desk</h2>
-          <form id="player-form" class="space-y-4">
-            <div>
-              <label class="block text-[10px] font-black tracking-wider uppercase text-slate-400 mb-1.5">Player Name</label>
-              <input type="text" id="player-name" required placeholder="Enter full name" class="w-full px-3 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-white shadow-inner transition">
-            </div>
-            
-            <div>
-              <label class="block text-[10px] font-black tracking-wider uppercase text-emerald-400 mb-1.5">Assign To Court</label>
-              <select id="player-court" class="w-full px-3 py-3 bg-slate-950 border border-emerald-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-emerald-400 font-bold shadow-inner transition">
-                <option value="" disabled>Loading courts...</option>
-              </select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-[10px] font-black tracking-wider uppercase text-slate-400 mb-1.5">Skill Badge</label>
-                  <select id="player-category" class="w-full px-2 py-2.5 bg-slate-900 border border-slate-700 rounded-lg outline-none text-xs text-white">
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermed.</option>
-                    <option value="Advanced">Advanced</option>
-                    <option value="Professional">Pro</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-[10px] font-black tracking-wider uppercase text-slate-400 mb-1.5">Payment</label>
-                  <select id="payment-status" class="w-full px-2 py-2.5 bg-slate-900 border border-slate-700 rounded-lg outline-none text-xs text-white">
-                    <option value="Paid">Paid ₱120</option>
-                    <option value="Unpaid">Unpaid</option>
-                  </select>
-                </div>
-            </div>
-            
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest py-3.5 rounded-lg text-sm transition shadow-lg mt-2">Add Walk-In</button>
-          </form>
+    <main class="max-w-[1800px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-black uppercase tracking-widest text-white">Live Courts</h2>
+          <p class="mt-1 text-[11px] text-slate-500">Walk-ins are entered directly inside courts manually assigned to Open Play.</p>
         </div>
+        <button onclick="requestResetDailyData()" class="rounded-xl border border-amber-700/60 bg-amber-950/30 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-900/50">
+          End Day & Archive
+        </button>
+      </div>
 
-        <button onclick="requestResetDailyData()" class="w-full bg-slate-800 hover:bg-amber-600 border border-slate-700 hover:border-amber-500 text-slate-400 hover:text-white font-black tracking-widest uppercase py-4 rounded-2xl text-xs transition shadow-lg">End Day & Archive</button>
-
-        <!-- EXPIRED PLAYERS TABLE -->
-        <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-xl flex flex-col max-h-[350px] overflow-hidden mt-auto">
-          <div class="p-4 border-b border-slate-700 bg-slate-900/30 flex justify-between items-center">
-             <h2 class="text-xs font-black tracking-widest text-red-400">EXPIRED PLAYERS</h2>
-          </div>
-          <div class="overflow-y-auto flex-1 p-2">
-            <table class="w-full text-left text-xs">
-              <tbody id="expired-log-table" class="divide-y divide-slate-700/50 text-slate-300"></tbody>
-            </table>
-          </div>
+      <section>
+        <div id="courts-and-queues-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-5 items-start">
+          <!-- Rendered by JavaScript -->
         </div>
-
-      </aside>
-
-      <!-- RIGHT MAIN AREA: 6 COURTS -->
-      <section class="flex-1">
-          <div id="courts-and-queues-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-5 items-start">
-              <!-- Rendered by JavaScript -->
-          </div>
       </section>
-
     </main>
   </div>
 
@@ -875,59 +825,41 @@
       setTimeout(() => modal.classList.add('hidden'), 200);
     };
 
-    // CHECK-IN Logic
-    document.getElementById('player-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    // INLINE WALK-IN CHECK-IN
+    // Only courts manually configured as Open Play expose this action.
+    window.addWalkInToCourt = async function(courtId) {
       if (!requireLivePanelControl("Adding a player")) return;
-      const nameInput = document.getElementById('player-name');
-      const name = nameInput.value.trim();
-      const category = document.getElementById('player-category').value;
-      const targetCourt = document.getElementById('player-court').value;
-      const payment = document.getElementById('payment-status').value;
 
-      if(!name) return;
-      if(!targetCourt) {
-         window.showToast("No courts are currently configured for Open Play.", "warn");
-         return;
+      const court = (Array.isArray(state.courts) ? state.courts : [])
+        .find(c => Number(c.id) === Number(courtId) && c.mode === 'open_play' && c.isConfigured);
+
+      if (!court || !court.timeEnd) {
+        window.showToast("This court is not manually assigned to Open Play.", "warn");
+        return;
       }
 
-      // Use only the manually configured court record for walk-ins.
-      // A booking-page overlay must not authorize manual Open Play entry.
-      const court = (Array.isArray(state.courts) ? state.courts : [])
-        .find(c => c.id.toString() === targetCourt && c.mode === 'open_play' && c.isConfigured);
+      const nameInput = document.getElementById(`walkin-name-${courtId}`);
+      const categoryInput = document.getElementById(`walkin-category-${courtId}`);
+      const paymentInput = document.getElementById(`walkin-payment-${courtId}`);
+      const name = String(nameInput?.value || "").trim();
+      const category = categoryInput?.value || "Beginner";
+      const payment = paymentInput?.value || "Paid";
 
-      if(!court || !court.timeEnd) {
-          window.showToast("This court is not manually assigned to Open Play.", "warn");
-          return;
+      if (!name) {
+        window.showToast("Enter the player's name first.", "warn");
+        nameInput?.focus();
+        return;
       }
 
       const now = new Date();
       const timeInStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
-      // Calculate expiration time based on Court's End Time
       const [endH, endM] = court.timeEnd.split(':').map(Number);
       const expireTime = new Date();
       expireTime.setHours(endH, endM, 0, 0);
       if (expireTime < now) expireTime.setDate(expireTime.getDate() + 1);
-
       const timeOutStr = expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      const newPlayer = {
-        id: 'P-' + Date.now(),
-        name: name,
-        category: category,
-        queueCourt: targetCourt,
-        gamesPlayed: 0,
-        timeIn: timeInStr,
-        timeOut: timeOutStr,
-        expireTimestamp: expireTime.getTime(),
-        isExpired: false,
-        paid: payment === 'Paid'
-      };
-
-      // Update the shared public Open Play count first. This keeps the customer
-      // booking page in sync with walk-ins without exposing pickleball/currentState.
-      const sessionId = court.sourceScheduleId || scheduleRecordId(court);
+      const sessionId = scheduleRecordId(court);
       if (!sessionId) {
         window.showToast("Open Play session record is missing. Player was not added.", "warn");
         return;
@@ -949,21 +881,33 @@
             updatedAt: serverTimestamp()
           });
         });
-      } catch (err) {
-        window.showToast(err?.message || "Could not update Open Play count.", "warn");
-        return;
-      }
 
-      newPlayer.source = "walk_in";
-      newPlayer.openPlaySessionId = sessionId;
-      state.players.push(newPlayer);
-      if(!state.queues[targetCourt]) state.queues[targetCourt] = [];
-      state.queues[targetCourt].push(newPlayer.id);
-      
-      nameInput.value = '';
-      window.showToast(`${name} checked in. Open Play count updated. Time ends at ${formatTime(court.timeEnd)}.`);
-      saveState(); 
-    });
+        const newPlayer = {
+          id: 'P-' + Date.now(),
+          name,
+          category,
+          queueCourt: String(courtId),
+          gamesPlayed: 0,
+          timeIn: timeInStr,
+          timeOut: timeOutStr,
+          expireTimestamp: expireTime.getTime(),
+          isExpired: false,
+          paid: payment === 'Paid',
+          source: "walk_in",
+          openPlaySessionId: sessionId
+        };
+
+        state.players.push(newPlayer);
+        if(!state.queues[String(courtId)]) state.queues[String(courtId)] = [];
+        state.queues[String(courtId)].push(newPlayer.id);
+
+        if (nameInput) nameInput.value = "";
+        await saveState();
+        window.showToast(`${name} added to Court ${courtId}. Open Play count updated.`);
+      } catch (err) {
+        window.showToast(err?.message || "Could not add walk-in.", "warn");
+      }
+    };
 
     window.showTransferModal = function(playerId) {
       const player = state.players.find(p => p.id === playerId);
@@ -1893,23 +1837,6 @@
       let activeCount = 0;
       const safeCourts = effectiveCourts();
       
-      const courtSelect = document.getElementById('player-court');
-      if (courtSelect) {
-        const currentVal = courtSelect.value;
-
-        // Manual walk-in entry must follow the admin's own court configuration only.
-        // Online booking overlays must never make a court eligible for manual Open Play entry.
-        const openCourts = (Array.isArray(state.courts) ? state.courts : [])
-          .filter(c => c.mode === 'open_play' && c.isConfigured);
-
-        if (openCourts.length > 0) {
-          courtSelect.innerHTML = openCourts.map(c => `<option value="${c.id}">${c.name} Line</option>`).join('');
-          if (openCourts.find(c => c.id.toString() === currentVal)) courtSelect.value = currentVal;
-        } else {
-          courtSelect.innerHTML = `<option value="" disabled selected>No Open Courts Configured</option>`;
-        }
-      }
-
       const courtsContainer = document.getElementById('courts-and-queues-container');
       if (courtsContainer) {
         courtsContainer.innerHTML = safeCourts.map(court => {
@@ -1989,7 +1916,38 @@
                   ` : `<div class="flex items-center justify-center h-full border-2 border-dashed border-slate-700 rounded-lg text-slate-500 text-xs font-bold uppercase tracking-widest py-3">Court Open</div>`}
                 </div>
                 
-                <div class="grid grid-cols-4 gap-2 mt-2">
+                ${(() => {
+                  const manuallyConfiguredOpenPlay = (Array.isArray(state.courts) ? state.courts : [])
+                    .some(c => Number(c.id) === Number(court.id) && c.mode === 'open_play' && c.isConfigured);
+
+                  if (!manuallyConfiguredOpenPlay) return '';
+
+                  return `
+                    <div class="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-3">
+                      <div class="mb-2 text-[9px] font-black uppercase tracking-widest text-emerald-300">Add Walk-In</div>
+                      <input id="walkin-name-${court.id}" type="text" placeholder="Player name"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500">
+                      <div class="mt-2 grid grid-cols-2 gap-2">
+                        <select id="walkin-category-${court.id}" class="rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-[11px] text-white">
+                          <option value="Beginner">Beginner</option>
+                          <option value="Intermediate">Intermediate</option>
+                          <option value="Advanced">Advanced</option>
+                          <option value="Professional">Professional</option>
+                        </select>
+                        <select id="walkin-payment-${court.id}" class="rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-[11px] text-white">
+                          <option value="Paid">Paid ₱${court.openPlayPrice || 120}</option>
+                          <option value="Unpaid">Unpaid</option>
+                        </select>
+                      </div>
+                      <button onclick="addWalkInToCourt(${court.id})"
+                        class="mt-2 w-full rounded-lg bg-emerald-600 py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition hover:bg-emerald-500">
+                        Add Player
+                      </button>
+                    </div>
+                  `;
+                })()}
+
+                <div class="grid grid-cols-4 gap-2 mt-3">
                   <div class="col-span-2">
                     ${matchPlayers ? `<button onclick="finishMatch(${court.id})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">Finish Match</button>` 
                     : `<button onclick="assignNextMatch(${court.id})" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">Assign Next 4</button>`}
@@ -2073,24 +2031,6 @@
                         safeCourts.filter(c => c.mode === 'rental' && c.isConfigured).reduce((sum, c) => sum + (c.rentalRevenue||0), 0);
       if (document.getElementById('stat-revenue')) document.getElementById('stat-revenue').innerText = `₱${Math.round(walkInRev + rentalRev)}`;
 
-      const expiredTableBody = document.getElementById('expired-log-table');
-      if (expiredTableBody) {
-         let expiredList = Array.isArray(state.players) ? state.players.filter(p => p.isExpired) : [];
-         expiredTableBody.innerHTML = expiredList.map(p => `
-            <tr class="hover:bg-slate-800 transition group border-b border-slate-700/50 last:border-none">
-              <td class="p-2 py-3 font-bold text-slate-300">
-                ${p.name}
-                <div class="text-[9px] text-slate-500 font-normal mt-0.5">Games: ${p.gamesPlayed || 0}</div>
-              </td>
-              <td class="p-2 text-right">
-                <div class="flex flex-col gap-1 items-end opacity-60 group-hover:opacity-100 transition">
-                  <button onclick="openExtendModal('${p.id}')" class="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1.5 rounded text-[9px] font-bold transition">Extend Time</button>
-                  <button onclick="removePlayerFromQueue('${p.id}')" class="bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-700 px-2 py-1.5 rounded text-[9px] font-bold transition">Delete</button>
-                </div>
-              </td>
-            </tr>`).join('');
-         if(expiredList.length === 0) expiredTableBody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-slate-500 text-xs italic">No expired players.</td></tr>`;
-      }
     }
   </script>
 </body>
