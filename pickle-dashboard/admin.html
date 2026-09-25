@@ -672,11 +672,19 @@
     }
 
     async function saveHistory() {
-      if (!requireLivePanelControl("Saving history")) return;
-      try { 
+      if (!requireLivePanelControl("Saving history")) return false;
+      try {
         const cleanHistory = JSON.parse(JSON.stringify(historyVault));
-        await setDoc(historyRef, { history: cleanHistory }); 
-      } catch (e) { console.error("History Save Failed:", e); }
+        await setDoc(historyRef, {
+          history: cleanHistory,
+          updatedAt: serverTimestamp()
+        });
+        return true;
+      } catch (e) {
+        console.error("History Save Failed:", e);
+        window.showToast("Archive was NOT saved to Firebase. Active data was kept.", "error");
+        return false;
+      }
     }
 
     function getBadgeClass(cat) {
@@ -1344,7 +1352,7 @@
       const totalRevenue = walkInRevenue + rentalRevenue;
       const discrepancies = walkInPlayers.filter(p => !p.paid).map(p => p.name);
 
-      historyVault.unshift({
+      const archiveRecord = {
         id: 'ARCHIVE-' + Date.now(),
         date: dateStr,
         timestamp: Date.now(),
@@ -1357,9 +1365,18 @@
         rentals: finalRentals,
         openPlaySessions: finalOpenPlays,
         discrepancies: discrepancies
-      });
+      };
 
-      saveHistory();
+      historyVault.unshift(archiveRecord);
+
+      // The vault is cloud-backed in Firestore. Do not clear the active board
+      // until the archive has been successfully written to the database.
+      const archiveSaved = await saveHistory();
+      if (!archiveSaved) {
+        historyVault = historyVault.filter(item => item.id !== archiveRecord.id);
+        renderHistory();
+        return;
+      }
 
       state = {
         players: [],
@@ -1369,7 +1386,8 @@
         dailyRentals: [],
         dailyOpenPlayLogs: []
       };
-      saveState();
+      await saveState();
+      window.showToast("Day archived safely to Firebase.");
     };
 
     window.exportFullBackup = function() {
