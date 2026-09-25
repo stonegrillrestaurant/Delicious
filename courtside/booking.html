@@ -544,10 +544,11 @@ function rangeIsAvailable(courtId, startTime, endTime, items = currentItems) {
   });
 }
 
-const BOOKING_HOLD_MS = 30 * 60 * 1000;
+const OPEN_PLAY_HOLD_MS = 20 * 60 * 1000;
+const PRIVATE_RENTAL_HOLD_MS = 30 * 60 * 1000;
 
-function bookingHoldUntil() {
-  return Timestamp.fromMillis(Date.now() + BOOKING_HOLD_MS);
+function bookingHoldUntil(durationMs = OPEN_PLAY_HOLD_MS) {
+  return Timestamp.fromMillis(Date.now() + durationMs);
 }
 
 function isExpiredHold(data) {
@@ -597,7 +598,7 @@ async function reservePrivateRentalAtomically(slot, user) {
   const scheduleRef = doc(db, "publicSchedule", bookingId);
   const lockIds = rentalLockIds(slot);
   const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
-  const holdUntil = bookingHoldUntil();
+  const holdUntil = bookingHoldUntil(PRIVATE_RENTAL_HOLD_MS);
 
   await runTransaction(db, async tx => {
     const [bookingSnap, ...lockSnaps] = await Promise.all([
@@ -841,15 +842,31 @@ async function commitPaymentAtomically(paymentId, paymentData, registration, res
       const bookingSnap = await tx.get(bookingRef);
       if (!bookingSnap.exists() || bookingSnap.data().customerUid !== user.uid) throw rentalConflictError();
 
+      const booking = bookingSnap.data();
+      if (booking.status !== "pending_payment" || isExpiredHold(booking)) {
+        const err = new Error("Your 30-minute payment window has expired. The court is available to other customers again.");
+        err.code = "hold-expired";
+        throw err;
+      }
+
       const lockIds = Array.isArray(reservationState?.lockIds)
         ? reservationState.lockIds
-        : (bookingSnap.data().lockIds || []);
+        : (booking.lockIds || []);
 
       const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
       const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
       lockSnaps.forEach(snap => {
-        if (!snap.exists() || snap.data().customerUid !== user.uid || snap.data().bookingId !== registration.id) {
-          throw rentalConflictError();
+        if (!snap.exists()) throw rentalConflictError();
+        const lock = snap.data();
+        if (
+          lock.customerUid !== user.uid ||
+          lock.bookingId !== registration.id ||
+          lock.status !== "pending_payment" ||
+          isExpiredHold(lock)
+        ) {
+          const err = new Error("Your 30-minute payment window has expired. The court is available to other customers again.");
+          err.code = "hold-expired";
+          throw err;
         }
       });
 
