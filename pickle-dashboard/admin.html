@@ -891,9 +891,13 @@
          return;
       }
 
-      const court = effectiveCourts().find(c => c.id.toString() === targetCourt);
+      // Use only the manually configured court record for walk-ins.
+      // A booking-page overlay must not authorize manual Open Play entry.
+      const court = (Array.isArray(state.courts) ? state.courts : [])
+        .find(c => c.id.toString() === targetCourt && c.mode === 'open_play' && c.isConfigured);
+
       if(!court || !court.timeEnd) {
-          window.showToast("This court's end time is not set. Configure court first.", "warn");
+          window.showToast("This court is not manually assigned to Open Play.", "warn");
           return;
       }
 
@@ -965,7 +969,8 @@
       const player = state.players.find(p => p.id === playerId);
       if(!player) return;
       
-      const openCourts = effectiveCourts().filter(c => c.mode === 'open_play' && c.isConfigured);
+      const openCourts = (Array.isArray(state.courts) ? state.courts : [])
+          .filter(c => c.mode === 'open_play' && c.isConfigured);
       const optionsHTML = openCourts.length > 0 
           ? openCourts.map(c => `<option value="${c.id}">${c.name} (${formatTime(c.timeStart)} - ${formatTime(c.timeEnd)})</option>`).join('')
           : `<option value="" disabled selected>No Open Courts Configured</option>`;
@@ -989,7 +994,8 @@
       if (!newCourtId) return;
       
       const player = state.players.find(p => p.id === playerId);
-      const newCourt = effectiveCourts().find(c => c.id.toString() === newCourtId);
+      const newCourt = (Array.isArray(state.courts) ? state.courts : [])
+        .find(c => c.id.toString() === newCourtId && c.mode === 'open_play' && c.isConfigured);
       
       if(!player || !newCourt) return;
       
@@ -1890,7 +1896,12 @@
       const courtSelect = document.getElementById('player-court');
       if (courtSelect) {
         const currentVal = courtSelect.value;
-        const openCourts = safeCourts.filter(c => c.mode === 'open_play' && c.isConfigured);
+
+        // Manual walk-in entry must follow the admin's own court configuration only.
+        // Online booking overlays must never make a court eligible for manual Open Play entry.
+        const openCourts = (Array.isArray(state.courts) ? state.courts : [])
+          .filter(c => c.mode === 'open_play' && c.isConfigured);
+
         if (openCourts.length > 0) {
           courtSelect.innerHTML = openCourts.map(c => `<option value="${c.id}">${c.name} Line</option>`).join('');
           if (openCourts.find(c => c.id.toString() === currentVal)) courtSelect.value = currentVal;
