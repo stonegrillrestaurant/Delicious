@@ -22,7 +22,9 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(2,6,23,.26);
     }
     .schedule-grid { min-width: 930px; display: grid; grid-template-columns: 118px repeat(6, minmax(132px, 1fr)); }
-    .schedule-head { position: sticky; top: 0; z-index: 4; }
+    .schedule-scroll { overflow-x: auto; position: relative; }
+    .schedule-head { position: sticky; top: 0; z-index: 20; box-shadow: 0 8px 18px rgba(2,6,23,.72); }
+    .schedule-head .court-head { background: rgba(2,6,23,.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     .time-cell, .court-head, .slot-cell { border-right: 1px solid rgb(51 65 85); border-bottom: 1px solid rgb(51 65 85); }
     .time-cell { min-height: 64px; }
     .slot-cell { min-height: 64px; }
@@ -1084,16 +1086,19 @@ function render(items) {
   }
 
   const header = `
-    <div class="schedule-grid schedule-head bg-slate-950">
+    <div class="schedule-grid schedule-head">
       <div class="court-head p-3 text-xs font-bold tracking-wider text-slate-400">
-        <div>TIME / RATE</div>
-        <div class="mt-1 text-[10px] font-medium leading-4 text-slate-500">C1–4 ₱250/hr<br>C5–6 ₱350/hr</div>
+        <div>TIME</div>
       </div>
-      ${courts.map(courtId => `
-        <div class="court-head p-3 text-center">
-          <div class="font-bold">Court ${courtId}</div>
-        </div>
-      `).join("")}
+      ${courts.map(courtId => {
+        const rate = courtId >= 5 ? 350 : 250;
+        return `
+          <div class="court-head p-3 text-center">
+            <div class="font-bold">Court ${courtId}</div>
+            <div class="mt-1 text-[10px] font-black text-lime-300">₱${rate}/hr</div>
+          </div>
+        `;
+      }).join("")}
     </div>`;
 
   const body = rows.map(row => {
@@ -1246,7 +1251,6 @@ function render(items) {
       <div class="schedule-grid">
         <div class="time-cell bg-slate-950 p-3 text-xs font-black text-white">
           <div>${formatTime12(row.start)}</div>
-          <div class="mt-1 text-[9px] font-medium leading-4 text-slate-500">C1–4 ₱250<br>C5–6 ₱350</div>
         </div>
         ${cells}
       </div>`;
@@ -1286,7 +1290,7 @@ function render(items) {
       <div class="text-xs text-slate-500">Scroll sideways on mobile →</div>
     </div>
     ${rentalSelectionBar}
-    <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900">
+    <div class="schedule-scroll rounded-2xl border border-slate-800 bg-slate-900">
       ${header}
       ${body}
     </div>`;
