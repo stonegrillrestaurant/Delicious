@@ -524,6 +524,8 @@ function renderCustomerPasses() {
           registration.status === "confirmed" ||
           registration.status === "verified" ||
           verified.length > 0;
+        const isCheckedIn = payments.some(p => p.checkedIn === true);
+        const visibleStatus = isCheckedIn ? "CHECKED-IN" : (isVerified ? "VERIFIED" : "PENDING");
 
         if (isRental) {
           const waitingForPayment =
@@ -548,7 +550,7 @@ function renderCustomerPasses() {
                 PRIVATE COURT RENTAL
               </div>
               <div class="mt-2 text-2xl font-black text-white">
-                ${isVerified ? "BOOKING CONFIRMED" : hasSubmittedPayment ? "PAYMENT SUBMITTED" : "TIME CONFIRMED"}
+                ${visibleStatus}
               </div>
               <div class="mt-2 text-sm text-slate-300">
                 Court ${registration.courtId} · ${registration.date}<br>
@@ -563,7 +565,7 @@ function renderCustomerPasses() {
                 <div class="rounded-2xl border border-slate-700 bg-slate-950/55 p-3">
                   <div class="text-xs text-slate-500">Status</div>
                   <div class="mt-1 font-bold ${accentClass}">
-                    ${isVerified ? "Verified" : hasSubmittedPayment ? "For verification" : "Pay now"}
+                    ${visibleStatus}
                   </div>
                 </div>
               </div>
@@ -600,12 +602,14 @@ function renderCustomerPasses() {
             class="liquid-glass rounded-3xl border ${isVerified ? "border-emerald-500 bg-emerald-950/30" : "border-amber-500 bg-amber-950/25"} p-5">
             <div class="text-center">
               <div class="text-sm font-bold tracking-[.18em] ${isVerified ? "text-emerald-300" : "text-amber-300"}">
-                ${isVerified ? "PAYMENT VERIFIED" : "PAYMENT SUBMITTED"}
+                ${visibleStatus}
               </div>
               <div class="mt-2 text-3xl font-black ${isVerified ? "text-emerald-200" : "text-amber-100"}">
-                ${isVerified
-                  ? `VERIFIED FOR ${paidPlayers || 1}`
-                  : `${totalSubmittedPlayers || "—"} PLAYER${totalSubmittedPlayers === 1 ? "" : "S"} PENDING`}
+                ${isCheckedIn
+                  ? `${paidPlayers || totalSubmittedPlayers || 1} PLAYER${(paidPlayers || totalSubmittedPlayers || 1) === 1 ? "" : "S"} CHECKED-IN`
+                  : isVerified
+                    ? `VERIFIED FOR ${paidPlayers || 1}`
+                    : `${totalSubmittedPlayers || "—"} PLAYER${totalSubmittedPlayers === 1 ? "" : "S"} PENDING`}
               </div>
               <div class="mt-2 text-sm text-slate-300">
                 Open Play · Court ${registration.courtId}<br>
@@ -624,9 +628,7 @@ function renderCustomerPasses() {
 
               <div class="mt-3 text-slate-400">Status</div>
               <div class="font-semibold ${isVerified ? "text-emerald-300" : "text-amber-300"}">
-                ${isVerified
-                  ? `${paidPlayers || 1} paid · ready for entrance validation`
-                  : `${pending.length || payments.length} payment(s) awaiting staff verification`}
+                ${visibleStatus}
               </div>
             </div>
 
