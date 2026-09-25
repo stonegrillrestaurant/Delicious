@@ -470,6 +470,12 @@ async function confirmPayment(paymentId, options = {}) {
       if (!registrationSnap.exists()) throw new Error("Linked Open Play registration does not exist.");
 
       const registration = registrationSnap.data();
+      const sessionId = registration.sessionId || payment.sessionId;
+      if (!sessionId) throw new Error("Open Play session ID is missing.");
+      const sessionRef = doc(db, "openPlaySessions", sessionId);
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) throw new Error("Linked Open Play session does not exist.");
+      const session = sessionSnap.data();
       const players = Number(payment.playersCovered || 0);
       if (!Number.isInteger(players) || players < 1) {
         throw new Error("Invalid playersCovered value. Review this payment manually.");
@@ -526,6 +532,16 @@ async function confirmPayment(paymentId, options = {}) {
         verifiedReferenceLast6: last6,
         verifiedAt: serverTimestamp(),
         verifiedBy: auth.currentUser.uid
+      });
+
+      const currentJoined = Math.max(0, Number(session.joinedPlayers || 0));
+      const maxPlayers = Math.max(1, Number(session.maxPlayers || 12));
+      if (currentJoined + players > maxPlayers) {
+        throw new Error("Verification would exceed the Open Play maximum. Review capacity manually.");
+      }
+      tx.update(sessionRef, {
+        joinedPlayers: currentJoined + players,
+        updatedAt: serverTimestamp()
       });
 
       seatLockRefs.forEach(ref => tx.update(ref, {
