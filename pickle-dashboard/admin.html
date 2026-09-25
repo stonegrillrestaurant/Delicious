@@ -486,7 +486,7 @@
           ...publicData,
           sessionId: scheduleId,
           status: "active"
-        });
+        }, { merge: true });
       } else {
         publicData.bookingType = "private_rental";
         publicData.hourlyRate = (Number(court.id) === 5 || Number(court.id) === 6) ? 350 : 250;
@@ -876,7 +876,7 @@
     };
 
     // CHECK-IN Logic
-    document.getElementById('player-form').addEventListener('submit', (e) => {
+    document.getElementById('player-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!requireLivePanelControl("Adding a player")) return;
       const nameInput = document.getElementById('player-name');
@@ -921,12 +921,43 @@
         paid: payment === 'Paid'
       };
 
+      // Update the shared public Open Play count first. This keeps the customer
+      // booking page in sync with walk-ins without exposing pickleball/currentState.
+      const sessionId = court.sourceScheduleId || scheduleRecordId(court);
+      if (!sessionId) {
+        window.showToast("Open Play session record is missing. Player was not added.", "warn");
+        return;
+      }
+
+      try {
+        await runTransaction(db, async tx => {
+          const sessionRef = doc(db, "openPlaySessions", sessionId);
+          const sessionSnap = await tx.get(sessionRef);
+          if (!sessionSnap.exists()) throw new Error("Open Play session does not exist.");
+
+          const session = sessionSnap.data();
+          const joined = Math.max(0, Number(session.joinedPlayers || 0));
+          const maxPlayers = Math.max(1, Number(session.maxPlayers || court.maxPlayers || 12));
+          if (joined >= maxPlayers) throw new Error("Open Play is already full.");
+
+          tx.update(sessionRef, {
+            joinedPlayers: joined + 1,
+            updatedAt: serverTimestamp()
+          });
+        });
+      } catch (err) {
+        window.showToast(err?.message || "Could not update Open Play count.", "warn");
+        return;
+      }
+
+      newPlayer.source = "walk_in";
+      newPlayer.openPlaySessionId = sessionId;
       state.players.push(newPlayer);
       if(!state.queues[targetCourt]) state.queues[targetCourt] = [];
       state.queues[targetCourt].push(newPlayer.id);
       
       nameInput.value = '';
-      window.showToast(`${name} checked in. Time ends at ${formatTime(court.timeEnd)}.`);
+      window.showToast(`${name} checked in. Open Play count updated. Time ends at ${formatTime(court.timeEnd)}.`);
       saveState(); 
     });
 
