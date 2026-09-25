@@ -20,7 +20,7 @@
     <header class="py-6">
       <p class="text-xs font-black tracking-[.22em] text-lime-300">COURTSIDE GATHERINGS</p>
       <h1 class="mt-2 text-3xl font-black">Payment Verification</h1>
-      <p class="mt-2 text-sm text-slate-400">Enter the customer's GCash reference number. A valid pending payment becomes VERIFIED.</p>
+      <p class="mt-2 text-sm text-slate-400">Verify one GCash reference at a time. A successful match shows the payer name so staff can compare it with the GCash sender.</p>
     </header>
 
     <section class="liquid-glass rounded-3xl p-5">
@@ -121,7 +121,7 @@ function showToast(type, message) {
       ? "border-emerald-500 bg-emerald-950 text-emerald-100"
       : "border-red-500 bg-red-950 text-red-100");
   toast.textContent = message;
-  toastTimer = setTimeout(() => toast.classList.add("hidden"), 2600);
+  toastTimer = setTimeout(() => toast.classList.add("hidden"), 4200);
 }
 
 function renderVerified(payments) {
@@ -455,7 +455,11 @@ async function verifyReference() {
     const payment = matches[0];
 
     if (payment.status === "verified") {
-      showToast("success", payment.checkedIn === true ? "ALREADY CHECKED-IN" : "ALREADY VERIFIED");
+      const payerName = String(payment.customerName || "Customer").trim();
+      showToast(
+        "success",
+        payerName + (payment.checkedIn === true ? " — ALREADY CHECKED-IN" : " — ALREADY VERIFIED")
+      );
       referenceInput.value = "";
       return;
     }
@@ -467,7 +471,8 @@ async function verifyReference() {
 
     await confirmPayment(payment.id, { silent: true });
     referenceInput.value = "";
-    showToast("success", "VERIFIED");
+    const payerName = String(payment.customerName || "Customer").trim();
+    showToast("success", payerName + " — VERIFIED");
   } catch (err) {
     console.error(err);
     showToast("error", "INVALID / COULD NOT VERIFY");
