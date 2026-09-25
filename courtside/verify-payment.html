@@ -54,6 +54,22 @@
 
       <div id="messageBox" class="mt-4 hidden rounded-2xl border p-4 text-sm"></div>
       <div id="results" class="mt-4 space-y-4"></div>
+
+      <section class="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-5">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="text-xs font-black tracking-[.18em] text-cyan-300">VENUE CHECK-IN</div>
+            <h2 class="mt-1 text-xl font-black">Verified · Not Checked In</h2>
+          </div>
+          <div id="waitingCount" class="rounded-full bg-cyan-950 px-3 py-1 text-xs font-black text-cyan-200">0</div>
+        </div>
+        <p class="mt-2 text-sm text-slate-400">
+          Payment verification does not place players in the live queue. They stay here until staff checks them in when they actually arrive.
+        </p>
+        <div id="verifiedWaitingList" class="mt-4 space-y-3">
+          <div class="text-sm text-slate-500">Loading verified players…</div>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -64,7 +80,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
-  getFirestore, collection, query, where, getDocs, doc,
+  getFirestore, collection, query, where, getDocs, doc, getDoc, onSnapshot,
   runTransaction, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -82,6 +98,11 @@ const searchBtn = $("searchBtn");
 const results = $("results");
 const messageBox = $("messageBox");
 const exitVerificationBtn = $("exitVerificationBtn");
+const verifiedWaitingList = $("verifiedWaitingList");
+const waitingCount = $("waitingCount");
+
+let unsubscribeVerifiedWaiting = null;
+let verifiedWaitingPayments = [];
 
 exitVerificationBtn.addEventListener("click", () => {
   window.location.href = "/pickle-dashboard/admin.html";
@@ -107,6 +128,205 @@ function formatTime12(value) {
   const suffix = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
   return `${hour}:${m} ${suffix}`;
+}
+
+function todayLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function renderVerifiedWaiting() {
+  const waiting = verifiedWaitingPayments
+    .filter(p => p.status === "verified")
+    .filter(p => p.bookingType !== "private_rental")
+    .filter(p => p.checkedIn !== true)
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")) || String(a.startTime || "").localeCompare(String(b.startTime || "")));
+
+  waitingCount.textContent = String(waiting.length);
+
+  if (!waiting.length) {
+    verifiedWaitingList.innerHTML = '<div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-500">No verified players are waiting for check-in.</div>';
+    return;
+  }
+
+  verifiedWaitingList.innerHTML = waiting.map(p => {
+    const isToday = p.date === todayLocal();
+    const names = Array.isArray(p.playerNames) && p.playerNames.length
+      ? p.playerNames
+      : [p.customerName || "Customer"];
+    return `
+      <article class="rounded-2xl border border-cyan-900/70 bg-slate-950/65 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-xs font-black tracking-[.15em] text-cyan-300">PAYMENT VERIFIED</div>
+            <div class="mt-1 text-lg font-black">${names.map(esc).join(", ")}</div>
+            <div class="mt-1 text-sm text-slate-400">
+              Court ${esc(p.courtId)} · ${esc(p.date)} · ${esc(formatTime12(p.startTime))}–${esc(formatTime12(p.endTime))}
+            </div>
+          </div>
+          <div class="rounded-xl bg-slate-900 px-3 py-2 text-right">
+            <div class="text-[10px] uppercase text-slate-500">Ref</div>
+            <div class="font-mono text-xs font-bold">${esc(p.reference)}</div>
+          </div>
+        </div>
+
+        <div class="mt-3 text-xs text-slate-500">
+          ${names.length} player${names.length === 1 ? "" : "s"} · waiting for venue arrival
+        </div>
+
+        <button type="button"
+          class="check-in-verified mt-3 w-full rounded-xl px-4 py-3 text-sm font-black ${isToday ? "bg-cyan-600 text-white" : "cursor-not-allowed bg-slate-800 text-slate-500"}"
+          data-payment-id="${esc(p.id)}"
+          ${isToday ? "" : "disabled"}>
+          ${isToday ? "CHECK IN AT VENUE" : "CHECK-IN AVAILABLE ON BOOKING DATE"}
+        </button>
+      </article>
+    `;
+  }).join("");
+}
+
+function startVerifiedWaitingListener() {
+  if (unsubscribeVerifiedWaiting) {
+    unsubscribeVerifiedWaiting();
+    unsubscribeVerifiedWaiting = null;
+  }
+
+  const verifiedQ = query(
+    collection(db, "paymentSubmissions"),
+    where("status", "==", "verified")
+  );
+
+  unsubscribeVerifiedWaiting = onSnapshot(
+    verifiedQ,
+    snap => {
+      verifiedWaitingPayments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderVerifiedWaiting();
+    },
+    err => {
+      console.warn("Verified waiting list failed:", err);
+      verifiedWaitingList.innerHTML = '<div class="rounded-2xl border border-red-800 bg-red-950/30 p-4 text-sm text-red-200">Could not load verified waiting players.</div>';
+    }
+  );
+}
+
+function stopVerifiedWaitingListener() {
+  if (unsubscribeVerifiedWaiting) {
+    unsubscribeVerifiedWaiting();
+    unsubscribeVerifiedWaiting = null;
+  }
+  verifiedWaitingPayments = [];
+  waitingCount.textContent = "0";
+  verifiedWaitingList.innerHTML = '<div class="text-sm text-slate-500">Sign in as an authorized admin to view verified players.</div>';
+}
+
+async function checkInVerifiedPayment(paymentId) {
+  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
+    throw new Error("Admin authorization required.");
+  }
+
+  const paymentRef = doc(db, "paymentSubmissions", paymentId);
+  const stateRef = doc(db, "pickleball", "currentState");
+
+  await runTransaction(db, async tx => {
+    const paymentSnap = await tx.get(paymentRef);
+    if (!paymentSnap.exists()) throw new Error("Payment record no longer exists.");
+
+    const payment = paymentSnap.data();
+    if (payment.status !== "verified") throw new Error("Payment must be verified before check-in.");
+    if (payment.checkedIn === true) throw new Error("These players are already checked in.");
+    if (payment.bookingType === "private_rental") throw new Error("Private rentals do not enter the Open Play queue.");
+    if (payment.date !== todayLocal()) throw new Error("Check-in is only available on the booking date.");
+
+    const names = Array.isArray(payment.playerNames)
+      ? payment.playerNames.map(name => String(name || "").trim()).filter(Boolean)
+      : [];
+    const players = Number(payment.playersCovered || names.length || 0);
+    if (!players || names.length !== players) {
+      throw new Error("Player names are incomplete. Review this payment before check-in.");
+    }
+
+    const stateSnap = await tx.get(stateRef);
+    const live = stateSnap.exists()
+      ? stateSnap.data()
+      : {
+          players: [],
+          queues: { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] },
+          courts: [],
+          totalMatchesPlayed: 0,
+          dailyRentals: [],
+          dailyOpenPlayLogs: []
+        };
+
+    const queuePlayers = Array.isArray(live.players) ? [...live.players] : [];
+    const queues = live.queues && typeof live.queues === "object"
+      ? JSON.parse(JSON.stringify(live.queues))
+      : { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] };
+
+    const targetCourt = String(payment.courtId || "");
+    if (!["1","2","3","4","5","6"].includes(targetCourt)) {
+      throw new Error("This verified payment does not have a valid court.");
+    }
+    if (!Array.isArray(queues[targetCourt])) queues[targetCourt] = [];
+
+    const now = new Date();
+    const timeIn = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const sessionEnd = new Date(String(payment.date) + "T" + String(payment.endTime) + ":00");
+    const expireTimestamp = sessionEnd.getTime();
+    const timeOut = Number.isFinite(expireTimestamp)
+      ? sessionEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : formatTime12(payment.endTime);
+
+    names.forEach((name, index) => {
+      const stableId = "ONL-" + String(paymentId).replace(/[^A-Za-z0-9_-]/g, "") + "-" + (index + 1);
+      if (!queuePlayers.some(p => p.id === stableId)) {
+        queuePlayers.push({
+          id: stableId,
+          name,
+          category: "Unrated",
+          queueCourt: targetCourt,
+          gamesPlayed: 0,
+          timeIn,
+          timeOut,
+          expireTimestamp: Number.isFinite(expireTimestamp) ? expireTimestamp : null,
+          isExpired: false,
+          paid: true,
+          source: "online",
+          onlineVerified: true,
+          checkedIn: true,
+          checkedInAt: now.toISOString(),
+          paymentId,
+          paymentReference: payment.reference || "",
+          paymentAmount: Number(payment.amountPaid || 0),
+          registrationId: payment.registrationId || "",
+          payerName: payment.customerName || ""
+        });
+      }
+      if (!queues[targetCourt].includes(stableId)) queues[targetCourt].push(stableId);
+    });
+
+    tx.set(stateRef, {
+      ...live,
+      players: queuePlayers,
+      queues
+    });
+
+    tx.update(paymentRef, {
+      checkedIn: true,
+      checkedInAt: serverTimestamp(),
+      checkedInBy: auth.currentUser.uid,
+      checkedInByEmail: auth.currentUser.email || ""
+    });
+
+    if (payment.registrationId) {
+      tx.update(doc(db, "openPlayRegistrations", payment.registrationId), {
+        checkedIn: true,
+        checkedInAt: serverTimestamp()
+      });
+    }
+  });
 }
 
 function parseReferences(raw) {
@@ -137,6 +357,7 @@ onAuthStateChanged(auth, user => {
     authState.textContent = "Not signed in.";
     googleBtn.textContent = "Sign in with Google";
     adminPanel.classList.add("hidden");
+    stopVerifiedWaitingListener();
     return;
   }
 
@@ -146,7 +367,9 @@ onAuthStateChanged(auth, user => {
 
   if (admin) {
     adminPanel.classList.remove("hidden");
+    startVerifiedWaitingListener();
   } else {
+    stopVerifiedWaitingListener();
     adminPanel.classList.add("hidden");
     showMessage("error", "This Google account is not authorized for Courtside payment verification.");
   }
@@ -417,7 +640,6 @@ async function confirmPayment(paymentId, options = {}) {
   }
 
   const paymentRef = doc(db, "paymentSubmissions", paymentId);
-  const queueStateRef = doc(db, "pickleball", "currentState");
 
   try {
     await runTransaction(db, async tx => {
@@ -438,9 +660,7 @@ async function confirmPayment(paymentId, options = {}) {
       if (payment.bookingType === "private_rental") {
         const bookingRef = doc(db, "privateRentalBookings", payment.registrationId);
         const bookingSnap = await tx.get(bookingRef);
-        if (!bookingSnap.exists()) {
-          throw new Error("Linked private-rental booking does not exist.");
-        }
+        if (!bookingSnap.exists()) throw new Error("Linked private-rental booking does not exist.");
 
         const booking = bookingSnap.data();
         if (booking.customerUid !== payment.customerUid) {
@@ -449,7 +669,6 @@ async function confirmPayment(paymentId, options = {}) {
 
         const publicRef = doc(db, "publicSchedule", payment.registrationId);
         const publicSnap = await tx.get(publicRef);
-
         if (publicSnap.exists()) {
           const existing = publicSnap.data();
           const sameBooking =
@@ -458,16 +677,13 @@ async function confirmPayment(paymentId, options = {}) {
             existing.date === booking.date &&
             existing.startTime === booking.startTime &&
             existing.endTime === booking.endTime;
-
-          if (!sameBooking) {
-            throw new Error("This rental slot is already occupied.");
-          }
+          if (!sameBooking) throw new Error("This rental slot is already occupied.");
         }
 
-        const rentalLockIds = Array.isArray(booking.lockIds) ? booking.lockIds : [];
-        const rentalLockRefs = rentalLockIds.map(id => doc(db, "slotLocks", id));
-        const rentalLockSnaps = await Promise.all(rentalLockRefs.map(ref => tx.get(ref)));
-        rentalLockSnaps.forEach(snap => {
+        const lockIds = Array.isArray(booking.lockIds) ? booking.lockIds : [];
+        const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
+        const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
+        lockSnaps.forEach(snap => {
           if (!snap.exists()) throw new Error("A rental protection lock is missing.");
           const lock = snap.data();
           if (lock.bookingId !== payment.registrationId || lock.customerUid !== payment.customerUid) {
@@ -477,6 +693,7 @@ async function confirmPayment(paymentId, options = {}) {
 
         tx.update(paymentRef, {
           status: "verified",
+          checkedIn: false,
           verifiedAt: serverTimestamp(),
           verifiedBy: auth.currentUser.uid,
           verifiedByEmail: auth.currentUser.email || ""
@@ -502,20 +719,17 @@ async function confirmPayment(paymentId, options = {}) {
           status: "confirmed"
         });
 
-        rentalLockRefs.forEach(ref => tx.update(ref, {
+        lockRefs.forEach(ref => tx.update(ref, {
           status: "verified",
           verifiedAt: serverTimestamp(),
           verifiedBy: auth.currentUser.uid
         }));
-
         return;
       }
 
       const registrationRef = doc(db, "openPlayRegistrations", payment.registrationId);
       const registrationSnap = await tx.get(registrationRef);
-      if (!registrationSnap.exists()) {
-        throw new Error("Linked Open Play registration does not exist.");
-      }
+      if (!registrationSnap.exists()) throw new Error("Linked Open Play registration does not exist.");
 
       const registration = registrationSnap.data();
       const players = Number(payment.playersCovered || 0);
@@ -526,29 +740,22 @@ async function confirmPayment(paymentId, options = {}) {
       let playerNames = Array.isArray(payment.playerNames)
         ? payment.playerNames.map(name => String(name || "").trim()).filter(Boolean)
         : [];
-
-      // Legacy one-player payments did not yet store playerNames.
       if (playerNames.length === 0 && players === 1 && payment.customerName) {
         playerNames = [String(payment.customerName).trim()];
       }
-
       if (playerNames.length !== players) {
         throw new Error(
           "Player names are incomplete. This payment covers " + players +
-          " player(s), but " + playerNames.length +
-          " valid player name(s) are saved. Do not auto-queue until the names are complete."
+          " player(s), but " + playerNames.length + " valid player name(s) are saved."
         );
       }
 
       const alreadyPaid = Number(registration.paidPlayers || 0);
       const newPaidTotal = alreadyPaid + players;
       const last6 = String(payment.reference || "").slice(-6);
-
       const seatLockIds = Array.isArray(registration.seatLockIds) ? registration.seatLockIds : [];
       const seatLockRefs = seatLockIds.slice(0, players).map(id => doc(db, "openPlaySeatLocks", id));
 
-      // New protected registrations must have one lock per paid player.
-      // Older pre-lock registrations are still verifiable for migration compatibility.
       if (seatLockIds.length > 0 && seatLockIds.length < players) {
         throw new Error("Open Play capacity locks do not cover all paid players.");
       }
@@ -564,84 +771,9 @@ async function confirmPayment(paymentId, options = {}) {
         });
       }
 
-      // Read the existing working queue state inside the same transaction.
-      // This lets payment verification and queue insertion succeed or fail together.
-      const queueSnap = await tx.get(queueStateRef);
-      const queueState = queueSnap.exists()
-        ? queueSnap.data()
-        : {
-            players: [],
-            queues: { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] },
-            courts: [],
-            totalMatchesPlayed: 0,
-            dailyRentals: [],
-            dailyOpenPlayLogs: []
-          };
-
-      const queuePlayers = Array.isArray(queueState.players) ? [...queueState.players] : [];
-      const queues = queueState.queues && typeof queueState.queues === "object"
-        ? JSON.parse(JSON.stringify(queueState.queues))
-        : { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] };
-
-      const targetCourt = String(payment.courtId || registration.courtId || "");
-      if (!targetCourt || !["1","2","3","4","5","6"].includes(targetCourt)) {
-        throw new Error("This payment does not have a valid assigned court.");
-      }
-      if (!Array.isArray(queues[targetCourt])) queues[targetCourt] = [];
-
-      const sessionEnd = new Date(
-        String(payment.date || registration.date) + "T" +
-        String(payment.endTime || registration.endTime) + ":00"
-      );
-      const expireTimestamp = sessionEnd.getTime();
-      const sessionAlreadyEnded =
-        Number.isFinite(expireTimestamp) && Date.now() > expireTimestamp;
-
-      if (!sessionAlreadyEnded) {
-        const now = new Date();
-        const timeIn = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        const timeOut = Number.isFinite(expireTimestamp)
-          ? sessionEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : formatTime12(payment.endTime || registration.endTime);
-
-        playerNames.forEach((name, index) => {
-          const stableId =
-            "ONL-" +
-            String(paymentId).replace(/[^A-Za-z0-9_-]/g, "") +
-            "-" + (index + 1);
-
-          const alreadyExists = queuePlayers.some(p => p.id === stableId);
-          if (alreadyExists) return;
-
-          queuePlayers.push({
-            id: stableId,
-            name,
-            category: "Unrated",
-            queueCourt: targetCourt,
-            gamesPlayed: 0,
-            timeIn,
-            timeOut,
-            expireTimestamp: Number.isFinite(expireTimestamp) ? expireTimestamp : null,
-            isExpired: false,
-            paid: true,
-            source: "online",
-            onlineVerified: true,
-            checkedIn: false,
-            paymentId,
-            paymentReference: payment.reference || "",
-            paymentAmount: Number(payment.amountPaid || 0),
-            registrationId: payment.registrationId || "",
-            payerName: payment.customerName || ""
-          });
-
-          if (!queues[targetCourt].includes(stableId)) {
-            queues[targetCourt].push(stableId);
-          }
-        });
-      }
-
       tx.update(paymentRef, {
         status: "verified",
+        checkedIn: false,
         verifiedAt: serverTimestamp(),
         verifiedBy: auth.currentUser.uid,
         verifiedByEmail: auth.currentUser.email || ""
@@ -650,6 +782,7 @@ async function confirmPayment(paymentId, options = {}) {
       tx.update(registrationRef, {
         paymentStatus: "verified",
         status: "confirmed",
+        checkedIn: false,
         paidPlayers: newPaidTotal,
         playerNames,
         verifiedReferenceLast6: last6,
@@ -662,27 +795,39 @@ async function confirmPayment(paymentId, options = {}) {
         verifiedAt: serverTimestamp(),
         verifiedBy: auth.currentUser.uid
       }));
-
-      tx.set(queueStateRef, {
-        ...queueState,
-        players: queuePlayers,
-        queues
-      });
     });
 
     if (!options.silent) {
-      showMessage("success", "Payment confirmed. The customer's page should update to VERIFIED in real time.");
+      showMessage("success", "Payment verified. Player remains in the waiting list until venue check-in.");
     }
     return true;
   } catch (err) {
-    if (!options.silent) {
-      showMessage("error", err.message || "Could not confirm payment.");
-    }
+    if (!options.silent) showMessage("error", err.message || "Could not confirm payment.");
     throw err;
   }
 }
 
 searchBtn.addEventListener("click", findPayments);
+
+verifiedWaitingList.addEventListener("click", async event => {
+  const btn = event.target.closest(".check-in-verified");
+  if (!btn || btn.disabled) return;
+
+  const ok = confirm("Check these verified player(s) in now and add them to the live queue?");
+  if (!ok) return;
+
+  btn.disabled = true;
+  btn.textContent = "CHECKING IN…";
+
+  try {
+    await checkInVerifiedPayment(btn.dataset.paymentId);
+    showMessage("success", "Checked in. Player name(s) have now been transferred to the live queue.");
+  } catch (err) {
+    showMessage("error", err?.message || "Could not check in these players.");
+    btn.disabled = false;
+    btn.textContent = "CHECK IN AT VENUE";
+  }
+});
 
 results.addEventListener("click", event => {
   const btn = event.target.closest(".confirm-payment");
