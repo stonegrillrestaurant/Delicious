@@ -361,7 +361,27 @@ service cloud.firestore {
     // can change live queue/history state.
     match /pickleball/currentState {
       allow read: if isAdmin();
-      allow write: if hasLivePanelControl();
+
+      // Normal Live Panel operations remain single-controller.
+      // Venue check-in is the one exception: any authorized admin may append
+      // verified arrivals to players/queues from the Payment Verification page.
+      allow create: if hasLivePanelControl()
+        || (
+          isAdmin()
+          && request.resource.data.keys().hasOnly([
+            "players", "queues", "courts",
+            "totalMatchesPlayed", "dailyRentals", "dailyOpenPlayLogs"
+          ])
+        );
+
+      allow update: if hasLivePanelControl()
+        || (
+          isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["players", "queues"])
+        );
+
+      allow delete: if hasLivePanelControl();
     }
 
     match /pickleball/historyVault {
