@@ -253,6 +253,10 @@
     let unsubscribeState = null;
     let unsubscribeHistory = null;
     let unsubscribePendingPayments = null;
+    let unsubscribeTodaySchedule = null;
+    let unsubscribeTodayRentals = null;
+    let todayPublicSchedule = [];
+    let todayRentalBookings = [];
     let unsubscribeAdminLock = null;
     let livePanelLockTimer = null;
     let hasLivePanelControl = false;
@@ -522,16 +526,94 @@
       }
     }
 
+    function localDateKey(date = new Date()) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function minutesFromClock(value) {
+      const [h, m] = String(value || "00:00").split(":").map(Number);
+      return (h * 60) + (m || 0);
+    }
+
+    function currentMinuteOfDay() {
+      const now = new Date();
+      return now.getHours() * 60 + now.getMinutes();
+    }
+
+    function activeBookingForCourt(courtId) {
+      const nowMinute = currentMinuteOfDay();
+      return todayPublicSchedule
+        .filter(item =>
+          Number(item.courtId) === Number(courtId) &&
+          item.status !== "cancelled" &&
+          item.startTime && item.endTime &&
+          minutesFromClock(item.startTime) <= nowMinute &&
+          minutesFromClock(item.endTime) > nowMinute
+        )
+        .sort((a, b) => minutesFromClock(a.startTime) - minutesFromClock(b.startTime))[0] || null;
+    }
+
+    function effectiveCourts() {
+      const baseCourts = Array.isArray(state.courts)
+        ? JSON.parse(JSON.stringify(state.courts))
+        : JSON.parse(JSON.stringify(DEFAULT_COURTS));
+
+      return baseCourts.map(court => {
+        const booking = activeBookingForCourt(court.id);
+        if (!booking) return court;
+
+        if (booking.type === "open_play") {
+          return {
+            ...court,
+            mode: "open_play",
+            isConfigured: true,
+            scheduleDate: booking.date || localDateKey(),
+            timeStart: booking.startTime,
+            timeEnd: booking.endTime,
+            openPlayPrice: Number(booking.pricePerPlayer || court.openPlayPrice || 120),
+            maxPlayers: Number(booking.maxPlayers || court.maxPlayers || 12),
+            liveSource: "booking_schedule",
+            sourceScheduleId: booking.id
+          };
+        }
+
+        const bookingId = booking.bookingId || booking.id;
+        const rental = todayRentalBookings.find(item =>
+          item.id === bookingId || item.slotId === bookingId
+        );
+
+        return {
+          ...court,
+          mode: "rental",
+          isConfigured: true,
+          scheduleDate: booking.date || localDateKey(),
+          timeStart: booking.startTime,
+          timeEnd: booking.endTime,
+          renterName: rental?.customerName || "Online Customer",
+          bookingStatus: booking.status || rental?.status || "reserved",
+          liveSource: "booking_page",
+          sourceScheduleId: booking.id
+        };
+      });
+    }
+
     function stopRealtimeListeners() {
       if (unsubscribeState) { unsubscribeState(); unsubscribeState = null; }
       if (unsubscribeHistory) { unsubscribeHistory(); unsubscribeHistory = null; }
       if (unsubscribePendingPayments) { unsubscribePendingPayments(); unsubscribePendingPayments = null; }
+      if (unsubscribeTodaySchedule) { unsubscribeTodaySchedule(); unsubscribeTodaySchedule = null; }
+      if (unsubscribeTodayRentals) { unsubscribeTodayRentals(); unsubscribeTodayRentals = null; }
+      todayPublicSchedule = [];
+      todayRentalBookings = [];
       updatePendingPaymentButton(0);
       isConnected = false;
     }
 
     function startRealtimeListeners() {
-      if (unsubscribeState || unsubscribeHistory || unsubscribePendingPayments) return;
+      if (unsubscribeState || unsubscribeHistory || unsubscribePendingPayments || unsubscribeTodaySchedule || unsubscribeTodayRentals) return;
         unsubscribeState = onSnapshot(stateRef, (docSnap) => {
         document.getElementById('admin-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> DB LIVE`;
         
@@ -603,6 +685,44 @@
         (err) => {
           console.error("Pending payment count listener failed:", err);
           updatePendingPaymentButton(0);
+        }
+      );
+
+      // Booking page -> Live Panel bridge.
+      // currentState remains the staff/queue document; publicSchedule remains
+      // the booking authority. The panel derives the live court mode from it.
+      const today = localDateKey();
+      const todayScheduleQuery = query(
+        collection(db, "publicSchedule"),
+        where("date", "==", today)
+      );
+      unsubscribeTodaySchedule = onSnapshot(
+        todayScheduleQuery,
+        (snapshot) => {
+          todayPublicSchedule = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          render();
+        },
+        (err) => {
+          console.error("Today's booking schedule listener failed:", err);
+          todayPublicSchedule = [];
+          render();
+        }
+      );
+
+      const todayRentalsQuery = query(
+        collection(db, "privateRentalBookings"),
+        where("date", "==", today)
+      );
+      unsubscribeTodayRentals = onSnapshot(
+        todayRentalsQuery,
+        (snapshot) => {
+          todayRentalBookings = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          render();
+        },
+        (err) => {
+          console.error("Today's rental booking listener failed:", err);
+          todayRentalBookings = [];
+          render();
         }
       );
   
@@ -766,7 +886,7 @@
          return;
       }
 
-      const court = state.courts.find(c => c.id.toString() === targetCourt);
+      const court = effectiveCourts().find(c => c.id.toString() === targetCourt);
       if(!court || !court.timeEnd) {
           window.showToast("This court's end time is not set. Configure court first.", "warn");
           return;
@@ -809,7 +929,7 @@
       const player = state.players.find(p => p.id === playerId);
       if(!player) return;
       
-      const openCourts = state.courts.filter(c => c.mode === 'open_play' && c.isConfigured);
+      const openCourts = effectiveCourts().filter(c => c.mode === 'open_play' && c.isConfigured);
       const optionsHTML = openCourts.length > 0 
           ? openCourts.map(c => `<option value="${c.id}">${c.name} (${formatTime(c.timeStart)} - ${formatTime(c.timeEnd)})</option>`).join('')
           : `<option value="" disabled selected>No Open Courts Configured</option>`;
@@ -833,7 +953,7 @@
       if (!newCourtId) return;
       
       const player = state.players.find(p => p.id === playerId);
-      const newCourt = state.courts.find(c => c.id.toString() === newCourtId);
+      const newCourt = effectiveCourts().find(c => c.id.toString() === newCourtId);
       
       if(!player || !newCourt) return;
       
@@ -933,6 +1053,7 @@
 
     setInterval(() => {
       if(!isConnected) return;
+      render();
       const now = Date.now();
       let changed = false;
       state.players.forEach(p => {
@@ -1538,7 +1659,7 @@
 
     function render() {
       let activeCount = 0;
-      const safeCourts = Array.isArray(state.courts) ? state.courts : JSON.parse(JSON.stringify(DEFAULT_COURTS));
+      const safeCourts = effectiveCourts();
       
       const courtSelect = document.getElementById('player-court');
       if (courtSelect) {
@@ -1583,17 +1704,25 @@
               <div class="p-4 bg-amber-500/10 relative border-b border-slate-700 flex flex-col min-h-[170px]">
                 <div class="flex justify-between items-center mb-1">
                   <span class="font-black text-white text-base">${court.name}</span>
-                  <span class="bg-amber-500/20 text-amber-300 font-bold text-[10px] px-2 py-0.5 rounded uppercase">Rental</span>
+                  <span class="bg-amber-500/20 text-amber-300 font-bold text-[10px] px-2 py-0.5 rounded uppercase">
+                    ${court.liveSource === "booking_page" ? "Online Rental" : "Rental"}
+                  </span>
                 </div>
                 <div class="text-[10px] text-amber-400/80 font-bold mb-3 bg-amber-500/10 inline-block px-1.5 py-0.5 rounded self-start border border-amber-500/20">${timeRangeStr}</div>
                 <div class="text-center flex-1 flex flex-col justify-center">
                   <p class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-1">Rented By</p>
                   <p class="text-lg font-black text-white truncate px-2">${court.renterName || 'Unknown'}</p>
                 </div>
-                <div class="grid grid-cols-2 gap-2 mt-2">
-                  <button onclick="endSession(${court.id})" class="w-full bg-amber-600/80 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">End & Log</button>
-                  <button onclick="openCourtConfig(${court.id})" class="w-full bg-slate-900/50 hover:bg-slate-900 border border-amber-500/30 text-amber-400 font-bold py-2 rounded-lg text-[10px] transition">Adjust Time</button>
-                </div>
+                ${court.liveSource === "booking_page" ? `
+                  <div class="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-[10px] font-bold text-amber-300">
+                    Booking Page · ${String(court.bookingStatus || "reserved").replaceAll("_", " ").toUpperCase()}
+                  </div>
+                ` : `
+                  <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button onclick="endSession(${court.id})" class="w-full bg-amber-600/80 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">End & Log</button>
+                    <button onclick="openCourtConfig(${court.id})" class="w-full bg-slate-900/50 hover:bg-slate-900 border border-amber-500/30 text-amber-400 font-bold py-2 rounded-lg text-[10px] transition">Adjust Time</button>
+                  </div>
+                `}
               </div>
             `;
           } else {
