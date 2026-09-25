@@ -1574,6 +1574,67 @@ schedule.addEventListener("click", async (event) => {
   selectedOpenPlay = currentItems.find(x => x.id === button.dataset.sessionId);
   if (!selectedOpenPlay) return;
 
+  // Preflight before showing the confirmation modal. If Firebase already has
+  // this user's registration, send them to the existing booking/payment state
+  // instead of asking them to confirm something that will be rejected.
+  try {
+    const user = await ensureSignedIn();
+    const registrationId = `${selectedOpenPlay.id}_${user.uid}`;
+    const registrationSnap = await getDoc(doc(db, "openPlayRegistrations", registrationId));
+
+    if (registrationSnap.exists()) {
+      const existing = { id: registrationId, ...registrationSnap.data() };
+
+      if (
+        existing.status === "confirmed" ||
+        existing.status === "verified" ||
+        existing.paymentStatus === "verified"
+      ) {
+        selectedOpenPlay = null;
+        showStatus(
+          "info",
+          "Already joined",
+          "You are already VERIFIED for this Open Play session."
+        );
+        renderCustomerPasses();
+        return;
+      }
+
+      if (
+        existing.status === "pending_verification" ||
+        existing.paymentStatus === "submitted"
+      ) {
+        selectedOpenPlay = null;
+        showStatus(
+          "info",
+          "Payment already submitted",
+          "Your Open Play registration is already PENDING verification. Do not pay again."
+        );
+        renderCustomerPasses();
+        return;
+      }
+
+      if (existing.status === "pending_payment" && !isExpiredHold(existing)) {
+        selectedOpenPlay = null;
+        openPaymentModal(existing);
+        showStatus(
+          "info",
+          "Continue your existing booking",
+          "Your Open Play spot is already being held. Complete the payment instead of joining again."
+        );
+        return;
+      }
+    }
+  } catch (err) {
+    showStatus(
+      "error",
+      "Could not check your booking",
+      err?.message || "Please try again."
+    );
+    selectedOpenPlay = null;
+    return;
+  }
+
   joinDetails.innerHTML = `
     <div><strong>Date:</strong> ${selectedOpenPlay.date}</div>
     <div><strong>Court:</strong> ${selectedOpenPlay.courtId}</div>
