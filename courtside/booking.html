@@ -199,7 +199,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { firebaseConfig } from "./courtside-config.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
-  getFirestore, collection, query, where, onSnapshot,
+  getFirestore, collection, query, where, onSnapshot, getDocs,
   doc, setDoc, getDoc, runTransaction, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -350,11 +350,8 @@ async function ensureSignedIn() {
   try {
     const result = await signInWithPopup(auth, provider);
     clearAuthTimer();
-    showAuthDebug([
-      "Google sign-in completed successfully.",
-      `UID: ${result.user.uid}`,
-      `Email: ${result.user.email || "not returned"}`
-    ]);
+    authDebug.classList.add("hidden");
+    authDebugText.textContent = "";
     return result.user;
   } catch (err) {
     clearAuthTimer();
@@ -1581,11 +1578,19 @@ schedule.addEventListener("click", async (event) => {
   // instead of asking them to confirm something that will be rejected.
   try {
     const user = await ensureSignedIn();
-    const registrationId = `${selectedOpenPlay.id}_${user.uid}`;
-    const registrationSnap = await getDoc(doc(db, "openPlayRegistrations", registrationId));
 
-    if (registrationSnap.exists()) {
-      const existing = { id: registrationId, ...registrationSnap.data() };
+    // Query only this signed-in user's records. This is compatible with the
+    // owner-scoped Firestore read rule even when no registration exists yet.
+    const existingQ = query(
+      collection(db, "openPlayRegistrations"),
+      where("customerUid", "==", user.uid),
+      where("sessionId", "==", selectedOpenPlay.id)
+    );
+    const existingSnap = await getDocs(existingQ);
+    const existingDoc = existingSnap.docs[0];
+
+    if (existingDoc) {
+      const existing = { id: existingDoc.id, ...existingDoc.data() };
 
       if (
         existing.status === "confirmed" ||
