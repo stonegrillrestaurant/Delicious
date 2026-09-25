@@ -107,7 +107,7 @@
         <button id="cancelRentalBtn" type="button" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
         <button id="continueRentalBtn" type="button" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Continue to Payment</button>
       </div>
-      <p class="mt-4 text-xs text-slate-500">Choose a start time, then an end time. When you continue, the selected hours are locked for 20 minutes while you complete payment.</p>
+      <p class="mt-4 text-xs text-slate-500">Review your selected hours. The court is not reserved until you tap Continue to Payment. Then the selected hours are locked for 20 minutes while you complete payment.</p>
     </div>
   </div>
 
@@ -940,54 +940,44 @@ function render(items) {
           rentalSelectionStart &&
           Number(rentalSelectionStart.courtId) === Number(courtId);
 
-        const startMinutes = selectingThisCourt
-          ? toMinutes(rentalSelectionStart.startTime)
-          : null;
-
         const isStartCell =
           selectingThisCourt &&
           row.start === rentalSelectionStart.startTime;
 
-        const canBeEnd =
-          selectingThisCourt &&
-          rowEnd > startMinutes &&
-          rangeIsAvailable(
-            courtId,
-            rentalSelectionStart.startTime,
-            row.end,
-            items
-          );
+        const hasSelectedRange =
+          selectedRentalSlot &&
+          Number(selectedRentalSlot.courtId) === Number(courtId);
 
-        const inPreviewRange =
-          selectingThisCourt &&
-          rowStart >= startMinutes &&
-          canBeEnd;
+        const inSelectedRange =
+          hasSelectedRange &&
+          rowStart >= toMinutes(selectedRentalSlot.startTime) &&
+          rowEnd <= toMinutes(selectedRentalSlot.endTime);
+
+        if (inSelectedRange) {
+          const firstSelected = row.start === selectedRentalSlot.startTime;
+          return `
+            <div class="slot-cell p-2 bg-emerald-950/20">
+              <button
+                class="rent-hour h-full min-h-[48px] w-full rounded-lg border-2 border-emerald-400 bg-emerald-900/45 px-2 py-2 text-center"
+                data-court-id="${courtId}"
+                data-start="${row.start}"
+                data-end="${row.end}"
+                data-rate="${rate}">
+                <div class="text-xs font-black text-emerald-100">${firstSelected ? "SELECTED" : "✓"}</div>
+              </button>
+            </div>`;
+        }
 
         if (isStartCell) {
           return `
             <div class="slot-cell p-2 bg-slate-900/50">
               <button
-                class="rent-hour h-full min-h-[48px] w-full rounded-lg border-2 border-sky-400 bg-sky-900/40 px-2 py-2 text-left"
+                class="rent-hour h-full min-h-[48px] w-full rounded-lg border-2 border-sky-400 bg-sky-900/40 px-2 py-2 text-center"
                 data-court-id="${courtId}"
                 data-start="${row.start}"
                 data-end="${row.end}"
                 data-rate="${rate}">
-                <div class="text-xs font-black text-sky-200">START SELECTED</div>
-                <div class="mt-1 text-[11px] text-slate-200">Choose an end below</div>
-              </button>
-            </div>`;
-        }
-
-        if (canBeEnd && rowStart >= startMinutes) {
-          return `
-            <div class="slot-cell p-2 ${inPreviewRange ? 'bg-sky-950/20' : 'bg-slate-900/50'}">
-              <button
-                class="rent-hour h-full min-h-[48px] w-full rounded-lg border border-sky-700 bg-sky-950/25 px-2 py-2 text-left hover:bg-sky-900/40"
-                data-court-id="${courtId}"
-                data-start="${row.start}"
-                data-end="${row.end}"
-                data-rate="${rate}">
-                <div class="text-xs font-bold text-sky-300">Choose End</div>
+                <div class="text-xs font-black text-sky-200">START</div>
               </button>
             </div>`;
         }
@@ -1088,14 +1078,40 @@ function render(items) {
       </div>`;
   }).join("");
 
+  const rentalSelectionBar = selectedRentalSlot ? `
+    <div class="mb-3 rounded-2xl border border-emerald-700 bg-emerald-950/35 p-4">
+      <div class="text-sm font-black text-emerald-200">
+        Court ${selectedRentalSlot.courtId} ·
+        ${formatTime12(selectedRentalSlot.startTime)}–${formatTime12(selectedRentalSlot.endTime)}
+      </div>
+      <div class="mt-1 text-xs text-slate-300">
+        ${selectedRentalSlot.hours} hour${selectedRentalSlot.hours === 1 ? "" : "s"} · ₱${selectedRentalSlot.amountDue}
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button type="button" class="cancel-rental-selection flex-1 rounded-xl border border-slate-600 px-3 py-2 text-xs font-bold">
+          Cancel Selection
+        </button>
+        <button type="button" class="review-rental-selection flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black">
+          Continue Rental
+        </button>
+      </div>
+    </div>
+  ` : rentalSelectionStart ? `
+    <div class="mb-3 rounded-2xl border border-sky-800 bg-sky-950/25 p-3 text-sm text-sky-100">
+      Start selected: Court ${rentalSelectionStart.courtId} · ${formatTime12(rentalSelectionStart.startTime)}.
+      Tap another available time on the same court to select the full range. Tap the start again to cancel.
+    </div>
+  ` : "";
+
   schedule.innerHTML = `
     <div class="mb-3 flex items-center justify-between">
       <div>
         <h2 class="text-lg font-bold">Court Schedule</h2>
-        <p class="text-sm text-slate-400">Courts are columns · time is shown by row</p>
+        <p class="text-sm text-slate-400">Tap once for start · tap a second time for the end</p>
       </div>
       <div class="text-xs text-slate-500">Scroll sideways on mobile →</div>
     </div>
+    ${rentalSelectionBar}
     <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900">
       ${header}
       ${body}
@@ -1121,12 +1137,67 @@ schedule.addEventListener("click", (event) => {
     return;
   }
 
+  const cancelRentalSelectionBtn = event.target.closest(".cancel-rental-selection");
+  if (cancelRentalSelectionBtn) {
+    clearRentalSelection();
+    showStatus("info", "Rental selection cleared", "No court time has been reserved.");
+    return;
+  }
+
+  const reviewRentalSelectionBtn = event.target.closest(".review-rental-selection");
+  if (reviewRentalSelectionBtn) {
+    if (!selectedRentalSlot) return;
+    const hours = selectedRentalSlot.hours;
+    const rate = selectedRentalSlot.hourlyRate;
+    rentalDetails.innerHTML = `
+      <div><strong>Date:</strong> ${selectedRentalSlot.date}</div>
+      <div><strong>Court:</strong> ${selectedRentalSlot.courtId}</div>
+      <div><strong>Time:</strong> ${formatTime12(selectedRentalSlot.startTime)}–${formatTime12(selectedRentalSlot.endTime)}</div>
+      <div><strong>Duration:</strong> ${hours} hour${hours === 1 ? "" : "s"}</div>
+      <div><strong>Rate:</strong> ₱${rate}/hour</div>
+      <div class="pt-2 text-xl font-black text-emerald-300">Total: ₱${selectedRentalSlot.amountDue}</div>
+    `;
+    rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+    rentalStatus.textContent = "";
+    rentalModal.classList.remove("hidden");
+    rentalModal.classList.add("flex");
+    return;
+  }
+
   const rentalButton = event.target.closest(".rent-hour");
   if (rentalButton) {
     const courtId = Number(rentalButton.dataset.courtId);
     const rate = Number(rentalButton.dataset.rate || (courtId >= 5 ? 350 : 250));
     const clickedStart = rentalButton.dataset.start;
     const clickedEnd = rentalButton.dataset.end;
+
+    if (selectedRentalSlot) {
+      const clickedMinute = toMinutes(clickedStart);
+      const insideSelectedRange =
+        Number(selectedRentalSlot.courtId) === courtId &&
+        clickedMinute >= toMinutes(selectedRentalSlot.startTime) &&
+        clickedMinute < toMinutes(selectedRentalSlot.endTime);
+
+      if (insideSelectedRange) {
+        clearRentalSelection();
+        showStatus("info", "Rental selection cleared", "No court time has been reserved.");
+        return;
+      }
+
+      rentalSelectionStart = {
+        courtId,
+        startTime: clickedStart,
+        hourlyRate: rate
+      };
+      selectedRentalSlot = null;
+      render(currentItems);
+      showStatus(
+        "info",
+        "Rental start selected",
+        "Only this start time is selected. Tap another available time on Court " + courtId + " to choose the end."
+      );
+      return;
+    }
 
     if (
       !rentalSelectionStart ||
@@ -1142,57 +1213,58 @@ schedule.addEventListener("click", (event) => {
       showStatus(
         "info",
         "Rental start selected",
-        "Court " + courtId + " · " + formatTime12(clickedStart) +
-        ". Now click the available hour where you want the rental to END."
+        "Only " + formatTime12(clickedStart) + " is selected. Tap another available time on Court " + courtId + " to choose the end."
       );
       return;
     }
 
     if (clickedStart === rentalSelectionStart.startTime) {
       clearRentalSelection();
-      showStatus("info", "Rental selection cleared", "Choose another available start time.");
+      showStatus("info", "Rental selection cleared", "No court time has been reserved.");
       return;
     }
 
-    const rangeEnd = clickedEnd;
-    if (
-      toMinutes(rangeEnd) <= toMinutes(rentalSelectionStart.startTime) ||
-      !rangeIsAvailable(courtId, rentalSelectionStart.startTime, rangeEnd, currentItems)
-    ) {
+    const firstStart = rentalSelectionStart.startTime;
+    const selectionStart = toMinutes(clickedStart) < toMinutes(firstStart) ? clickedStart : firstStart;
+    const selectionEnd = toMinutes(clickedStart) < toMinutes(firstStart)
+      ? String(Number(clickedStart.split(":")[0]) + 1).padStart(2, "0") + ":" + clickedStart.split(":")[1]
+      : clickedEnd;
+
+    if (!rangeIsAvailable(courtId, selectionStart, selectionEnd, currentItems)) {
       showStatus(
         "error",
         "That range is not available",
-        "Open Play or another booking blocks part of the selected time. Choose an earlier available end time."
+        "Open Play or another booking is inside those hours. Your first tap is still selected."
       );
       return;
     }
 
-    const hours = (toMinutes(rangeEnd) - toMinutes(rentalSelectionStart.startTime)) / 60;
+    const hours = (toMinutes(selectionEnd) - toMinutes(selectionStart)) / 60;
     const total = rate * hours;
 
+    rentalSelectionStart = {
+      courtId,
+      startTime: selectionStart,
+      hourlyRate: rate
+    };
     selectedRentalSlot = {
       bookingType: "private_rental",
       date: dateInput.value,
       courtId,
-      startTime: rentalSelectionStart.startTime,
-      endTime: rangeEnd,
+      startTime: selectionStart,
+      endTime: selectionEnd,
       hourlyRate: rate,
       hours,
       amountDue: total
     };
 
-    rentalDetails.innerHTML = `
-      <div><strong>Date:</strong> ${selectedRentalSlot.date}</div>
-      <div><strong>Court:</strong> ${selectedRentalSlot.courtId}</div>
-      <div><strong>Time:</strong> ${formatTime12(selectedRentalSlot.startTime)}–${formatTime12(selectedRentalSlot.endTime)}</div>
-      <div><strong>Duration:</strong> ${hours} hour${hours === 1 ? "" : "s"}</div>
-      <div><strong>Rate:</strong> ₱${rate}/hour</div>
-      <div class="pt-2 text-xl font-black text-emerald-300">Total: ₱${total}</div>
-    `;
-    rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
-    rentalStatus.textContent = "";
-    rentalModal.classList.remove("hidden");
-    rentalModal.classList.add("flex");
+    render(currentItems);
+    showStatus(
+      "info",
+      "Rental time selected",
+      "Court " + courtId + " · " + formatTime12(selectionStart) + "–" + formatTime12(selectionEnd) +
+      ". Nothing is reserved yet. Tap Continue Rental when ready, or tap the selected range again to cancel."
+    );
     return;
   }
 
@@ -1219,9 +1291,10 @@ schedule.addEventListener("click", (event) => {
 $("cancelRentalBtn").addEventListener("click", () => {
   rentalModal.classList.add("hidden");
   rentalModal.classList.remove("flex");
-  selectedRentalSlot = null;
-  rentalSelectionStart = null;
+  rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+  rentalStatus.textContent = "";
   render(currentItems);
+  showStatus("info", "Rental not submitted", "Your time selection is still highlighted. No court has been reserved yet.");
 });
 
 $("continueRentalBtn").addEventListener("click", async () => {
