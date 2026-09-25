@@ -107,7 +107,7 @@
         <button id="cancelRentalBtn" type="button" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
         <button id="continueRentalBtn" type="button" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Continue to Payment</button>
       </div>
-      <p class="mt-4 text-xs text-slate-500">Choose a start time, then an end time. Only consecutive available hours can be rented. Open Play and existing private bookings cannot be selected.</p>
+      <p class="mt-4 text-xs text-slate-500">Choose a start time, then an end time. When you continue, the selected hours are locked for 20 minutes while you complete payment.</p>
     </div>
   </div>
 
@@ -185,7 +185,7 @@ import { firebaseConfig } from "./courtside-config.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
   getFirestore, collection, query, where, onSnapshot,
-  doc, setDoc, serverTimestamp
+  doc, setDoc, getDoc, runTransaction, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
@@ -540,6 +540,350 @@ function rangeIsAvailable(courtId, startTime, endTime, items = currentItems) {
     const itemStart = toMinutes(item.startTime);
     const itemEnd = toMinutes(item.endTime);
     return itemStart < end && itemEnd > start;
+  });
+}
+
+const BOOKING_HOLD_MS = 20 * 60 * 1000;
+
+function bookingHoldUntil() {
+  return Timestamp.fromMillis(Date.now() + BOOKING_HOLD_MS);
+}
+
+function isExpiredHold(data) {
+  if (!data || data.status !== "pending_payment") return false;
+  const ms = data.holdUntil?.toMillis ? data.holdUntil.toMillis() : 0;
+  return ms > 0 && ms <= Date.now();
+}
+
+function rentalLockIds(slot) {
+  const ids = [];
+  const start = toMinutes(slot.startTime);
+  const end = toMinutes(slot.endTime);
+  for (let minute = start; minute < end; minute += 60) {
+    const h = Math.floor(minute / 60);
+    const m = minute % 60;
+    const hhmm = String(h).padStart(2, "0") + String(m).padStart(2, "0");
+    ids.push(`${slot.date}_C${slot.courtId}_${hhmm}`);
+  }
+  return ids;
+}
+
+function rentalConflictError() {
+  const err = new Error("This court time was just reserved by another customer. Please choose another available time.");
+  err.code = "booking-conflict";
+  return err;
+}
+
+function capacityConflictError(remaining = 0) {
+  const err = new Error(
+    remaining > 0
+      ? `Only ${remaining} Open Play spot${remaining === 1 ? "" : "s"} remain. Reduce the number of players and try again.`
+      : "This Open Play session has just reached capacity."
+  );
+  err.code = "capacity-conflict";
+  return err;
+}
+
+async function reservePrivateRentalAtomically(slot, user) {
+  const bookingId = [
+    slot.date,
+    "C" + slot.courtId,
+    slot.startTime.replace(":", ""),
+    slot.endTime.replace(":", "")
+  ].join("_");
+
+  const bookingRef = doc(db, "privateRentalBookings", bookingId);
+  const scheduleRef = doc(db, "publicSchedule", bookingId);
+  const lockIds = rentalLockIds(slot);
+  const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
+  const holdUntil = bookingHoldUntil();
+
+  await runTransaction(db, async tx => {
+    const [bookingSnap, ...lockSnaps] = await Promise.all([
+      tx.get(bookingRef),
+      ...lockRefs.map(ref => tx.get(ref))
+    ]);
+
+    if (bookingSnap.exists()) {
+      const existing = bookingSnap.data();
+      const sameOwner = existing.customerUid === user.uid;
+      if (!sameOwner && !isExpiredHold(existing)) throw rentalConflictError();
+    }
+
+    for (const lockSnap of lockSnaps) {
+      if (!lockSnap.exists()) continue;
+      const data = lockSnap.data();
+      const sameBooking = data.bookingId === bookingId && data.customerUid === user.uid;
+      if (!sameBooking && !isExpiredHold(data)) throw rentalConflictError();
+    }
+
+    const bookingData = {
+      bookingType: "private_rental",
+      slotId: bookingId,
+      customerUid: user.uid,
+      customerName: user.displayName || "",
+      customerEmail: user.email || "",
+      date: slot.date,
+      courtId: slot.courtId,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      hourlyRate: slot.hourlyRate,
+      hours: slot.hours,
+      amountDue: slot.amountDue,
+      status: "pending_payment",
+      paymentStatus: "pending",
+      lockIds,
+      holdUntil,
+      createdAt: serverTimestamp()
+    };
+
+    tx.set(bookingRef, bookingData);
+
+    lockRefs.forEach((ref, index) => {
+      tx.set(ref, {
+        lockId: lockIds[index],
+        bookingId,
+        customerUid: user.uid,
+        date: slot.date,
+        courtId: slot.courtId,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        status: "pending_payment",
+        holdUntil,
+        updatedAt: serverTimestamp()
+      });
+    });
+
+    tx.set(scheduleRef, {
+      type: "private",
+      bookingType: "private_rental",
+      bookingId,
+      courtId: slot.courtId,
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      hourlyRate: slot.hourlyRate,
+      status: "pending_payment",
+      holdUntil
+    });
+  });
+
+  return { bookingId, lockIds, holdUntil };
+}
+
+async function reserveOpenPlaySeatsAtomically(session, user, requestedPlayers = 1) {
+  const count = Math.max(1, Math.floor(Number(requestedPlayers || 1)));
+  const sessionRef = doc(db, "openPlaySessions", session.id);
+  const registrationId = `${session.id}_${user.uid}`;
+  const registrationRef = doc(db, "openPlayRegistrations", registrationId);
+  const maxPlayers = Math.max(1, Math.floor(Number(session.maxPlayers || 12)));
+  const seatRefs = Array.from({ length: maxPlayers }, (_, i) =>
+    doc(db, "openPlaySeatLocks", `${session.id}__S${i + 1}`)
+  );
+  const holdUntil = bookingHoldUntil();
+
+  const result = await runTransaction(db, async tx => {
+    const sessionSnap = await tx.get(sessionRef);
+    if (!sessionSnap.exists()) {
+      const err = new Error("This Open Play session is no longer available.");
+      err.code = "session-unavailable";
+      throw err;
+    }
+
+    const liveSession = { id: session.id, ...sessionSnap.data() };
+    const liveMax = Math.max(1, Math.floor(Number(liveSession.maxPlayers || maxPlayers)));
+    const liveSeatRefs = seatRefs.slice(0, liveMax);
+    const [registrationSnap, ...seatSnaps] = await Promise.all([
+      tx.get(registrationRef),
+      ...liveSeatRefs.map(ref => tx.get(ref))
+    ]);
+
+    const owned = [];
+    const available = [];
+
+    seatSnaps.forEach((snap, index) => {
+      if (!snap.exists()) {
+        available.push(index);
+        return;
+      }
+      const data = snap.data();
+      if (data.registrationId === registrationId && data.customerUid === user.uid) {
+        owned.push(index);
+        return;
+      }
+      if (isExpiredHold(data)) available.push(index);
+    });
+
+    const needed = Math.max(0, count - owned.length);
+    if (needed > available.length) {
+      throw capacityConflictError(owned.length + available.length);
+    }
+
+    const selectedIndexes = [...owned, ...available.slice(0, needed)].slice(0, count);
+    const selectedLockIds = selectedIndexes.map(i => `${session.id}__S${i + 1}`);
+
+    selectedIndexes.forEach(i => {
+      tx.set(liveSeatRefs[i], {
+        sessionId: session.id,
+        registrationId,
+        customerUid: user.uid,
+        seatNumber: i + 1,
+        status: "pending_payment",
+        holdUntil,
+        updatedAt: serverTimestamp()
+      });
+    });
+
+    const registrationData = {
+      sessionId: session.id,
+      customerUid: user.uid,
+      customerName: user.displayName || "",
+      customerEmail: user.email || "",
+      customerPhotoURL: user.photoURL || "",
+      date: liveSession.date,
+      courtId: Number(liveSession.courtId),
+      startTime: liveSession.startTime,
+      endTime: liveSession.endTime,
+      pricePerPlayer: Number(liveSession.pricePerPlayer || 0),
+      paymentStatus: "pending",
+      status: "pending_payment",
+      checkedIn: false,
+      reservedPlayers: count,
+      seatLockIds: selectedLockIds,
+      holdUntil,
+      updatedAt: serverTimestamp()
+    };
+    if (!registrationSnap.exists()) registrationData.createdAt = serverTimestamp();
+
+    tx.set(registrationRef, registrationData, { merge: true });
+
+    return {
+      registrationId,
+      reservedPlayers: count,
+      seatLockIds: selectedLockIds,
+      holdUntil,
+      session: liveSession
+    };
+  });
+
+  return result;
+}
+
+async function refreshReservationBeforePayment(registration, requestedPlayers) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Sign in is required.");
+
+  if (registration.bookingType === "private_rental") {
+    const bookingRef = doc(db, "privateRentalBookings", registration.id);
+    const bookingSnap = await getDoc(bookingRef);
+    if (!bookingSnap.exists() || bookingSnap.data().customerUid !== user.uid) {
+      throw rentalConflictError();
+    }
+
+    const booking = bookingSnap.data();
+    const lockIds = Array.isArray(booking.lockIds) ? booking.lockIds : rentalLockIds(booking);
+    const holdUntil = bookingHoldUntil();
+
+    await runTransaction(db, async tx => {
+      const freshBooking = await tx.get(bookingRef);
+      if (!freshBooking.exists() || freshBooking.data().customerUid !== user.uid) throw rentalConflictError();
+
+      const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
+      const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
+      lockSnaps.forEach(snap => {
+        if (!snap.exists()) throw rentalConflictError();
+        const data = snap.data();
+        if (data.customerUid !== user.uid || data.bookingId !== registration.id) throw rentalConflictError();
+      });
+
+      tx.update(bookingRef, { holdUntil, updatedAt: serverTimestamp() });
+      lockRefs.forEach(ref => tx.update(ref, { holdUntil, updatedAt: serverTimestamp() }));
+      tx.update(doc(db, "publicSchedule", registration.id), { holdUntil });
+    });
+
+    return { lockIds, reservedPlayers: 0 };
+  }
+
+  const session = currentItems.find(item => item.id === registration.sessionId) || registration;
+  return reserveOpenPlaySeatsAtomically(session, user, requestedPlayers);
+}
+
+async function commitPaymentAtomically(paymentId, paymentData, registration, reservationState) {
+  const paymentRef = doc(db, "paymentSubmissions", paymentId);
+  const user = auth.currentUser;
+
+  await runTransaction(db, async tx => {
+    const existingPayment = await tx.get(paymentRef);
+    if (existingPayment.exists()) {
+      const existing = existingPayment.data();
+      if (existing.customerUid === user.uid && existing.sessionId === registration.sessionId) {
+        return;
+      }
+      const err = new Error("That GCash reference number is already attached to another payment.");
+      err.code = "duplicate-payment";
+      throw err;
+    }
+
+    if (registration.bookingType === "private_rental") {
+      const bookingRef = doc(db, "privateRentalBookings", registration.id);
+      const bookingSnap = await tx.get(bookingRef);
+      if (!bookingSnap.exists() || bookingSnap.data().customerUid !== user.uid) throw rentalConflictError();
+
+      const lockIds = Array.isArray(reservationState?.lockIds)
+        ? reservationState.lockIds
+        : (bookingSnap.data().lockIds || []);
+
+      const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
+      const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
+      lockSnaps.forEach(snap => {
+        if (!snap.exists() || snap.data().customerUid !== user.uid || snap.data().bookingId !== registration.id) {
+          throw rentalConflictError();
+        }
+      });
+
+      tx.update(bookingRef, {
+        status: "pending_verification",
+        paymentStatus: "submitted",
+        updatedAt: serverTimestamp()
+      });
+      tx.update(doc(db, "publicSchedule", registration.id), {
+        status: "pending_verification"
+      });
+      lockRefs.forEach(ref => tx.update(ref, {
+        status: "pending_verification",
+        updatedAt: serverTimestamp()
+      }));
+    } else {
+      const registrationRef = doc(db, "openPlayRegistrations", registration.id);
+      const regSnap = await tx.get(registrationRef);
+      if (!regSnap.exists() || regSnap.data().customerUid !== user.uid) {
+        throw capacityConflictError(0);
+      }
+
+      const lockIds = Array.isArray(reservationState?.seatLockIds)
+        ? reservationState.seatLockIds
+        : (regSnap.data().seatLockIds || []);
+      const lockRefs = lockIds.map(id => doc(db, "openPlaySeatLocks", id));
+      const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
+      lockSnaps.forEach(snap => {
+        if (!snap.exists() || snap.data().customerUid !== user.uid || snap.data().registrationId !== registration.id) {
+          throw capacityConflictError(0);
+        }
+      });
+
+      tx.update(registrationRef, {
+        status: "pending_verification",
+        paymentStatus: "submitted",
+        reservedPlayers: Number(paymentData.playersCovered || 1),
+        updatedAt: serverTimestamp()
+      });
+      lockRefs.forEach(ref => tx.update(ref, {
+        status: "pending_verification",
+        updatedAt: serverTimestamp()
+      }));
+    }
+
+    tx.set(paymentRef, paymentData);
   });
 }
 
@@ -900,49 +1244,13 @@ $("continueRentalBtn").addEventListener("click", async () => {
   btn.disabled = true;
   btn.textContent = "Reserving…";
   rentalStatus.className = "mt-4 rounded-xl border border-slate-600 bg-slate-800 p-3 text-sm text-slate-200";
-  rentalStatus.textContent = "Checking and reserving the selected time range…";
+  rentalStatus.textContent = "Checking the live booking locks…";
 
   try {
     const user = await ensureSignedIn();
-    const slotId = [
-      selectedRentalSlot.date,
-      "C" + selectedRentalSlot.courtId,
-      selectedRentalSlot.startTime.replace(":", ""),
-      selectedRentalSlot.endTime.replace(":", "")
-    ].join("_");
-
-    await setDoc(doc(db, "privateRentalBookings", slotId), {
-      bookingType: "private_rental",
-      slotId,
-      customerUid: user.uid,
-      customerName: user.displayName || "",
-      customerEmail: user.email || "",
-      date: selectedRentalSlot.date,
-      courtId: selectedRentalSlot.courtId,
-      startTime: selectedRentalSlot.startTime,
-      endTime: selectedRentalSlot.endTime,
-      hourlyRate: selectedRentalSlot.hourlyRate,
-      hours: selectedRentalSlot.hours,
-      amountDue: selectedRentalSlot.amountDue,
-      status: "pending_payment",
-      paymentStatus: "pending",
-      createdAt: serverTimestamp()
-    });
-
-    // Immediately publish a privacy-safe schedule block.
-    // This prevents the selected range from continuing to appear AVAILABLE
-    // while the customer's payment is waiting for admin verification.
-    await setDoc(doc(db, "publicSchedule", slotId), {
-      type: "private",
-      bookingType: "private_rental",
-      bookingId: slotId,
-      courtId: selectedRentalSlot.courtId,
-      date: selectedRentalSlot.date,
-      startTime: selectedRentalSlot.startTime,
-      endTime: selectedRentalSlot.endTime,
-      hourlyRate: selectedRentalSlot.hourlyRate,
-      status: "pending_payment"
-    });
+    const slot = { ...selectedRentalSlot };
+    const reservation = await reservePrivateRentalAtomically(slot, user);
+    const slotId = reservation.bookingId;
 
     const rentalRegistration = {
       id: slotId,
@@ -952,14 +1260,16 @@ $("continueRentalBtn").addEventListener("click", async () => {
       customerUid: user.uid,
       customerName: user.displayName || "",
       customerEmail: user.email || "",
-      date: selectedRentalSlot.date,
-      courtId: selectedRentalSlot.courtId,
-      startTime: selectedRentalSlot.startTime,
-      endTime: selectedRentalSlot.endTime,
-      pricePerPlayer: selectedRentalSlot.hourlyRate,
-      hourlyRate: selectedRentalSlot.hourlyRate,
-      hours: selectedRentalSlot.hours,
-      amountDue: selectedRentalSlot.amountDue
+      date: slot.date,
+      courtId: slot.courtId,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      pricePerPlayer: slot.hourlyRate,
+      hourlyRate: slot.hourlyRate,
+      hours: slot.hours,
+      amountDue: slot.amountDue,
+      lockIds: reservation.lockIds,
+      holdUntil: reservation.holdUntil
     };
 
     rentalModal.classList.add("hidden");
@@ -967,12 +1277,18 @@ $("continueRentalBtn").addEventListener("click", async () => {
     selectedRentalSlot = null;
     rentalSelectionStart = null;
     render(currentItems);
+    showStatus(
+      "success",
+      "Court held for 20 minutes",
+      "Your selected court/time is protected while you complete payment."
+    );
     openPaymentModal(rentalRegistration);
   } catch (err) {
     rentalStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
-    rentalStatus.textContent = err?.code === "permission-denied"
-      ? "This slot is already reserved, or private-rental booking permission is not enabled yet."
-      : (err?.message || "Could not reserve this slot.");
+    rentalStatus.textContent =
+      err?.code === "booking-conflict" || err?.code === "permission-denied"
+        ? "That court/time was just taken by another customer. Please close this window and choose another available time."
+        : (err?.message || "Could not reserve this slot.");
   } finally {
     btn.disabled = false;
     btn.textContent = "Continue to Payment";
@@ -995,96 +1311,60 @@ $("confirmJoinBtn").addEventListener("click", async () => {
   btn.textContent = "Please wait…";
   joinStatus.className = "mt-4 rounded-xl border border-slate-600 bg-slate-800 p-3 text-sm text-slate-200";
   joinStatus.textContent = auth.currentUser
-    ? "Saving your Open Play registration…"
+    ? "Checking live Open Play capacity…"
     : "Opening Google sign-in…";
 
   let savedSuccessfully = false;
 
   try {
     const user = await ensureSignedIn();
-    const existingRegistration = currentRegistrations.find(
-      r => r.sessionId === selectedOpenPlay.id && r.customerUid === user.uid
-    );
-
-    if (existingRegistration) {
-      joinStatus.className = "mt-4 rounded-xl border border-amber-600 bg-amber-950/40 p-3 text-sm text-amber-100";
-      joinStatus.textContent = "You are already registered for this Open Play session.";
-      showStatus("info", "Already registered", "This Google account already has an Open Play registration for this session.");
-      return;
-    }
-
-    const registrationId = `${selectedOpenPlay.id}_${user.uid}`;
-    const registrationRef = doc(db, "openPlayRegistrations", registrationId);
-
-    await setDoc(registrationRef, {
-      sessionId: selectedOpenPlay.id,
-      customerUid: user.uid,
-      customerName: user.displayName || "",
-      customerEmail: user.email || "",
-      customerPhotoURL: user.photoURL || "",
-      date: selectedOpenPlay.date,
-      courtId: Number(selectedOpenPlay.courtId),
-      startTime: selectedOpenPlay.startTime,
-      endTime: selectedOpenPlay.endTime,
-      pricePerPlayer: Number(selectedOpenPlay.pricePerPlayer || 0),
-      paymentStatus: "pending",
-      status: "pending_payment",
-      checkedIn: false,
-      createdAt: serverTimestamp()
-    });
+    const session = { ...selectedOpenPlay };
+    const reserved = await reserveOpenPlaySeatsAtomically(session, user, 1);
 
     joinModal.classList.add("hidden");
     joinModal.classList.remove("flex");
 
     savedSuccessfully = true;
     const newRegistration = {
-      id: registrationId,
-      sessionId: selectedOpenPlay.id,
+      id: reserved.registrationId,
+      sessionId: session.id,
       customerUid: user.uid,
       customerName: user.displayName || "",
       customerEmail: user.email || "",
-      date: selectedOpenPlay.date,
-      courtId: Number(selectedOpenPlay.courtId),
-      startTime: selectedOpenPlay.startTime,
-      endTime: selectedOpenPlay.endTime,
-      pricePerPlayer: Number(selectedOpenPlay.pricePerPlayer || 0),
+      date: session.date,
+      courtId: Number(session.courtId),
+      startTime: session.startTime,
+      endTime: session.endTime,
+      pricePerPlayer: Number(session.pricePerPlayer || 0),
       paymentStatus: "pending",
-      status: "pending_payment"
+      status: "pending_payment",
+      reservedPlayers: 1,
+      seatLockIds: reserved.seatLockIds,
+      holdUntil: reserved.holdUntil
     };
+
     showStatus(
       "success",
-      "Open Play registration created",
-      `${user.displayName || user.email} is registered for Court ${selectedOpenPlay.courtId}. Next: submit your payment confirmation.`
+      "Open Play spot held for 20 minutes",
+      "One player spot is protected. If you pay for more players, capacity will be checked again before submission."
     );
     openPaymentModal(newRegistration);
   } catch (err) {
-    if (err?.code === "permission-denied" && auth.currentUser) {
-      joinStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
-      joinStatus.textContent = "Google sign-in worked, but Firestore rejected this registration. Please send the diagnostic below if this continues.";
-      showStatus(
-        "error",
-        "Registration not saved",
-        "Google sign-in worked, but Firestore rejected the registration."
-      );
+    joinStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+    if (err?.code === "capacity-conflict") {
+      joinStatus.textContent = err.message;
+      showStatus("error", "Open Play capacity changed", err.message);
+    } else if (err?.code === "permission-denied" && auth.currentUser) {
+      joinStatus.textContent = "Firestore protection rules are not published yet for the new capacity lock.";
+      showStatus("error", "Registration protection not active", "Publish the newest Firestore rules, then try again.");
     } else {
-      joinStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
       joinStatus.textContent = `${err?.code || "unknown"}: ${err?.message || "Could not complete registration."}`;
-      showStatus("error", "Could not join Open Play", `${err.code || "unknown"}: ${err.message}`);
+      showStatus("error", "Could not join Open Play", err?.message || "Unknown error");
     }
-    showAuthDebug([
-      `Code: ${err?.code || "unknown"}`,
-      `Message: ${err?.message || "No message"}`,
-      `Signed in: ${auth.currentUser ? "yes" : "no"}`,
-      `UID: ${auth.currentUser?.uid || "none"}`,
-      `Current page: ${location.origin}`,
-      `Firebase authDomain: ${firebaseConfig.authDomain}`
-    ]);
   } finally {
     btn.disabled = false;
     btn.textContent = "Continue";
-    if (savedSuccessfully) {
-      selectedOpenPlay = null;
-    }
+    if (savedSuccessfully) selectedOpenPlay = null;
   }
 });
 
@@ -1219,7 +1499,6 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   if (!paymentRegistration || !auth.currentUser) return;
 
   const mobile = paymentMobile.value.trim();
-
   const existingPaymentForSession = currentPayments.find(
     p => p.sessionId === paymentRegistration.sessionId
   );
@@ -1228,12 +1507,8 @@ $("submitPaymentBtn").addEventListener("click", async () => {
     const sessionId = paymentRegistration.sessionId;
     closePaymentModal();
     renderCustomerPasses();
-
     const pass = document.getElementById(`pass-${sessionId}`);
-    if (pass) {
-      pass.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-
+    if (pass) pass.scrollIntoView({ behavior: "smooth", block: "center" });
     showStatus(
       "info",
       "Payment already submitted",
@@ -1276,15 +1551,38 @@ $("submitPaymentBtn").addEventListener("click", async () => {
     return;
   }
 
+  const cleanReference = reference.replace(/[^A-Za-z0-9_-]/g, "");
+  if (!cleanReference) {
+    paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
+    paymentStatusBox.textContent = "Please enter a valid GCash reference number.";
+    return;
+  }
+
   const btn = $("submitPaymentBtn");
   btn.disabled = true;
-  btn.textContent = "Submitting…";
+  btn.textContent = "Checking reservation…";
   paymentStatusBox.className = "mt-4 rounded-xl border border-slate-600 bg-slate-800 p-3 text-sm text-slate-200";
-  paymentStatusBox.textContent = "Uploading payment confirmation…";
+  paymentStatusBox.textContent = "Checking live availability before payment submission…";
 
   try {
-    const base64Receipt = await fileToBase64(file);
+    const existingReference = await getDoc(doc(db, "paymentSubmissions", cleanReference));
+    if (existingReference.exists()) {
+      const existing = existingReference.data();
+      if (existing.customerUid === auth.currentUser.uid && existing.sessionId === paymentRegistration.sessionId) {
+        throw Object.assign(new Error("This payment reference is already saved for your booking."), { code: "duplicate-payment-self" });
+      }
+      throw Object.assign(new Error("That GCash reference number is already attached to another payment."), { code: "duplicate-payment" });
+    }
 
+    const reservationState = await refreshReservationBeforePayment(
+      paymentRegistration,
+      isRentalPayment ? 0 : playersCovered
+    );
+
+    btn.textContent = "Uploading…";
+    paymentStatusBox.textContent = "Reservation protected. Uploading payment confirmation…";
+
+    const base64Receipt = await fileToBase64(file);
     const payload = {
       customerName: paymentRegistration.customerName || auth.currentUser.displayName || "",
       mobile,
@@ -1307,22 +1605,9 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       body: JSON.stringify(payload)
     });
     const result = await response.json();
+    if (!result.success) throw new Error(result.message || "Payment submission failed.");
 
-    if (!result.success) {
-      throw new Error(result.message || "Payment submission failed.");
-    }
-
-    const cleanReference = reference.replace(/[^A-Za-z0-9_-]/g, "");
-    if (!cleanReference) {
-      throw new Error("Please enter a valid GCash reference number.");
-    }
-
-    // One GCash reference = one payment transaction across Courtside.
-    // Using the reference itself as the Firestore document ID prevents the
-    // same transaction from being claimed again for another session/account.
-    const paymentId = cleanReference;
-
-    await setDoc(doc(db, "paymentSubmissions", paymentId), {
+    const paymentData = {
       bookingType: paymentRegistration.bookingType || "open_play",
       registrationId: paymentRegistration.id,
       sessionId: paymentRegistration.sessionId,
@@ -1342,26 +1627,38 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       receiptUrl: result.receiptUrl || "",
       status: "pending_verification",
       submittedAt: serverTimestamp()
-    });
+    };
+
+    btn.textContent = "Securing booking…";
+    await commitPaymentAtomically(
+      cleanReference,
+      paymentData,
+      paymentRegistration,
+      reservationState
+    );
 
     paymentStatusBox.className = "mt-4 rounded-xl border border-emerald-700 bg-emerald-950/40 p-3 text-sm text-emerald-100";
     paymentStatusBox.textContent = isRentalPayment
-      ? "Private-rental payment submitted. Waiting for staff verification."
-      : `Payment submitted for ${playersCovered} player${playersCovered === 1 ? "" : "s"}. Waiting for staff verification.`;
+      ? "Private-rental payment submitted. The court remains locked while staff verifies it."
+      : `Payment submitted for ${playersCovered} player${playersCovered === 1 ? "" : "s"}. Those spots remain protected while staff verifies it.`;
 
     showStatus(
       "success",
-      "Payment submitted — pending verification",
-      `Reference ${reference}. Your payment/entry status will remain visible above the schedule after refresh.`
+      "Payment submitted — booking protected",
+      `Reference ${reference}. Your reservation is now protected from competing customer bookings while verification is pending.`
     );
 
     setTimeout(closePaymentModal, 1400);
   } catch (err) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
 
-    if (err?.code === "permission-denied") {
+    if (err?.code === "capacity-conflict" || err?.code === "booking-conflict") {
+      paymentStatusBox.textContent = err.message;
+    } else if (String(err?.code || "").includes("duplicate-payment")) {
+      paymentStatusBox.textContent = err.message + " Do not pay again.";
+    } else if (err?.code === "permission-denied") {
       paymentStatusBox.textContent =
-        "This GCash reference may already have been submitted. Do not pay again. If this is your payment, use the same Google account that originally submitted it.";
+        "The new booking-protection rules are not active yet. Publish the newest Firestore rules before continuing.";
     } else {
       paymentStatusBox.textContent = `${err?.code || "error"}: ${err?.message || "Could not submit payment."}`;
     }
@@ -1390,7 +1687,9 @@ function loadSchedule() {
   unsubscribeSchedule = onSnapshot(
     publicQ,
     (snap) => {
-      currentPublicItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      currentPublicItems = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(item => !(item.type === "private" && isExpiredHold(item)));
       mergeScheduleSources();
       showStatus(
         "info",
