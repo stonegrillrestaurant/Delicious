@@ -16,62 +16,48 @@
   </style>
 </head>
 <body class="min-h-screen bg-slate-950 text-white">
-  <main class="mx-auto max-w-2xl p-5">
-    <header class="border-b border-slate-800 py-6">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <p class="text-xs font-bold tracking-[.22em] text-lime-300">COURTSIDE GATHERINGS</p>
-          <h1 class="mt-2 text-3xl font-black">Payment Verification</h1>
-          <p class="mt-2 text-sm text-slate-400">Merchant-reference verification. The GCash reference number is the primary verification record; screenshots are optional.</p>
-        </div>
-        <button id="exitVerificationBtn" type="button" aria-label="Back to Live Panel"
-          class="liquid-glass shrink-0 grid h-11 w-11 place-items-center rounded-2xl text-lime-200 hover:text-white"
-          title="Back to Live Panel">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M15 18l-6-6 6-6"></path>
-          </svg>
-        </button>
-      </div>
+  <main class="mx-auto max-w-3xl p-4 sm:p-6">
+    <header class="py-6">
+      <p class="text-xs font-black tracking-[.22em] text-lime-300">COURTSIDE GATHERINGS</p>
+      <h1 class="mt-2 text-3xl font-black">Payment Verification</h1>
+      <p class="mt-2 text-sm text-slate-400">Enter the customer's GCash reference number. A valid pending payment becomes VERIFIED.</p>
     </header>
 
-    <section class="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-5">
+    <section class="liquid-glass rounded-3xl p-5">
       <div id="authState" class="text-sm text-slate-400">Checking sign-in…</div>
       <button id="googleBtn" class="mt-3 w-full rounded-xl bg-white px-4 py-3 font-bold text-slate-900">Sign in with Google</button>
     </section>
 
-    <section id="adminPanel" class="mt-6 hidden">
-      <div class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-        <label for="referenceInput" class="block text-sm font-bold text-slate-300">Merchant GCash Reference Numbers</label>
-        <textarea id="referenceInput" rows="7" autocomplete="off"
-          placeholder="Paste one or many merchant references here&#10;&#10;37954634&#10;12345678&#10;87654321"
-          class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-lg font-mono"></textarea>
-        <button id="searchBtn" class="mt-3 w-full rounded-xl bg-emerald-600 px-5 py-4 text-lg font-black">MATCH & VERIFY BATCH</button>
-        <p class="mt-3 text-xs leading-5 text-slate-500">
-          Paste references received from the merchant side. Separate them by new line, comma, space, or semicolon.
-          Exact single pending matches are verified after this staff action. Screenshots are optional. Unmatched or duplicate/ambiguous references are never auto-confirmed.
-        </p>
+    <section id="adminPanel" class="mt-5 hidden">
+      <div class="liquid-glass rounded-3xl p-5">
+        <label for="referenceInput" class="block text-xs font-black tracking-[.14em] text-slate-400">GCASH REFERENCE NUMBER</label>
+        <input id="referenceInput" type="text" inputmode="numeric" autocomplete="off"
+          placeholder="Enter reference number"
+          class="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-4 text-xl font-mono font-black outline-none focus:border-lime-400" />
+        <button id="verifyBtn" class="mt-3 w-full rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black hover:bg-emerald-500">
+          VERIFY
+        </button>
       </div>
 
-      <div id="messageBox" class="mt-4 hidden rounded-2xl border p-4 text-sm"></div>
-      <div id="results" class="mt-4 space-y-4"></div>
-
-      <section class="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-5">
-        <div class="flex items-center justify-between gap-3">
+      <section class="mt-6">
+        <div class="mb-3 flex items-end justify-between gap-3">
           <div>
-            <div class="text-xs font-black tracking-[.18em] text-cyan-300">VENUE CHECK-IN</div>
-            <h2 class="mt-1 text-xl font-black">Verified · Not Checked In</h2>
+            <div class="text-xs font-black tracking-[.18em] text-cyan-300">VERIFIED BOOKINGS</div>
+            <h2 class="mt-1 text-xl font-black">Customer List</h2>
           </div>
-          <div id="waitingCount" class="rounded-full bg-cyan-950 px-3 py-1 text-xs font-black text-cyan-200">0</div>
+          <div id="verifiedCount" class="rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-slate-300">0</div>
         </div>
-        <p class="mt-2 text-sm text-slate-400">
-          Payment verification does not place players in the live queue. They stay here until staff checks them in when they actually arrive.
+        <p class="mb-4 text-sm text-slate-500">
+          Read-only here. Venue CHECK-IN will be handled from the Staff Window.
         </p>
-        <div id="verifiedWaitingList" class="mt-4 space-y-3">
-          <div class="text-sm text-slate-500">Loading verified players…</div>
+        <div id="verifiedList" class="space-y-5">
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-500">Loading…</div>
         </div>
       </section>
     </section>
   </main>
+
+  <div id="toast" class="pointer-events-none fixed left-1/2 top-5 z-50 hidden w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border px-4 py-4 text-center font-black shadow-2xl"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -80,7 +66,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
-  getFirestore, collection, query, where, getDocs, doc, getDoc, onSnapshot,
+  getFirestore, collection, query, where, getDocs, doc, onSnapshot,
   runTransaction, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -88,25 +74,20 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: "select_account" });
 
 const $ = id => document.getElementById(id);
 const authState = $("authState");
 const googleBtn = $("googleBtn");
 const adminPanel = $("adminPanel");
 const referenceInput = $("referenceInput");
-const searchBtn = $("searchBtn");
-const results = $("results");
-const messageBox = $("messageBox");
-const exitVerificationBtn = $("exitVerificationBtn");
-const verifiedWaitingList = $("verifiedWaitingList");
-const waitingCount = $("waitingCount");
+const verifyBtn = $("verifyBtn");
+const verifiedList = $("verifiedList");
+const verifiedCount = $("verifiedCount");
+const toast = $("toast");
 
-let unsubscribeVerifiedWaiting = null;
-let verifiedWaitingPayments = [];
-
-exitVerificationBtn.addEventListener("click", () => {
-  window.location.href = "/pickle-dashboard/admin.html";
-});
+let unsubscribeVerified = null;
+let toastTimer = null;
 
 function esc(v) {
   return String(v ?? "")
@@ -114,11 +95,6 @@ function esc(v) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-}
-
-function money(v) {
-  const n = Number(v || 0);
-  return "₱" + n.toLocaleString("en-PH");
 }
 
 function formatTime12(value) {
@@ -130,248 +106,133 @@ function formatTime12(value) {
   return `${hour}:${m} ${suffix}`;
 }
 
-function todayLocal() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+function statusLabel(payment) {
+  if (payment.checkedIn === true) return "CHECKED-IN";
+  if (payment.status === "verified") return "VERIFIED";
+  return "PENDING";
 }
 
-function renderVerifiedWaiting() {
-  const waiting = verifiedWaitingPayments
+function showToast(type, message) {
+  clearTimeout(toastTimer);
+  toast.classList.remove("hidden");
+  toast.className =
+    "pointer-events-none fixed left-1/2 top-5 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border px-4 py-4 text-center font-black shadow-2xl " +
+    (type === "success"
+      ? "border-emerald-500 bg-emerald-950 text-emerald-100"
+      : "border-red-500 bg-red-950 text-red-100");
+  toast.textContent = message;
+  toastTimer = setTimeout(() => toast.classList.add("hidden"), 2600);
+}
+
+function renderVerified(payments) {
+  const rows = payments
     .filter(p => p.status === "verified")
-    .filter(p => p.bookingType !== "private_rental")
-    .filter(p => p.checkedIn !== true)
-    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")) || String(a.startTime || "").localeCompare(String(b.startTime || "")));
+    .sort((a,b) =>
+      String(a.date || "").localeCompare(String(b.date || "")) ||
+      String(a.startTime || "").localeCompare(String(b.startTime || "")) ||
+      String(a.customerName || "").localeCompare(String(b.customerName || ""))
+    );
 
-  waitingCount.textContent = String(waiting.length);
+  verifiedCount.textContent = String(rows.length);
 
-  if (!waiting.length) {
-    verifiedWaitingList.innerHTML = '<div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-500">No verified players are waiting for check-in.</div>';
+  if (!rows.length) {
+    verifiedList.innerHTML = '<div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-500">No verified bookings yet.</div>';
     return;
   }
 
-  verifiedWaitingList.innerHTML = waiting.map(p => {
-    const isToday = p.date === todayLocal();
-    const names = Array.isArray(p.playerNames) && p.playerNames.length
-      ? p.playerNames
-      : [p.customerName || "Customer"];
-    return `
-      <article class="rounded-2xl border border-cyan-900/70 bg-slate-950/65 p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="text-xs font-black tracking-[.15em] text-cyan-300">PAYMENT VERIFIED</div>
-            <div class="mt-1 text-lg font-black">${names.map(esc).join(", ")}</div>
-            <div class="mt-1 text-sm text-slate-400">
-              Court ${esc(p.courtId)} · ${esc(p.date)} · ${esc(formatTime12(p.startTime))}–${esc(formatTime12(p.endTime))}
-            </div>
-          </div>
-          <div class="rounded-xl bg-slate-900 px-3 py-2 text-right">
-            <div class="text-[10px] uppercase text-slate-500">Ref</div>
-            <div class="font-mono text-xs font-bold">${esc(p.reference)}</div>
-          </div>
-        </div>
+  const groups = {};
+  rows.forEach(p => {
+    const date = p.date || "No date";
+    (groups[date] ||= []).push(p);
+  });
 
-        <div class="mt-3 text-xs text-slate-500">
-          ${names.length} player${names.length === 1 ? "" : "s"} · waiting for venue arrival
-        </div>
+  verifiedList.innerHTML = Object.entries(groups).map(([date, items]) => `
+    <section>
+      <div class="mb-2 text-xs font-black tracking-[.16em] text-slate-400">${esc(date)}</div>
+      <div class="space-y-2">
+        ${items.map(p => {
+          const names = Array.isArray(p.playerNames) && p.playerNames.length
+            ? p.playerNames.join(", ")
+            : (p.customerName || "Customer");
+          const service = p.bookingType === "private_rental" ? "RENTED COURT" : "OPEN PLAY";
+          const state = statusLabel(p);
+          const stateClass = state === "CHECKED-IN"
+            ? "text-lime-300 border-lime-700 bg-lime-950/25"
+            : "text-emerald-300 border-emerald-800 bg-emerald-950/20";
 
-        <button type="button"
-          class="check-in-verified mt-3 w-full rounded-xl px-4 py-3 text-sm font-black ${isToday ? "bg-cyan-600 text-white" : "cursor-not-allowed bg-slate-800 text-slate-500"}"
-          data-payment-id="${esc(p.id)}"
-          ${isToday ? "" : "disabled"}>
-          ${isToday ? "CHECK IN AT VENUE" : "CHECK-IN AVAILABLE ON BOOKING DATE"}
-        </button>
-      </article>
-    `;
-  }).join("");
+          return `
+            <article class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="truncate text-base font-black text-white">${esc(names)}</div>
+                  <div class="mt-1 text-sm text-slate-400">${esc(p.mobile || "No mobile number")}</div>
+                </div>
+                <div class="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black tracking-wider ${stateClass}">
+                  ${state}
+                </div>
+              </div>
+
+              <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <div class="rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Court</div>
+                  <div class="mt-1 font-bold">Court ${esc(p.courtId)}</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Service</div>
+                  <div class="mt-1 font-bold">${service}</div>
+                </div>
+                <div class="col-span-2 rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Time</div>
+                  <div class="mt-1 font-bold">${esc(formatTime12(p.startTime))}–${esc(formatTime12(p.endTime))}</div>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `).join("");
 }
 
-function startVerifiedWaitingListener() {
-  if (unsubscribeVerifiedWaiting) {
-    unsubscribeVerifiedWaiting();
-    unsubscribeVerifiedWaiting = null;
-  }
-
-  const verifiedQ = query(
-    collection(db, "paymentSubmissions"),
-    where("status", "==", "verified")
-  );
-
-  unsubscribeVerifiedWaiting = onSnapshot(
-    verifiedQ,
-    snap => {
-      verifiedWaitingPayments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderVerifiedWaiting();
-    },
-    err => {
-      console.warn("Verified waiting list failed:", err);
-      verifiedWaitingList.innerHTML = '<div class="rounded-2xl border border-red-800 bg-red-950/30 p-4 text-sm text-red-200">Could not load verified waiting players.</div>';
-    }
-  );
-}
-
-function stopVerifiedWaitingListener() {
-  if (unsubscribeVerifiedWaiting) {
-    unsubscribeVerifiedWaiting();
-    unsubscribeVerifiedWaiting = null;
-  }
-  verifiedWaitingPayments = [];
-  waitingCount.textContent = "0";
-  verifiedWaitingList.innerHTML = '<div class="text-sm text-slate-500">Sign in as an authorized admin to view verified players.</div>';
-}
-
-async function checkInVerifiedPayment(paymentId) {
-  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
-    throw new Error("Admin authorization required.");
-  }
-
-  const paymentRef = doc(db, "paymentSubmissions", paymentId);
-  const stateRef = doc(db, "pickleball", "currentState");
-
-  await runTransaction(db, async tx => {
-    const paymentSnap = await tx.get(paymentRef);
-    if (!paymentSnap.exists()) throw new Error("Payment record no longer exists.");
-
-    const payment = paymentSnap.data();
-    if (payment.status !== "verified") throw new Error("Payment must be verified before check-in.");
-    if (payment.checkedIn === true) throw new Error("These players are already checked in.");
-    if (payment.bookingType === "private_rental") throw new Error("Private rentals do not enter the Open Play queue.");
-    if (payment.date !== todayLocal()) throw new Error("Check-in is only available on the booking date.");
-
-    const names = Array.isArray(payment.playerNames)
-      ? payment.playerNames.map(name => String(name || "").trim()).filter(Boolean)
-      : [];
-    const players = Number(payment.playersCovered || names.length || 0);
-    if (!players || names.length !== players) {
-      throw new Error("Player names are incomplete. Review this payment before check-in.");
-    }
-
-    const stateSnap = await tx.get(stateRef);
-    const live = stateSnap.exists()
-      ? stateSnap.data()
-      : {
-          players: [],
-          queues: { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] },
-          courts: [],
-          totalMatchesPlayed: 0,
-          dailyRentals: [],
-          dailyOpenPlayLogs: []
-        };
-
-    const queuePlayers = Array.isArray(live.players) ? [...live.players] : [];
-    const queues = live.queues && typeof live.queues === "object"
-      ? JSON.parse(JSON.stringify(live.queues))
-      : { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] };
-
-    const targetCourt = String(payment.courtId || "");
-    if (!["1","2","3","4","5","6"].includes(targetCourt)) {
-      throw new Error("This verified payment does not have a valid court.");
-    }
-    if (!Array.isArray(queues[targetCourt])) queues[targetCourt] = [];
-
-    const now = new Date();
-    const timeIn = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const sessionEnd = new Date(String(payment.date) + "T" + String(payment.endTime) + ":00");
-    const expireTimestamp = sessionEnd.getTime();
-    const timeOut = Number.isFinite(expireTimestamp)
-      ? sessionEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      : formatTime12(payment.endTime);
-
-    names.forEach((name, index) => {
-      const stableId = "ONL-" + String(paymentId).replace(/[^A-Za-z0-9_-]/g, "") + "-" + (index + 1);
-      if (!queuePlayers.some(p => p.id === stableId)) {
-        queuePlayers.push({
-          id: stableId,
-          name,
-          category: "Unrated",
-          queueCourt: targetCourt,
-          gamesPlayed: 0,
-          timeIn,
-          timeOut,
-          expireTimestamp: Number.isFinite(expireTimestamp) ? expireTimestamp : null,
-          isExpired: false,
-          paid: true,
-          source: "online",
-          onlineVerified: true,
-          checkedIn: true,
-          checkedInAt: now.toISOString(),
-          paymentId,
-          paymentReference: payment.reference || "",
-          paymentAmount: Number(payment.amountPaid || 0),
-          registrationId: payment.registrationId || "",
-          payerName: payment.customerName || ""
-        });
-      }
-      if (!queues[targetCourt].includes(stableId)) queues[targetCourt].push(stableId);
-    });
-
-    tx.set(stateRef, {
-      ...live,
-      players: queuePlayers,
-      queues
-    });
-
-    tx.update(paymentRef, {
-      checkedIn: true,
-      checkedInAt: serverTimestamp(),
-      checkedInBy: auth.currentUser.uid,
-      checkedInByEmail: auth.currentUser.email || ""
-    });
-
-    if (payment.registrationId) {
-      tx.update(doc(db, "openPlayRegistrations", payment.registrationId), {
-        checkedIn: true,
-        checkedInAt: serverTimestamp()
-      });
-    }
+function startVerifiedListener() {
+  if (unsubscribeVerified) unsubscribeVerified();
+  const q = query(collection(db, "paymentSubmissions"), where("status", "==", "verified"));
+  unsubscribeVerified = onSnapshot(q, snap => {
+    renderVerified(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }, err => {
+    console.warn(err);
+    verifiedList.innerHTML = '<div class="rounded-2xl border border-red-800 bg-red-950/30 p-4 text-sm text-red-200">Could not load verified bookings.</div>';
   });
 }
 
-function parseReferences(raw) {
-  return [...new Set(
-    String(raw || "")
-      .split(/[\s,;]+/)
-      .map(x => x.trim())
-      .filter(Boolean)
-  )];
-}
-
-function showMessage(type, text) {
-  messageBox.classList.remove("hidden");
-  messageBox.className = "mt-4 rounded-2xl border p-4 text-sm " +
-    (type === "error"
-      ? "border-red-700 bg-red-950/40 text-red-100"
-      : type === "success"
-      ? "border-emerald-700 bg-emerald-950/40 text-emerald-100"
-      : "border-amber-700 bg-amber-950/30 text-amber-100");
-  messageBox.textContent = text;
+function stopVerifiedListener() {
+  if (unsubscribeVerified) {
+    unsubscribeVerified();
+    unsubscribeVerified = null;
+  }
+  verifiedCount.textContent = "0";
+  verifiedList.innerHTML = "";
 }
 
 onAuthStateChanged(auth, user => {
-  results.innerHTML = "";
-  messageBox.classList.add("hidden");
-
   if (!user) {
     authState.textContent = "Not signed in.";
     googleBtn.textContent = "Sign in with Google";
     adminPanel.classList.add("hidden");
-    stopVerifiedWaitingListener();
+    stopVerifiedListener();
     return;
   }
 
-  const admin = isAuthorizedAdmin(user);
   authState.textContent = `Signed in as ${user.email || user.displayName || user.uid}`;
   googleBtn.textContent = "Sign out";
 
-  if (admin) {
+  if (isAuthorizedAdmin(user)) {
     adminPanel.classList.remove("hidden");
-    startVerifiedWaitingListener();
+    startVerifiedListener();
   } else {
-    stopVerifiedWaitingListener();
     adminPanel.classList.add("hidden");
-    showMessage("error", "This Google account is not authorized for Courtside payment verification.");
+    stopVerifiedListener();
+    showToast("error", "This account is not authorized.");
   }
 });
 
@@ -383,259 +244,13 @@ googleBtn.addEventListener("click", async () => {
   try {
     await signInWithPopup(auth, provider);
   } catch (err) {
-    showMessage("error", `${err.code || "error"}: ${err.message || "Sign-in failed."}`);
+    showToast("error", err?.message || "Sign-in failed.");
   }
 });
 
-async function findPayments() {
-  const references = parseReferences(referenceInput.value);
-  results.innerHTML = "";
-  messageBox.classList.add("hidden");
-
-  if (!references.length) {
-    showMessage("error", "Enter at least one merchant reference number.");
-    return;
-  }
-
-  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
-    showMessage("error", "Admin authorization required.");
-    return;
-  }
-
-  searchBtn.disabled = true;
-  searchBtn.textContent = "Processing " + references.length + " reference" + (references.length === 1 ? "" : "s") + "…";
-
-  const outcome = {
-    verified: [],
-    alreadyVerified: [],
-    unmatched: [],
-    ambiguous: [],
-    errors: []
-  };
-
-  try {
-    for (const reference of references) {
-      try {
-        const q = query(
-          collection(db, "paymentSubmissions"),
-          where("reference", "==", reference)
-        );
-        const snap = await getDocs(q);
-        const matches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        if (matches.length === 0) {
-          outcome.unmatched.push(reference);
-          continue;
-        }
-
-        if (matches.length > 1) {
-          outcome.ambiguous.push({ reference, count: matches.length });
-          continue;
-        }
-
-        const payment = matches[0];
-
-        if (payment.status === "verified") {
-          outcome.alreadyVerified.push(payment);
-          continue;
-        }
-
-        if (payment.status !== "pending_verification") {
-          outcome.errors.push({
-            reference,
-            message: "Unexpected payment status: " + (payment.status || "missing")
-          });
-          continue;
-        }
-
-        await confirmPayment(payment.id, { silent: true });
-        outcome.verified.push(payment);
-      } catch (err) {
-        outcome.errors.push({
-          reference,
-          message: err?.message || "Could not process this reference."
-        });
-      }
-    }
-
-    renderBatchResults(outcome);
-
-    const review =
-      outcome.unmatched.length +
-      outcome.ambiguous.length +
-      outcome.errors.length;
-
-    showMessage(
-      review ? "info" : "success",
-      "Batch complete: " +
-        outcome.verified.length + " newly verified, " +
-        outcome.alreadyVerified.length + " already verified, " +
-        review + " need review."
-    );
-  } finally {
-    searchBtn.disabled = false;
-    searchBtn.textContent = "MATCH & VERIFY BATCH";
-  }
-}
-
-function renderBatchResults(outcome) {
-  const blocks = [];
-
-  if (outcome.verified.length) {
-    blocks.push(
-      '<section class="rounded-3xl border border-emerald-700 bg-emerald-950/20 p-5">' +
-      '<div class="text-sm font-black tracking-[.15em] text-emerald-300">VERIFIED NOW · ' + outcome.verified.length + '</div>' +
-      '<div class="mt-3 space-y-2">' +
-      outcome.verified.map(p => batchRow(p, "Verified")).join("") +
-      '</div></section>'
-    );
-  }
-
-  if (outcome.alreadyVerified.length) {
-    blocks.push(
-      '<section class="rounded-3xl border border-slate-700 bg-slate-900 p-5">' +
-      '<div class="text-sm font-black tracking-[.15em] text-slate-300">ALREADY VERIFIED · ' + outcome.alreadyVerified.length + '</div>' +
-      '<div class="mt-3 space-y-2">' +
-      outcome.alreadyVerified.map(p => batchRow(p, "Already verified")).join("") +
-      '</div></section>'
-    );
-  }
-
-  if (outcome.unmatched.length) {
-    blocks.push(
-      '<section class="rounded-3xl border border-red-700 bg-red-950/20 p-5">' +
-      '<div class="text-sm font-black tracking-[.15em] text-red-300">NO CUSTOMER MATCH · ' + outcome.unmatched.length + '</div>' +
-      '<p class="mt-2 text-sm text-slate-300">These merchant references have no matching customer submission. Check for a typing error or a customer who has not submitted the payment form yet. Any customer claim not represented by a merchant reference remains pending and is not verified.</p>' +
-      '<div class="mt-3 space-y-2">' +
-      outcome.unmatched.map(ref => '<div class="rounded-xl bg-slate-950 p-3 font-mono font-bold">' + esc(ref) + '</div>').join("") +
-      '</div></section>'
-    );
-  }
-
-  if (outcome.ambiguous.length) {
-    blocks.push(
-      '<section class="rounded-3xl border border-amber-600 bg-amber-950/20 p-5">' +
-      '<div class="text-sm font-black tracking-[.15em] text-amber-300">DUPLICATE / AMBIGUOUS · ' + outcome.ambiguous.length + '</div>' +
-      '<p class="mt-2 text-sm text-slate-300">Nothing was auto-verified because more than one Firebase payment record matched the same reference.</p>' +
-      '<div class="mt-3 space-y-2">' +
-      outcome.ambiguous.map(x => '<div class="rounded-xl bg-slate-950 p-3"><div class="font-mono font-bold">' + esc(x.reference) + '</div><div class="mt-1 text-xs text-amber-300">' + x.count + ' matching records — manual review required</div></div>').join("") +
-      '</div></section>'
-    );
-  }
-
-  if (outcome.errors.length) {
-    blocks.push(
-      '<section class="rounded-3xl border border-red-700 bg-red-950/20 p-5">' +
-      '<div class="text-sm font-black tracking-[.15em] text-red-300">ERRORS · ' + outcome.errors.length + '</div>' +
-      '<div class="mt-3 space-y-2">' +
-      outcome.errors.map(x => '<div class="rounded-xl bg-slate-950 p-3"><div class="font-mono font-bold">' + esc(x.reference) + '</div><div class="mt-1 text-xs text-red-300">' + esc(x.message) + '</div></div>').join("") +
-      '</div></section>'
-    );
-  }
-
-  results.innerHTML = blocks.join("");
-}
-
-function batchRow(p, label) {
-  const players = Number(p.playersCovered || 0);
-  return (
-    '<div class="rounded-xl bg-slate-950 p-3">' +
-    '<div class="flex items-center justify-between gap-3">' +
-    '<div><div class="font-mono font-bold">' + esc(p.reference) + '</div>' +
-    '<div class="text-sm text-slate-300">' +
-    esc(p.customerName || "Customer") + " · " + money(p.amountPaid) + " · " +
-    (p.bookingType === "private_rental"
-      ? ("Court " + esc(p.courtId) + " rental")
-      : (players + " player" + (players === 1 ? "" : "s"))) +
-    '</div></div>' +
-    '<div class="text-xs font-bold text-emerald-300">' + esc(label) + '</div>' +
-    '</div></div>'
-  );
-}
-
-function paymentCard(p) {
-  const verified = p.status === "verified";
-  const last6 = String(p.reference || "").slice(-6);
-
-  return `
-    <article class="rounded-3xl border ${verified ? "border-emerald-600" : "border-amber-600"} bg-slate-900 p-5">
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <div class="text-xs font-bold tracking-[.18em] ${verified ? "text-emerald-400" : "text-amber-400"}">
-            ${verified ? "VERIFIED" : "PENDING VERIFICATION"}
-          </div>
-          <div class="mt-2 text-2xl font-black">${esc(p.customerName || "Customer")}</div>
-          <div class="text-sm text-slate-400">${esc(p.customerEmail || "")}</div>
-        </div>
-        <div class="rounded-xl bg-slate-950 px-3 py-2 text-right">
-          ${p.bookingType === "private_rental" ? `
-            <div class="text-xs text-slate-500">Type</div>
-            <div class="text-sm font-black text-orange-200">PRIVATE RENTAL</div>
-          ` : `
-            <div class="text-xs text-slate-500">Players</div>
-            <div class="text-2xl font-black">${Number(p.playersCovered || 0)}</div>
-          `}
-        </div>
-      </div>
-
-      <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
-        <div class="rounded-xl bg-slate-950 p-3">
-          <div class="text-slate-500">Amount</div>
-          <div class="font-bold">${money(p.amountPaid)}</div>
-        </div>
-        <div class="rounded-xl bg-slate-950 p-3">
-          <div class="text-slate-500">Reference</div>
-          <div class="break-all font-mono font-bold">${esc(p.reference)}</div>
-        </div>
-        <div class="rounded-xl bg-slate-950 p-3">
-          <div class="text-slate-500">Court</div>
-          <div class="font-bold">Court ${esc(p.courtId)}</div>
-        </div>
-        <div class="rounded-xl bg-slate-950 p-3">
-          <div class="text-slate-500">Schedule</div>
-          <div class="font-bold">${esc(p.date)} · ${esc(formatTime12(p.startTime))}–${esc(formatTime12(p.endTime))}</div>
-        </div>
-      </div>
-
-      ${Array.isArray(p.playerNames) && p.playerNames.length ? `
-        <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-3">
-          <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Players</div>
-          <div class="mt-2 space-y-1 text-sm font-semibold">
-            ${p.playerNames.map((name, index) => `<div>${index + 1}. ${esc(name)}</div>`).join("")}
-          </div>
-        </div>
-      ` : ""}
-
-      <div class="mt-3 text-xs text-slate-500">Payment document: ${esc(p.id)}</div>
-
-      ${p.receiptUrl ? `
-        <a href="${esc(p.receiptUrl)}" target="_blank" rel="noopener"
-          class="mt-4 block w-full rounded-xl border border-slate-600 px-4 py-3 text-center font-semibold">
-          View Optional Screenshot
-        </a>
-      ` : `
-        <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-center text-xs text-slate-400">
-          No screenshot attached · verify using the GCash reference number.
-        </div>
-      `}
-
-      ${verified ? `
-        <div class="mt-4 rounded-xl border border-emerald-700 bg-emerald-950/30 p-3 text-center font-bold text-emerald-300">
-          Payment already verified · Ref ••••••${esc(last6)}
-        </div>
-      ` : `
-        <button class="confirm-payment mt-4 w-full rounded-xl bg-emerald-600 px-4 py-4 text-lg font-black"
-          data-payment-id="${esc(p.id)}">
-          CONFIRM PAYMENT
-        </button>
-      `}
-    </article>
-  `;
-}
-
 async function confirmPayment(paymentId, options = {}) {
   if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
-    showMessage("error", "Admin authorization required.");
+    showToast("error", "Admin authorization required.");
     return;
   }
 
@@ -798,49 +413,77 @@ async function confirmPayment(paymentId, options = {}) {
     });
 
     if (!options.silent) {
-      showMessage("success", "Payment verified. Player remains in the waiting list until venue check-in.");
+      showToast("success", "VERIFIED");
     }
     return true;
   } catch (err) {
-    if (!options.silent) showMessage("error", err.message || "Could not confirm payment.");
+    if (!options.silent) showToast("error", err.message || "Could not confirm payment.");
     throw err;
   }
 }
 
-searchBtn.addEventListener("click", findPayments);
 
-verifiedWaitingList.addEventListener("click", async event => {
-  const btn = event.target.closest(".check-in-verified");
-  if (!btn || btn.disabled) return;
+async function verifyReference() {
+  const reference = referenceInput.value.trim();
 
-  const ok = confirm("Check these verified player(s) in now and add them to the live queue?");
-  if (!ok) return;
+  if (!reference) {
+    showToast("error", "INVALID REFERENCE");
+    return;
+  }
 
-  btn.disabled = true;
-  btn.textContent = "CHECKING IN…";
+  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
+    showToast("error", "Admin authorization required.");
+    return;
+  }
+
+  verifyBtn.disabled = true;
+  verifyBtn.textContent = "VERIFYING…";
 
   try {
-    await checkInVerifiedPayment(btn.dataset.paymentId);
-    showMessage("success", "Checked in. Player name(s) have now been transferred to the live queue.");
+    const q = query(
+      collection(db, "paymentSubmissions"),
+      where("reference", "==", reference)
+    );
+    const snap = await getDocs(q);
+    const matches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (matches.length !== 1) {
+      showToast("error", matches.length > 1 ? "DUPLICATE REFERENCE" : "INVALID REFERENCE");
+      return;
+    }
+
+    const payment = matches[0];
+
+    if (payment.status === "verified") {
+      showToast("success", payment.checkedIn === true ? "ALREADY CHECKED-IN" : "ALREADY VERIFIED");
+      referenceInput.value = "";
+      return;
+    }
+
+    if (payment.status !== "pending_verification") {
+      showToast("error", "INVALID REFERENCE");
+      return;
+    }
+
+    await confirmPayment(payment.id, { silent: true });
+    referenceInput.value = "";
+    showToast("success", "VERIFIED");
   } catch (err) {
-    showMessage("error", err?.message || "Could not check in these players.");
-    btn.disabled = false;
-    btn.textContent = "CHECK IN AT VENUE";
+    console.error(err);
+    showToast("error", "INVALID / COULD NOT VERIFY");
+  } finally {
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = "VERIFY";
+    referenceInput.focus();
   }
-});
+}
 
-results.addEventListener("click", event => {
-  const btn = event.target.closest(".confirm-payment");
-  if (!btn) return;
-
-  const ok = confirm(
-    "Confirm this payment only if the reference matches the merchant-side GCash/SMS notification. Continue?"
-  );
-  if (!ok) return;
-
-  btn.disabled = true;
-  btn.textContent = "Confirming…";
-  confirmPayment(btn.dataset.paymentId);
+verifyBtn.addEventListener("click", verifyReference);
+referenceInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    verifyReference();
+  }
 });
 </script>
 </body>
