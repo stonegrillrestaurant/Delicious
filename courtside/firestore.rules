@@ -257,6 +257,19 @@ service cloud.firestore {
               && request.resource.data.paymentStatus == "submitted"
             )
           )
+        )
+        // A different customer may reuse the exact same booking ID only after
+        // the previous unpaid hold has expired.
+        || (
+          signedIn()
+          && resource.data.status == "pending_payment"
+          && resource.data.holdUntil <= request.time
+          && request.resource.data.customerUid == request.auth.uid
+          && request.resource.data.bookingType == "private_rental"
+          && request.resource.data.status == "pending_payment"
+          && request.resource.data.paymentStatus == "pending"
+          && request.resource.data.holdUntil > request.time
+          && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
         );
 
       allow delete: if isAdmin();
