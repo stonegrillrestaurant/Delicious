@@ -1009,72 +1009,59 @@ function render(items) {
 
       if (occupying.type === "open_play") {
         const myRegistration = currentRegistrations.find(r => r.sessionId === occupying.id);
-        const isConfirmed = myRegistration &&
-          (myRegistration.status === "confirmed" || myRegistration.paymentStatus === "verified");
-        const isPending = myRegistration && !isConfirmed;
 
         if (myRegistration) {
           const mySessionPayments = currentPayments.filter(p =>
             p.sessionId === occupying.id && p.customerUid === auth.currentUser?.uid
           );
-          const verifiedPayments = mySessionPayments.filter(p => p.status === "verified");
-          const pendingPayments = mySessionPayments.filter(p => p.status === "pending_verification");
-          const verifiedPlayers = verifiedPayments.reduce((sum, p) => sum + Number(p.playersCovered || 0), 0);
           const hasSubmittedPayment = mySessionPayments.length > 0;
+          const submittedPlayers = mySessionPayments.reduce(
+            (sum, p) => sum + Number(p.playersCovered || 0),
+            0
+          );
+          const joinedPlayers = Math.max(
+            1,
+            Number(
+              myRegistration.paidPlayers ||
+              submittedPlayers ||
+              myRegistration.reservedPlayers ||
+              1
+            )
+          );
 
-          if (isConfirmed || verifiedPlayers > 0) {
-            const paidCount = Number(myRegistration.paidPlayers || verifiedPlayers || 1);
+          // After payment submission, the large status card above carries the details.
+          // Keep the schedule cell compact and uniform: only show the player's joined count.
+          if (hasSubmittedPayment || myRegistration.paymentStatus === "verified" || myRegistration.status === "confirmed") {
             return `
               <div class="slot-cell p-2 bg-slate-900/50">
-                ${startsHere ? `
-                  <div class="h-full min-h-[48px] w-full rounded-lg border-2 border-green-300 bg-green-500/35 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(134,239,172,.25)]">
-                    <div class="text-xs font-bold text-emerald-200">✓ VERIFIED FOR ${paidCount}</div>
-                    <div class="mt-1 text-[11px] text-slate-300">
-                      ${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>
-                      Court ${occupying.courtId}<br>
-                      ${myRegistration.verifiedReferenceLast6 ? `Ref ••••••${myRegistration.verifiedReferenceLast6}` : "Payment confirmed"}
-                    </div>
+                <button
+                  class="payment-status-open h-full min-h-[48px] w-full rounded-lg border-2 border-cyan-300 bg-cyan-500/30 px-2 py-2 text-center shadow-[0_0_0_1px_rgba(103,232,249,.25)]"
+                  data-registration-id="${myRegistration.id}"
+                  data-session-id="${occupying.id}">
+                  <div class="text-xs font-black text-cyan-50">
+                    ${joinedPlayers} PLAYER${joinedPlayers === 1 ? "" : "S"} JOINED
                   </div>
-                ` : `
-                  <div class="h-full min-h-[48px] w-full rounded-lg border border-emerald-900/50 bg-emerald-950/15 px-2 py-2 text-left">
-                    <div class="text-[11px] font-semibold text-emerald-300/70">Open Play continues</div>
-                  </div>
-                `}
+                </button>
               </div>`;
           }
 
+          // Registered but payment has not been submitted yet.
           return `
             <div class="slot-cell p-2 bg-slate-900/50">
-              ${startsHere ? `
-                <button
-                  class="${hasSubmittedPayment ? "payment-status-open" : "pay-open-play"} h-full min-h-[48px] w-full rounded-lg border-2 border-yellow-300 bg-yellow-400/25 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(253,224,71,.22)] hover:bg-yellow-400/35"
-                  data-registration-id="${myRegistration.id}"
-                  data-session-id="${occupying.id}">
-                  <div class="text-xs font-bold text-amber-200">
-                    ${hasSubmittedPayment ? "✓ Payment Submitted" : "✓ Joined · Pay Now"}
-                  </div>
-                  <div class="mt-1 text-[11px] text-slate-300">
-                    ${formatTime12(occupying.startTime)}–${formatTime12(occupying.endTime)}<br>
-                    ₱${occupying.pricePerPlayer ?? "?"}/player<br>
-                    ${hasSubmittedPayment
-                      ? `${pendingPayments.length || mySessionPayments.length} payment(s) awaiting verification · Tap to view status`
-                      : "Tap to submit payment"}
-                  </div>
-                </button>
-              ` : `
-                <div class="h-full min-h-[48px] w-full rounded-lg border border-amber-900/50 bg-amber-950/15 px-2 py-2 text-left">
-                  <div class="text-[11px] font-semibold text-amber-300/70">Open Play continues</div>
-                </div>
-              `}
+              <button
+                class="pay-open-play h-full min-h-[48px] w-full rounded-lg border-2 border-amber-300 bg-amber-400/20 px-2 py-2 text-center hover:bg-amber-400/30"
+                data-registration-id="${myRegistration.id}"
+                data-session-id="${occupying.id}">
+                <div class="text-xs font-black text-amber-100">PAY NOW</div>
+              </button>
             </div>`;
         }
 
         return `
           <div class="slot-cell p-2 bg-slate-900/50">
-            <button class="join-open-play h-full min-h-[48px] w-full rounded-lg border-2 border-cyan-300 bg-cyan-500/30 px-2 py-2 text-left shadow-[0_0_0_1px_rgba(103,232,249,.25)] hover:bg-cyan-500/45"
+            <button class="join-open-play h-full min-h-[48px] w-full rounded-lg border-2 border-cyan-300 bg-cyan-500/30 px-2 py-2 text-center shadow-[0_0_0_1px_rgba(103,232,249,.25)] hover:bg-cyan-500/45"
               data-session-id="${occupying.id}">
               <div class="text-xs font-black text-cyan-100">${startsHere ? "OPEN PLAY · JOIN" : "OPEN PLAY"}</div>
-              ${startsHere ? `<div class="mt-1 text-[11px] font-semibold text-cyan-50">₱${occupying.pricePerPlayer ?? "?"}/player</div>` : ""}
             </button>
           </div>`;
       }
