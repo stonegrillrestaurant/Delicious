@@ -536,18 +536,24 @@ async function confirmPayment(paymentId, options = {}) {
       const last6 = String(payment.reference || "").slice(-6);
 
       const seatLockIds = Array.isArray(registration.seatLockIds) ? registration.seatLockIds : [];
-      if (seatLockIds.length < players) {
+      const seatLockRefs = seatLockIds.slice(0, players).map(id => doc(db, "openPlaySeatLocks", id));
+
+      // New protected registrations must have one lock per paid player.
+      // Older pre-lock registrations are still verifiable for migration compatibility.
+      if (seatLockIds.length > 0 && seatLockIds.length < players) {
         throw new Error("Open Play capacity locks do not cover all paid players.");
       }
-      const seatLockRefs = seatLockIds.slice(0, players).map(id => doc(db, "openPlaySeatLocks", id));
-      const seatLockSnaps = await Promise.all(seatLockRefs.map(ref => tx.get(ref)));
-      seatLockSnaps.forEach(snap => {
-        if (!snap.exists()) throw new Error("An Open Play capacity lock is missing.");
-        const lock = snap.data();
-        if (lock.registrationId !== payment.registrationId || lock.customerUid !== payment.customerUid) {
-          throw new Error("Open Play capacity lock does not match this registration.");
-        }
-      });
+
+      if (seatLockRefs.length > 0) {
+        const seatLockSnaps = await Promise.all(seatLockRefs.map(ref => tx.get(ref)));
+        seatLockSnaps.forEach(snap => {
+          if (!snap.exists()) throw new Error("An Open Play capacity lock is missing.");
+          const lock = snap.data();
+          if (lock.registrationId !== payment.registrationId || lock.customerUid !== payment.customerUid) {
+            throw new Error("Open Play capacity lock does not match this registration.");
+          }
+        });
+      }
 
       // Read the existing working queue state inside the same transaction.
       // This lets payment verification and queue insertion succeed or fail together.
