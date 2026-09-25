@@ -107,7 +107,7 @@
         <button id="cancelRentalBtn" type="button" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
         <button id="continueRentalBtn" type="button" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Continue to Payment</button>
       </div>
-      <p class="mt-4 text-xs text-slate-500">Review your selected hours. The court is not reserved until you tap Continue to Payment. Then the selected hours are locked for 20 minutes while you complete payment.</p>
+      <p class="mt-4 text-xs text-slate-500">Review your selected hours. The court is not reserved until you tap Continue to Payment. Then the selected hours are locked for 30 minutes while you complete payment.</p>
     </div>
   </div>
 
@@ -161,7 +161,7 @@
       </div>
 
       <div class="mt-4">
-        <label class="block text-sm font-semibold text-slate-300 mb-1" for="paymentReceipt">Payment Screenshot *</label>
+        <label class="block text-sm font-semibold text-slate-300 mb-1" for="paymentReceipt">Payment Screenshot (optional)</label>
         <input id="paymentReceipt" type="file" accept="image/*"
           class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-300" />
       </div>
@@ -173,8 +173,9 @@
         <button id="submitPaymentBtn" type="button" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Submit Payment</button>
       </div>
       <p class="mt-4 text-xs text-slate-500">
+        The GCash reference number is required. A screenshot is optional.
         After submission, your payment stays pending until staff matches the reference number with the merchant notification.
-        If you already paid earlier, do not pay again — use the same GCash reference number and receipt screenshot to restore the pending record.
+        If you already paid earlier, do not pay again — use the same GCash reference number.
       </p>
     </div>
   </div>
@@ -543,7 +544,7 @@ function rangeIsAvailable(courtId, startTime, endTime, items = currentItems) {
   });
 }
 
-const BOOKING_HOLD_MS = 20 * 60 * 1000;
+const BOOKING_HOLD_MS = 30 * 60 * 1000;
 
 function bookingHoldUntil() {
   return Timestamp.fromMillis(Date.now() + BOOKING_HOLD_MS);
@@ -775,33 +776,44 @@ async function refreshReservationBeforePayment(registration, requestedPlayers) {
 
   if (registration.bookingType === "private_rental") {
     const bookingRef = doc(db, "privateRentalBookings", registration.id);
-    const bookingSnap = await getDoc(bookingRef);
-    if (!bookingSnap.exists() || bookingSnap.data().customerUid !== user.uid) {
-      throw rentalConflictError();
-    }
 
-    const booking = bookingSnap.data();
-    const lockIds = Array.isArray(booking.lockIds) ? booking.lockIds : rentalLockIds(booking);
-    const holdUntil = bookingHoldUntil();
-
-    await runTransaction(db, async tx => {
+    return runTransaction(db, async tx => {
       const freshBooking = await tx.get(bookingRef);
-      if (!freshBooking.exists() || freshBooking.data().customerUid !== user.uid) throw rentalConflictError();
+      if (!freshBooking.exists()) throw rentalConflictError();
 
+      const booking = freshBooking.data();
+      if (
+        booking.customerUid !== user.uid ||
+        booking.status !== "pending_payment" ||
+        isExpiredHold(booking)
+      ) {
+        const err = new Error("Your 30-minute payment window has expired. The court is available to other customers again.");
+        err.code = "hold-expired";
+        throw err;
+      }
+
+      const lockIds = Array.isArray(booking.lockIds) ? booking.lockIds : rentalLockIds(booking);
       const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
       const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
+
       lockSnaps.forEach(snap => {
         if (!snap.exists()) throw rentalConflictError();
         const data = snap.data();
-        if (data.customerUid !== user.uid || data.bookingId !== registration.id) throw rentalConflictError();
+        if (
+          data.customerUid !== user.uid ||
+          data.bookingId !== registration.id ||
+          data.status !== "pending_payment" ||
+          isExpiredHold(data)
+        ) {
+          const err = new Error("Your 30-minute payment window has expired. The court is available to other customers again.");
+          err.code = "hold-expired";
+          throw err;
+        }
       });
 
-      tx.update(bookingRef, { holdUntil, updatedAt: serverTimestamp() });
-      lockRefs.forEach(ref => tx.update(ref, { holdUntil, updatedAt: serverTimestamp() }));
-      tx.update(doc(db, "publicSchedule", registration.id), { holdUntil });
+      // Do not extend the hold here. The original CONFIRM TIME deadline is final.
+      return { lockIds, reservedPlayers: 0 };
     });
-
-    return { lockIds, reservedPlayers: 0 };
   }
 
   const session = currentItems.find(item => item.id === registration.sessionId) || registration;
@@ -1092,7 +1104,7 @@ function render(items) {
           Cancel Selection
         </button>
         <button type="button" class="review-rental-selection flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black">
-          Continue Rental
+          CONFIRM TIME
         </button>
       </div>
     </div>
@@ -1118,7 +1130,7 @@ function render(items) {
     </div>`;
 }
 
-schedule.addEventListener("click", (event) => {
+schedule.addEventListener("click", async (event) => {
   const statusButton = event.target.closest(".payment-status-open");
   if (statusButton) {
     const pass = document.getElementById(`pass-${statusButton.dataset.sessionId}`);
@@ -1147,20 +1159,68 @@ schedule.addEventListener("click", (event) => {
   const reviewRentalSelectionBtn = event.target.closest(".review-rental-selection");
   if (reviewRentalSelectionBtn) {
     if (!selectedRentalSlot) return;
-    const hours = selectedRentalSlot.hours;
-    const rate = selectedRentalSlot.hourlyRate;
-    rentalDetails.innerHTML = `
-      <div><strong>Date:</strong> ${selectedRentalSlot.date}</div>
-      <div><strong>Court:</strong> ${selectedRentalSlot.courtId}</div>
-      <div><strong>Time:</strong> ${formatTime12(selectedRentalSlot.startTime)}–${formatTime12(selectedRentalSlot.endTime)}</div>
-      <div><strong>Duration:</strong> ${hours} hour${hours === 1 ? "" : "s"}</div>
-      <div><strong>Rate:</strong> ₱${rate}/hour</div>
-      <div class="pt-2 text-xl font-black text-emerald-300">Total: ₱${selectedRentalSlot.amountDue}</div>
-    `;
-    rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
-    rentalStatus.textContent = "";
-    rentalModal.classList.remove("hidden");
-    rentalModal.classList.add("flex");
+
+    const originalText = reviewRentalSelectionBtn.textContent;
+    reviewRentalSelectionBtn.disabled = true;
+    reviewRentalSelectionBtn.textContent = "CONFIRMING…";
+
+    try {
+      const user = await ensureSignedIn();
+      const slot = { ...selectedRentalSlot };
+
+      // This is the exact point where Firebase gets the reservation.
+      // Browsing/selecting before this button is local UI only.
+      const reservation = await reservePrivateRentalAtomically(slot, user);
+      const slotId = reservation.bookingId;
+
+      const rentalRegistration = {
+        id: slotId,
+        registrationId: slotId,
+        sessionId: slotId,
+        bookingType: "private_rental",
+        customerUid: user.uid,
+        customerName: user.displayName || "",
+        customerEmail: user.email || "",
+        date: slot.date,
+        courtId: slot.courtId,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        pricePerPlayer: slot.hourlyRate,
+        hourlyRate: slot.hourlyRate,
+        hours: slot.hours,
+        amountDue: slot.amountDue,
+        lockIds: reservation.lockIds,
+        holdUntil: reservation.holdUntil
+      };
+
+      selectedRentalSlot = null;
+      rentalSelectionStart = null;
+      render(currentItems);
+
+      showStatus(
+        "success",
+        "Time confirmed — 30 minute payment window",
+        "Court " + slot.courtId + " · " +
+        formatTime12(slot.startTime) + "–" + formatTime12(slot.endTime) +
+        ". Submit your GCash reference number before the 30-minute hold expires."
+      );
+
+      openPaymentModal(rentalRegistration);
+    } catch (err) {
+      if (err?.code === "booking-conflict" || err?.code === "permission-denied") {
+        showStatus(
+          "error",
+          "Time can no longer be confirmed",
+          "Another customer has already confirmed part of this time. Choose another available time."
+        );
+      } else {
+        showStatus("error", "Could not confirm time", err?.message || "Unknown error");
+      }
+      render(currentItems);
+    } finally {
+      reviewRentalSelectionBtn.disabled = false;
+      reviewRentalSelectionBtn.textContent = originalText;
+    }
     return;
   }
 
@@ -1263,7 +1323,7 @@ schedule.addEventListener("click", (event) => {
       "info",
       "Rental time selected",
       "Court " + courtId + " · " + formatTime12(selectionStart) + "–" + formatTime12(selectionEnd) +
-      ". Nothing is reserved yet. Tap CONFIRM TIME when ready, or tap the selected range again to cancel."
+      ". Nothing is reserved yet. Tap CONFIRM TIME when ready. Confirming will hold these hours for 30 minutes while you complete the GCash payment."
     );
     return;
   }
@@ -1339,7 +1399,7 @@ $("continueRentalBtn").addEventListener("click", async () => {
     render(currentItems);
     showStatus(
       "success",
-      "Court held for 20 minutes",
+      "Court held for 30 minutes",
       "Your selected court/time is protected while you complete payment."
     );
     openPaymentModal(rentalRegistration);
@@ -1405,7 +1465,7 @@ $("confirmJoinBtn").addEventListener("click", async () => {
 
     showStatus(
       "success",
-      "Open Play spot held for 20 minutes",
+      "Open Play spot held for 30 minutes",
       "One player spot is protected. If you pay for more players, capacity will be checked again before submission."
     );
     openPaymentModal(newRegistration);
@@ -1511,7 +1571,7 @@ function updatePlayersCoveredHint() {
     const hours = Number(paymentRegistration.hours || 1);
     paymentCalculation.textContent = "Private court rental · " + hours + " hour" + (hours === 1 ? "" : "s");
     paymentTotal.textContent = `₱${total}`;
-    playersCoveredHint.textContent = "This payment reserves the selected court for the selected one-hour slot.";
+    playersCoveredHint.textContent = "Submit the GCash reference before the 30-minute confirmed-time hold expires.";
     playersCoveredHint.className = "mt-2 text-xs text-emerald-400";
     paymentPlayerNames.innerHTML = "";
     return;
@@ -1587,9 +1647,9 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   const file = paymentReceipt.files[0];
   const playerNames = isRentalPayment ? [] : getPlayerNames();
 
-  if (!mobile || (!isRentalPayment && playersCovered < 1) || !price || !reference || !file) {
+  if (!mobile || (!isRentalPayment && playersCovered < 1) || !price || !reference) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
-    paymentStatusBox.textContent = "Please complete mobile number, number of players, GCash reference number, and payment screenshot.";
+    paymentStatusBox.textContent = "Please complete mobile number, number of players, and GCash reference number.";
     return;
   }
 
@@ -1599,13 +1659,13 @@ $("submitPaymentBtn").addEventListener("click", async () => {
     return;
   }
 
-  if (!file.type.startsWith("image/")) {
+  if (file && !file.type.startsWith("image/")) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
-    paymentStatusBox.textContent = "Please upload an image screenshot.";
+    paymentStatusBox.textContent = "If you attach a screenshot, it must be an image.";
     return;
   }
 
-  if (file.size > 5 * 1024 * 1024) {
+  if (file && file.size > 5 * 1024 * 1024) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
     paymentStatusBox.textContent = "Screenshot must be below 5MB.";
     return;
@@ -1639,33 +1699,40 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       isRentalPayment ? 0 : playersCovered
     );
 
-    btn.textContent = "Uploading…";
-    paymentStatusBox.textContent = "Reservation protected. Uploading payment confirmation…";
+    let receiptUrl = "";
+    if (file) {
+      btn.textContent = "Uploading…";
+      paymentStatusBox.textContent = "Reservation protected. Uploading optional payment screenshot…";
 
-    const base64Receipt = await fileToBase64(file);
-    const payload = {
-      customerName: paymentRegistration.customerName || auth.currentUser.displayName || "",
-      mobile,
-      bookingType: paymentRegistration.bookingType || "open_play",
-      playersCovered,
-      playerNames,
-      amount: String(amount),
-      reference,
-      notes: isRentalPayment
-        ? `Courtside Private Rental | ${paymentRegistration.hours || 1} hour(s) | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime} | Booking ${paymentRegistration.id}`
-        : `Courtside Open Play | ${playersCovered} player(s) | Players: ${playerNames.join(", ")} | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
-      fileName: file.name,
-      fileType: file.type,
-      receiptBase64: base64Receipt,
-      submittedAt: new Date().toLocaleString()
-    };
+      const base64Receipt = await fileToBase64(file);
+      const payload = {
+        customerName: paymentRegistration.customerName || auth.currentUser.displayName || "",
+        mobile,
+        bookingType: paymentRegistration.bookingType || "open_play",
+        playersCovered,
+        playerNames,
+        amount: String(amount),
+        reference,
+        notes: isRentalPayment
+          ? `Courtside Private Rental | ${paymentRegistration.hours || 1} hour(s) | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime} | Booking ${paymentRegistration.id}`
+          : `Courtside Open Play | ${playersCovered} player(s) | Players: ${playerNames.join(", ")} | Registration ${paymentRegistration.id} | Session ${paymentRegistration.sessionId} | Court ${paymentRegistration.courtId} | ${paymentRegistration.date} ${paymentRegistration.startTime}-${paymentRegistration.endTime}`,
+        fileName: file.name,
+        fileType: file.type,
+        receiptBase64: base64Receipt,
+        submittedAt: new Date().toLocaleString()
+      };
 
-    const response = await fetch(PAYMENT_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json();
-    if (!result.success) throw new Error(result.message || "Payment submission failed.");
+      const response = await fetch(PAYMENT_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.message || "Payment screenshot upload failed.");
+      receiptUrl = result.receiptUrl || "";
+    } else {
+      btn.textContent = "Securing booking…";
+      paymentStatusBox.textContent = "Reference number received. Securing your booking…";
+    }
 
     const paymentData = {
       bookingType: paymentRegistration.bookingType || "open_play",
@@ -1684,7 +1751,7 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       reference,
       playersCovered,
       playerNames,
-      receiptUrl: result.receiptUrl || "",
+      receiptUrl,
       status: "pending_verification",
       submittedAt: serverTimestamp()
     };
@@ -1712,7 +1779,10 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   } catch (err) {
     paymentStatusBox.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
 
-    if (err?.code === "capacity-conflict" || err?.code === "booking-conflict") {
+    if (err?.code === "hold-expired") {
+      paymentStatusBox.textContent = err.message + " Please close this payment window and choose the time again.";
+      showStatus("error", "Payment window expired", err.message);
+    } else if (err?.code === "capacity-conflict" || err?.code === "booking-conflict") {
       paymentStatusBox.textContent = err.message;
     } else if (String(err?.code || "").includes("duplicate-payment")) {
       paymentStatusBox.textContent = err.message + " Do not pay again.";
