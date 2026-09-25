@@ -74,17 +74,62 @@ service cloud.firestore {
           && request.resource.data.bookingType == "private_rental"
           && request.resource.data.status == "pending_payment"
           && request.resource.data.bookingId == scheduleId
-          && get(/databases/$(database)/documents/privateRentalBookings/$(scheduleId))
+          && getAfter(/databases/$(database)/documents/privateRentalBookings/$(scheduleId))
                .data.customerUid == request.auth.uid
         );
 
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.type == "private"
+          && getAfter(/databases/$(database)/documents/privateRentalBookings/$(scheduleId))
+               .data.customerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["status", "holdUntil"])
+        );
+
+      allow delete: if isAdmin();
     }
 
     // Actual Open Play session definition.
     match /openPlaySessions/{sessionId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
+    }
+
+    // Atomic Open Play seat locks. Expired pending-payment locks may be reclaimed.
+    match /openPlaySeatLocks/{lockId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.customerUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.status == "pending_payment"
+        && request.resource.data.holdUntil > request.time
+        && request.resource.data.holdUntil <= request.time + duration.value(30, "m");
+
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.customerUid == request.auth.uid
+          && (
+            resource.data.customerUid == request.auth.uid
+            || (
+              resource.data.status == "pending_payment"
+              && resource.data.holdUntil <= request.time
+            )
+          )
+          && (
+            (
+              request.resource.data.status == "pending_payment"
+              && request.resource.data.holdUntil > request.time
+              && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+            )
+            || request.resource.data.status == "pending_verification"
+          )
+        );
+
+      allow delete: if isAdmin();
     }
 
     // Customer Open Play joins.
@@ -95,6 +140,9 @@ service cloud.firestore {
           && request.resource.data.customerUid == request.auth.uid
           && request.resource.data.status == "pending_payment"
           && request.resource.data.paymentStatus == "pending"
+          && request.resource.data.reservedPlayers >= 1
+          && request.resource.data.holdUntil > request.time
+          && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
         );
 
       allow read: if signedIn()
@@ -103,7 +151,66 @@ service cloud.firestore {
           || isAdmin()
         );
 
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.customerUid == request.auth.uid
+          && request.resource.data.customerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status", "paymentStatus", "reservedPlayers",
+            "seatLockIds", "holdUntil", "updatedAt"
+          ])
+          && (
+            (
+              request.resource.data.status == "pending_payment"
+              && request.resource.data.paymentStatus == "pending"
+              && request.resource.data.reservedPlayers >= 1
+              && request.resource.data.holdUntil > request.time
+              && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+            )
+            || (
+              request.resource.data.status == "pending_verification"
+              && request.resource.data.paymentStatus == "submitted"
+            )
+          )
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // Atomic hourly court locks. These are the concurrency authority for customer rentals.
+    match /slotLocks/{lockId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.customerUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.status == "pending_payment"
+        && request.resource.data.holdUntil > request.time
+        && request.resource.data.holdUntil <= request.time + duration.value(30, "m");
+
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.customerUid == request.auth.uid
+          && (
+            resource.data.customerUid == request.auth.uid
+            || (
+              resource.data.status == "pending_payment"
+              && resource.data.holdUntil <= request.time
+            )
+          )
+          && (
+            (
+              request.resource.data.status == "pending_payment"
+              && request.resource.data.holdUntil > request.time
+              && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+            )
+            || request.resource.data.status == "pending_verification"
+          )
+        );
+
+      allow delete: if isAdmin();
     }
 
     // Actual private-rental booking.
@@ -114,6 +221,8 @@ service cloud.firestore {
           && request.resource.data.customerUid == request.auth.uid
           && request.resource.data.status == "pending_payment"
           && request.resource.data.paymentStatus == "pending"
+          && request.resource.data.holdUntil > request.time
+          && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
         );
 
       allow read: if signedIn()
@@ -122,14 +231,54 @@ service cloud.firestore {
           || isAdmin()
         );
 
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.customerUid == request.auth.uid
+          && request.resource.data.customerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status", "paymentStatus", "holdUntil", "updatedAt"
+          ])
+          && (
+            (
+              request.resource.data.status == "pending_payment"
+              && request.resource.data.paymentStatus == "pending"
+              && request.resource.data.holdUntil > request.time
+              && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+            )
+            || (
+              request.resource.data.status == "pending_verification"
+              && request.resource.data.paymentStatus == "submitted"
+            )
+          )
+        );
+
+      allow delete: if isAdmin();
     }
 
     // Customer payment claim + admin verification.
+    // The payment record can only be created after the reservation has been
+    // atomically promoted to pending_verification in the same transaction.
     match /paymentSubmissions/{paymentId} {
       allow create: if signedIn()
         && request.resource.data.customerUid == request.auth.uid
-        && request.resource.data.status == "pending_verification";
+        && request.resource.data.status == "pending_verification"
+        && (
+          (
+            request.resource.data.bookingType == "private_rental"
+            && getAfter(/databases/$(database)/documents/privateRentalBookings/$(request.resource.data.registrationId))
+                 .data.customerUid == request.auth.uid
+            && getAfter(/databases/$(database)/documents/privateRentalBookings/$(request.resource.data.registrationId))
+                 .data.status == "pending_verification"
+          )
+          || (
+            request.resource.data.bookingType != "private_rental"
+            && getAfter(/databases/$(database)/documents/openPlayRegistrations/$(request.resource.data.registrationId))
+                 .data.customerUid == request.auth.uid
+            && getAfter(/databases/$(database)/documents/openPlayRegistrations/$(request.resource.data.registrationId))
+                 .data.status == "pending_verification"
+          )
+        );
 
       allow read: if signedIn()
         && (
