@@ -22,7 +22,7 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(2,6,23,.26);
     }
     .schedule-grid { min-width: 930px; display: grid; grid-template-columns: 118px repeat(6, minmax(132px, 1fr)); }
-    .schedule-scroll { overflow-x: auto; position: relative; }
+    .schedule-scroll { overflow-x: auto; position: relative; -webkit-overflow-scrolling: touch; }
     .schedule-head { position: sticky; top: 0; z-index: 20; box-shadow: 0 8px 18px rgba(2,6,23,.72); }
     .schedule-head .court-head { background: rgba(2,6,23,.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     .time-cell, .court-head, .slot-cell { border-right: 1px solid rgb(51 65 85); border-bottom: 1px solid rgb(51 65 85); }
@@ -31,13 +31,16 @@
     @media (max-width: 640px) {
       main { padding-left: 14px !important; padding-right: 14px !important; }
       header { gap: 12px !important; }
-      .schedule-grid { min-width: 860px; grid-template-columns: 112px repeat(6, minmax(124px, 1fr)); }
+      .schedule-grid { min-width: 820px; grid-template-columns: 96px repeat(6, minmax(120px, 1fr)); }
+      .time-cell, .slot-cell { min-height: 58px; }
       #dateInput { font-size: 16px; padding-right: 3.75rem; }
+      #joinModal > div, #rentalModal > div, #paymentModal > div { max-height: 92vh; overflow-y: auto; }
+      #googleBtn { width: 100%; }
     }
   </style>
 </head>
 <body class="bg-slate-950 text-white min-h-screen">
-  <main class="max-w-3xl mx-auto p-5">
+  <main class="max-w-5xl mx-auto p-5">
     <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 py-6 border-b border-slate-800">
       <div>
         <h1 class="text-3xl font-bold">Courtside Gatherings</h1>
@@ -105,7 +108,7 @@
         <button id="cancelJoinBtn" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
         <button id="confirmJoinBtn" class="flex-1 rounded-xl bg-teal-600 px-4 py-3 font-semibold">Continue</button>
       </div>
-      <p class="mt-4 text-xs text-slate-500">This test creates a pending-payment registration. Payment confirmation will be connected next.</p>
+      <p class="mt-4 text-xs text-slate-500">Your spot is held only after Firebase confirms availability. You can then continue to payment.</p>
     </div>
   </div>
 
@@ -1128,8 +1131,7 @@ function render(items) {
   currentItems = items;
   const courts = [1,2,3,4,5,6];
 
-  // Temporary display range for the test scheduler.
-  // We can set the final opening/closing hours once Courtside operating hours are confirmed.
+  // Customer booking window: 8:00 AM through 12:00 midnight.
   const startHour = 8;
   const endHour = 24;
   const rows = [];
