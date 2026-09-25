@@ -455,6 +455,17 @@ async function confirmPayment(paymentId, options = {}) {
           }
         }
 
+        const rentalLockIds = Array.isArray(booking.lockIds) ? booking.lockIds : [];
+        const rentalLockRefs = rentalLockIds.map(id => doc(db, "slotLocks", id));
+        const rentalLockSnaps = await Promise.all(rentalLockRefs.map(ref => tx.get(ref)));
+        rentalLockSnaps.forEach(snap => {
+          if (!snap.exists()) throw new Error("A rental protection lock is missing.");
+          const lock = snap.data();
+          if (lock.bookingId !== payment.registrationId || lock.customerUid !== payment.customerUid) {
+            throw new Error("Rental protection lock does not match this booking.");
+          }
+        });
+
         tx.update(paymentRef, {
           status: "verified",
           verifiedAt: serverTimestamp(),
@@ -481,6 +492,12 @@ async function confirmPayment(paymentId, options = {}) {
           hourlyRate: Number(booking.hourlyRate || payment.amountPaid || 0),
           status: "confirmed"
         });
+
+        rentalLockRefs.forEach(ref => tx.update(ref, {
+          status: "verified",
+          verifiedAt: serverTimestamp(),
+          verifiedBy: auth.currentUser.uid
+        }));
 
         return;
       }
@@ -517,6 +534,20 @@ async function confirmPayment(paymentId, options = {}) {
       const alreadyPaid = Number(registration.paidPlayers || 0);
       const newPaidTotal = alreadyPaid + players;
       const last6 = String(payment.reference || "").slice(-6);
+
+      const seatLockIds = Array.isArray(registration.seatLockIds) ? registration.seatLockIds : [];
+      if (seatLockIds.length < players) {
+        throw new Error("Open Play capacity locks do not cover all paid players.");
+      }
+      const seatLockRefs = seatLockIds.slice(0, players).map(id => doc(db, "openPlaySeatLocks", id));
+      const seatLockSnaps = await Promise.all(seatLockRefs.map(ref => tx.get(ref)));
+      seatLockSnaps.forEach(snap => {
+        if (!snap.exists()) throw new Error("An Open Play capacity lock is missing.");
+        const lock = snap.data();
+        if (lock.registrationId !== payment.registrationId || lock.customerUid !== payment.customerUid) {
+          throw new Error("Open Play capacity lock does not match this registration.");
+        }
+      });
 
       // Read the existing working queue state inside the same transaction.
       // This lets payment verification and queue insertion succeed or fail together.
@@ -610,6 +641,12 @@ async function confirmPayment(paymentId, options = {}) {
         verifiedAt: serverTimestamp(),
         verifiedBy: auth.currentUser.uid
       });
+
+      seatLockRefs.forEach(ref => tx.update(ref, {
+        status: "verified",
+        verifiedAt: serverTimestamp(),
+        verifiedBy: auth.currentUser.uid
+      }));
 
       tx.set(queueStateRef, {
         ...queueState,
