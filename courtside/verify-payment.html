@@ -42,6 +42,22 @@
       <section class="mt-6">
         <div class="mb-3 flex items-end justify-between gap-3">
           <div>
+            <div class="text-xs font-black tracking-[.18em] text-amber-300">PENDING REVIEW</div>
+            <h2 class="mt-1 text-xl font-black">Unverified Submissions</h2>
+          </div>
+          <div id="pendingCount" class="rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-slate-300">0</div>
+        </div>
+        <p class="mb-4 text-sm text-slate-500">
+          Admin-only correction area. If the GCash reference is correct but no match is found, compare the sender, amount and customer details before correcting a likely typo.
+        </p>
+        <div id="pendingList" class="space-y-5">
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-500">Loading…</div>
+        </div>
+      </section>
+
+      <section class="mt-8">
+        <div class="mb-3 flex items-end justify-between gap-3">
+          <div>
             <div class="text-xs font-black tracking-[.18em] text-cyan-300">VERIFIED BOOKINGS</div>
             <h2 class="mt-1 text-xl font-black">Customer List</h2>
           </div>
@@ -82,10 +98,13 @@ const googleBtn = $("googleBtn");
 const adminPanel = $("adminPanel");
 const referenceInput = $("referenceInput");
 const verifyBtn = $("verifyBtn");
+const pendingList = $("pendingList");
+const pendingCount = $("pendingCount");
 const verifiedList = $("verifiedList");
 const verifiedCount = $("verifiedCount");
 const toast = $("toast");
 
+let unsubscribePending = null;
 let unsubscribeVerified = null;
 let toastTimer = null;
 
@@ -122,6 +141,107 @@ function showToast(type, message) {
       : "border-red-500 bg-red-950 text-red-100");
   toast.textContent = message;
   toastTimer = setTimeout(() => toast.classList.add("hidden"), 4200);
+}
+
+function renderPending(payments) {
+  const rows = payments
+    .filter(p => p.status === "pending_verification")
+    .sort((a,b) =>
+      String(a.date || "").localeCompare(String(b.date || "")) ||
+      String(a.startTime || "").localeCompare(String(b.startTime || "")) ||
+      String(a.customerName || "").localeCompare(String(b.customerName || ""))
+    );
+
+  pendingCount.textContent = String(rows.length);
+
+  if (!rows.length) {
+    pendingList.innerHTML = '<div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-500">No pending submissions.</div>';
+    return;
+  }
+
+  const groups = {};
+  rows.forEach(p => {
+    const date = p.date || "No date";
+    (groups[date] ||= []).push(p);
+  });
+
+  pendingList.innerHTML = Object.entries(groups).map(([date, items]) => `
+    <section>
+      <div class="mb-2 text-xs font-black tracking-[.16em] text-slate-400">${esc(date)}</div>
+      <div class="space-y-2">
+        ${items.map(p => {
+          const names = Array.isArray(p.playerNames) && p.playerNames.length
+            ? p.playerNames.join(", ")
+            : (p.customerName || "Customer");
+          const service = p.bookingType === "private_rental" ? "RENTED COURT" : "OPEN PLAY";
+          return `
+            <article class="rounded-2xl border border-amber-900/70 bg-amber-950/10 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="truncate text-base font-black text-white">${esc(names)}</div>
+                  <div class="mt-1 text-sm text-slate-400">${esc(p.mobile || "No mobile number")}</div>
+                </div>
+                <div class="shrink-0 rounded-full border border-amber-700 bg-amber-950/30 px-2.5 py-1 text-[10px] font-black tracking-wider text-amber-300">
+                  PENDING
+                </div>
+              </div>
+
+              <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <div class="col-span-2 rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Submitted Reference</div>
+                  <div class="mt-1 break-all font-mono text-base font-black text-amber-200">${esc(p.reference || "—")}</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Amount</div>
+                  <div class="mt-1 font-bold">₱${Number(p.amountPaid || 0).toLocaleString("en-PH")}</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Service</div>
+                  <div class="mt-1 font-bold">${service}</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Court</div>
+                  <div class="mt-1 font-bold">Court ${esc(p.courtId)}</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/70 p-3">
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Time</div>
+                  <div class="mt-1 font-bold">${esc(formatTime12(p.startTime))}–${esc(formatTime12(p.endTime))}</div>
+                </div>
+              </div>
+
+              <button type="button"
+                class="edit-reference mt-3 w-full rounded-xl border border-amber-700 bg-amber-950/30 px-4 py-3 text-sm font-black text-amber-200"
+                data-payment-id="${esc(p.id)}"
+                data-current-reference="${esc(p.reference || "")}"
+                data-customer-name="${esc(p.customerName || names)}">
+                EDIT SUBMITTED REFERENCE
+              </button>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `).join("");
+}
+
+function startPendingListener() {
+  if (unsubscribePending) unsubscribePending();
+  const q = query(collection(db, "paymentSubmissions"), where("status", "==", "pending_verification"));
+  unsubscribePending = onSnapshot(q, snap => {
+    renderPending(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }, err => {
+    console.warn(err);
+    pendingList.innerHTML = '<div class="rounded-2xl border border-red-800 bg-red-950/30 p-4 text-sm text-red-200">Could not load pending submissions.</div>';
+  });
+}
+
+function stopPendingListener() {
+  if (unsubscribePending) {
+    unsubscribePending();
+    unsubscribePending = null;
+  }
+  pendingCount.textContent = "0";
+  pendingList.innerHTML = "";
 }
 
 function renderVerified(payments) {
@@ -219,6 +339,7 @@ onAuthStateChanged(auth, user => {
     authState.textContent = "Not signed in.";
     googleBtn.textContent = "Sign in with Google";
     adminPanel.classList.add("hidden");
+    stopPendingListener();
     stopVerifiedListener();
     return;
   }
@@ -228,9 +349,11 @@ onAuthStateChanged(auth, user => {
 
   if (isAuthorizedAdmin(user)) {
     adminPanel.classList.remove("hidden");
+    startPendingListener();
     startVerifiedListener();
   } else {
     adminPanel.classList.add("hidden");
+    stopPendingListener();
     stopVerifiedListener();
     showToast("error", "This account is not authorized.");
   }
@@ -422,6 +545,85 @@ async function confirmPayment(paymentId, options = {}) {
   }
 }
 
+
+async function correctPendingReference(paymentId, currentReference, customerName) {
+  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
+    showToast("error", "Admin authorization required.");
+    return;
+  }
+
+  const entered = window.prompt(
+    "Correct the submitted GCash reference for " + customerName + ".\n\nOnly continue after comparing the GCash sender and amount.",
+    currentReference || ""
+  );
+
+  if (entered === null) return;
+
+  const nextReference = entered.trim();
+  if (!nextReference) {
+    showToast("error", "REFERENCE CANNOT BE EMPTY");
+    return;
+  }
+  if (nextReference === String(currentReference || "").trim()) {
+    showToast("error", "REFERENCE WAS NOT CHANGED");
+    return;
+  }
+
+  // Prevent the admin from correcting this submission to a reference already
+  // attached to another Firebase payment record.
+  const duplicateQ = query(
+    collection(db, "paymentSubmissions"),
+    where("reference", "==", nextReference)
+  );
+  const duplicateSnap = await getDocs(duplicateQ);
+  const otherMatches = duplicateSnap.docs.filter(d => d.id !== paymentId);
+
+  if (otherMatches.length) {
+    showToast("error", "REFERENCE NUMBER ALREADY USED / DUPLICATE");
+    return;
+  }
+
+  const paymentRef = doc(db, "paymentSubmissions", paymentId);
+
+  await runTransaction(db, async tx => {
+    const snap = await tx.get(paymentRef);
+    if (!snap.exists()) throw new Error("Payment record no longer exists.");
+
+    const payment = snap.data();
+    if (payment.status !== "pending_verification") {
+      throw new Error("Only PENDING submissions can be corrected.");
+    }
+
+    tx.update(paymentRef, {
+      reference: nextReference,
+      previousReference: payment.reference || "",
+      referenceCorrectedAt: serverTimestamp(),
+      referenceCorrectedBy: auth.currentUser.uid,
+      referenceCorrectedByEmail: auth.currentUser.email || ""
+    });
+  });
+
+  showToast("success", customerName + " — REFERENCE CORRECTED");
+}
+
+pendingList.addEventListener("click", async event => {
+  const btn = event.target.closest(".edit-reference");
+  if (!btn) return;
+
+  btn.disabled = true;
+  try {
+    await correctPendingReference(
+      btn.dataset.paymentId,
+      btn.dataset.currentReference || "",
+      btn.dataset.customerName || "Customer"
+    );
+  } catch (err) {
+    console.error(err);
+    showToast("error", err?.message || "COULD NOT CORRECT REFERENCE");
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 async function verifyReference() {
   const reference = referenceInput.value.trim();
