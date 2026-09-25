@@ -99,8 +99,9 @@ service cloud.firestore {
 
     // Atomic Open Play seat locks. Expired pending-payment locks may be reclaimed.
     match /openPlaySeatLocks/{lockId} {
-      allow read: if isAdmin()
-        || (signedIn() && resource.data.customerUid == request.auth.uid);
+      // Customers may fetch a specific seat lock during a transaction, but cannot list the collection.
+      allow get: if signedIn();
+      allow list: if isAdmin();
 
       allow create: if signedIn()
         && request.resource.data.customerUid == request.auth.uid
@@ -111,6 +112,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (
           signedIn()
+          && resource.data.status == "pending_payment"
           && request.resource.data.customerUid == request.auth.uid
           && (
             resource.data.customerUid == request.auth.uid
@@ -155,6 +157,7 @@ service cloud.firestore {
         || (
           signedIn()
           && resource.data.customerUid == request.auth.uid
+          && resource.data.status == "pending_payment"
           && request.resource.data.customerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "status", "paymentStatus", "reservedPlayers",
@@ -180,8 +183,9 @@ service cloud.firestore {
 
     // Atomic hourly court locks. These are the concurrency authority for customer rentals.
     match /slotLocks/{lockId} {
-      allow read: if isAdmin()
-        || (signedIn() && resource.data.customerUid == request.auth.uid);
+      // Customers may fetch a specific hourly lock during a transaction, but cannot list the collection.
+      allow get: if signedIn();
+      allow list: if isAdmin();
 
       allow create: if signedIn()
         && request.resource.data.customerUid == request.auth.uid
@@ -192,6 +196,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (
           signedIn()
+          && resource.data.status == "pending_payment"
           && request.resource.data.customerUid == request.auth.uid
           && (
             resource.data.customerUid == request.auth.uid
@@ -235,6 +240,7 @@ service cloud.firestore {
         || (
           signedIn()
           && resource.data.customerUid == request.auth.uid
+          && resource.data.status == "pending_payment"
           && request.resource.data.customerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "status", "paymentStatus", "holdUntil", "updatedAt"
