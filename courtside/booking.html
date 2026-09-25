@@ -991,17 +991,11 @@ async function commitPaymentAtomically(paymentId, paymentData, registration, res
   const user = auth.currentUser;
 
   await runTransaction(db, async tx => {
-    const existingPayment = await tx.get(paymentRef);
-    if (existingPayment.exists()) {
-      const existing = existingPayment.data();
-      if (existing.customerUid === user.uid && existing.sessionId === registration.sessionId) {
-        return;
-      }
-      const err = new Error("That GCash reference number is already attached to another payment.");
-      err.code = "duplicate-payment";
-      throw err;
-    }
-
+    // Do not pre-read paymentSubmissions/{reference} when it may not exist.
+    // The owner-scoped Firestore read rule cannot authorize a nonexistent doc.
+    // The deterministic reference document ID still protects uniqueness:
+    // a new reference is a create; an existing reference would require an update,
+    // which customers are not allowed to perform.
     if (registration.bookingType === "private_rental") {
       const bookingRef = doc(db, "privateRentalBookings", registration.id);
       const bookingSnap = await tx.get(bookingRef);
@@ -1986,15 +1980,9 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   paymentStatusBox.textContent = "Checking live availability before payment submission…";
 
   try {
-    const existingReference = await getDoc(doc(db, "paymentSubmissions", cleanReference));
-    if (existingReference.exists()) {
-      const existing = existingReference.data();
-      if (existing.customerUid === auth.currentUser.uid && existing.sessionId === paymentRegistration.sessionId) {
-        throw Object.assign(new Error("This payment reference is already saved for your booking."), { code: "duplicate-payment-self" });
-      }
-      throw Object.assign(new Error("That GCash reference number is already attached to another payment."), { code: "duplicate-payment" });
-    }
-
+    // Existing payments for this signed-in user/session are already checked
+    // from currentPayments above. Do not directly get a possibly nonexistent
+    // payment reference document because owner-only rules reject that read.
     const reservationState = await refreshReservationBeforePayment(
       paymentRegistration,
       isRentalPayment ? 0 : playersCovered
@@ -2089,7 +2077,7 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       paymentStatusBox.textContent = err.message + " Do not pay again.";
     } else if (err?.code === "permission-denied") {
       paymentStatusBox.textContent =
-        "The new booking-protection rules are not active yet. Publish the newest Firestore rules before continuing.";
+        "Payment could not be saved. If this GCash reference was already used, do not pay again. Otherwise refresh and retry once.";
     } else {
       paymentStatusBox.textContent = `${err?.code || "error"}: ${err?.message || "Could not submit payment."}`;
     }
