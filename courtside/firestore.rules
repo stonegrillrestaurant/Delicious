@@ -82,10 +82,14 @@ service cloud.firestore {
         || (
           signedIn()
           && resource.data.type == "private"
+          && resource.data.holdUntil > request.time
           && getAfter(/databases/$(database)/documents/privateRentalBookings/$(scheduleId))
                .data.customerUid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/privateRentalBookings/$(scheduleId))
+               .data.status == "pending_verification"
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(["status", "holdUntil"])
+               .hasOnly(["status"])
+          && request.resource.data.status == "pending_verification"
         );
 
       allow delete: if isAdmin();
@@ -211,7 +215,10 @@ service cloud.firestore {
               && request.resource.data.holdUntil > request.time
               && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
             )
-            || request.resource.data.status == "pending_verification"
+            || (
+              request.resource.data.status == "pending_verification"
+              && resource.data.holdUntil > request.time
+            )
           )
         );
 
@@ -241,6 +248,7 @@ service cloud.firestore {
           signedIn()
           && resource.data.customerUid == request.auth.uid
           && resource.data.status == "pending_payment"
+          && resource.data.holdUntil > request.time
           && request.resource.data.customerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "status", "paymentStatus", "holdUntil", "updatedAt"
