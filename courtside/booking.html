@@ -859,47 +859,10 @@ async function reserveOpenPlaySeatsAtomically(session, user, requestedPlayers = 
     const liveMax = Math.max(1, Math.floor(Number(liveSession.maxPlayers || maxPlayers)));
     const liveSeatRefs = seatRefs.slice(0, liveMax);
 
-    // Read the user's registration first. If this account already joined this
-    // exact session, do not try to overwrite a verified/submitted registration
-    // or rewrite verified seat locks.
-    const registrationSnap = await tx.get(registrationRef);
-    if (registrationSnap.exists()) {
-      const existing = registrationSnap.data();
-
-      if (existing.customerUid !== user.uid) {
-        throw capacityConflictError(0);
-      }
-
-      if (
-        existing.status === "confirmed" ||
-        existing.status === "verified" ||
-        existing.paymentStatus === "verified"
-      ) {
-        return {
-          registrationId,
-          reservedPlayers: Number(existing.paidPlayers || existing.reservedPlayers || 1),
-          seatLockIds: Array.isArray(existing.seatLockIds) ? existing.seatLockIds : [],
-          holdUntil: existing.holdUntil || null,
-          session: liveSession,
-          existingState: "verified"
-        };
-      }
-
-      if (
-        existing.status === "pending_verification" ||
-        existing.paymentStatus === "submitted"
-      ) {
-        return {
-          registrationId,
-          reservedPlayers: Number(existing.reservedPlayers || 1),
-          seatLockIds: Array.isArray(existing.seatLockIds) ? existing.seatLockIds : [],
-          holdUntil: existing.holdUntil || null,
-          session: liveSession,
-          existingState: "pending_verification"
-        };
-      }
-    }
-
+    // Do not read the deterministic registration document here before creation.
+    // Owner-scoped Firestore rules cannot authorize a get() against a document
+    // that does not exist yet. Existing-registration handling is already done by
+    // the owner-scoped preflight query before this transaction.
     const seatSnaps = await Promise.all(liveSeatRefs.map(ref => tx.get(ref)));
 
     const owned = [];
@@ -957,8 +920,8 @@ async function reserveOpenPlaySeatsAtomically(session, user, requestedPlayers = 
       holdUntil,
       updatedAt: serverTimestamp()
     };
-    if (!registrationSnap.exists()) registrationData.createdAt = serverTimestamp();
-
+    // createdAt is intentionally omitted here so the same merge works for both
+    // first-time holds and an existing unpaid hold without requiring a pre-read.
     tx.set(registrationRef, registrationData, { merge: true });
 
     return {
@@ -1809,11 +1772,11 @@ $("confirmJoinBtn").addEventListener("click", async () => {
       joinStatus.textContent = err.message;
       showStatus("error", "Open Play capacity changed", err.message);
     } else if (err?.code === "permission-denied" && auth.currentUser) {
-      joinStatus.textContent = "Firebase rejected this registration. The account may already have a saved registration, or the live rules do not match this booking flow.";
+      joinStatus.textContent = "Firebase blocked this booking transaction. No payment was created.";
       showStatus(
         "error",
         "Registration was blocked",
-        "No payment was created. Refresh the page first; if this account already joined the session, its existing booking will be shown."
+        "The booking was not saved. Refresh the page and try once more."
       );
     } else {
       joinStatus.textContent = `${err?.code || "unknown"}: ${err?.message || "Could not complete registration."}`;
