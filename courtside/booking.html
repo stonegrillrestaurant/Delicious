@@ -858,10 +858,49 @@ async function reserveOpenPlaySeatsAtomically(session, user, requestedPlayers = 
     const liveSession = { id: session.id, ...sessionSnap.data() };
     const liveMax = Math.max(1, Math.floor(Number(liveSession.maxPlayers || maxPlayers)));
     const liveSeatRefs = seatRefs.slice(0, liveMax);
-    const [registrationSnap, ...seatSnaps] = await Promise.all([
-      tx.get(registrationRef),
-      ...liveSeatRefs.map(ref => tx.get(ref))
-    ]);
+
+    // Read the user's registration first. If this account already joined this
+    // exact session, do not try to overwrite a verified/submitted registration
+    // or rewrite verified seat locks.
+    const registrationSnap = await tx.get(registrationRef);
+    if (registrationSnap.exists()) {
+      const existing = registrationSnap.data();
+
+      if (existing.customerUid !== user.uid) {
+        throw capacityConflictError(0);
+      }
+
+      if (
+        existing.status === "confirmed" ||
+        existing.status === "verified" ||
+        existing.paymentStatus === "verified"
+      ) {
+        return {
+          registrationId,
+          reservedPlayers: Number(existing.paidPlayers || existing.reservedPlayers || 1),
+          seatLockIds: Array.isArray(existing.seatLockIds) ? existing.seatLockIds : [],
+          holdUntil: existing.holdUntil || null,
+          session: liveSession,
+          existingState: "verified"
+        };
+      }
+
+      if (
+        existing.status === "pending_verification" ||
+        existing.paymentStatus === "submitted"
+      ) {
+        return {
+          registrationId,
+          reservedPlayers: Number(existing.reservedPlayers || 1),
+          seatLockIds: Array.isArray(existing.seatLockIds) ? existing.seatLockIds : [],
+          holdUntil: existing.holdUntil || null,
+          session: liveSession,
+          existingState: "pending_verification"
+        };
+      }
+    }
+
+    const seatSnaps = await Promise.all(liveSeatRefs.map(ref => tx.get(ref)));
 
     const owned = [];
     const available = [];
@@ -1642,6 +1681,32 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     const session = { ...selectedOpenPlay };
     const reserved = await reserveOpenPlaySeatsAtomically(session, user, 1);
 
+    if (reserved.existingState === "verified") {
+      joinModal.classList.add("hidden");
+      joinModal.classList.remove("flex");
+      savedSuccessfully = true;
+      showStatus(
+        "info",
+        "Already joined",
+        "This Google account is already VERIFIED for this Open Play session. No second registration was created."
+      );
+      renderCustomerPasses();
+      return;
+    }
+
+    if (reserved.existingState === "pending_verification") {
+      joinModal.classList.add("hidden");
+      joinModal.classList.remove("flex");
+      savedSuccessfully = true;
+      showStatus(
+        "info",
+        "Payment already submitted",
+        "This Google account already has a PENDING registration for this Open Play session. Do not pay again."
+      );
+      renderCustomerPasses();
+      return;
+    }
+
     joinModal.classList.add("hidden");
     joinModal.classList.remove("flex");
 
@@ -1676,8 +1741,12 @@ $("confirmJoinBtn").addEventListener("click", async () => {
       joinStatus.textContent = err.message;
       showStatus("error", "Open Play capacity changed", err.message);
     } else if (err?.code === "permission-denied" && auth.currentUser) {
-      joinStatus.textContent = "Firestore protection rules are not published yet for the new capacity lock.";
-      showStatus("error", "Registration protection not active", "Publish the newest Firestore rules, then try again.");
+      joinStatus.textContent = "Firebase rejected this registration. The account may already have a saved registration, or the live rules do not match this booking flow.";
+      showStatus(
+        "error",
+        "Registration was blocked",
+        "No payment was created. Refresh the page first; if this account already joined the session, its existing booking will be shown."
+      );
     } else {
       joinStatus.textContent = `${err?.code || "unknown"}: ${err?.message || "Could not complete registration."}`;
       showStatus("error", "Could not join Open Play", err?.message || "Unknown error");
