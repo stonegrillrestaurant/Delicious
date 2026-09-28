@@ -382,6 +382,27 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Customer carried-balance summary. Customers may read their own balance;
+    // only Admin may change it after a deliberate payment decision.
+    match /customerBalances/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Immutable balance ledger created by Admin payment decisions.
+    match /balanceTransactions/{transactionId} {
+      allow read: if signedIn()
+        && (
+          resource.data.customerUid == request.auth.uid
+          || isAdmin()
+        );
+      allow create: if isAdmin()
+        && request.resource.data.customerUid is string
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.email;
+      allow update, delete: if false;
+    }
+
     // Confirmed attendance/activity. Customers cannot award themselves.
     match /playerActivity/{activityId} {
       allow read: if signedIn()
