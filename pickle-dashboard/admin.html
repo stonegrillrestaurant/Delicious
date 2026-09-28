@@ -176,7 +176,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { firebaseConfig, isAuthorizedAdmin, isAuthorizedOperator, courtsideRole } from "../courtside/courtside-config.js";
 
     const app = initializeApp(firebaseConfig);
@@ -1415,100 +1415,158 @@
     // --- END OF DAY / ARCHIVE LOGIC ---
 
     window.requestResetDailyData = function() {
-      if (!requireLivePanelControl("End Day & Archive")) return;
-      if (state.players.length === 0 && (!state.dailyRentals || state.dailyRentals.length === 0) && (!state.dailyOpenPlayLogs || state.dailyOpenPlayLogs.length === 0)) {
-          window.showToast("No data to archive yet.", "warn");
-          return;
+      if (!isAuthorizedAdmin(auth.currentUser)) {
+        window.showToast("Day reports are admin-only.", "warn");
+        return;
       }
 
-      const localDate = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const dateLabel = now.toLocaleDateString('en-PH', {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+      });
+      const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       const content = `
-        <h3 class="text-lg font-black text-red-400 mb-2">End Day Archive</h3>
-        <p class="text-sm text-slate-300 mb-4">Package all registries, verify discrepancies, log rentals, and calculate daily revenue. This will clear the active board.</p>
-        <label class="block text-[10px] font-black text-slate-500 mb-1 tracking-widest uppercase">Archive Date</label>
-        <input type="date" id="archive-date" value="${localDate}" class="w-full px-3 py-3 bg-slate-900 rounded-lg text-white mb-5 border border-slate-700 outline-none focus:border-red-500 transition">
-        <div class="flex justify-end gap-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-black text-amber-300 mb-1">Save Day Report</h3>
+            <p class="text-sm text-slate-300">Create a cumulative snapshot of today's records up to <b>${timeLabel}</b>. Nothing on the live board will be cleared or reset.</p>
+          </div>
+          <button onclick="hideModal()" aria-label="Close" class="h-9 w-9 shrink-0 rounded-full border border-slate-600 bg-slate-700 text-xl text-slate-200">×</button>
+        </div>
+        <div class="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm">
+          <div class="font-bold text-white">${dateLabel}</div>
+          <div class="mt-1 text-xs text-slate-400">Covers start of day → ${timeLabel}</div>
+        </div>
+        <div class="mt-5 flex justify-end gap-3">
           <button onclick="hideModal()" class="px-4 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold transition text-sm">Cancel</button>
-          <button onclick="executeArchive()" class="px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold transition text-sm">Archive Data</button>
+          <button onclick="executeArchive()" class="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black transition text-sm">Save Snapshot</button>
         </div>
       `;
       window.showModal(content);
     };
 
     window.executeArchive = async function() {
-      const dateInput = document.getElementById('archive-date').value;
-      window.hideModal();
-      
-      const selectedDate = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
-      const dateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-      
-      const walkInPlayers = state.players;
-      const walkInCount = walkInPlayers.length;
-      const paidWalkIns = walkInPlayers.filter(p => p.paid && p.source !== 'online').length;
-      const walkInRevenue = paidWalkIns * 120;
-      
-      let finalRentals = [...(state.dailyRentals || [])];
-      let finalOpenPlays = [...(state.dailyOpenPlayLogs || [])];
-
-      state.courts.forEach(c => {
-          if(c.isConfigured) {
-              if(c.mode === 'rental') {
-                  finalRentals.push({
-                      court: c.name,
-                      renter: c.renterName,
-                      revenue: c.rentalRevenue,
-                      time: `${formatTime(c.timeStart)} - ${formatTime(c.timeEnd)}`
-                  });
-              } else {
-                  finalOpenPlays.push({
-                     court: c.name,
-                     time: `${formatTime(c.timeStart)} - ${formatTime(c.timeEnd)}`,
-                     queueClearedCount: (state.queues[c.id.toString()] || []).length
-                  });
-              }
-          }
-      });
-
-      const rentalRevenue = finalRentals.reduce((sum, r) => sum + (r.revenue || 0), 0);
-      const totalRevenue = walkInRevenue + rentalRevenue;
-      const discrepancies = walkInPlayers.filter(p => !p.paid).map(p => p.name);
-
-      const archiveRecord = {
-        id: 'ARCHIVE-' + Date.now(),
-        date: dateStr,
-        timestamp: Date.now(),
-        totalPlayers: walkInCount,
-        totalMatches: state.totalMatchesPlayed,
-        walkInRevenue: walkInRevenue,
-        rentalRevenue: rentalRevenue,
-        totalRevenue: totalRevenue,
-        players: [...walkInPlayers],
-        rentals: finalRentals,
-        openPlaySessions: finalOpenPlays,
-        discrepancies: discrepancies
-      };
-
-      historyVault.unshift(archiveRecord);
-
-      // The vault is cloud-backed in Firestore. Do not clear the active board
-      // until the archive has been successfully written to the database.
-      const archiveSaved = await saveHistory();
-      if (!archiveSaved) {
-        historyVault = historyVault.filter(item => item.id !== archiveRecord.id);
-        renderHistory();
+      if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
+        window.showToast("Day reports are admin-only.", "warn");
         return;
       }
 
-      state = {
-        players: [],
-        queues: { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] },
-        courts: JSON.parse(JSON.stringify(DEFAULT_COURTS)),
-        totalMatchesPlayed: 0,
-        dailyRentals: [],
-        dailyOpenPlayLogs: []
-      };
-      await saveState();
-      window.showToast("Day archived safely to Firebase.");
+      window.hideModal();
+
+      try {
+        const now = new Date();
+        const dateKey = localDateKey();
+        const dateStr = now.toLocaleDateString('en-PH', {
+          weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+        });
+        const snapshotTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const activePlayers = [...(state.players || [])];
+        const walkInPlayers = activePlayers.filter(p => p.source !== 'online');
+        const paidWalkIns = walkInPlayers.filter(p => p.paid);
+        const walkInRevenue = paidWalkIns.reduce((sum, p) =>
+          sum + Number(p.amountPaid || p.pricePaid || p.openPlayPrice || 120), 0
+        );
+
+        const currentCourts = Array.isArray(state.courts)
+          ? state.courts.filter(court => court.isConfigured)
+          : [];
+
+        const activeRentals = currentCourts
+          .filter(court => court.mode === 'rental')
+          .map(court => ({
+            court: court.name,
+            renter: court.renterName || 'Unknown',
+            revenue: Number(court.rentalRevenue || 0),
+            time: `${formatTime(court.timeStart)} - ${formatTime(court.timeEnd)}`,
+            source: 'live'
+          }));
+
+        const activeOpenPlay = currentCourts
+          .filter(court => court.mode === 'open_play')
+          .map(court => ({
+            court: court.name,
+            time: `${formatTime(court.timeStart)} - ${formatTime(court.timeEnd)}`,
+            maxPlayers: Number(court.maxPlayers || 12),
+            queueCount: (state.queues?.[String(court.id)] || []).length,
+            source: 'live'
+          }));
+
+        const rentals = [...(state.dailyRentals || []), ...activeRentals];
+        const openPlaySessions = [...(state.dailyOpenPlayLogs || []), ...activeOpenPlay];
+        const rentalRevenue = rentals.reduce((sum, item) => sum + Number(item.revenue || 0), 0);
+        const totalOnSiteRevenue = walkInRevenue + rentalRevenue;
+
+        const snapshotRecord = {
+          snapshotVersion: 1,
+          dateKey,
+          date: dateStr,
+          snapshotTime,
+          generatedAtMs: Date.now(),
+          createdAt: serverTimestamp(),
+          createdByUid: auth.currentUser.uid,
+          createdByEmail: auth.currentUser.email || "",
+          createdByName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+          coverage: {
+            from: "start_of_day",
+            to: snapshotTime
+          },
+          totals: {
+            currentPlayers: activePlayers.length,
+            walkIns: walkInPlayers.length,
+            paidWalkIns: paidWalkIns.length,
+            matchesPlayed: Number(state.totalMatchesPlayed || 0),
+            rentals: rentals.length,
+            openPlaySessions: openPlaySessions.length,
+            walkInRevenue,
+            rentalRevenue,
+            totalOnSiteRevenue
+          },
+          players: activePlayers,
+          rentals,
+          openPlaySessions
+        };
+
+        const snapshotRef = await addDoc(collection(db, "daySnapshots"), snapshotRecord);
+
+        await addDoc(collection(db, "eventLogs"), {
+          eventType: "DAY_SNAPSHOT_CREATED",
+          actorUid: auth.currentUser.uid,
+          actorEmail: auth.currentUser.email || "",
+          actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+          dateKey,
+          snapshotId: snapshotRef.id,
+          snapshotTime,
+          createdAt: serverTimestamp()
+        });
+
+        // Keep the existing History UI useful without changing live operational state.
+        const localArchive = {
+          id: snapshotRef.id,
+          date: dateStr + " · " + snapshotTime,
+          timestamp: Date.now(),
+          totalPlayers: activePlayers.length,
+          totalMatches: Number(state.totalMatchesPlayed || 0),
+          walkInRevenue,
+          rentalRevenue,
+          totalRevenue: totalOnSiteRevenue,
+          players: activePlayers,
+          rentals,
+          openPlaySessions,
+          discrepancies: walkInPlayers.filter(p => !p.paid).map(p => p.name),
+          createdBy: auth.currentUser.email || "",
+          nonDestructiveSnapshot: true
+        };
+        historyVault.unshift(localArchive);
+        await saveHistory();
+
+        window.showToast("Day report saved. Live operations were not reset.");
+        renderHistory();
+      } catch (err) {
+        console.error("Day snapshot failed:", err);
+        window.showToast(err?.message || "Could not save day report.", "error");
+      }
     };
 
     window.exportFullBackup = function() {
