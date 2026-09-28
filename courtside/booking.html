@@ -87,6 +87,7 @@
 
     <section id="statusBox" class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4 hidden"></section>
 
+    <section id="customerBalanceNotice" class="mt-5 hidden"></section>
     <section id="customerPasses" class="mt-5 hidden"></section>
 
     <section id="authDebug" class="mt-4 rounded-2xl border border-amber-700/60 bg-amber-950/20 p-4 hidden">
@@ -227,6 +228,7 @@ const provider = new GoogleAuthProvider();
 const $ = (id) => document.getElementById(id);
 const statusBox = $("statusBox");
 const customerPasses = $("customerPasses");
+const customerBalanceNotice = $("customerBalanceNotice");
 const schedule = $("schedule");
 const dateInput = $("dateInput");
 const calendarBtn = $("calendarBtn");
@@ -262,12 +264,14 @@ let unsubscribeOpenPlaySessions = null;
 let unsubscribeRegistrations = null;
 let unsubscribeRentalBookings = null;
 let unsubscribePayments = null;
+let unsubscribeBalance = null;
 let currentItems = [];
 let currentPublicItems = [];
 let currentOpenPlaySessions = [];
 let currentRegistrations = [];
 let currentRentalBookings = [];
 let currentPayments = [];
+let currentBalance = 0;
 let paymentRegistration = null;
 let authTimer = null;
 
@@ -412,13 +416,42 @@ onAuthStateChanged(auth, (user) => {
     unsubscribePayments();
     unsubscribePayments = null;
   }
+  if (unsubscribeBalance) {
+    unsubscribeBalance();
+    unsubscribeBalance = null;
+  }
 
   currentRegistrations = [];
   currentRentalBookings = [];
   currentPayments = [];
+  currentBalance = 0;
+  customerBalanceNotice.classList.add("hidden");
+  customerBalanceNotice.innerHTML = "";
 
   if (user) {
     showStatus("success", "Google account connected", `${user.displayName || user.email} · UID ${user.uid}`);
+
+    const balanceRef = doc(db, "customerBalances", user.uid);
+    unsubscribeBalance = onSnapshot(
+      balanceRef,
+      (snap) => {
+        currentBalance = snap.exists() ? Math.max(0, Number(snap.data().outstandingBalance || 0)) : 0;
+        if (currentBalance > 0) {
+          customerBalanceNotice.classList.remove("hidden");
+          customerBalanceNotice.innerHTML = `
+            <div class="rounded-2xl border border-amber-700 bg-amber-950/25 p-4">
+              <div class="text-xs font-black tracking-[.16em] text-amber-300">BALANCE NOTICE</div>
+              <div class="mt-1 text-lg font-black text-white">Previous balance: ₱${currentBalance.toLocaleString("en-PH")}</div>
+              <div class="mt-1 text-sm text-slate-300">This balance is added to your next payment total. If you already paid it separately, an Admin can record that later payment and clear the balance.</div>
+            </div>`;
+        } else {
+          customerBalanceNotice.classList.add("hidden");
+          customerBalanceNotice.innerHTML = "";
+        }
+        if (paymentRegistration) updatePlayersCoveredHint();
+      },
+      (err) => console.warn("Could not load customer balance:", err)
+    );
 
     const myRegistrationsQ = query(
       collection(db, "openPlayRegistrations"),
@@ -1926,12 +1959,15 @@ function updatePlayersCoveredHint() {
   }
 
   if (paymentRegistration.bookingType === "private_rental") {
-    const total = Number(paymentRegistration.amountDue || paymentRegistration.hourlyRate || paymentRegistration.pricePerPlayer || 0);
+    const bookingTotal = Number(paymentRegistration.amountDue || paymentRegistration.hourlyRate || paymentRegistration.pricePerPlayer || 0);
+    const total = bookingTotal + currentBalance;
     paymentPlayers.value = "1";
     paymentAmount.value = String(total);
     const hours = Number(paymentRegistration.hours || 1);
-    paymentCalculation.textContent = "Private court rental · " + hours + " hour" + (hours === 1 ? "" : "s");
-    paymentTotal.textContent = `₱${total}`;
+    paymentCalculation.textContent = currentBalance > 0
+      ? `Rental ₱${bookingTotal.toLocaleString("en-PH")} + previous balance ₱${currentBalance.toLocaleString("en-PH")}`
+      : "Private court rental · " + hours + " hour" + (hours === 1 ? "" : "s");
+    paymentTotal.textContent = `₱${total.toLocaleString("en-PH")}`;
     playersCoveredHint.textContent = "Submit the GCash reference before the 10-minute confirmed-time hold expires.";
     playersCoveredHint.className = "mt-2 text-xs text-emerald-400";
     paymentPlayerNames.innerHTML = "";
@@ -1944,11 +1980,14 @@ function updatePlayersCoveredHint() {
   if (!Number.isFinite(count) || count < 1) count = 1;
   paymentPlayers.value = String(count);
 
-  const total = price * count;
+  const bookingTotal = price * count;
+  const total = bookingTotal + currentBalance;
   paymentAmount.value = String(total);
 
-  paymentCalculation.textContent = `₱${price} × ${count} player${count === 1 ? "" : "s"}`;
-  paymentTotal.textContent = `₱${total}`;
+  paymentCalculation.textContent = currentBalance > 0
+    ? `₱${price} × ${count} player${count === 1 ? "" : "s"} + previous balance ₱${currentBalance.toLocaleString("en-PH")}`
+    : `₱${price} × ${count} player${count === 1 ? "" : "s"}`;
+  paymentTotal.textContent = `₱${total.toLocaleString("en-PH")}`;
   playersCoveredHint.textContent = `This payment will be recorded for exactly ${count} player${count === 1 ? "" : "s"}.`;
   playersCoveredHint.className = "mt-2 text-xs text-emerald-400";
   renderPlayerNameInputs(count);
@@ -2018,9 +2057,11 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   const isRentalPayment = paymentRegistration.bookingType === "private_rental";
   const playersCovered = isRentalPayment ? 0 : Math.floor(Number(paymentPlayers.value || 0));
   const price = Number(paymentRegistration.pricePerPlayer || paymentRegistration.hourlyRate || 0);
-  const amount = isRentalPayment
+  const bookingAmount = isRentalPayment
     ? Number(paymentRegistration.amountDue || paymentRegistration.hourlyRate || price)
     : price * playersCovered;
+  const priorBalanceAtSubmission = Math.max(0, Number(currentBalance || 0));
+  const amount = bookingAmount + priorBalanceAtSubmission;
   const reference = paymentReference.value.trim();
   const file = paymentReceipt.files[0];
   const playerNames = isRentalPayment ? [] : getPlayerNames();
@@ -2119,6 +2160,9 @@ $("submitPaymentBtn").addEventListener("click", async () => {
       startTime: paymentRegistration.startTime,
       endTime: paymentRegistration.endTime,
       pricePerPlayer: price,
+      bookingAmount,
+      priorBalanceAtSubmission,
+      expectedAmount: amount,
       amountPaid: amount,
       reference,
       playersCovered,
