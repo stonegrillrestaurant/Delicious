@@ -117,34 +117,36 @@
 
     <main class="max-w-[1800px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
 
-      <section class="admin-only mb-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div class="rounded-2xl border border-emerald-800/60 bg-emerald-950/15 p-4">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <div class="text-[10px] font-black tracking-[.18em] text-emerald-300">VERIFIED · WAITING FOR ARRIVAL</div>
-              <div class="mt-1 text-sm text-slate-400">Payment is verified. These customers have not been checked in yet.</div>
-            </div>
-            <span id="verified-arrivals-count" class="rounded-full bg-emerald-900/60 px-3 py-1 text-xs font-black text-emerald-200">0</span>
+      <section class="admin-only mb-5 rounded-2xl border border-slate-700 bg-slate-900/55 overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+          <div>
+            <div class="text-[10px] font-black tracking-[.18em] text-emerald-300">VERIFIED BOOKINGS & PLAYERS</div>
+            <div class="mt-1 text-sm text-slate-400">All verified arrivals stay in one compact list. Check-in remains separate from payment verification.</div>
           </div>
-          <div id="verified-arrivals-list" class="mt-3 space-y-2">
-            <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">Loading verified bookings…</div>
-          </div>
-          <div class="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-500">
-            Check-in action will be connected to the real staff process. Verification alone does not put a player into the live queue.
+          <div class="flex items-center gap-2 text-[11px] font-black">
+            <span class="rounded-full bg-emerald-950/70 px-3 py-1 text-emerald-200">WAITING <span id="verified-arrivals-count">0</span></span>
+            <span class="rounded-full bg-cyan-950/70 px-3 py-1 text-cyan-200">CHECKED-IN <span id="checked-in-today-count">0</span></span>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-cyan-800/60 bg-cyan-950/15 p-4">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <div class="text-[10px] font-black tracking-[.18em] text-cyan-300">CHECKED-IN TODAY</div>
-              <div class="mt-1 text-sm text-slate-400">Customers already marked present for today's booking.</div>
-            </div>
-            <span id="checked-in-today-count" class="rounded-full bg-cyan-900/60 px-3 py-1 text-xs font-black text-cyan-200">0</span>
-          </div>
-          <div id="checked-in-today-list" class="mt-3 space-y-2">
-            <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">No checked-in customers yet.</div>
-          </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[980px] text-left text-xs">
+            <thead class="bg-slate-950/70 text-[10px] uppercase tracking-wider text-slate-500">
+              <tr>
+                <th class="px-4 py-3">Customer / Players</th>
+                <th class="px-3 py-3">Booking</th>
+                <th class="px-3 py-3">Schedule</th>
+                <th class="px-3 py-3">Payment</th>
+                <th class="px-3 py-3">Status</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="verified-bookings-table" class="divide-y divide-slate-800">
+              <tr>
+                <td colspan="6" class="px-4 py-5 text-center text-slate-500">Loading verified bookings…</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -897,69 +899,92 @@
     }
 
     function renderVerifiedArrivals() {
-      const waitingBox = document.getElementById("verified-arrivals-list");
+      const tableBody = document.getElementById("verified-bookings-table");
       const waitingCount = document.getElementById("verified-arrivals-count");
-      const checkedBox = document.getElementById("checked-in-today-list");
       const checkedCount = document.getElementById("checked-in-today-count");
-      if (!waitingBox || !checkedBox || !waitingCount || !checkedCount) return;
+      if (!tableBody || !waitingCount || !checkedCount) return;
 
       const today = localDateKey();
-      const active = verifiedPayments
-        .filter(p => p.status === "verified" && p.checkedIn !== true && !bookingHasEnded(p))
+      const rows = verifiedPayments
+        .filter(p =>
+          p.status === "verified" &&
+          (
+            (p.checkedIn !== true && !bookingHasEnded(p)) ||
+            (p.checkedIn === true && p.date === today)
+          )
+        )
         .sort((a,b) =>
           String(a.date || "").localeCompare(String(b.date || "")) ||
           String(a.startTime || "").localeCompare(String(b.startTime || "")) ||
           String(a.customerName || "").localeCompare(String(b.customerName || ""))
         );
 
-      const checked = verifiedPayments
-        .filter(p => p.checkedIn === true && p.date === today)
-        .sort((a,b) =>
-          String(a.startTime || "").localeCompare(String(b.startTime || "")) ||
-          String(a.customerName || "").localeCompare(String(b.customerName || ""))
-        );
-
-      waitingCount.textContent = String(active.length);
+      const waiting = rows.filter(p => p.checkedIn !== true);
+      const checked = rows.filter(p => p.checkedIn === true);
+      waitingCount.textContent = String(waiting.length);
       checkedCount.textContent = String(checked.length);
 
-      waitingBox.innerHTML = active.length ? active.map(p => {
-        const names = Array.isArray(p.playerNames) && p.playerNames.length ? p.playerNames.join(", ") : (p.customerName || "Customer");
+      if (!rows.length) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="px-4 py-5 text-center text-slate-500">No verified bookings waiting or checked in today.</td></tr>';
+        return;
+      }
+
+      tableBody.innerHTML = rows.map(p => {
+        const names = Array.isArray(p.playerNames) && p.playerNames.length
+          ? p.playerNames.join(", ")
+          : (p.customerName || "Customer");
+        const payer = p.customerName || "Customer";
+        const playerCount = Math.max(1, Number(p.playersCovered || p.paidPlayers || (Array.isArray(p.playerNames) ? p.playerNames.length : 1)));
         const service = p.bookingType === "private_rental" ? "Rent Court" : "Open Play";
         const expected = Number(p.expectedAmount ?? p.amountPaid ?? 0);
         const received = Number(p.actualReceivedAmount ?? expected);
-        return `
-          <article class="rounded-xl border border-emerald-900/60 bg-slate-950/45 p-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="truncate text-sm font-black text-white">${escapeHtml(names)}</div>
-                <div class="mt-1 text-[11px] text-slate-400">
-                  ${escapeHtml(p.date || "—")} · ${escapeHtml(formatTime(p.startTime))}–${escapeHtml(formatTime(p.endTime))}
-                </div>
-              </div>
-              <span class="shrink-0 rounded-full border border-emerald-700 bg-emerald-950/40 px-2 py-1 text-[9px] font-black text-emerald-300">VERIFIED</span>
-            </div>
-            <div class="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Court</span><br><strong>Court ${escapeHtml(p.courtId)}</strong></div>
-              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Type</span><br><strong>${service}</strong></div>
-              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Expected</span><br><strong>₱${expected.toLocaleString("en-PH")}</strong></div>
-              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Received</span><br><strong>₱${received.toLocaleString("en-PH")}</strong></div>
-            </div>
-          </article>`;
-      }).join("") : '<div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">No verified customers waiting for arrival.</div>';
+        const difference = Number((expected - received).toFixed(2));
+        const checkedIn = p.checkedIn === true;
+        const decision = String(p.paymentDecision || "verify").toUpperCase();
 
-      checkedBox.innerHTML = checked.length ? checked.map(p => {
-        const names = Array.isArray(p.playerNames) && p.playerNames.length ? p.playerNames.join(", ") : (p.customerName || "Customer");
+        const playerSubtitle = p.bookingType === "private_rental"
+          ? `${payer} · Private renter`
+          : `${payer} · ${playerCount} player${playerCount === 1 ? "" : "s"}`;
+
+        const paymentSubtitle = difference === 0
+          ? `${decision} · exact payment`
+          : difference > 0
+            ? `${decision} · ₱${difference.toLocaleString("en-PH")} short`
+            : `${decision} · ₱${Math.abs(difference).toLocaleString("en-PH")} over`;
+
         return `
-          <article class="rounded-xl border border-cyan-900/60 bg-slate-950/45 p-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="truncate text-sm font-black text-white">${escapeHtml(names)}</div>
-                <div class="mt-1 text-[11px] text-slate-400">Court ${escapeHtml(p.courtId)} · ${escapeHtml(formatTime(p.startTime))}–${escapeHtml(formatTime(p.endTime))}</div>
-              </div>
-              <span class="shrink-0 rounded-full border border-cyan-700 bg-cyan-950/40 px-2 py-1 text-[9px] font-black text-cyan-300">CHECKED-IN</span>
-            </div>
-          </article>`;
-      }).join("") : '<div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">No checked-in customers yet.</div>';
+          <tr class="${checkedIn ? "bg-cyan-950/10" : "bg-emerald-950/5"}">
+            <td class="px-4 py-3 align-top">
+              <div class="max-w-[280px] font-black text-white">${escapeHtml(names)}</div>
+              <div class="mt-1 text-[10px] text-slate-500">${escapeHtml(playerSubtitle)}</div>
+            </td>
+            <td class="px-3 py-3 align-top">
+              <div class="font-bold text-slate-200">${service}</div>
+              <div class="mt-1 text-[10px] text-slate-500">Court ${escapeHtml(p.courtId)}</div>
+            </td>
+            <td class="px-3 py-3 align-top whitespace-nowrap">
+              <div class="font-bold text-slate-200">${escapeHtml(p.date || "—")}</div>
+              <div class="mt-1 text-[10px] text-slate-500">${escapeHtml(formatTime(p.startTime))}–${escapeHtml(formatTime(p.endTime))}</div>
+            </td>
+            <td class="px-3 py-3 align-top whitespace-nowrap">
+              <div class="font-bold text-slate-200">₱${received.toLocaleString("en-PH")} / ₱${expected.toLocaleString("en-PH")}</div>
+              <div class="mt-1 text-[10px] ${difference === 0 ? "text-slate-500" : "text-amber-300"}">${escapeHtml(paymentSubtitle)}</div>
+            </td>
+            <td class="px-3 py-3 align-top">
+              <span class="inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black tracking-wider ${
+                checkedIn
+                  ? "border-cyan-700 bg-cyan-950/50 text-cyan-300"
+                  : "border-emerald-700 bg-emerald-950/50 text-emerald-300"
+              }">${checkedIn ? "CHECKED-IN" : "VERIFIED"}</span>
+            </td>
+            <td class="px-4 py-3 align-top text-right">
+              ${checkedIn
+                ? '<span class="text-[10px] font-bold text-slate-600">DONE</span>'
+                : '<button type="button" class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black text-slate-400" disabled title="Check-in workflow will be connected after the venue process is finalized">CHECK IN</button>'
+              }
+            </td>
+          </tr>`;
+      }).join("");
     }
 
     window.switchTab = function(tabId) {
