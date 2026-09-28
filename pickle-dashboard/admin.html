@@ -738,11 +738,45 @@
       }
     });
 
+    function publicLiveState() {
+      const safePlayers = (state.players || []).map(player => ({
+        id: player.id,
+        name: player.name || "Player",
+        category: player.category || "Beginner",
+        queueCourt: player.queueCourt || "",
+        gamesPlayed: Number(player.gamesPlayed || 0),
+        isExpired: Boolean(player.isExpired)
+      }));
+
+      const safeCourts = (state.courts || []).map(court => ({
+        id: court.id,
+        name: court.name,
+        mode: court.mode,
+        isConfigured: Boolean(court.isConfigured),
+        renterName: court.mode === "rental" ? (court.renterName || "Reserved") : "",
+        timeStart: court.timeStart || "",
+        timeEnd: court.timeEnd || "",
+        currentMatch: Array.isArray(court.currentMatch) ? [...court.currentMatch] : null
+      }));
+
+      const safeQueues = {};
+      for (let i = 1; i <= 6; i++) safeQueues[String(i)] = [...(state.queues?.[String(i)] || [])];
+
+      return {
+        courts: safeCourts,
+        players: safePlayers,
+        queues: safeQueues,
+        totalMatchesPlayed: Number(state.totalMatchesPlayed || 0),
+        updatedAt: serverTimestamp()
+      };
+    }
+
     async function saveState() {
       if (!requireLivePanelControl("Saving Live Panel changes")) return;
       try {
         const cleanState = JSON.parse(JSON.stringify(state)); 
         await setDoc(stateRef, cleanState);
+        await setDoc(doc(db, "pickleball", "publicLive"), publicLiveState());
       } catch (e) {
         window.showModal(`
           <h3 class="text-xl font-black text-red-500 mb-2">🛑 SAVE FAILED</h3>
