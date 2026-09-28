@@ -88,12 +88,12 @@
 
         /* Admin Cashier Summaries */
         .cashier-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;}
-        .c-card { background: white; border: 1px solid var(--ledger-line); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;}
+        .c-card { background: white; border: 1px solid var(--ledger-line); padding: 15px; display: flex; justify-content: space-between; align-items: center;}
         .c-card-left { display: flex; flex-direction: column; gap: 4px;}
         .c-card-right { text-align: right; background: #fff3e0; padding: 10px; border: 1px solid #f39c12; border-radius: 4px;}
 
         /* ========================================== */
-        /* --- PRINT STYLES (Document by Date) ---    */
+        /* --- PRINT STYLES (Document by Date/Month) --- */
         /* ========================================== */
         .print-only { display: none; }
         
@@ -160,7 +160,7 @@
 <!-- CASHIER VIEW (Ledger Interface)            -->
 <!-- ========================================== -->
 <div id="cashierView" class="container hidden">
-    
+
     <!-- Print specific headers -->
     <div class="print-only">
         <h1>Stone Grill Finance</h1>
@@ -171,7 +171,7 @@
         <h2>Ledger Book: <span id="cashierNameDisplay"></span></h2>
         <div style="display:flex; gap: 10px;">
             <button class="btn-action" style="background-color: var(--blue);" onclick="window.print()">
-                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 4px;"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
                 Print
             </button>
             <button class="btn-logout" onclick="handleLogout()">Logout</button>
@@ -229,7 +229,7 @@
 <!-- ADMIN VIEW (Master Ledger)                 -->
 <!-- ========================================== -->
 <div id="adminView" class="container hidden">
-    
+
     <!-- Print specific headers for Master Ledger -->
     <div class="print-only">
         <h1>Stone Grill Finance</h1>
@@ -242,14 +242,15 @@
     </div>
 
     <div class="admin-controls">
-        <label>📅 Filter Ledger By Date:</label>
-        <input type="date" id="adminDateFilter" onchange="renderAdminUI()">
-        <button class="btn-action" onclick="document.getElementById('adminDateFilter').value=''; renderAdminUI();">View All Time</button>
+        <label>📅 Filter Ledger:</label>
+        <input type="date" id="adminDateFilter" onchange="renderAdminUI('date')" title="Daily Filter">
+        <span style="font-size: 0.8rem; color: #777; font-weight: bold;">OR</span>
+        <input type="month" id="adminMonthFilter" onchange="renderAdminUI('month')" title="Monthly Filter">
+        <button class="btn-action" onclick="document.getElementById('adminDateFilter').value=''; document.getElementById('adminMonthFilter').value=''; renderAdminUI();">View All Time</button>
         
-        <!-- NEW FEATURE: Print Document by Date button directly accesses print mode based on the current filter -->
         <button class="btn-action" style="background-color: var(--blue); margin-left: auto;" onclick="window.print()">
-            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
-            Print Ledger
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 4px;"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+            Print
         </button>
     </div>
 
@@ -486,14 +487,41 @@
     }
 
     // --- RENDER ADMIN MASTER LEDGER ---
-    window.renderAdminUI = function() {
-        const filterDate = document.getElementById('adminDateFilter').value;
-        const dateDisplayStr = filterDate ? `(Filtered: ${filterDate})` : "(All Time)";
+    window.renderAdminUI = function(changedFilter = null) {
+        let dateFilter = document.getElementById('adminDateFilter').value;
+        let monthFilter = document.getElementById('adminMonthFilter').value;
+        
+        // Auto-clear the opposite filter so they don't conflict
+        if (changedFilter === 'date' && dateFilter) {
+            document.getElementById('adminMonthFilter').value = '';
+            monthFilter = '';
+        } else if (changedFilter === 'month' && monthFilter) {
+            document.getElementById('adminDateFilter').value = '';
+            dateFilter = '';
+        }
+
+        let dateDisplayStr = "(All Time)";
+        let printHeaderStr = "Master Ledger: All Time";
+
+        if (dateFilter) {
+            dateDisplayStr = `(Filtered Daily: ${dateFilter})`;
+            printHeaderStr = `Master Ledger: Daily Report (${dateFilter})`;
+        } else if (monthFilter) {
+            dateDisplayStr = `(Filtered Monthly: ${monthFilter})`;
+            printHeaderStr = `Master Ledger: Monthly Report (${monthFilter})`;
+        }
         
         document.getElementById('adminDateLabel').innerText = dateDisplayStr;
         
-        // Dynamically update the Print Document Title to match the filter context
-        document.getElementById('printDateHeader').innerText = filterDate ? `Master Ledger: ${filterDate}` : `Master Ledger: All Time`;
+        const printHeaderEl = document.getElementById('printDateHeader');
+        if (printHeaderEl) printHeaderEl.innerText = printHeaderStr;
+
+        // Helper function to check if a transaction date matches the current active filter
+        const isMatch = (txDate) => {
+            if (dateFilter) return txDate === dateFilter;
+            if (monthFilter) return txDate.startsWith(monthFilter); // 'YYYY-MM-DD' starts with 'YYYY-MM'
+            return true;
+        };
 
         let filteredAdminReceived = 0; 
         let totalPendingAuth = 0; 
@@ -528,7 +556,7 @@
                 }
             }
 
-            if (!filterDate || t.date === filterDate) {
+            if (isMatch(t.date)) {
                 if (t.type === 'in') filteredStats[email].in += amt;
                 if (t.type === 'out') filteredStats[email].out += amt;
                 if (t.type === 'remit') {
@@ -587,7 +615,7 @@
         const adminTbody = document.getElementById('adminTableBody');
         adminTbody.innerHTML = '';
         
-        let filteredTxForTable = cloudTransactions.filter(t => !filterDate || t.date === filterDate);
+        let filteredTxForTable = cloudTransactions.filter(t => isMatch(t.date));
 
         if (filteredTxForTable.length === 0) {
             adminTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #888;">No transactions found for this period.</td></tr>`;
