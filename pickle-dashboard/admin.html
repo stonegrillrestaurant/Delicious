@@ -35,7 +35,9 @@
       opacity: .5;
     }
     body.view-only-mode #view-dashboard { cursor: default; }
-  </style>
+  
+    body.role-staff .admin-only { display: none !important; }
+</style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-10">
 
@@ -65,12 +67,14 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
         </button>
         <button id="admin-signout-btn" type="button" class="hidden bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Sign out</button>
-        <button onclick="openPaymentVerification()" id="btn-payment-verification" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition flex items-center gap-2" title="Payment verification">
+        <a href="/courtside/booking.html" target="_blank" rel="noopener" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Booking</a>
+        <a href="/pickle-dashboard/live.html" target="_blank" rel="noopener" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Live</a>
+        <button onclick="openPaymentVerification()" id="btn-payment-verification" class="admin-only bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition flex items-center gap-2" title="Payment verification">
           <span>Admin Payment</span>
           <span id="pending-payment-count" class="hidden min-w-[20px] h-5 px-1.5 rounded-full bg-white text-amber-700 text-[11px] font-black leading-5 text-center shadow-sm">0</span>
         </button>
         <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Live Panel</button>
-        <button onclick="switchTab('history')" id="btn-tab-history" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Vault & History</button>
+        <button onclick="switchTab('history')" id="btn-tab-history" class="admin-only bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-3 rounded-lg transition">Reports & History</button>
       </div>
     </div>
   </header>
@@ -117,8 +121,8 @@
           <h2 class="text-sm font-black uppercase tracking-widest text-white">Live Courts</h2>
           <p class="mt-1 text-[11px] text-slate-500">Walk-ins are entered directly inside courts manually assigned to Open Play.</p>
         </div>
-        <button onclick="requestResetDailyData()" class="rounded-xl border border-amber-700/60 bg-amber-950/30 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-900/50">
-          End Day & Archive
+        <button onclick="requestResetDailyData()" class="admin-only rounded-xl border border-amber-700/60 bg-amber-950/30 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-900/50">
+          Save Day Report
         </button>
       </div>
 
@@ -173,7 +177,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { firebaseConfig, isAuthorizedAdmin } from "../courtside/courtside-config.js";
+    import { firebaseConfig, isAuthorizedAdmin, isAuthorizedOperator, courtsideRole } from "../courtside/courtside-config.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -285,7 +289,7 @@
     }
 
     async function acquireOrRefreshLivePanelControl() {
-      if (!signedInAdmin || !isAuthorizedAdmin(signedInAdmin)) return false;
+      if (!signedInAdmin || !isAuthorizedOperator(signedInAdmin)) return false;
 
       try {
         const result = await runTransaction(db, async (tx) => {
@@ -567,18 +571,20 @@
       isConnected = false;
     }
 
-    function startRealtimeListeners() {
-      if (unsubscribeState || unsubscribeHistory || unsubscribePendingPayments || unsubscribeTodaySchedule || unsubscribeTodayRentals) return;
-        unsubscribeState = onSnapshot(stateRef, (docSnap) => {
-        document.getElementById('admin-status-badge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> DB LIVE`;
-        
+    function startRealtimeListeners(role = "admin") {
+      if (unsubscribeState || unsubscribeTodaySchedule || unsubscribeTodayRentals) return;
+
+      unsubscribeState = onSnapshot(stateRef, (docSnap) => {
+        document.getElementById('admin-status-badge').innerHTML =
+          `<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> ${role === "staff" ? "STAFF · DB LIVE" : "ADMIN · DB LIVE"}`;
+
         if (docSnap.exists()) {
           const fetchedData = docSnap.data();
           state.players = fetchedData.players || [];
           state.totalMatchesPlayed = fetchedData.totalMatchesPlayed || 0;
           state.dailyRentals = fetchedData.dailyRentals || [];
           state.dailyOpenPlayLogs = fetchedData.dailyOpenPlayLogs || [];
-          
+
           if (fetchedData.courts && Array.isArray(fetchedData.courts)) {
              let updatedCourts = fetchedData.courts;
              if(updatedCourts.length < 6) {
@@ -586,66 +592,64 @@
                      updatedCourts.push({ id: i, name: "Court " + i, currentMatch: null, mode: 'open_play', renterName: '', timeStart: '', timeEnd: '', rentalRevenue: 0, isConfigured: false, scheduleDate: "", openPlayPrice: 120, maxPlayers: 12 });
                  }
              }
-             updatedCourts.forEach(c => {
-                 if(c.isExclusive === true && !c.mode) c.mode = 'rental';
-                 if(c.isExclusive === false && !c.mode) c.mode = 'open_play';
-                 if(c.Renter && !c.renterName) c.renterName = c.Renter;
-                 if(c.isConfigured === undefined) c.isConfigured = !!(c.timeStart && c.timeEnd);
-                 if(c.scheduleDate === undefined) c.scheduleDate = "";
-                 if(c.openPlayPrice === undefined) c.openPlayPrice = 120;
-                 if(c.maxPlayers === undefined) c.maxPlayers = 12;
+             updatedCourts.forEach(court => {
+                 if(court.isExclusive === true && !court.mode) court.mode = 'rental';
+                 if(court.isExclusive === false && !court.mode) court.mode = 'open_play';
+                 if(court.Renter && !court.renterName) court.renterName = court.Renter;
+                 if(court.isConfigured === undefined) court.isConfigured = !!(court.timeStart && court.timeEnd);
+                 if(court.scheduleDate === undefined) court.scheduleDate = "";
+                 if(court.openPlayPrice === undefined) court.openPlayPrice = 120;
+                 if(court.maxPlayers === undefined) court.maxPlayers = 12;
              });
              state.courts = updatedCourts;
           } else {
              state.courts = JSON.parse(JSON.stringify(DEFAULT_COURTS));
           }
-  
+
           state.queues = fetchedData.queues || {};
           for(let i=1; i<=6; i++) {
               if(!state.queues[i.toString()]) state.queues[i.toString()] = [];
           }
-  
           render();
-        } else { 
-          saveState(); 
+        } else {
+          saveState();
         }
-        
+
         if (!isConnected) {
-            isConnected = true;
-            window.showToast("Connected to Cloud.");
+          isConnected = true;
+          window.showToast("Connected to Cloud.");
         }
       }, (err) => {
           document.getElementById('admin-status-badge').innerHTML = `ERROR: DB BLOCKED`;
           document.getElementById('admin-status-badge').classList.replace('bg-emerald-500', 'bg-red-500');
           console.error("Firebase Sync Error:", err);
       });
-  
+
+      if (role !== "staff") {
         unsubscribeHistory = onSnapshot(historyRef, (docSnap) => {
-        if (docSnap.exists()) {
-          historyVault = docSnap.data().history || [];
-          renderHistory();
-        } else { saveHistory(); }
-      });
+          if (docSnap.exists()) {
+            historyVault = docSnap.data().history || [];
+            renderHistory();
+          }
+        });
 
-      const pendingPaymentsQuery = query(
-        collection(db, "paymentSubmissions"),
-        where("status", "==", "pending_verification")
-      );
+        const pendingPaymentsQuery = query(
+          collection(db, "paymentSubmissions"),
+          where("status", "==", "pending_verification")
+        );
 
-      unsubscribePendingPayments = onSnapshot(
-        pendingPaymentsQuery,
-        (snapshot) => {
-          updatePendingPaymentButton(snapshot.size);
-        },
-        (err) => {
-          console.error("Pending payment count listener failed:", err);
-          updatePendingPaymentButton(0);
-        }
-      );
+        unsubscribePendingPayments = onSnapshot(
+          pendingPaymentsQuery,
+          (snapshot) => updatePendingPaymentButton(snapshot.size),
+          (err) => {
+            console.error("Pending payment count listener failed:", err);
+            updatePendingPaymentButton(0);
+          }
+        );
+      } else {
+        updatePendingPaymentButton(0);
+      }
 
-      // Booking page -> Live Panel bridge.
-      // currentState remains the staff/queue document; publicSchedule remains
-      // the booking authority. The panel derives the live court mode from it.
       const today = localDateKey();
       const todayScheduleQuery = query(
         collection(db, "publicSchedule"),
@@ -680,8 +684,6 @@
           render();
         }
       );
-  
-  
     }
 
     const authGate = document.getElementById("admin-auth-gate");
@@ -708,14 +710,18 @@
     });
 
     onAuthStateChanged(auth, user => {
-      const authorized = isAuthorizedAdmin(user);
+      const authorized = isAuthorizedOperator(user);
+      const role = courtsideRole(user);
+
+      document.body.classList.toggle("role-staff", role === "staff");
 
       if (authorized) {
         authGate.classList.add("hidden");
         signOutBtn.classList.remove("hidden");
         document.getElementById("admin-status-badge").innerHTML =
-          '<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> AUTHORIZED';
-        startRealtimeListeners();
+          '<span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> ' +
+          (role === "staff" ? "STAFF AUTHORIZED" : role === "owner" ? "SYSTEM OWNER" : "ADMIN AUTHORIZED");
+        startRealtimeListeners(role);
         startLivePanelControl(user);
         return;
       }
@@ -726,9 +732,9 @@
       signOutBtn.classList.add("hidden");
 
       if (user) {
-        authMessage.textContent = "This Google account is signed in but is not authorized as a Courtside administrator.";
+        authMessage.textContent = "This Google account is signed in but is not authorized for Courtside operations.";
       } else {
-        authMessage.textContent = "Sign in with an authorized Courtside Google account to open the live operations panel.";
+        authMessage.textContent = "Sign in with an authorized Courtside Admin or Staff Google account.";
       }
     });
 
@@ -771,6 +777,10 @@
     }
 
     window.openPaymentVerification = function() {
+      if (document.body.classList.contains("role-staff")) {
+        window.showToast("Payment verification is admin-only.", "warn");
+        return;
+      }
       window.open('/courtside/verify-payment.html', '_blank', 'noopener');
     };
 
@@ -782,6 +792,10 @@
     }
 
     window.switchTab = function(tabId) {
+      if (document.body.classList.contains("role-staff") && tabId !== "dashboard") {
+        window.showToast("Reports and history are admin-only.", "warn");
+        return;
+      }
       if (tabId === 'dashboard') {
         document.getElementById('view-dashboard').classList.remove('hidden-section');
         document.getElementById('view-history').classList.add('hidden-section');
