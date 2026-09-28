@@ -814,16 +814,10 @@ async function reservePrivateRentalAtomically(slot, user) {
   const holdUntil = bookingHoldUntil(PRIVATE_RENTAL_HOLD_MS);
 
   await runTransaction(db, async tx => {
-    const [bookingSnap, ...lockSnaps] = await Promise.all([
-      tx.get(bookingRef),
-      ...lockRefs.map(ref => tx.get(ref))
-    ]);
-
-    if (bookingSnap.exists()) {
-      const existing = bookingSnap.data();
-      const sameOwner = existing.customerUid === user.uid;
-      if (!sameOwner && !isExpiredHold(existing)) throw rentalConflictError();
-    }
+    // slotLocks are the atomic authority for overlapping rental time.
+    // Do not pre-read bookingRef here: a customer cannot read a non-existent
+    // privateRentalBookings document under owner-scoped Firestore rules.
+    const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
 
     for (const lockSnap of lockSnaps) {
       if (!lockSnap.exists()) continue;
@@ -1475,11 +1469,17 @@ schedule.addEventListener("click", async (event) => {
 
       openPaymentModal(rentalRegistration);
     } catch (err) {
-      if (err?.code === "booking-conflict" || err?.code === "permission-denied") {
+      if (err?.code === "booking-conflict") {
         showStatus(
           "error",
           "Time can no longer be confirmed",
-          "Another customer has already confirmed part of this time. Choose another available time."
+          "Another booking already holds part of this court/time. Choose another available time."
+        );
+      } else if (err?.code === "permission-denied") {
+        showStatus(
+          "error",
+          "Firebase blocked the rental",
+          "This is a permission/rules problem, not proof that another customer took the court. Do not pay yet."
         );
       } else {
         showStatus("error", "Could not confirm time", err?.message || "Unknown error");
@@ -1827,9 +1827,11 @@ $("continueRentalBtn").addEventListener("click", async () => {
   } catch (err) {
     rentalStatus.className = "mt-4 rounded-xl border border-red-700 bg-red-950/50 p-3 text-sm text-red-100";
     rentalStatus.textContent =
-      err?.code === "booking-conflict" || err?.code === "permission-denied"
-        ? "That court/time was just taken by another customer. Please close this window and choose another available time."
-        : (err?.message || "Could not reserve this slot.");
+      err?.code === "booking-conflict"
+        ? "Another booking already holds part of this court/time. Choose another available time."
+        : err?.code === "permission-denied"
+          ? "Firebase blocked this rental transaction. This is a rules/permission problem, not proof that the court was taken. Do not pay yet."
+          : (err?.message || "Could not reserve this slot.");
   } finally {
     btn.disabled = false;
     btn.textContent = "Continue to Payment";
