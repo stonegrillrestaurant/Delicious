@@ -198,6 +198,26 @@ Messenger: https://m.me/courtsidegatherings
 Payment screenshot is optional.
 GCash reference number is required.
 
+PAYMENT AMOUNT MODEL
+The booking calculates the amount the customer is expected to pay.
+If the customer has a carried balance from an earlier CONSIDER decision, that balance is added to the next payment total.
+
+During verification the Admin enters:
+- the actual GCash reference received
+- the actual amount received
+
+Admin then chooses:
+VERIFY
+Normal verification. The booking proceeds.
+
+CONSIDER
+The booking proceeds, but any shortage is carried to customerBalances and an immutable balanceTransactions record is created. The customer sees the outstanding balance and it is added to the next payment total.
+
+ALLOW
+The booking proceeds and the Admin deliberately accepts the difference. No shortage is carried forward.
+
+A payment amount mismatch is not automatically treated as a system error. The Admin makes the business decision and the system records what happened.
+
 --------------------------------------------------
 7. PAYMENT VERIFICATION
 --------------------------------------------------
@@ -334,7 +354,13 @@ slotLocks
 Atomic hourly private-rental protection.
 
 paymentSubmissions
-Submitted payment/reference records.
+Submitted payment/reference records including expected amount, actual amount received, and Admin decision.
+
+customerBalances
+Current outstanding balance per customer.
+
+balanceTransactions
+Immutable audit ledger for carried balances and later balance settlements.
 
 playerActivity
 Attendance/activity records.
