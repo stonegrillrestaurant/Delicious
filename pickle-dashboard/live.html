@@ -47,24 +47,16 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { firebaseConfig } from "../courtside/courtside-config.js";
 
     setInterval(() => {
       document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
-      authDomain: "stone-grill-payroll.firebaseapp.com",
-      projectId: "stone-grill-payroll",
-      storageBucket: "stone-grill-payroll.firebasestorage.app",
-      messagingSenderId: "255528914541",
-      appId: "1:255528914541:web:d58d9731a29d27fc253964"
-    };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const stateRef = doc(db, 'pickleball', 'currentState');
+    const stateRef = doc(db, 'pickleball', 'publicLive');
 
     onSnapshot(stateRef, (docSnap) => {
       const syncDot = document.getElementById('sync-dot');
