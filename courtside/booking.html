@@ -129,9 +129,10 @@
       <h2 class="pr-12 text-2xl font-bold">Rent Court</h2>
       <div id="rentalDetails" class="mt-4 text-slate-300 space-y-1"></div>
       <div id="rentalStatus" class="mt-4 hidden rounded-xl border p-3 text-sm"></div>
-      <div class="mt-6 flex gap-3">
-        <button id="cancelRentalBtn" type="button" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
-        <button id="continueRentalBtn" type="button" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Continue to Payment</button>
+      <div class="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <button id="cancelRentalBtn" type="button" class="rounded-xl border border-red-800 bg-red-950/20 px-4 py-3 font-semibold text-red-200">Cancel Selection</button>
+        <button id="extendRentalBtn" type="button" class="rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 font-semibold">Add More Hours</button>
+        <button id="continueRentalBtn" type="button" class="rounded-xl bg-emerald-600 px-4 py-3 font-semibold">Continue to Payment</button>
       </div>
       <p class="mt-4 text-xs text-slate-500">Review your selected hours. The court is not reserved until you tap Continue to Payment. Then the selected hours are locked for 10 minutes while you complete payment.</p>
     </div>
@@ -1131,6 +1132,27 @@ function clearRentalSelection() {
   render(currentItems);
 }
 
+function openRentalReviewModal() {
+  if (!selectedRentalSlot) return;
+  const slot = selectedRentalSlot;
+  const balanceLine = currentBalance > 0
+    ? `<div class="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/25 p-3 text-amber-100"><strong>Previous balance:</strong> ₱${currentBalance.toLocaleString("en-PH")}<br><span class="text-xs text-amber-200/80">This will be added to the payment total.</span></div>`
+    : "";
+
+  rentalDetails.innerHTML = `
+    <div><strong>Date:</strong> ${slot.date}</div>
+    <div><strong>Court:</strong> Court ${slot.courtId}</div>
+    <div><strong>Time:</strong> ${formatTime12(slot.startTime)}–${formatTime12(slot.endTime)}</div>
+    <div><strong>Duration:</strong> ${slot.hours} hour${slot.hours === 1 ? "" : "s"}</div>
+    <div><strong>Rental:</strong> ₱${Number(slot.amountDue || 0).toLocaleString("en-PH")}</div>
+    ${balanceLine}
+  `;
+  rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+  rentalStatus.textContent = "";
+  rentalModal.classList.remove("hidden");
+  rentalModal.classList.add("flex");
+}
+
 function render(items) {
   currentItems = items;
   const courts = [1,2,3,4,5,6];
@@ -1337,7 +1359,7 @@ function render(items) {
   }).join("");
 
   const rentalSelectionBar = selectedRentalSlot ? `
-    <div class="mb-3 rounded-2xl border border-emerald-700 bg-emerald-950/35 p-4">
+    <div class="sticky top-[78px] z-30 mb-3 rounded-2xl border border-emerald-700 bg-slate-950/95 p-4 shadow-xl backdrop-blur">
       <div class="text-sm font-black text-emerald-200">
         Court ${selectedRentalSlot.courtId} ·
         ${formatTime12(selectedRentalSlot.startTime)}–${formatTime12(selectedRentalSlot.endTime)}
@@ -1532,8 +1554,9 @@ schedule.addEventListener("click", async (event) => {
           "info",
           "Rental time updated",
           "Court " + courtId + " · " + formatTime12(selectionStart) + "–" + formatTime12(selectionEnd) +
-          ". Tap CONFIRM TIME when ready."
+          ". Review the updated rental below."
         );
+        openRentalReviewModal();
         return;
       }
 
@@ -1558,8 +1581,9 @@ schedule.addEventListener("click", async (event) => {
         "info",
         "1-hour rental selected",
         "Court " + courtId + " · " + formatTime12(clickedStart) + "–" + formatTime12(clickedEnd) +
-        ". Tap CONFIRM TIME, or tap another available hour on the same court to extend."
+        ". Review the rental and continue, or choose Add More Hours."
       );
+      openRentalReviewModal();
       return;
     }
 
@@ -1587,8 +1611,9 @@ schedule.addEventListener("click", async (event) => {
         "info",
         "1-hour rental selected",
         "Court " + courtId + " · " + formatTime12(clickedStart) + "–" + formatTime12(clickedEnd) +
-        ". Tap CONFIRM TIME, or tap another available hour on the same court to extend."
+        ". Review the rental and continue, or choose Add More Hours."
       );
+      openRentalReviewModal();
       return;
     }
 
@@ -1637,8 +1662,9 @@ schedule.addEventListener("click", async (event) => {
       "info",
       "Rental time selected",
       "Court " + courtId + " · " + formatTime12(selectionStart) + "–" + formatTime12(selectionEnd) +
-      ". Nothing is reserved yet. Tap CONFIRM TIME when ready. Confirming will hold these hours for 10 minutes while you complete the GCash payment."
+      ". Review the rental and continue to payment when ready."
     );
+    openRentalReviewModal();
     return;
   }
 
@@ -1736,8 +1762,20 @@ $("cancelRentalBtn").addEventListener("click", () => {
   rentalModal.classList.remove("flex");
   rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
   rentalStatus.textContent = "";
-  render(currentItems);
-  showStatus("info", "Rental not submitted", "Your time selection is still highlighted. No court has been reserved yet.");
+  clearRentalSelection();
+  showStatus("info", "Rental selection cancelled", "No court time has been reserved.");
+});
+
+$("extendRentalBtn").addEventListener("click", () => {
+  rentalModal.classList.add("hidden");
+  rentalModal.classList.remove("flex");
+  rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+  rentalStatus.textContent = "";
+  showStatus(
+    "info",
+    "Selection kept",
+    "Tap another available hour on the same court to extend the rental. Your current selection is still highlighted."
+  );
 });
 
 $("continueRentalBtn").addEventListener("click", async () => {
@@ -2075,7 +2113,11 @@ $("increasePlayersBtn").addEventListener("click", () => {
 $("closePaymentBtn").addEventListener("click", closePaymentAndReleaseIfNeeded);
 $("closePaymentX").addEventListener("click", closePaymentAndReleaseIfNeeded);
 $("closeJoinX").addEventListener("click", () => $("cancelJoinBtn").click());
-$("closeRentalX").addEventListener("click", () => $("cancelRentalBtn").click());
+$("closeRentalX").addEventListener("click", () => {
+  rentalModal.classList.add("hidden");
+  rentalModal.classList.remove("flex");
+  showStatus("info", "Selection kept", "Your rental selection is still highlighted. Continue from the schedule when ready.");
+});
 
 async function copyCourtsideNumber(button) {
   const value = "09173065956";
