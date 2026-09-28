@@ -612,6 +612,23 @@ function renderCustomerPasses() {
               ? "text-amber-300"
               : "text-cyan-300";
 
+          const rentalAmount = Number(registration.amountDue || 0);
+          const latestPayment = payments
+            .slice()
+            .sort((a,b) => {
+              const ams = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
+              const bms = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
+              return bms - ams;
+            })[0] || null;
+          const carriedAtSubmission = Number(
+            latestPayment?.priorBalanceAtSubmission ??
+            (hasSubmittedPayment ? currentBalance : 0)
+          );
+          const expectedTotal = Number(
+            latestPayment?.expectedAmount ??
+            (rentalAmount + Math.max(0, carriedAtSubmission))
+          );
+
           return `
             <article id="pass-${registration.id}" class="liquid-glass rounded-3xl border ${statusClass} p-5">
               <div class="text-xs font-black tracking-[.18em] ${accentClass}">
@@ -625,17 +642,23 @@ function renderCustomerPasses() {
                 ${formatTime12(registration.startTime)}–${formatTime12(registration.endTime)}
               </div>
 
-              <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 <div class="rounded-2xl border border-slate-700 bg-slate-950/55 p-3">
-                  <div class="text-xs text-slate-500">Rental total</div>
-                  <div class="mt-1 font-black text-white">₱${Number(registration.amountDue || 0)}</div>
+                  <div class="text-xs text-slate-500">Rental</div>
+                  <div class="mt-1 font-black text-white">₱${rentalAmount.toLocaleString("en-PH")}</div>
                 </div>
                 <div class="rounded-2xl border border-slate-700 bg-slate-950/55 p-3">
-                  <div class="text-xs text-slate-500">Status</div>
-                  <div class="mt-1 font-bold ${accentClass}">
-                    ${visibleStatus}
-                  </div>
+                  <div class="text-xs text-slate-500">Previous balance</div>
+                  <div class="mt-1 font-black text-amber-200">₱${Math.max(0, carriedAtSubmission).toLocaleString("en-PH")}</div>
                 </div>
+                <div class="rounded-2xl border border-emerald-800 bg-emerald-950/25 p-3">
+                  <div class="text-xs font-bold text-emerald-300">Total expected</div>
+                  <div class="mt-1 text-xl font-black text-emerald-100">₱${expectedTotal.toLocaleString("en-PH")}</div>
+                </div>
+              </div>
+              <div class="mt-3 rounded-2xl border border-slate-700 bg-slate-950/55 p-3 text-sm">
+                <div class="text-xs text-slate-500">Status</div>
+                <div class="mt-1 font-bold ${accentClass}">${visibleStatus}</div>
               </div>
 
               ${waitingForPayment ? `
