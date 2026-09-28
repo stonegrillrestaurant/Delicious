@@ -1129,8 +1129,13 @@ function clearRentalSelection() {
 function openRentalReviewModal() {
   if (!selectedRentalSlot) return;
   const slot = selectedRentalSlot;
+  const rentalAmount = Number(slot.amountDue || 0);
+  const totalToPay = rentalAmount + Math.max(0, Number(currentBalance || 0));
   const balanceLine = currentBalance > 0
-    ? `<div class="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/25 p-3 text-amber-100"><strong>Previous balance:</strong> ₱${currentBalance.toLocaleString("en-PH")}<br><span class="text-xs text-amber-200/80">This will be added to the payment total.</span></div>`
+    ? `<div class="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/25 p-3 text-amber-100">
+         <div class="text-xs uppercase tracking-[.14em] text-amber-300">Previous balance</div>
+         <div class="mt-1 text-sm">₱${currentBalance.toLocaleString("en-PH")} will be included below.</div>
+       </div>`
     : "";
 
   rentalDetails.innerHTML = `
@@ -1138,8 +1143,13 @@ function openRentalReviewModal() {
     <div><strong>Court:</strong> Court ${slot.courtId}</div>
     <div><strong>Time:</strong> ${formatTime12(slot.startTime)}–${formatTime12(slot.endTime)}</div>
     <div><strong>Duration:</strong> ${slot.hours} hour${slot.hours === 1 ? "" : "s"}</div>
-    <div><strong>Rental:</strong> ₱${Number(slot.amountDue || 0).toLocaleString("en-PH")}</div>
+    <div><strong>Rental:</strong> ₱${rentalAmount.toLocaleString("en-PH")}</div>
     ${balanceLine}
+    <div class="mt-4 rounded-2xl border border-emerald-700 bg-emerald-950/30 p-4 text-center">
+      <div class="text-xs font-black tracking-[.16em] text-emerald-300">TOTAL AMOUNT TO PAY LATER</div>
+      <div class="mt-1 text-3xl font-black text-emerald-100">₱${totalToPay.toLocaleString("en-PH")}</div>
+      ${currentBalance > 0 ? `<div class="mt-1 text-xs text-slate-400">Rental ₱${rentalAmount.toLocaleString("en-PH")} + previous balance ₱${currentBalance.toLocaleString("en-PH")}</div>` : ""}
+    </div>
   `;
   rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
   rentalStatus.textContent = "";
