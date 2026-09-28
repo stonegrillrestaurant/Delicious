@@ -41,13 +41,24 @@
 
     <section id="adminPanel" class="mt-5 hidden">
       <div class="liquid-glass rounded-3xl p-5">
-        <label for="referenceInput" class="block text-xs font-black tracking-[.14em] text-slate-400">GCASH REFERENCE NUMBER</label>
+        <label for="referenceInput" class="block text-xs font-black tracking-[.14em] text-slate-400">GCASH REFERENCE NUMBER RECEIVED</label>
         <input id="referenceInput" type="text" inputmode="numeric" autocomplete="off"
-          placeholder="Enter reference number"
+          placeholder="Enter actual GCash reference"
           class="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-4 text-xl font-mono font-black outline-none focus:border-lime-400" />
-        <button id="verifyBtn" class="mt-3 w-full rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black hover:bg-emerald-500">
-          VERIFY
-        </button>
+
+        <label for="receivedAmountInput" class="mt-4 block text-xs font-black tracking-[.14em] text-slate-400">ACTUAL AMOUNT RECEIVED</label>
+        <input id="receivedAmountInput" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off"
+          placeholder="₱ Amount received"
+          class="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-4 text-xl font-black outline-none focus:border-lime-400" />
+
+        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <button id="verifyBtn" class="rounded-2xl bg-emerald-600 px-4 py-4 text-sm font-black hover:bg-emerald-500">VERIFY</button>
+          <button id="considerBtn" class="rounded-2xl bg-amber-600 px-4 py-4 text-sm font-black hover:bg-amber-500">CONSIDER</button>
+          <button id="allowBtn" class="rounded-2xl bg-cyan-600 px-4 py-4 text-sm font-black hover:bg-cyan-500">ALLOW</button>
+        </div>
+        <div class="mt-3 text-xs leading-5 text-slate-400">
+          VERIFY = normal verification · CONSIDER = proceed and carry any shortage to the customer balance · ALLOW = proceed and accept the difference without carrying a balance.
+        </div>
       </div>
 
       <section class="mt-6">
@@ -109,6 +120,9 @@ const googleBtn = $("googleBtn");
 const adminPanel = $("adminPanel");
 const referenceInput = $("referenceInput");
 const verifyBtn = $("verifyBtn");
+const considerBtn = $("considerBtn");
+const allowBtn = $("allowBtn");
+const receivedAmountInput = $("receivedAmountInput");
 const pendingList = $("pendingList");
 const pendingCount = $("pendingCount");
 const verifiedList = $("verifiedList");
@@ -203,8 +217,8 @@ function renderPending(payments) {
                   <div class="mt-1 break-all font-mono text-base font-black text-amber-200">${esc(p.reference || "—")}</div>
                 </div>
                 <div class="rounded-xl bg-slate-950/70 p-3">
-                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Amount</div>
-                  <div class="mt-1 font-bold">₱${Number(p.amountPaid || 0).toLocaleString("en-PH")}</div>
+                  <div class="text-[10px] uppercase tracking-wider text-slate-500">Expected</div>
+                  <div class="mt-1 font-bold">₱${Number(p.expectedAmount ?? p.amountPaid ?? 0).toLocaleString("en-PH")}</div>
                 </div>
                 <div class="rounded-xl bg-slate-950/70 p-3">
                   <div class="text-[10px] uppercase tracking-wider text-slate-500">Service</div>
@@ -383,12 +397,16 @@ googleBtn.addEventListener("click", async () => {
 });
 
 async function confirmPayment(paymentId, options = {}) {
+  const actualReceivedAmount = Math.max(0, Number(options.actualReceivedAmount || 0));
+  const decision = ["verify", "consider", "allow"].includes(options.decision) ? options.decision : "verify";
+
   if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
     showToast("error", "Admin authorization required.");
     return;
   }
 
   const paymentRef = doc(db, "paymentSubmissions", paymentId);
+  const eventRef = doc(collection(db, "eventLogs"));
 
   try {
     await runTransaction(db, async tx => {
@@ -396,6 +414,15 @@ async function confirmPayment(paymentId, options = {}) {
       if (!paymentSnap.exists()) throw new Error("Payment record no longer exists.");
 
       const payment = paymentSnap.data();
+      const expectedAmount = Math.max(0, Number(payment.expectedAmount ?? payment.amountPaid ?? 0));
+      const difference = Number((expectedAmount - actualReceivedAmount).toFixed(2));
+      const shortage = Math.max(0, difference);
+      const overage = Math.max(0, -difference);
+      const balanceRef = doc(db, "customerBalances", payment.customerUid);
+      const balanceLedgerRef = doc(db, "balanceTransactions", paymentId);
+      const balanceSnap = decision === "consider" && shortage > 0 ? await tx.get(balanceRef) : null;
+      const ledgerSnap = decision === "consider" && shortage > 0 ? await tx.get(balanceLedgerRef) : null;
+
       if (payment.status === "verified") {
         throw new Error("This payment has already been verified.");
       }
@@ -443,6 +470,12 @@ async function confirmPayment(paymentId, options = {}) {
         tx.update(paymentRef, {
           status: "verified",
           checkedIn: false,
+          expectedAmount,
+          actualReceivedAmount,
+          paymentDifference: difference,
+          shortageAmount: shortage,
+          overageAmount: overage,
+          paymentDecision: decision,
           verifiedAt: serverTimestamp(),
           verifiedBy: auth.currentUser.uid,
           verifiedByEmail: auth.currentUser.email || ""
@@ -473,6 +506,50 @@ async function confirmPayment(paymentId, options = {}) {
           verifiedAt: serverTimestamp(),
           verifiedBy: auth.currentUser.uid
         }));
+
+        if (decision === "consider" && shortage > 0) {
+          const previousBalance = balanceSnap?.exists() ? Math.max(0, Number(balanceSnap.data().outstandingBalance || 0)) : 0;
+          const nextBalance = Number((previousBalance + shortage).toFixed(2));
+          if (!ledgerSnap?.exists()) {
+            tx.set(balanceLedgerRef, {
+              customerUid: payment.customerUid,
+              customerName: payment.customerName || "",
+              paymentId,
+              bookingId: payment.registrationId,
+              type: "short_payment_carried",
+              amount: shortage,
+              previousBalance,
+              newBalance: nextBalance,
+              reference: payment.reference || "",
+              actorUid: auth.currentUser.uid,
+              actorEmail: auth.currentUser.email || "",
+              createdAt: serverTimestamp()
+            });
+            tx.set(balanceRef, {
+              customerUid: payment.customerUid,
+              customerName: payment.customerName || "",
+              outstandingBalance: nextBalance,
+              updatedAt: serverTimestamp(),
+              updatedByUid: auth.currentUser.uid,
+              updatedByEmail: auth.currentUser.email || ""
+            }, { merge: true });
+          }
+        }
+
+        tx.set(eventRef, {
+          eventType: decision === "consider" ? "PAYMENT_CONSIDERED" : decision === "allow" ? "PAYMENT_ALLOWED" : "PAYMENT_VERIFIED",
+          paymentId,
+          bookingId: payment.registrationId,
+          customerUid: payment.customerUid,
+          customerName: payment.customerName || "",
+          actorUid: auth.currentUser.uid,
+          actorEmail: auth.currentUser.email || "",
+          expectedAmount,
+          actualReceivedAmount,
+          difference,
+          decision,
+          timestamp: serverTimestamp()
+        });
         return;
       }
 
@@ -529,6 +606,12 @@ async function confirmPayment(paymentId, options = {}) {
       tx.update(paymentRef, {
         status: "verified",
         checkedIn: false,
+        expectedAmount,
+        actualReceivedAmount,
+        paymentDifference: difference,
+        shortageAmount: shortage,
+        overageAmount: overage,
+        paymentDecision: decision,
         verifiedAt: serverTimestamp(),
         verifiedBy: auth.currentUser.uid,
         verifiedByEmail: auth.currentUser.email || ""
@@ -560,6 +643,50 @@ async function confirmPayment(paymentId, options = {}) {
         verifiedAt: serverTimestamp(),
         verifiedBy: auth.currentUser.uid
       }));
+
+      if (decision === "consider" && shortage > 0) {
+        const previousBalance = balanceSnap?.exists() ? Math.max(0, Number(balanceSnap.data().outstandingBalance || 0)) : 0;
+        const nextBalance = Number((previousBalance + shortage).toFixed(2));
+        if (!ledgerSnap?.exists()) {
+          tx.set(balanceLedgerRef, {
+            customerUid: payment.customerUid,
+            customerName: payment.customerName || "",
+            paymentId,
+            bookingId: payment.registrationId,
+            type: "short_payment_carried",
+            amount: shortage,
+            previousBalance,
+            newBalance: nextBalance,
+            reference: payment.reference || "",
+            actorUid: auth.currentUser.uid,
+            actorEmail: auth.currentUser.email || "",
+            createdAt: serverTimestamp()
+          });
+          tx.set(balanceRef, {
+            customerUid: payment.customerUid,
+            customerName: payment.customerName || "",
+            outstandingBalance: nextBalance,
+            updatedAt: serverTimestamp(),
+            updatedByUid: auth.currentUser.uid,
+            updatedByEmail: auth.currentUser.email || ""
+          }, { merge: true });
+        }
+      }
+
+      tx.set(eventRef, {
+        eventType: decision === "consider" ? "PAYMENT_CONSIDERED" : decision === "allow" ? "PAYMENT_ALLOWED" : "PAYMENT_VERIFIED",
+        paymentId,
+        bookingId: payment.registrationId,
+        customerUid: payment.customerUid,
+        customerName: payment.customerName || "",
+        actorUid: auth.currentUser.uid,
+        actorEmail: auth.currentUser.email || "",
+        expectedAmount,
+        actualReceivedAmount,
+        difference,
+        decision,
+        timestamp: serverTimestamp()
+      });
     });
 
     if (!options.silent) {
@@ -652,11 +779,17 @@ pendingList.addEventListener("click", async event => {
   }
 });
 
-async function verifyReference() {
+async function verifyReference(decision = "verify") {
   const reference = referenceInput.value.trim();
+  const actualReceivedAmount = Number(receivedAmountInput.value);
 
   if (!reference) {
     showToast("error", "INVALID REFERENCE");
+    return;
+  }
+
+  if (!Number.isFinite(actualReceivedAmount) || actualReceivedAmount < 0) {
+    showToast("error", "ENTER THE ACTUAL AMOUNT RECEIVED");
     return;
   }
 
@@ -665,7 +798,7 @@ async function verifyReference() {
     return;
   }
 
-  verifyBtn.disabled = true;
+  [verifyBtn, considerBtn, allowBtn].forEach(btn => btn.disabled = true);
   verifyBtn.textContent = "VERIFYING…";
 
   try {
@@ -698,25 +831,47 @@ async function verifyReference() {
       return;
     }
 
-    await confirmPayment(payment.id, { silent: true });
+    const expectedAmount = Math.max(0, Number(payment.expectedAmount ?? payment.amountPaid ?? 0));
+    const difference = Number((expectedAmount - actualReceivedAmount).toFixed(2));
+
+    await confirmPayment(payment.id, {
+      silent: true,
+      actualReceivedAmount,
+      decision
+    });
+
     referenceInput.value = "";
+    receivedAmountInput.value = "";
     const payerName = String(payment.customerName || "Customer").trim();
-    showToast("success", payerName + " — VERIFIED");
+    const suffix = decision === "consider" && difference > 0
+      ? ` — VERIFIED · ₱${difference.toLocaleString("en-PH")} BALANCE CARRIED`
+      : decision === "allow" && difference !== 0
+        ? " — VERIFIED · DIFFERENCE ALLOWED"
+        : " — VERIFIED";
+    showToast("success", payerName + suffix);
   } catch (err) {
     console.error(err);
     showToast("error", "INVALID / COULD NOT VERIFY");
   } finally {
-    verifyBtn.disabled = false;
+    [verifyBtn, considerBtn, allowBtn].forEach(btn => btn.disabled = false);
     verifyBtn.textContent = "VERIFY";
     referenceInput.focus();
   }
 }
 
-verifyBtn.addEventListener("click", verifyReference);
+verifyBtn.addEventListener("click", () => verifyReference("verify"));
+considerBtn.addEventListener("click", () => verifyReference("consider"));
+allowBtn.addEventListener("click", () => verifyReference("allow"));
 referenceInput.addEventListener("keydown", event => {
   if (event.key === "Enter") {
     event.preventDefault();
-    verifyReference();
+    receivedAmountInput.focus();
+  }
+});
+receivedAmountInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    verifyReference("verify");
   }
 });
 </script>
