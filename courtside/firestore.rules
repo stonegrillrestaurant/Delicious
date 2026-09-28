@@ -7,14 +7,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isSystemOwner() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == "courtsidegatherings@gmail.com";
+    }
+
     function isAdmin() {
       return signedIn()
         && request.auth.token.email_verified == true
         && (
-          request.auth.token.email == "courtsidegatherings@gmail.com"
-          || request.auth.token.email == "lzl.lopez@yahoo.com"
-          || request.auth.token.email == "dod_ong@yahoo.com"
+          isSystemOwner()
+          || request.auth.token.email == "ninoxx@gmail.com"
         );
+    }
+
+    function isStaff() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.uid == "gFwVPu5eiXgvqjCxMfCvR8IMCb32";
+    }
+
+    function isOperator() {
+      return isAdmin() || isStaff();
     }
 
     function isOwner(uid) {
@@ -22,7 +37,7 @@ service cloud.firestore {
     }
 
     function hasLivePanelControl() {
-      return isAdmin()
+      return isOperator()
         && exists(/databases/$(database)/documents/adminSessions/livePanel)
         && get(/databases/$(database)/documents/adminSessions/livePanel).data.activeUid == request.auth.uid
         && get(/databases/$(database)/documents/adminSessions/livePanel).data.leaseUntil > request.time;
@@ -102,7 +117,16 @@ service cloud.firestore {
     // pages; customers never write this counter directly.
     match /openPlaySessions/{sessionId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          isStaff()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "joinedPlayers", "updatedAt"
+          ])
+          && request.resource.data.joinedPlayers >= 0
+          && request.resource.data.joinedPlayers <= resource.data.maxPlayers
+        );
     }
 
     // Atomic Open Play seat locks. Expired pending-payment locks may be reclaimed.
@@ -161,10 +185,19 @@ service cloud.firestore {
       allow read: if signedIn()
         && (
           resource.data.customerUid == request.auth.uid
-          || isAdmin()
+          || isOperator()
         );
 
       allow update: if isAdmin()
+        || (
+          isStaff()
+          && resource.data.paymentStatus == "verified"
+          && request.resource.data.customerUid == resource.data.customerUid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "checkedIn", "checkedInAt", "checkedInByUid", "checkedInByEmail",
+            "updatedAt"
+          ])
+        )
         || (
           signedIn()
           && resource.data.customerUid == request.auth.uid
@@ -202,7 +235,7 @@ service cloud.firestore {
         && request.resource.data.customerUid == request.auth.uid
         && request.resource.data.status == "pending_payment"
         && request.resource.data.holdUntil > request.time
-        && request.resource.data.holdUntil <= request.time + duration.value(30, "m");
+        && request.resource.data.holdUntil <= request.time + duration.value(10, "m");
 
       allow update: if isAdmin()
         || (
@@ -220,7 +253,7 @@ service cloud.firestore {
             (
               request.resource.data.status == "pending_payment"
               && request.resource.data.holdUntil > request.time
-              && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+              && request.resource.data.holdUntil <= request.time + duration.value(10, "m")
             )
             || (
               request.resource.data.status == "pending_verification"
@@ -241,16 +274,24 @@ service cloud.firestore {
           && request.resource.data.status == "pending_payment"
           && request.resource.data.paymentStatus == "pending"
           && request.resource.data.holdUntil > request.time
-          && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+          && request.resource.data.holdUntil <= request.time + duration.value(10, "m")
         );
 
       allow read: if signedIn()
         && (
           resource.data.customerUid == request.auth.uid
-          || isAdmin()
+          || isOperator()
         );
 
       allow update: if isAdmin()
+        || (
+          isStaff()
+          && request.resource.data.customerUid == resource.data.customerUid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "checkedIn", "checkedInAt", "checkedInByUid", "checkedInByEmail",
+            "updatedAt"
+          ])
+        )
         || (
           signedIn()
           && resource.data.customerUid == request.auth.uid
@@ -265,7 +306,7 @@ service cloud.firestore {
               request.resource.data.status == "pending_payment"
               && request.resource.data.paymentStatus == "pending"
               && request.resource.data.holdUntil > request.time
-              && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+              && request.resource.data.holdUntil <= request.time + duration.value(10, "m")
             )
             || (
               request.resource.data.status == "pending_verification"
@@ -284,7 +325,7 @@ service cloud.firestore {
           && request.resource.data.status == "pending_payment"
           && request.resource.data.paymentStatus == "pending"
           && request.resource.data.holdUntil > request.time
-          && request.resource.data.holdUntil <= request.time + duration.value(30, "m")
+          && request.resource.data.holdUntil <= request.time + duration.value(10, "m")
         );
 
       allow delete: if isAdmin();
@@ -343,23 +384,42 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Permanent audit trail. Operators can append actions attributed to themselves.
+    // Only admins can browse the complete audit history.
+    match /eventLogs/{eventId} {
+      allow create: if isOperator()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.email;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Cumulative "today so far" snapshots. Saving a report never resets transactions.
+    match /daySnapshots/{snapshotId} {
+      allow create: if isAdmin()
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.createdByEmail == request.auth.token.email;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // Live Panel controller lease. All admins may see who currently controls the panel.
     // Only the current controller may refresh/release their lease; another admin can
     // take control after the previous lease expires.
     match /adminSessions/livePanel {
-      allow read: if isAdmin();
+      allow read: if isOperator();
 
-      allow create: if isAdmin()
+      allow create: if isOperator()
         && request.resource.data.activeUid == request.auth.uid;
 
-      allow update: if isAdmin()
+      allow update: if isOperator()
         && request.resource.data.activeUid == request.auth.uid
         && (
           resource.data.activeUid == request.auth.uid
           || resource.data.leaseUntil <= request.time
         );
 
-      allow delete: if isAdmin()
+      allow delete: if isOperator()
         && resource.data.activeUid == request.auth.uid;
     }
 
@@ -372,8 +432,7 @@ service cloud.firestore {
     }
 
     match /pickleball/historyVault {
-      allow read: if isAdmin();
-      allow write: if hasLivePanelControl();
+      allow read, write: if isAdmin();
     }
 
     match /{document=**} {
