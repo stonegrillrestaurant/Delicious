@@ -1365,7 +1365,7 @@ function render(items) {
     <div class="mb-3 flex items-center justify-between">
       <div>
         <h2 class="text-lg font-bold">Court Schedule</h2>
-        <p class="text-sm text-slate-400">Tap once for start · tap a second time for the end</p>
+        <p class="text-sm text-slate-400">Tap one available hour to rent 1 hour · tap another hour on the same court to extend</p>
       </div>
       <div class="text-xs text-slate-500">Scroll sideways on mobile →</div>
     </div>
@@ -1445,10 +1445,10 @@ schedule.addEventListener("click", async (event) => {
 
       showStatus(
         "success",
-        "Time confirmed — 30 minute payment window",
+        "Time confirmed — 10 minute payment window",
         "Court " + slot.courtId + " · " +
         formatTime12(slot.startTime) + "–" + formatTime12(slot.endTime) +
-        ". Submit your GCash reference number before the 30-minute hold expires."
+        ". Submit your GCash reference number before the 10-minute hold expires."
       );
 
       openPaymentModal(rentalRegistration);
@@ -1490,17 +1490,75 @@ schedule.addEventListener("click", async (event) => {
         return;
       }
 
+      if (Number(selectedRentalSlot.courtId) === courtId) {
+        const currentStart = selectedRentalSlot.startTime;
+        const selectionStart =
+          toMinutes(clickedStart) < toMinutes(currentStart)
+            ? clickedStart
+            : currentStart;
+        const selectionEnd =
+          toMinutes(clickedStart) < toMinutes(currentStart)
+            ? clickedEnd === "24:00" ? "24:00" : clickedEnd
+            : clickedEnd;
+
+        if (!rangeIsAvailable(courtId, selectionStart, selectionEnd, currentItems)) {
+          showStatus(
+            "error",
+            "That range is not available",
+            "Open Play or another booking is inside those hours. Your current rental selection is unchanged."
+          );
+          return;
+        }
+
+        const hours = (toMinutes(selectionEnd) - toMinutes(selectionStart)) / 60;
+        selectedRentalSlot = {
+          bookingType: "private_rental",
+          date: dateInput.value,
+          courtId,
+          startTime: selectionStart,
+          endTime: selectionEnd,
+          hourlyRate: rate,
+          hours,
+          amountDue: rate * hours
+        };
+        rentalSelectionStart = {
+          courtId,
+          startTime: selectionStart,
+          hourlyRate: rate
+        };
+
+        render(currentItems);
+        showStatus(
+          "info",
+          "Rental time updated",
+          "Court " + courtId + " · " + formatTime12(selectionStart) + "–" + formatTime12(selectionEnd) +
+          ". Tap CONFIRM TIME when ready."
+        );
+        return;
+      }
+
+      // Tapping another court starts a fresh one-hour selection there.
       rentalSelectionStart = {
         courtId,
         startTime: clickedStart,
         hourlyRate: rate
       };
-      selectedRentalSlot = null;
+      selectedRentalSlot = {
+        bookingType: "private_rental",
+        date: dateInput.value,
+        courtId,
+        startTime: clickedStart,
+        endTime: clickedEnd,
+        hourlyRate: rate,
+        hours: 1,
+        amountDue: rate
+      };
       render(currentItems);
       showStatus(
         "info",
-        "Rental start selected",
-        "Only this start time is selected. Tap another available time on Court " + courtId + " to choose the end."
+        "1-hour rental selected",
+        "Court " + courtId + " · " + formatTime12(clickedStart) + "–" + formatTime12(clickedEnd) +
+        ". Tap CONFIRM TIME, or tap another available hour on the same court to extend."
       );
       return;
     }
@@ -1514,12 +1572,22 @@ schedule.addEventListener("click", async (event) => {
         startTime: clickedStart,
         hourlyRate: rate
       };
-      selectedRentalSlot = null;
+      selectedRentalSlot = {
+        bookingType: "private_rental",
+        date: dateInput.value,
+        courtId,
+        startTime: clickedStart,
+        endTime: clickedEnd,
+        hourlyRate: rate,
+        hours: 1,
+        amountDue: rate
+      };
       render(currentItems);
       showStatus(
         "info",
-        "Rental start selected",
-        "Only " + formatTime12(clickedStart) + " is selected. Tap another available time on Court " + courtId + " to choose the end."
+        "1-hour rental selected",
+        "Court " + courtId + " · " + formatTime12(clickedStart) + "–" + formatTime12(clickedEnd) +
+        ". Tap CONFIRM TIME, or tap another available hour on the same court to extend."
       );
       return;
     }
@@ -1569,7 +1637,7 @@ schedule.addEventListener("click", async (event) => {
       "info",
       "Rental time selected",
       "Court " + courtId + " · " + formatTime12(selectionStart) + "–" + formatTime12(selectionEnd) +
-      ". Nothing is reserved yet. Tap CONFIRM TIME when ready. Confirming will hold these hours for 30 minutes while you complete the GCash payment."
+      ". Nothing is reserved yet. Tap CONFIRM TIME when ready. Confirming will hold these hours for 10 minutes while you complete the GCash payment."
     );
     return;
   }
