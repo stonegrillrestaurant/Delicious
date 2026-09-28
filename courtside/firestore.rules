@@ -89,6 +89,7 @@ service cloud.firestore {
           && request.resource.data.bookingType == "private_rental"
           && request.resource.data.status == "pending_payment"
           && request.resource.data.bookingId == scheduleId
+          && request.resource.data.customerUid == request.auth.uid
           && getAfter(/databases/$(database)/documents/privateRentalBookings/$(scheduleId))
                .data.customerUid == request.auth.uid
         );
@@ -107,7 +108,13 @@ service cloud.firestore {
           && request.resource.data.status == "pending_verification"
         );
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.type == "private"
+          && resource.data.status == "pending_payment"
+          && resource.data.customerUid == request.auth.uid
+        );
     }
 
     // Actual Open Play session definition + privacy-safe public capacity counter.
@@ -262,7 +269,12 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.customerUid == request.auth.uid
+          && resource.data.status == "pending_payment"
+        );
     }
 
     // Actual private-rental booking.
@@ -328,7 +340,13 @@ service cloud.firestore {
           && request.resource.data.holdUntil <= request.time + duration.value(10, "m")
         );
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.customerUid == request.auth.uid
+          && resource.data.status == "pending_payment"
+          && resource.data.paymentStatus == "pending"
+        );
     }
 
     // Customer payment claim + admin verification.
@@ -427,7 +445,7 @@ service cloud.firestore {
     // Every authorized admin can view it, but only the active Live Panel controller
     // can change live queue/history state.
     match /pickleball/currentState {
-      allow read: if isAdmin();
+      allow read: if isOperator();
       allow write: if hasLivePanelControl();
     }
 
