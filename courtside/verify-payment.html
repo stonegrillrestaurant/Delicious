@@ -51,13 +51,19 @@
           placeholder="₱ Amount received"
           class="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-4 text-xl font-black outline-none focus:border-lime-400" />
 
-        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div class="mt-3 grid grid-cols-1 gap-2">
           <button id="verifyBtn" class="rounded-2xl bg-emerald-600 px-4 py-4 text-sm font-black hover:bg-emerald-500">VERIFY</button>
-          <button id="considerBtn" class="rounded-2xl bg-amber-600 px-4 py-4 text-sm font-black hover:bg-amber-500">CONSIDER</button>
-          <button id="allowBtn" class="rounded-2xl bg-cyan-600 px-4 py-4 text-sm font-black hover:bg-cyan-500">ALLOW</button>
         </div>
-        <div class="mt-3 text-xs leading-5 text-slate-400">
-          VERIFY = normal verification · CONSIDER = proceed and carry any shortage to the customer balance · ALLOW = proceed and accept the difference without carrying a balance.
+
+        <div id="mismatchActions" class="mt-3 hidden rounded-2xl border border-amber-700/70 bg-amber-950/20 p-3">
+          <div id="mismatchSummary" class="text-sm font-bold text-amber-100"></div>
+          <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button id="considerBtn" class="rounded-2xl bg-amber-600 px-4 py-4 text-sm font-black hover:bg-amber-500">CONSIDER</button>
+            <button id="allowBtn" class="rounded-2xl bg-cyan-600 px-4 py-4 text-sm font-black hover:bg-cyan-500">ALLOW</button>
+          </div>
+          <div class="mt-3 text-xs leading-5 text-slate-400">
+            CONSIDER = proceed and carry a shortage to the customer balance. ALLOW = proceed and accept the difference without carrying a balance.
+          </div>
         </div>
       </div>
 
@@ -122,6 +128,8 @@ const referenceInput = $("referenceInput");
 const verifyBtn = $("verifyBtn");
 const considerBtn = $("considerBtn");
 const allowBtn = $("allowBtn");
+const mismatchActions = $("mismatchActions");
+const mismatchSummary = $("mismatchSummary");
 const receivedAmountInput = $("receivedAmountInput");
 const pendingList = $("pendingList");
 const pendingCount = $("pendingCount");
@@ -779,6 +787,20 @@ pendingList.addEventListener("click", async event => {
   }
 });
 
+function resetMismatchActions() {
+  mismatchActions.classList.add("hidden");
+  mismatchSummary.textContent = "";
+}
+
+function showMismatchActions(expectedAmount, actualReceivedAmount) {
+  const difference = Number((expectedAmount - actualReceivedAmount).toFixed(2));
+  const abs = Math.abs(difference);
+  mismatchSummary.textContent = difference > 0
+    ? `Amount mismatch: expected ₱${expectedAmount.toLocaleString("en-PH")}, received ₱${actualReceivedAmount.toLocaleString("en-PH")} — short by ₱${abs.toLocaleString("en-PH")}.`
+    : `Amount mismatch: expected ₱${expectedAmount.toLocaleString("en-PH")}, received ₱${actualReceivedAmount.toLocaleString("en-PH")} — over by ₱${abs.toLocaleString("en-PH")}.`;
+  mismatchActions.classList.remove("hidden");
+}
+
 async function verifyReference(decision = "verify") {
   const reference = referenceInput.value.trim();
   const actualReceivedAmount = Number(receivedAmountInput.value);
@@ -834,6 +856,12 @@ async function verifyReference(decision = "verify") {
     const expectedAmount = Math.max(0, Number(payment.expectedAmount ?? payment.amountPaid ?? 0));
     const difference = Number((expectedAmount - actualReceivedAmount).toFixed(2));
 
+    if (difference !== 0 && decision === "verify") {
+      showMismatchActions(expectedAmount, actualReceivedAmount);
+      showToast("error", "AMOUNT MISMATCH — CHOOSE CONSIDER OR ALLOW");
+      return;
+    }
+
     await confirmPayment(payment.id, {
       silent: true,
       actualReceivedAmount,
@@ -842,6 +870,7 @@ async function verifyReference(decision = "verify") {
 
     referenceInput.value = "";
     receivedAmountInput.value = "";
+    resetMismatchActions();
     const payerName = String(payment.customerName || "Customer").trim();
     const suffix = decision === "consider" && difference > 0
       ? ` — VERIFIED · ₱${difference.toLocaleString("en-PH")} BALANCE CARRIED`
@@ -862,6 +891,8 @@ async function verifyReference(decision = "verify") {
 verifyBtn.addEventListener("click", () => verifyReference("verify"));
 considerBtn.addEventListener("click", () => verifyReference("consider"));
 allowBtn.addEventListener("click", () => verifyReference("allow"));
+referenceInput.addEventListener("input", resetMismatchActions);
+receivedAmountInput.addEventListener("input", resetMismatchActions);
 referenceInput.addEventListener("keydown", event => {
   if (event.key === "Enter") {
     event.preventDefault();
