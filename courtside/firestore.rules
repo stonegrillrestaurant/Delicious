@@ -449,6 +449,13 @@ service cloud.firestore {
       allow write: if hasLivePanelControl();
     }
 
+    // Privacy-safe TV/public display. It contains only court, queue and player
+    // display fields written from the authorized Live Panel.
+    match /pickleball/publicLive {
+      allow read: if true;
+      allow write: if hasLivePanelControl();
+    }
+
     match /pickleball/historyVault {
       allow read, write: if isAdmin();
     }
