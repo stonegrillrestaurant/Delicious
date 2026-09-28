@@ -36,8 +36,9 @@
         .top-bar h2 { margin: 0; color: var(--dark); font-size: 1.4rem;}
         .top-bar span { color: var(--gold); font-weight: bold;}
         
-        button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
-        .btn-action { padding: 8px 15px; background: var(--dark); color: white; }
+        button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-action { padding: 8px 15px; background: var(--dark); color: white; display: inline-flex; align-items: center; justify-content: center; gap: 6px;}
         .btn-logout { background: var(--out-color); padding: 8px 15px; color: white; }
         .btn-delete { background: var(--out-color); padding: 4px 8px; font-size: 11px; color: white; border-radius: 3px;}
         .btn-delete:disabled { background: #ccc; cursor: not-allowed; }
@@ -73,7 +74,7 @@
         /* --- ADMIN DASHBOARD --- */
         .admin-controls { display: flex; gap: 10px; background: white; padding: 15px; border: 1px solid var(--ledger-line); margin-bottom: 15px; align-items: center; flex-wrap: wrap;}
         .admin-controls label { font-weight: bold; font-size: 0.9rem;}
-        .admin-controls input { padding: 6px; border: 1px solid #ccc;}
+        .admin-controls input { padding: 6px; border: 1px solid #ccc; border-radius: 4px;}
         
         .dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .dash-card { background: white; border: 1px solid var(--ledger-line); padding: 15px; border-radius: 4px; border-left: 4px solid var(--dark); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
@@ -87,15 +88,59 @@
 
         /* Admin Cashier Summaries */
         .cashier-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;}
-        .c-card { background: white; border: 1px solid var(--ledger-line); padding: 15px; display: flex; justify-content: space-between; align-items: center;}
+        .c-card { background: white; border: 1px solid var(--ledger-line); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;}
         .c-card-left { display: flex; flex-direction: column; gap: 4px;}
         .c-card-right { text-align: right; background: #fff3e0; padding: 10px; border: 1px solid #f39c12; border-radius: 4px;}
+
+        /* ========================================== */
+        /* --- PRINT STYLES (Document by Date) ---    */
+        /* ========================================== */
+        .print-only { display: none; }
+        
+        @media print {
+            body { background-color: white; padding: 0; margin: 0; color: black; font-size: 12px; }
+            .print-only { display: block; text-align: center; margin-bottom: 25px; }
+            .print-only h1 { margin: 0; font-size: 24px; color: #222; text-transform: uppercase; }
+            .print-only h3 { margin: 5px 0 0 0; font-size: 16px; color: #555; font-weight: normal; }
+            
+            /* Hide non-document elements */
+            .top-bar button, .admin-controls, .pending-box, .btn-delete, 
+            .entry-form, .login-box, .btn-logout { 
+                display: none !important; 
+            }
+            
+            /* Adjust layout for paper */
+            .container { max-width: 100%; width: 100%; margin: 0; padding: 0; }
+            .top-bar { box-shadow: none; border: none; padding: 0; margin-bottom: 15px; background: transparent; justify-content: center;}
+            .top-bar h2 { font-size: 1.2rem; }
+            
+            .ledger-paper { box-shadow: none; border: 1px solid #aaa; margin-bottom: 20px; overflow-x: visible; }
+            
+            /* Force exact background colors on paper */
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            
+            th { background-color: #eaeaea !important; color: #000 !important; border-bottom: 2px solid #555;}
+            td { border-color: #bbb; }
+            
+            /* Convert grids to flex for better page breaking */
+            .dash-cards { display: flex; gap: 15px; page-break-inside: avoid; }
+            .dash-card { flex: 1; border: 1px solid #aaa; border-left-width: 4px; padding: 10px;}
+            
+            .cashier-summary-grid { display: flex; flex-wrap: wrap; gap: 15px; page-break-inside: avoid; }
+            .c-card { flex: 1; min-width: 45%; border: 1px solid #aaa; padding: 10px;}
+            
+            /* Table formatting */
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            
+            /* Solidify badges for print readability */
+            .badge { border: 1px solid #444; color: #222 !important; background: #f9f9f9 !important; font-weight: bold;}
+        }
 
         @media (max-width: 768px) {
             .entry-form { grid-template-columns: 1fr; border-bottom: none; background: white; padding: 10px; border: 1px solid var(--ledger-line); margin-bottom: 15px;}
             .entry-form div { border-right: none; border-bottom: 1px solid #eee; }
             .entry-form button { padding: 12px; border-radius: 4px; margin-top: 10px;}
-            /* Table stays wide, user must scroll horizontally, acting like a real ledger */
         }
     </style>
 </head>
@@ -115,9 +160,22 @@
 <!-- CASHIER VIEW (Ledger Interface)            -->
 <!-- ========================================== -->
 <div id="cashierView" class="container hidden">
+    
+    <!-- Print specific headers -->
+    <div class="print-only">
+        <h1>Stone Grill Finance</h1>
+        <h3>Cashier Daily Ledger Report</h3>
+    </div>
+
     <div class="top-bar">
         <h2>Ledger Book: <span id="cashierNameDisplay"></span></h2>
-        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+        <div style="display:flex; gap: 10px;">
+            <button class="btn-action" style="background-color: var(--blue);" onclick="window.print()">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+                Print
+            </button>
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
+        </div>
     </div>
 
     <div class="ledger-paper">
@@ -171,6 +229,13 @@
 <!-- ADMIN VIEW (Master Ledger)                 -->
 <!-- ========================================== -->
 <div id="adminView" class="container hidden">
+    
+    <!-- Print specific headers for Master Ledger -->
+    <div class="print-only">
+        <h1>Stone Grill Finance</h1>
+        <h3 id="printDateHeader">Master Ledger Report</h3>
+    </div>
+
     <div class="top-bar">
         <h2>Admin Master Ledger</h2>
         <button class="btn-logout" onclick="handleLogout()">Logout</button>
@@ -180,6 +245,12 @@
         <label>📅 Filter Ledger By Date:</label>
         <input type="date" id="adminDateFilter" onchange="renderAdminUI()">
         <button class="btn-action" onclick="document.getElementById('adminDateFilter').value=''; renderAdminUI();">View All Time</button>
+        
+        <!-- NEW FEATURE: Print Document by Date button directly accesses print mode based on the current filter -->
+        <button class="btn-action" style="background-color: var(--blue); margin-left: auto;" onclick="window.print()">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+            Print Ledger
+        </button>
     </div>
 
     <!-- Pending Remittances -->
@@ -418,7 +489,11 @@
     window.renderAdminUI = function() {
         const filterDate = document.getElementById('adminDateFilter').value;
         const dateDisplayStr = filterDate ? `(Filtered: ${filterDate})` : "(All Time)";
+        
         document.getElementById('adminDateLabel').innerText = dateDisplayStr;
+        
+        // Dynamically update the Print Document Title to match the filter context
+        document.getElementById('printDateHeader').innerText = filterDate ? `Master Ledger: ${filterDate}` : `Master Ledger: All Time`;
 
         let filteredAdminReceived = 0; 
         let totalPendingAuth = 0; 
