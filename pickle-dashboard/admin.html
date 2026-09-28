@@ -116,6 +116,38 @@
     </section>
 
     <main class="max-w-[1800px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
+
+      <section class="admin-only mb-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="rounded-2xl border border-emerald-800/60 bg-emerald-950/15 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-[10px] font-black tracking-[.18em] text-emerald-300">VERIFIED · WAITING FOR ARRIVAL</div>
+              <div class="mt-1 text-sm text-slate-400">Payment is verified. These customers have not been checked in yet.</div>
+            </div>
+            <span id="verified-arrivals-count" class="rounded-full bg-emerald-900/60 px-3 py-1 text-xs font-black text-emerald-200">0</span>
+          </div>
+          <div id="verified-arrivals-list" class="mt-3 space-y-2">
+            <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">Loading verified bookings…</div>
+          </div>
+          <div class="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-500">
+            Check-in action will be connected to the real staff process. Verification alone does not put a player into the live queue.
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-cyan-800/60 bg-cyan-950/15 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-[10px] font-black tracking-[.18em] text-cyan-300">CHECKED-IN TODAY</div>
+              <div class="mt-1 text-sm text-slate-400">Customers already marked present for today's booking.</div>
+            </div>
+            <span id="checked-in-today-count" class="rounded-full bg-cyan-900/60 px-3 py-1 text-xs font-black text-cyan-200">0</span>
+          </div>
+          <div id="checked-in-today-list" class="mt-3 space-y-2">
+            <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">No checked-in customers yet.</div>
+          </div>
+        </div>
+      </section>
+
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-sm font-black uppercase tracking-widest text-white">Live Courts</h2>
@@ -212,10 +244,12 @@
     let unsubscribeState = null;
     let unsubscribeHistory = null;
     let unsubscribePendingPayments = null;
+    let unsubscribeVerifiedPayments = null;
     let unsubscribeTodaySchedule = null;
     let unsubscribeTodayRentals = null;
     let todayPublicSchedule = [];
     let todayRentalBookings = [];
+    let verifiedPayments = [];
     let unsubscribeAdminLock = null;
     let livePanelLockTimer = null;
     let hasLivePanelControl = false;
@@ -563,11 +597,14 @@
       if (unsubscribeState) { unsubscribeState(); unsubscribeState = null; }
       if (unsubscribeHistory) { unsubscribeHistory(); unsubscribeHistory = null; }
       if (unsubscribePendingPayments) { unsubscribePendingPayments(); unsubscribePendingPayments = null; }
+      if (unsubscribeVerifiedPayments) { unsubscribeVerifiedPayments(); unsubscribeVerifiedPayments = null; }
       if (unsubscribeTodaySchedule) { unsubscribeTodaySchedule(); unsubscribeTodaySchedule = null; }
       if (unsubscribeTodayRentals) { unsubscribeTodayRentals(); unsubscribeTodayRentals = null; }
       todayPublicSchedule = [];
       todayRentalBookings = [];
+      verifiedPayments = [];
       updatePendingPaymentButton(0);
+      renderVerifiedArrivals();
       isConnected = false;
     }
 
@@ -646,8 +683,28 @@
             updatePendingPaymentButton(0);
           }
         );
+
+        const verifiedPaymentsQuery = query(
+          collection(db, "paymentSubmissions"),
+          where("status", "==", "verified")
+        );
+
+        unsubscribeVerifiedPayments = onSnapshot(
+          verifiedPaymentsQuery,
+          (snapshot) => {
+            verifiedPayments = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            renderVerifiedArrivals();
+          },
+          (err) => {
+            console.error("Verified arrivals listener failed:", err);
+            verifiedPayments = [];
+            renderVerifiedArrivals();
+          }
+        );
       } else {
         updatePendingPaymentButton(0);
+        verifiedPayments = [];
+        renderVerifiedArrivals();
       }
 
       const today = localDateKey();
@@ -823,6 +880,86 @@
         const [h, m] = t.split(':');
         const d = new Date(); d.setHours(h); d.setMinutes(m);
         return d.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function bookingHasEnded(payment) {
+      if (!payment?.date || !payment?.endTime) return false;
+      const end = new Date(payment.date + "T" + payment.endTime + ":00");
+      return Number.isFinite(end.getTime()) && Date.now() > end.getTime();
+    }
+
+    function renderVerifiedArrivals() {
+      const waitingBox = document.getElementById("verified-arrivals-list");
+      const waitingCount = document.getElementById("verified-arrivals-count");
+      const checkedBox = document.getElementById("checked-in-today-list");
+      const checkedCount = document.getElementById("checked-in-today-count");
+      if (!waitingBox || !checkedBox || !waitingCount || !checkedCount) return;
+
+      const today = localDateKey();
+      const active = verifiedPayments
+        .filter(p => p.status === "verified" && p.checkedIn !== true && !bookingHasEnded(p))
+        .sort((a,b) =>
+          String(a.date || "").localeCompare(String(b.date || "")) ||
+          String(a.startTime || "").localeCompare(String(b.startTime || "")) ||
+          String(a.customerName || "").localeCompare(String(b.customerName || ""))
+        );
+
+      const checked = verifiedPayments
+        .filter(p => p.checkedIn === true && p.date === today)
+        .sort((a,b) =>
+          String(a.startTime || "").localeCompare(String(b.startTime || "")) ||
+          String(a.customerName || "").localeCompare(String(b.customerName || ""))
+        );
+
+      waitingCount.textContent = String(active.length);
+      checkedCount.textContent = String(checked.length);
+
+      waitingBox.innerHTML = active.length ? active.map(p => {
+        const names = Array.isArray(p.playerNames) && p.playerNames.length ? p.playerNames.join(", ") : (p.customerName || "Customer");
+        const service = p.bookingType === "private_rental" ? "Rent Court" : "Open Play";
+        const expected = Number(p.expectedAmount ?? p.amountPaid ?? 0);
+        const received = Number(p.actualReceivedAmount ?? expected);
+        return `
+          <article class="rounded-xl border border-emerald-900/60 bg-slate-950/45 p-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="truncate text-sm font-black text-white">${escapeHtml(names)}</div>
+                <div class="mt-1 text-[11px] text-slate-400">
+                  ${escapeHtml(p.date || "—")} · ${escapeHtml(formatTime(p.startTime))}–${escapeHtml(formatTime(p.endTime))}
+                </div>
+              </div>
+              <span class="shrink-0 rounded-full border border-emerald-700 bg-emerald-950/40 px-2 py-1 text-[9px] font-black text-emerald-300">VERIFIED</span>
+            </div>
+            <div class="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Court</span><br><strong>Court ${escapeHtml(p.courtId)}</strong></div>
+              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Type</span><br><strong>${service}</strong></div>
+              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Expected</span><br><strong>₱${expected.toLocaleString("en-PH")}</strong></div>
+              <div class="rounded-lg bg-slate-900/70 px-2.5 py-2"><span class="text-slate-500">Received</span><br><strong>₱${received.toLocaleString("en-PH")}</strong></div>
+            </div>
+          </article>`;
+      }).join("") : '<div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">No verified customers waiting for arrival.</div>';
+
+      checkedBox.innerHTML = checked.length ? checked.map(p => {
+        const names = Array.isArray(p.playerNames) && p.playerNames.length ? p.playerNames.join(", ") : (p.customerName || "Customer");
+        return `
+          <article class="rounded-xl border border-cyan-900/60 bg-slate-950/45 p-3">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="truncate text-sm font-black text-white">${escapeHtml(names)}</div>
+                <div class="mt-1 text-[11px] text-slate-400">Court ${escapeHtml(p.courtId)} · ${escapeHtml(formatTime(p.startTime))}–${escapeHtml(formatTime(p.endTime))}</div>
+              </div>
+              <span class="shrink-0 rounded-full border border-cyan-700 bg-cyan-950/40 px-2 py-1 text-[9px] font-black text-cyan-300">CHECKED-IN</span>
+            </div>
+          </article>`;
+      }).join("") : '<div class="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500">No checked-in customers yet.</div>';
     }
 
     window.switchTab = function(tabId) {
