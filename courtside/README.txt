@@ -56,7 +56,7 @@ Purpose:
 
 STAFF 1
 Firebase UID:
-gFwVPu5eiXgvqjCxMfCvR8IMCb32
+r4UwTxOgiKcEkHimmlAkVVlUJMt1
 
 Purpose:
 - live venue operations
