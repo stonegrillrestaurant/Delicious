@@ -242,11 +242,15 @@
     </div>
 
     <div class="admin-controls">
-        <label>📅 Filter Ledger:</label>
+        <label>📅 Filter:</label>
         <input type="date" id="adminDateFilter" onchange="renderAdminUI('date')" title="Daily Filter">
         <span style="font-size: 0.8rem; color: #777; font-weight: bold;">OR</span>
         <input type="month" id="adminMonthFilter" onchange="renderAdminUI('month')" title="Monthly Filter">
-        <button class="btn-action" onclick="document.getElementById('adminDateFilter').value=''; document.getElementById('adminMonthFilter').value=''; renderAdminUI();">View All Time</button>
+        
+        <label style="margin-left: 10px;">🔍 Search:</label>
+        <input type="text" id="adminDescFilter" oninput="renderAdminUI()" placeholder="By description..." title="Search by Description">
+        
+        <button class="btn-action" onclick="document.getElementById('adminDateFilter').value=''; document.getElementById('adminMonthFilter').value=''; document.getElementById('adminDescFilter').value=''; renderAdminUI();">Clear Filters</button>
         
         <button class="btn-action" style="background-color: var(--blue); margin-left: auto;" onclick="window.print()">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 4px;"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
@@ -490,8 +494,9 @@
     window.renderAdminUI = function(changedFilter = null) {
         let dateFilter = document.getElementById('adminDateFilter').value;
         let monthFilter = document.getElementById('adminMonthFilter').value;
+        let descFilter = document.getElementById('adminDescFilter').value.toLowerCase();
         
-        // Auto-clear the opposite filter so they don't conflict
+        // Auto-clear the opposite date filter so they don't conflict
         if (changedFilter === 'date' && dateFilter) {
             document.getElementById('adminMonthFilter').value = '';
             monthFilter = '';
@@ -516,11 +521,17 @@
         const printHeaderEl = document.getElementById('printDateHeader');
         if (printHeaderEl) printHeaderEl.innerText = printHeaderStr;
 
-        // Helper function to check if a transaction date matches the current active filter
-        const isMatch = (txDate) => {
+        // Helper function for matching the DATE/MONTH filters
+        const isDateMatch = (txDate) => {
             if (dateFilter) return txDate === dateFilter;
             if (monthFilter) return txDate.startsWith(monthFilter); // 'YYYY-MM-DD' starts with 'YYYY-MM'
             return true;
+        };
+
+        // Helper function for matching the DESCRIPTION filter
+        const isDescMatch = (txDesc) => {
+            if (!descFilter) return true;
+            return (txDesc || '').toLowerCase().includes(descFilter);
         };
 
         let filteredAdminReceived = 0; 
@@ -540,6 +551,7 @@
             if (!allTimeStats[email]) allTimeStats[email] = { name, in: 0, out: 0, remit_appr: 0, remit_pend: 0 };
             if (!filteredStats[email]) filteredStats[email] = { name, in: 0, out: 0, remit_appr: 0, remit_pend: 0 };
 
+            // ALL TIME STATS
             if (t.type === 'in') allTimeStats[email].in += amt;
             if (t.type === 'out') allTimeStats[email].out += amt;
             if (t.type === 'remit') {
@@ -556,7 +568,8 @@
                 }
             }
 
-            if (isMatch(t.date)) {
+            // FILTERED STATS (Tied strictly to date/time so search doesn't break accounting logic)
+            if (isDateMatch(t.date)) {
                 if (t.type === 'in') filteredStats[email].in += amt;
                 if (t.type === 'out') filteredStats[email].out += amt;
                 if (t.type === 'remit') {
@@ -611,14 +624,14 @@
         document.getElementById('adminTotalPending').innerText = formatMoney(totalPendingAuth);
         document.getElementById('adminTotalFloating').innerText = formatMoney(totalUncollected);
 
-        // Render Master Ledger Table
+        // Render Master Ledger Table (Filtered by BOTH Date/Month AND Description)
         const adminTbody = document.getElementById('adminTableBody');
         adminTbody.innerHTML = '';
         
-        let filteredTxForTable = cloudTransactions.filter(t => isMatch(t.date));
+        let filteredTxForTable = cloudTransactions.filter(t => isDateMatch(t.date) && isDescMatch(t.description));
 
         if (filteredTxForTable.length === 0) {
-            adminTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #888;">No transactions found for this period.</td></tr>`;
+            adminTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #888;">No matching transactions found.</td></tr>`;
         } else {
             filteredTxForTable.forEach(t => {
                 const tr = document.createElement('tr');
