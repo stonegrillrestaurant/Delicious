@@ -92,49 +92,148 @@
         .c-card-left { display: flex; flex-direction: column; gap: 4px;}
         .c-card-right { text-align: right; background: #fff3e0; padding: 10px; border: 1px solid #f39c12; border-radius: 4px;}
 
-        /* ========================================== */
-        /* --- PRINT STYLES (Document by Date/Month) --- */
-        /* ========================================== */
+        /* Compact print-only transaction lists */
         .print-only { display: none; }
-        
+
+        @page {
+            size: auto;
+            margin: 7mm;
+        }
+
         @media print {
-            body { background-color: white; padding: 0; margin: 0; color: black; font-size: 12px; }
-            .print-only { display: block; text-align: center; margin-bottom: 25px; }
-            .print-only h1 { margin: 0; font-size: 24px; color: #222; text-transform: uppercase; }
-            .print-only h3 { margin: 5px 0 0 0; font-size: 16px; color: #555; font-weight: normal; }
-            
-            /* Hide non-document elements */
-            .top-bar button, .admin-controls, .pending-box, .btn-delete, 
-            .entry-form, .login-box, .btn-logout { 
-                display: none !important; 
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                color: #111 !important;
+                font-size: 8pt !important;
+                -webkit-print-color-adjust: economy;
+                print-color-adjust: economy;
             }
-            
-            /* Adjust layout for paper */
-            .container { max-width: 100%; width: 100%; margin: 0; padding: 0; }
-            .top-bar { box-shadow: none; border: none; padding: 0; margin-bottom: 15px; background: transparent; justify-content: center;}
-            .top-bar h2 { font-size: 1.2rem; }
-            
-            .ledger-paper { box-shadow: none; border: 1px solid #aaa; margin-bottom: 20px; overflow-x: visible; }
-            
-            /* Force exact background colors on paper */
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            
-            th { background-color: #eaeaea !important; color: #000 !important; border-bottom: 2px solid #555;}
-            td { border-color: #bbb; }
-            
-            /* Convert grids to flex for better page breaking */
-            .dash-cards { display: flex; gap: 15px; page-break-inside: avoid; }
-            .dash-card { flex: 1; border: 1px solid #aaa; border-left-width: 4px; padding: 10px;}
-            
-            .cashier-summary-grid { display: flex; flex-wrap: wrap; gap: 15px; page-break-inside: avoid; }
-            .c-card { flex: 1; min-width: 45%; border: 1px solid #aaa; padding: 10px;}
-            
-            /* Table formatting */
-            table { page-break-inside: auto; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
-            
-            /* Solidify badges for print readability */
-            .badge { border: 1px solid #444; color: #222 !important; background: #f9f9f9 !important; font-weight: bold;}
+
+            .hidden,
+            #loginView,
+            .top-bar,
+            .admin-controls,
+            .pending-box,
+            .dash-cards,
+            #adminCashierList,
+            #adminView > h3,
+            .entry-form,
+            button,
+            .btn-delete {
+                display: none !important;
+            }
+
+            .container {
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .print-only {
+                display: block !important;
+                margin: 0 0 3mm !important;
+                text-align: left !important;
+            }
+
+            .print-only h1 {
+                margin: 0 !important;
+                color: #000 !important;
+                font-size: 13pt !important;
+                line-height: 1.1 !important;
+            }
+
+            .print-only h3 {
+                margin: 1mm 0 0 !important;
+                color: #333 !important;
+                font-size: 8pt !important;
+                font-weight: normal !important;
+                line-height: 1.1 !important;
+            }
+
+            .ledger-paper {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                break-inside: auto !important;
+                page-break-inside: auto !important;
+            }
+
+            table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
+                font-size: 7.5pt !important;
+                break-inside: auto !important;
+                page-break-inside: auto !important;
+            }
+
+            thead { display: table-header-group !important; }
+            tbody { display: table-row-group !important; }
+
+            tr {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            th, td {
+                padding: 1mm 1.3mm !important;
+                border: 0 !important;
+                border-bottom: 0.3pt solid #bbb !important;
+                color: #111 !important;
+                line-height: 1.1 !important;
+                vertical-align: top !important;
+                overflow-wrap: anywhere !important;
+            }
+
+            th {
+                background: transparent !important;
+                font-size: 7pt !important;
+                font-weight: 700 !important;
+                text-align: left !important;
+            }
+
+            .money-col { text-align: right !important; white-space: nowrap !important; }
+
+            #cashierView table th:nth-child(1),
+            #cashierView table td:nth-child(1) { width: 16% !important; white-space: nowrap !important; }
+            #cashierView table th:nth-child(2),
+            #cashierView table td:nth-child(2) { width: 40% !important; }
+            #cashierView table th:nth-child(3),
+            #cashierView table td:nth-child(3),
+            #cashierView table th:nth-child(4),
+            #cashierView table td:nth-child(4) { width: 13% !important; }
+            #cashierView table th:nth-child(5),
+            #cashierView table td:nth-child(5) { width: 18% !important; }
+            #cashierView table th:last-child,
+            #cashierView table td:last-child { display: none !important; }
+
+            #adminView table th:nth-child(1),
+            #adminView table td:nth-child(1) { width: 15% !important; white-space: nowrap !important; }
+            #adminView table th:nth-child(2),
+            #adminView table td:nth-child(2) { width: 17% !important; }
+            #adminView table th:nth-child(3),
+            #adminView table td:nth-child(3) { width: 40% !important; }
+            #adminView table th:nth-child(4),
+            #adminView table td:nth-child(4),
+            #adminView table th:nth-child(5),
+            #adminView table td:nth-child(5) { width: 14% !important; }
+            #adminView table th:last-child,
+            #adminView table td:last-child { display: none !important; }
+
+            .badge {
+                padding: 0 !important;
+                border: 0 !important;
+                background: transparent !important;
+                color: #111 !important;
+                font-size: 6.5pt !important;
+                font-weight: normal !important;
+            }
         }
 
         @media (max-width: 768px) {
