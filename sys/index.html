@@ -35,6 +35,7 @@
         const appId = "stone-grill-v1";
 
         window.fb = { db, auth, appId, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+        window.dispatchEvent(new Event('firebase-ready'));
     </script>
 
     <style>
@@ -401,6 +402,7 @@
             const [userRole, setUserRole] = useState(''); 
             const [currentBiometricId, setCurrentBiometricId] = useState(''); 
             const [isReady, setIsReady] = useState(false);
+            const [authInitError, setAuthInitError] = useState(false);
             const [activeTab, setActiveTab] = useState('dashboard');
             const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
             const [isRestoring, setIsRestoring] = useState(false);
@@ -449,12 +451,52 @@
             }, []);
 
             useEffect(() => {
-                window.fb.onAuthStateChanged(window.fb.auth, (u) => {
+                let cancelled = false;
+                let unsubscribe = null;
+                let authTimeout = null;
+                const handleAuth = (u) => {
+                    if (cancelled) return;
                     setUser(u);
-                    setIsReady(true);
                     setUserRole('');
                     if (!u) setCurrentBiometricId('');
-                });
+                    setAuthInitError(false);
+                    setIsReady(true);
+                    if (authTimeout) clearTimeout(authTimeout);
+                };
+                const startAuth = () => {
+                    if (cancelled || !window.fb) return;
+                    try {
+                        unsubscribe = window.fb.onAuthStateChanged(window.fb.auth, handleAuth, (err) => {
+                            console.error("Firebase auth state error:", err);
+                            if (!cancelled) {
+                                setAuthInitError(true);
+                                setIsReady(true);
+                            }
+                        });
+                    } catch (err) {
+                        console.error("Firebase auth initialization failed:", err);
+                        setAuthInitError(true);
+                        setIsReady(true);
+                    }
+                };
+                const onFirebaseReady = () => startAuth();
+                if (window.fb) startAuth();
+                else window.addEventListener('firebase-ready', onFirebaseReady, { once: true });
+
+                authTimeout = setTimeout(() => {
+                    if (!cancelled && !isReady) {
+                        console.error("Timed out waiting for Firebase authentication.");
+                        setAuthInitError(true);
+                        setIsReady(true);
+                    }
+                }, 15000);
+
+                return () => {
+                    cancelled = true;
+                    clearTimeout(authTimeout);
+                    window.removeEventListener('firebase-ready', onFirebaseReady);
+                    if (unsubscribe) unsubscribe();
+                };
             }, []);
 
             useEffect(() => {
@@ -713,6 +755,15 @@
                 return <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white">
                     <div className="w-10 h-10 border-4 border-t-white rounded-full animate-spin mb-4"></div>
                     <p className="font-black uppercase tracking-widest text-xs">Loading secure payroll...</p>
+                </div>;
+            }
+            if (authInitError) {
+                return <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center text-white">
+                    <div className="bg-white text-slate-800 rounded-3xl p-8 shadow-2xl max-w-sm w-full">
+                        <h2 className="text-xl font-black mb-3 uppercase tracking-widest">Unable to Load Secure Payroll</h2>
+                        <p className="text-sm text-slate-500 mb-6">The sign-in check did not finish. Check your connection, then reload the page.</p>
+                        <button onClick={() => window.location.reload()} className="w-full bg-blue-700 text-white py-4 rounded-2xl font-black uppercase">Reload App</button>
+                    </div>
                 </div>;
             }
             if (!user) return <LoginScreen />;
