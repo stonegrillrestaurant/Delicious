@@ -333,12 +333,8 @@
                 setLoading(true); 
                 try { 
                     const p = new window.fb.GoogleAuthProvider();
-                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                    if (isMobile) {
-                        await window.fb.signInWithRedirect(window.fb.auth, p);
-                    } else {
-                        await window.fb.signInWithPopup(window.fb.auth, p); 
-                    }
+                    p.setCustomParameters({ prompt: 'select_account' });
+                    await window.fb.signInWithPopup(window.fb.auth, p);
                 } catch (err) { 
                     alert("Error: " + err.message); 
                     setLoading(false); 
