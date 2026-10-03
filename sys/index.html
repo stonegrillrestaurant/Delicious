@@ -449,9 +449,11 @@
             }, []);
 
             useEffect(() => {
-                window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
-                    setUser(u); setIsReady(true); 
-                    if(!u) { setUserRole(''); setCurrentBiometricId(''); }
+                window.fb.onAuthStateChanged(window.fb.auth, (u) => {
+                    setUser(u);
+                    setIsReady(true);
+                    setUserRole('');
+                    if (!u) setCurrentBiometricId('');
                 });
             }, []);
 
@@ -470,7 +472,10 @@
                         }
                         setUserRole('Unauthorized');
                     }
-                }, (err) => alert("Database access error: " + err.message));
+                }, (err) => {
+                    console.error("Employee access check failed:", err);
+                    setUserRole('AccessError');
+                });
                 
                 const unsubAtt = window.fb.onSnapshot(getVaultCol('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
                 const unsubCA = window.fb.onSnapshot(getVaultCol('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -704,11 +709,29 @@
                 reader.readAsText(file); event.target.value = ''; 
             };
 
-            if (!isReady) return null;
+            if (!isReady) {
+                return <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white">
+                    <div className="w-10 h-10 border-4 border-t-white rounded-full animate-spin mb-4"></div>
+                    <p className="font-black uppercase tracking-widest text-xs">Loading secure payroll...</p>
+                </div>;
+            }
             if (!user) return <LoginScreen />;
 
             if (userRole === '') {
                 return <div className="fixed inset-0 bg-blue-950 flex flex-col items-center justify-center text-white"><div className="w-10 h-10 border-4 border-t-white rounded-full animate-spin mb-4"></div><p className="font-black uppercase tracking-widest text-xs">Checking Access...</p></div>;
+            }
+
+            if (userRole === 'AccessError') {
+                return (
+                    <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center z-[100]">
+                        <div className="bg-white rounded-3xl p-10 shadow-2xl max-w-sm w-full animate-slide-up">
+                            <X className="w-16 h-16 mx-auto mb-4 text-amber-500" />
+                            <h2 className="text-xl font-black mb-2 uppercase tracking-widest text-slate-800">Unable to Verify Account</h2>
+                            <p className="text-xs text-slate-500 font-bold mb-8 leading-relaxed">The app could not check your employee profile. Please check your connection or ask the admin for help.</p>
+                            <button onClick={() => window.fb.signOut(window.fb.auth)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform">Sign Out</button>
+                        </div>
+                    </div>
+                );
             }
 
             if (userRole === 'Unauthorized') {
