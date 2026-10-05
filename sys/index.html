@@ -305,10 +305,10 @@
             );
         }
 
-        function NavItem({ icon, label, active, onClick, open }) {
+        function NavItem({ icon, label, active, onClick, open, badge = 0 }) {
             return (
-                <button onClick={onClick} className={`w-full flex items-center px-6 py-3.5 transition-all duration-300 ${active ? 'bg-[#386df2] text-white border-l-4 border-white shadow-lg' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white border-l-4 border-transparent'}`}>
-                    <span className="shrink-0">{icon}</span>{open && <span className="ml-4 text-[11px] font-black uppercase tracking-widest whitespace-nowrap">{label}</span>}
+                <button onClick={onClick} title={badge > 0 ? `${label}: ${badge} awaiting approval` : label} aria-label={badge > 0 ? `${label}: ${badge} awaiting approval` : label} className={`w-full flex items-center px-6 py-3.5 transition-all duration-300 ${active ? 'bg-[#386df2] text-white border-l-4 border-white shadow-lg' : 'text-blue-200 hover:bg-blue-800/50 hover:text-white border-l-4 border-transparent'}`}>
+                    <span className="shrink-0">{icon}</span>{open && <span className="ml-4 text-[11px] font-black uppercase tracking-widest whitespace-nowrap">{label}</span>}{badge > 0 && <span role="status" className="ml-auto bg-amber-400 text-blue-950 min-w-[22px] h-[22px] px-1 rounded-full inline-flex items-center justify-center text-[10px] font-black shrink-0">{badge}</span>}
                 </button>
             );
         }
@@ -851,7 +851,7 @@
                                     <NavItem icon={<Users />} label="Masterlist" active={activeTab === 'employees'} onClick={() => switchTab('employees')} open={isSidebarOpen} />
                                     <NavItem icon={<Clock />} label="Attendance Logs" active={activeTab === 'attendance'} onClick={() => switchTab('attendance')} open={isSidebarOpen} />
                                     <NavItem icon={<FileText />} label="Payslip Builder" active={activeTab === 'payslips'} onClick={() => switchTab('payslips')} open={isSidebarOpen} />
-                                    <NavItem icon={<Banknote />} label="Cash Advance" active={activeTab === 'ca'} onClick={() => switchTab('ca')} open={isSidebarOpen} />
+                                    <NavItem icon={<Banknote />} label="Cash Advance" badge={caRequests.filter(req => req.status === 'Pending').length} active={activeTab === 'ca'} onClick={() => switchTab('ca')} open={isSidebarOpen} />
                                     <NavItem icon={<Calculator />} label="Payroll Print" active={activeTab === 'payroll'} onClick={() => switchTab('payroll')} open={isSidebarOpen} />
                                     <NavItem icon={<CalendarDays />} label="Summary" active={activeTab === 'summary'} onClick={() => switchTab('summary')} open={isSidebarOpen} />
                                     <NavItem icon={<Settings />} label="Settings" active={activeTab === 'settings'} onClick={() => switchTab('settings')} open={isSidebarOpen} />
@@ -1316,8 +1316,10 @@
                                     <p style={{ fontSize: '10px', margin: '0' }}>Cash Advance Voucher</p>
                                 </div>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Date:</strong> {timestampLabel(receiptToPrint.disbursedAt || receiptToPrint.dateApproved || receiptToPrint.dateRequested)}</p>
+                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Approved:</strong> {timestampLabel(receiptToPrint.approvedAt || receiptToPrint.dateApproved)}</p>
                                 <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Name:</strong> {receiptToPrint.empName.toUpperCase()}</p>
+                                <p style={{ fontSize: '9px', margin: '2px 0', overflowWrap: 'anywhere' }}><strong>Voucher / Request No:</strong> {receiptToPrint.id}</p>
+                                <p style={{ fontSize: '10px', margin: '2px 0', overflowWrap: 'anywhere' }}><strong>Reason:</strong> {receiptToPrint.reason}</p>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
                                 <div style={{ textAlign: 'center', margin: '15px 0' }}>
                                     <p style={{ fontSize: '10px', margin: '0 0 5px 0' }}>CASH ADVANCE AMOUNT</p>
@@ -1325,7 +1327,17 @@
                                 </div>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
                                 <p style={{ fontSize: '9px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Status: {receiptToPrint.status}<br/>Receipt confirmed: {timestampLabel(receiptToPrint.receivedAt)}<br/>Printing does not confirm cash received.</p>
-                                <div style={{ marginTop: '30px' }}><p style={{ fontSize: '10px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '90%', margin: '0 auto' }}>Cashier Signature</p></div>
+                                <div style={{ marginTop: '12px', fontSize: '10px' }}>
+                                    <p>I confirm that I received PHP {formatMoney(receiptToPrint.amount)}.</p>
+                                    <p style={{ borderTop: '1px solid black', paddingTop: '4px', marginTop: '28px', textAlign: 'center' }}>Employee Signature</p>
+                                    <p>Date / Time: __________________</p>
+                                </div>
+                                <div style={{ marginTop: '18px', fontSize: '10px' }}>
+                                    <p>I confirm that I released PHP {formatMoney(receiptToPrint.amount)} to the employee.</p>
+                                    <p style={{ borderTop: '1px solid black', paddingTop: '4px', marginTop: '28px', textAlign: 'center' }}>Cashier Signature</p>
+                                    <p>Date / Time: __________________</p>
+                                </div>
+                                <p style={{ fontSize: '9px', textAlign: 'center', marginTop: '14px' }}>Cashier: mark PAID after release. Keep this signed voucher as the cash-register money-out receipt. Check this request has not already been paid.</p>
                                 <div style={{ paddingBottom: '30px' }}></div>
                             </div>
                         )}
