@@ -18,7 +18,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, where, runTransaction, serverTimestamp, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDuFaPFfKKYhheMmemn0qqoc2cGiTrJzUw",
@@ -34,7 +34,7 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
-        window.fb = { db, auth, appId, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, deleteDoc, updateDoc };
+        window.fb = { db, auth, appId, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, where, runTransaction, serverTimestamp, deleteDoc, updateDoc };
     </script>
 
     <style>
@@ -395,7 +395,11 @@
 
         function App() {
             const MASTER_VAULT_UID = "TY8qdAMRtsZf48ibeNqdTNdO0aE2"; 
-            const ADMIN_EMAIL = "stonegrill2014@gmail.com";
+            const ADMIN_UIDS = [
+                "xqFeiAnYOjOW9VwqTLFBS8n82nM2",
+                "wtqmtdILKPVyufqoHnkIsu3tmwB3",
+                "cVahyUL7J4P46IrW0jKrkPy0L772"
+            ];
 
             const [user, setUser] = useState(null);
             const [userRole, setUserRole] = useState(''); 
@@ -431,6 +435,18 @@
 
             const [staffCaRequest, setStaffCaRequest] = useState({ amount: '', reason: '' });
             const [receiptToPrint, setReceiptToPrint] = useState(null);
+            const [caBusy, setCaBusy] = useState(false);
+            const caActionLock = React.useRef(false);
+            const [accessError, setAccessError] = useState('');
+            const employeeIds = (id) => {
+                const values = [String(id)];
+                if (/^\d+$/.test(String(id)) && Number.isSafeInteger(Number(id))) values.push(Number(id));
+                return values;
+            };
+            const timestampLabel = (value) => {
+                const date = value?.toDate ? value.toDate() : value?.seconds != null ? new Date(value.seconds * 1000) : value ? new Date(value) : null;
+                return date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : '—';
+            };
 
             const isAdmin = userRole === 'Admin';
 
@@ -449,36 +465,58 @@
             }, []);
 
             useEffect(() => {
-                window.fb.onAuthStateChanged(window.fb.auth, (u) => { 
-                    setUser(u); setIsReady(true); 
-                    if(!u) { setUserRole(''); setCurrentBiometricId(''); }
+                return window.fb.onAuthStateChanged(window.fb.auth, (u) => {
+                    setUser(u); setIsReady(true); setUserRole(''); setCurrentBiometricId('');
+                    setEmployees([]); setAttendance([]); setCashAdvances([]); setCaRequests([]);
+                    setInteractivePayrolls([]); setAccessError(''); setActiveTab('dashboard');
+                    setViewProfile(null); setShowAddStaff(false); setReceiptToPrint(null);
+                    setStaffCaRequest({ amount: '', reason: '' });
                 });
             }, []);
 
             useEffect(() => {
                 if (!user) return;
-                
-                const unsubEmps = window.fb.onSnapshot(getVaultCol('employees'), (s) => {
-                    const fetchedEmps = s.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim() || d.id })).sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
+                let active = true;
+                const admin = ADMIN_UIDS.includes(user.uid);
+                const emails = [...new Set([user.email, user.email?.trim().toLowerCase()].filter(Boolean))];
+                if (!admin && !emails.length) { setUserRole('Unauthorized'); return; }
+                const source = admin ? getVaultCol('employees')
+                    : window.fb.query(getVaultCol('employees'), window.fb.where('staffEmail', 'in', emails));
+                const unsubEmps = window.fb.onSnapshot(source, (s) => {
+                    if (!active) return;
+                    const fetchedEmps = s.docs.map(d => ({ ...d.data(), id: d.id, name: d.data().name || `${d.data().firstName || ''} ${d.data().lastName || ''}`.trim() || d.id })).sort((a,b)=> (a.name || '').localeCompare(b.name || ''));
                     setEmployees(fetchedEmps);
-                    if (user.uid === MASTER_VAULT_UID || (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase())) {
+                    if (admin) {
                         setUserRole('Admin'); setCurrentBiometricId('ADMIN');
                     } else {
-                        if (user.email) {
-                            const staffMatch = fetchedEmps.find(e => e.staffEmail && e.staffEmail.toLowerCase() === user.email.toLowerCase());
-                            if (staffMatch) { setUserRole('Staff'); setCurrentBiometricId(staffMatch.id); return; }
+                        if (fetchedEmps.length === 1) {
+                            setUserRole('Staff'); setCurrentBiometricId(fetchedEmps[0].id); return;
                         }
+                        setCurrentBiometricId('');
                         setUserRole('Unauthorized');
+                        if (fetchedEmps.length > 1) setAccessError('This email is assigned to multiple employee profiles. Ask the admin to correct the masterlist.');
                     }
-                }, (err) => alert("Database access error: " + err.message));
-                
-                const unsubAtt = window.fb.onSnapshot(getVaultCol('attendance'), (s) => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const unsubCA = window.fb.onSnapshot(getVaultCol('cash_advances'), (s) => setCashAdvances(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const unsubCAReq = window.fb.onSnapshot(getVaultCol('ca_requests'), (s) => setCaRequests(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                const unsubIP = window.fb.onSnapshot(getVaultCol('payroll_entries'), (s) => setInteractivePayrolls(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                
-                return () => { unsubEmps(); unsubAtt(); unsubCA(); unsubCAReq(); unsubIP(); };
+                }, (err) => { if (active) setAccessError('Could not verify account access: ' + err.message); });
+                return () => { active = false; unsubEmps(); };
             }, [user]);
+
+            useEffect(() => {
+                setAttendance([]); setCashAdvances([]); setCaRequests([]); setInteractivePayrolls([]);
+                if (!user || !['Admin', 'Staff'].includes(userRole) || !currentBiometricId) return;
+                let active = true;
+                const subscriptions = [
+                    ['attendance', setAttendance], ['cash_advances', setCashAdvances],
+                    ['ca_requests', setCaRequests], ['payroll_entries', setInteractivePayrolls]
+                ].map(([collectionName, setter]) => {
+                    const source = userRole === 'Admin' ? getVaultCol(collectionName)
+                        : window.fb.query(getVaultCol(collectionName),
+                            window.fb.where('empId', 'in', employeeIds(currentBiometricId)));
+                    return window.fb.onSnapshot(source,
+                        snapshot => { if (active) setter(snapshot.docs.map(d => ({ ...d.data(), id: d.id }))); },
+                        err => { if (active) setAccessError('Could not load payroll records: ' + err.message); });
+                });
+                return () => { active = false; subscriptions.forEach(unsub => unsub()); };
+            }, [user, userRole, currentBiometricId]);
 
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
@@ -561,22 +599,79 @@
                 }
             }, [icEmpId, icMonth, employees, attendance, cashAdvances, interactivePayrolls]);
 
+            const runCAAction = async (action) => {
+                if (caActionLock.current) return;
+                caActionLock.current = true; setCaBusy(true);
+                try { await action(); }
+                catch (err) { alert('Cash advance action failed: ' + err.message); }
+                finally { caActionLock.current = false; setCaBusy(false); }
+            };
+
             const handleStaffSubmitCARequest = async (e) => {
-                e.preventDefault(); if (!currentBiometricId || !staffCaRequest.amount) return;
-                await window.fb.addDoc(getVaultCol('ca_requests'), { empId: currentBiometricId, amount: parseFloat(staffCaRequest.amount), reason: staffCaRequest.reason, dateRequested: new Date().toISOString(), status: 'Pending' });
-                setStaffCaRequest({ amount: '', reason: '' }); alert("Request sent to Admin for approval.");
+                e.preventDefault();
+                const amount = Number(staffCaRequest.amount);
+                const reason = staffCaRequest.reason.trim();
+                if (userRole !== 'Staff' || !currentBiometricId || !Number.isFinite(amount) || amount <= 0 || !reason || reason.length > 500) return;
+                await runCAAction(async () => {
+                    await window.fb.addDoc(getVaultCol('ca_requests'), {
+                        empId: String(currentBiometricId), requesterUid: user.uid, amount, reason,
+                        dateRequested: new Date().toISOString(), requestedAt: window.fb.serverTimestamp(), status: 'Pending'
+                    });
+                    setStaffCaRequest({ amount: '', reason: '' });
+                    alert('Request sent to Admin. Approval does not mean cash has been handed over.');
+                });
             };
 
             const handleApproveCARequest = async (req) => {
-                if (!isAdmin) return; const today = new Date().toISOString().slice(0, 10);
-                await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Approved', dateApproved: today });
-                await window.fb.addDoc(getVaultCol('cash_advances'), { empId: req.empId, amount: req.amount, reason: `Apprvd Req: ${req.reason}`, date: today, type: 'advance' });
+                if (!isAdmin) return;
+                await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
+                    const ref = getVaultDoc('ca_requests', req.id);
+                    const snapshot = await transaction.get(ref);
+                    if (!snapshot.exists() || snapshot.data().status !== 'Pending') throw new Error('This request has already been processed.');
+                    transaction.update(ref, { status: 'Approved', approvalFlow: 'handover-v1', approvedByUid: user.uid,
+                        approvedAt: window.fb.serverTimestamp(), dateApproved: new Date().toISOString() });
+                }));
             };
 
-            const handleRejectCARequest = async (reqId) => { if (!isAdmin) return; await window.fb.updateDoc(getVaultDoc('ca_requests', reqId), { status: 'Rejected' }); };
+            const handleRejectCARequest = async (reqId) => {
+                if (!isAdmin) return;
+                await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
+                    const ref = getVaultDoc('ca_requests', reqId);
+                    const snapshot = await transaction.get(ref);
+                    if (!snapshot.exists() || snapshot.data().status !== 'Pending') throw new Error('This request has already been processed.');
+                    transaction.update(ref, { status: 'Rejected', rejectedByUid: user.uid, rejectedAt: window.fb.serverTimestamp() });
+                }));
+            };
+
+            const handleDisburseCARequest = async (req) => {
+                if (!isAdmin || !window.confirm(`Have you handed ₱${formatMoney(req.amount)} to this employee? This records the cash advance in the ledger.`)) return;
+                await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
+                    const ref = getVaultDoc('ca_requests', req.id);
+                    const ledgerId = 'request_' + req.id;
+                    const ledgerRef = getVaultDoc('cash_advances', ledgerId);
+                    const snapshot = await transaction.get(ref);
+                    const ledgerSnapshot = await transaction.get(ledgerRef);
+                    const data = snapshot.data();
+                    if (!snapshot.exists() || data.status !== 'Approved' || data.approvalFlow !== 'handover-v1') throw new Error('Only a new approved request can be handed over here.');
+                    if (ledgerSnapshot.exists()) throw new Error('This request already has a cash ledger entry.');
+                    if (!Number.isFinite(data.amount) || data.amount <= 0) throw new Error('Invalid request amount.');
+                    transaction.set(ledgerRef, { empId: data.empId, amount: data.amount,
+                        reason: 'Requested cash advance: ' + data.reason, date: new Date().toISOString().slice(0,10),
+                        type: 'advance', requestId: req.id, disbursedByUid: user.uid, disbursedAt: window.fb.serverTimestamp() });
+                    transaction.update(ref, { status: 'Disbursed', ledgerId, disbursedByUid: user.uid,
+                        disbursedAt: window.fb.serverTimestamp(), dateDisbursed: new Date().toISOString() });
+                }));
+            };
+
+            const handleConfirmCAReceived = async (req) => {
+                if (userRole !== 'Staff' || !window.confirm(`Confirm that you actually received ₱${formatMoney(req.amount)} in cash? Only confirm after receiving it.`)) return;
+                await runCAAction(() => window.fb.updateDoc(getVaultDoc('ca_requests', req.id), {
+                    status: 'Received', receivedByUid: user.uid, receivedAt: window.fb.serverTimestamp()
+                }));
+            };
 
             const handlePrintReceipt = async (req) => {
-                try { await window.fb.updateDoc(getVaultDoc('ca_requests', req.id), { status: 'Printed' }); } catch (err) { alert("Network error: Could not lock the record."); return; }
+                // Printing does not prove cash was handed over or received.
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
                 setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
                 alert("IMPORTANT: Make sure to select the 58mm KITCHEN PRINTER from the dropdown list before printing!");
@@ -643,7 +738,11 @@
             const handleAddStaffSubmit = async (e) => {
                 e.preventDefault(); if (!isAdmin) return;
                 const bId = normalizeId(newEmpForm.biometricId);
-                const payload = { ...newEmpForm, dailyRate: parseFloat(newEmpForm.dailyRate), sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() };
+                const staffEmail = newEmpForm.staffEmail.trim().toLowerCase();
+                if (staffEmail && employees.some(emp => emp.id !== bId && emp.staffEmail?.trim().toLowerCase() === staffEmail)) {
+                    alert('This email is already assigned to another employee.'); return;
+                }
+                const payload = { ...newEmpForm, staffEmail, dailyRate: parseFloat(newEmpForm.dailyRate), sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() };
                 await window.fb.setDoc(getVaultDoc('employees', bId), payload, { merge: true });
                 setShowAddStaff(false); setIsEditing(false);
             };
@@ -705,6 +804,16 @@
             };
 
             if (!isReady) return null;
+            if (user && accessError) return (
+                <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-6 text-center">
+                    <div className="bg-white rounded-3xl p-8 max-w-md">
+                        <h2 className="font-black text-xl mb-4">Unable to load payroll</h2>
+                        <p className="text-sm text-slate-600 mb-6">{accessError}</p>
+                        <button className="bg-blue-600 text-white px-5 py-3 rounded-xl mr-2" onClick={() => window.location.reload()}>Retry</button>
+                        <button className="border px-5 py-3 rounded-xl" onClick={() => window.fb.signOut(window.fb.auth)}>Sign out</button>
+                    </div>
+                </div>
+            );
             if (!user) return <LoginScreen />;
 
             if (userRole === '') {
@@ -808,15 +917,15 @@
                                                         <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center"><Banknote className="w-5 h-5 mr-2" /> Request Cash Advance</div>
                                                         <div className="p-6">
                                                             <form onSubmit={handleStaffSubmitCARequest} className="flex flex-col md:flex-row gap-4 mb-6">
-                                                                <div className="flex-1"><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Amount (₱)</label><input type="number" required min="1" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none text-emerald-700" value={staffCaRequest.amount} onChange={e=>setStaffCaRequest({...staffCaRequest, amount: e.target.value})} /></div>
-                                                                <div className="flex-[2]"><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Reason / Note</label><input type="text" required className="w-full p-3 border rounded-xl bg-slate-50 font-bold outline-none" value={staffCaRequest.reason} onChange={e=>setStaffCaRequest({...staffCaRequest, reason: e.target.value})} placeholder="e.g. For groceries" /></div>
-                                                                <div className="flex items-end"><button type="submit" className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white font-black uppercase rounded-xl hover:bg-emerald-700 active:scale-95 transition-all shadow-md">Submit Request</button></div>
+                                                                <div className="flex-1"><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Amount (₱)</label><input type="number" required min="1" step="0.01" className="w-full p-3 border rounded-xl bg-slate-50 font-black outline-none text-emerald-700" value={staffCaRequest.amount} onChange={e=>setStaffCaRequest({...staffCaRequest, amount: e.target.value})} /></div>
+                                                                <div className="flex-[2]"><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Reason / Note</label><input type="text" required maxLength={500} className="w-full p-3 border rounded-xl bg-slate-50 font-bold outline-none" value={staffCaRequest.reason} onChange={e=>setStaffCaRequest({...staffCaRequest, reason: e.target.value})} placeholder="e.g. For groceries" /></div>
+                                                                <div className="flex items-end"><button type="submit" disabled={caBusy} className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white font-black uppercase rounded-xl hover:bg-emerald-700 active:scale-95 transition-all shadow-md">{caBusy ? 'Saving...' : 'Submit Request'}</button></div>
                                                             </form>
 
                                                             <h4 className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-4">Request Status Tracker</h4>
                                                             <div className="max-h-48 overflow-y-auto custom-scrollbar border rounded-xl">
                                                                 <table className="w-full text-left text-xs">
-                                                                    <thead className="bg-slate-100 font-black uppercase text-[9px] text-[#94a3b8] sticky top-0"><tr><th className="p-3">Date</th><th className="p-3">Amount</th><th className="p-3">Status</th><th className="p-3 text-center">POS Receipt</th></tr></thead>
+                                                                    <thead className="bg-slate-100 font-black uppercase text-[9px] text-[#94a3b8] sticky top-0"><tr><th className="p-3">Date</th><th className="p-3">Amount</th><th className="p-3">Status</th><th className="p-3 text-center">Receipt / Confirmation</th></tr></thead>
                                                                     <tbody className="divide-y divide-slate-100">
                                                                         {myRequests.map(req => (
                                                                             <tr key={req.id}>
@@ -826,10 +935,13 @@
                                                                                     {req.status === 'Pending' && <span className="text-amber-500">PENDING</span>}
                                                                                     {req.status === 'Approved' && <span className="text-emerald-600">APPROVED</span>}
                                                                                     {req.status === 'Rejected' && <span className="text-rose-500">REJECTED</span>}
-                                                                                    {req.status === 'Printed' && <span className="text-blue-600">PRINTED / CLAIMED</span>}
+                                                                                    {req.status === 'Printed' && <span className="text-blue-600">LEGACY PRINTED — RECEIPT UNVERIFIED</span>}
+                                                                                    {req.status === 'Disbursed' && <span className="text-blue-600">CASH HANDED OVER — CONFIRM RECEIPT</span>}
+                                                                                    {req.status === 'Received' && <span className="text-emerald-600">RECEIVED<br/><small>{timestampLabel(req.receivedAt)}</small></span>}
                                                                                 </td>
                                                                                 <td className="p-3 text-center">
-                                                                                    {req.status === 'Approved' ? <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-black active:scale-95"><Printer className="w-3 h-3 inline mr-1"/> Print</button> : <span className="text-slate-300">--</span>}
+                                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase"><Printer className="w-3 h-3 inline mr-1"/> Print</button>}
+                                                                                    {req.status === 'Disbursed' && req.requesterUid === user.uid && <button disabled={caBusy} onClick={() => handleConfirmCAReceived(req)} className="block mt-2 bg-emerald-600 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase">I received the cash</button>}
                                                                                 </td>
                                                                             </tr>
                                                                         ))}
@@ -1038,13 +1150,44 @@
                                                                     <td className="p-4 italic text-slate-600">{req.reason}</td>
                                                                     <td className="p-4 font-black text-rose-600 text-sm">₱{formatMoney(req.amount)}</td>
                                                                     <td className="p-4 text-right space-x-2">
-                                                                        <button onClick={() => handleRejectCARequest(req.id)} className="px-4 py-2 border border-rose-200 text-rose-600 rounded-lg font-black uppercase text-[10px] hover:bg-rose-50">Reject</button>
-                                                                        <button onClick={() => handleApproveCARequest(req)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-black uppercase text-[10px] hover:bg-emerald-700 shadow">Approve & Deduct</button>
+                                                                        <button disabled={caBusy} onClick={() => handleRejectCARequest(req.id)} className="px-4 py-2 border border-rose-200 text-rose-600 rounded-lg font-black uppercase text-[10px] hover:bg-rose-50">Reject</button>
+                                                                        <button disabled={caBusy} onClick={() => handleApproveCARequest(req)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-black uppercase text-[10px] hover:bg-emerald-700 shadow">Approve Request</button>
                                                                     </td>
                                                                 </tr>
                                                             );
                                                         })}
                                                         {caRequests.filter(r=>r.status==='Pending').length === 0 && <tr><td colSpan="5" className="p-6 text-center text-amber-600/50 italic font-bold">No pending requests.</td></tr>}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white rounded-3xl border shadow-xl overflow-hidden">
+                                            <h3 className="p-5 bg-blue-50 font-black text-blue-900 uppercase text-xs">Cash Advance Request History &amp; Handover</h3>
+                                            <p className="px-5 pt-4 text-xs text-slate-500">Approve first, record the actual cash handover, then let the employee confirm receipt. Printing does not confirm payment. Older approvals were already posted to the ledger; do not issue them again.</p>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead className="bg-slate-50"><tr><th className="p-4">Employee / Reason</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Audit trail</th><th className="p-4">Action</th></tr></thead>
+                                                    <tbody className="divide-y">
+                                                        {[...caRequests].sort((a,b) => (b.dateRequested || '').localeCompare(a.dateRequested || '')).map(req => (
+                                                            <tr key={req.id}>
+                                                                <td className="p-4 font-bold">{employees.find(emp => normalizeId(emp.id) === normalizeId(req.empId))?.name || req.empId}<p className="font-normal text-slate-500">{req.reason}</p></td>
+                                                                <td className="p-4 font-black">₱{formatMoney(req.amount)}</td>
+                                                                <td className="p-4 font-bold">{req.status === 'Printed' ? 'Legacy printed (receipt unverified)' : req.status}<p className="font-normal text-slate-500">{!req.requesterUid && 'Legacy record: employee confirmation unavailable'}</p></td>
+                                                                <td className="p-4 text-slate-500">
+                                                                    <p>Requested: {timestampLabel(req.requestedAt || req.dateRequested)}</p>
+                                                                    <p>Approved: {timestampLabel(req.approvedAt || req.dateApproved)}</p>
+                                                                    <p>Handed over: {timestampLabel(req.disbursedAt)}</p>
+                                                                    <p>Employee received: {timestampLabel(req.receivedAt)}</p>
+                                                                    {req.rejectedAt && <p>Rejected: {timestampLabel(req.rejectedAt)}</p>}
+                                                                </td>
+                                                                <td className="p-4">
+                                                                    {req.status === 'Approved' && req.approvalFlow === 'handover-v1' && <button disabled={caBusy} onClick={() => handleDisburseCARequest(req)} className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold">Record cash handed over</button>}
+                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="block mt-2 border px-3 py-2 rounded-lg">Print voucher</button>}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                        {caRequests.length === 0 && <tr><td colSpan="5" className="p-5 text-slate-400 text-center">No cash advance requests.</td></tr>}
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -1173,15 +1316,15 @@
                                     <p style={{ fontSize: '10px', margin: '0' }}>Cash Advance Voucher</p>
                                 </div>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Date:</strong> {new Date(receiptToPrint.dateApproved || receiptToPrint.dateRequested).toLocaleString()}</p>
+                                <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Date:</strong> {timestampLabel(receiptToPrint.disbursedAt || receiptToPrint.dateApproved || receiptToPrint.dateRequested)}</p>
                                 <p style={{ fontSize: '10px', margin: '2px 0' }}><strong>Name:</strong> {receiptToPrint.empName.toUpperCase()}</p>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
                                 <div style={{ textAlign: 'center', margin: '15px 0' }}>
-                                    <p style={{ fontSize: '10px', margin: '0 0 5px 0' }}>AMOUNT APPROVED</p>
+                                    <p style={{ fontSize: '10px', margin: '0 0 5px 0' }}>CASH ADVANCE AMOUNT</p>
                                     <h1 style={{ fontSize: '20px', fontWeight: '900', margin: '0' }}>PHP {formatMoney(receiptToPrint.amount)}</h1>
                                 </div>
                                 <div style={{ borderBottom: '1px dashed black', margin: '10px 0' }}></div>
-                                <p style={{ fontSize: '9px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Admin Verified & Deducted</p>
+                                <p style={{ fontSize: '9px', textAlign: 'center', margin: '15px 0', textTransform: 'uppercase' }}>*** SYSTEM GENERATED ***<br/>Status: {receiptToPrint.status}<br/>Receipt confirmed: {timestampLabel(receiptToPrint.receivedAt)}<br/>Printing does not confirm cash received.</p>
                                 <div style={{ marginTop: '30px' }}><p style={{ fontSize: '10px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '90%', margin: '0 auto' }}>Cashier Signature</p></div>
                                 <div style={{ paddingBottom: '30px' }}></div>
                             </div>
