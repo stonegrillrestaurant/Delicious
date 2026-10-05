@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function payrollAdmin() {
+      return signedIn() && request.auth.uid in [
+        'xqFeiAnYOjOW9VwqTLFBS8n82nM2',
+        'wtqmtdILKPVyufqoHnkIsu3tmwB3',
+        'cVahyUL7J4P46IrW0jKrkPy0L772'
+      ];
+    }
+    function ownEmail(email) {
+      return signedIn() && request.auth.token.email_verified == true && request.auth.token.email is string
+        && email in [request.auth.token.email, request.auth.token.email.lower()];
+    }
+    function ownsEmployee(empId) {
+      return (empId is string || empId is int)
+        && exists(/databases/$(database)/documents/artifacts/stone-grill-v1/users/TY8qdAMRtsZf48ibeNqdTNdO0aE2/employees/$(string(empId)))
+        && ownEmail(get(/databases/$(database)/documents/artifacts/stone-grill-v1/users/TY8qdAMRtsZf48ibeNqdTNdO0aE2/employees/$(string(empId))).data.staffEmail);
+    }
+    match /artifacts/stone-grill-v1/users/TY8qdAMRtsZf48ibeNqdTNdO0aE2 {
+      // Only the three confirmed admins have unrestricted payroll access.
+      match /{document=**} { allow read, write: if payrollAdmin(); }
+      match /employees/{empId} {
+        allow read: if ownEmail(resource.data.staffEmail);
+      }
+      match /attendance/{id} { allow read: if signedIn() && ownsEmployee(resource.data.empId); }
+      match /cash_advances/{id} { allow read: if signedIn() && ownsEmployee(resource.data.empId); }
+      match /payroll_entries/{id} { allow read: if signedIn() && ownsEmployee(resource.data.empId); }
+      match /ca_requests/{id} {
+        allow read: if signedIn() && ownsEmployee(resource.data.empId);
+        allow create: if signedIn()
+          && request.resource.data.keys().hasAll(['empId', 'requesterUid', 'amount', 'reason', 'dateRequested', 'requestedAt', 'status'])
+          && request.resource.data.keys().hasOnly(['empId', 'requesterUid', 'amount', 'reason', 'dateRequested', 'requestedAt', 'status'])
+          && request.resource.data.empId is string
+          && ownsEmployee(request.resource.data.empId)
+          && request.resource.data.requesterUid == request.auth.uid
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && request.resource.data.reason is string
+          && request.resource.data.reason.size() > 0
+          && request.resource.data.reason.size() <= 500
+          && request.resource.data.dateRequested is string
+          && request.resource.data.requestedAt == request.time
+          && request.resource.data.status == 'Pending';
+        // An employee can only acknowledge cash already recorded as handed over.
+        allow update: if signedIn()
+          && ownsEmployee(resource.data.empId)
+          && resource.data.requesterUid == request.auth.uid
+          && resource.data.status == 'Disbursed'
+          && request.resource.data.status == 'Received'
+          && request.resource.data.receivedByUid == request.auth.uid
+          && request.resource.data.receivedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'receivedByUid', 'receivedAt']);
+      }
+    }
+    // Retained from the supplied rules; Courtside access is outside this change.
+    match /pickleball/{document=**} { allow read, write: if true; }
+  }
+}
