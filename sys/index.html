@@ -143,8 +143,17 @@
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
-        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete }) {
+        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, isAdmin = false, onIssueCA, caBusy = false }) {
             const [activeTab, setActiveTab] = useState('payslip');
+            const [profileCA, setProfileCA] = useState({ amount: '', reason: '', date: new Date().toISOString().slice(0, 10), type: 'advance' });
+            const handleProfileCASubmit = async (event) => {
+                event.preventDefault();
+                const amount = Number(profileCA.amount);
+                const reason = profileCA.reason.trim();
+                if (!isAdmin || !onIssueCA || !Number.isFinite(amount) || amount <= 0 || !reason) return;
+                const saved = await onIssueCA(emp, { ...profileCA, amount, reason });
+                if (saved) setProfileCA({ amount: '', reason: '', date: new Date().toISOString().slice(0, 10), type: 'advance' });
+            };
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
             const basicPay = emp.days * (parseFloat(emp.dailyRate || emp.rate) || 0);
             
@@ -283,7 +292,22 @@
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                <div className="flex justify-between items-center mb-6 px-2"><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold flex items-center bg-blue-100 px-3 py-1 rounded-full">{ledger.length} Records</span></div>
+                                <div className="flex justify-between items-center mb-4 px-2"><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold flex items-center bg-blue-100 px-3 py-1 rounded-full">{ledger.length} Records</span></div>
+                                {isAdmin && onIssueCA && (
+                                    <form onSubmit={handleProfileCASubmit} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-blue-100 space-y-3 print-hidden">
+                                        <div><h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">Record Cash Advance</h4><p className="text-[10px] text-slate-500 mt-1">This entry will be added directly to {emp.name}’s ledger.</p></div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button type="button" onClick={() => setProfileCA({...profileCA, type: 'advance'})} className={`py-2 rounded-lg text-[10px] font-black uppercase ${profileCA.type === 'advance' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-500'}`}>Advance</button>
+                                            <button type="button" onClick={() => setProfileCA({...profileCA, type: 'payment'})} className={`py-2 rounded-lg text-[10px] font-black uppercase ${profileCA.type === 'payment' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>Repayment</button>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Date<input required type="date" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm font-bold" value={profileCA.date} onChange={e=>setProfileCA({...profileCA, date:e.target.value})} /></label>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Amount (₱)<input required type="number" min="0.01" step="0.01" inputMode="decimal" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm font-black" placeholder="0.00" value={profileCA.amount} onChange={e=>setProfileCA({...profileCA, amount:e.target.value})} /></label>
+                                        </div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Note / Reason<input required type="text" maxLength="500" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm" placeholder="Reason or repayment note" value={profileCA.reason} onChange={e=>setProfileCA({...profileCA, reason:e.target.value})} /></label>
+                                        <button type="submit" disabled={caBusy || !profileCA.amount || !profileCA.reason.trim()} className="w-full py-3 bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50">{caBusy ? 'Saving…' : profileCA.type === 'payment' ? 'Record Repayment' : 'Record Cash Advance'}</button>
+                                    </form>
+                                )}
                                 {ledger.map(tx => (
                                     <div key={tx.id} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex items-center gap-4">
                                         <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><DollarSign className="w-5 h-5" /></div>
@@ -748,6 +772,22 @@
                 let amt = parseFloat(newCa.amount) || 0; if (caType === 'payment') amt = -Math.abs(amt);
                 await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: amt, type: caType });
                 setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
+            };
+
+            const handleProfileIssueCA = async (emp, entry) => {
+                if (!isAdmin || !emp?.id || !entry) return false;
+                const amount = Number(entry.amount);
+                if (!Number.isFinite(amount) || amount <= 0) return false;
+                let saved = false;
+                await runCAAction(async () => {
+                    await window.fb.addDoc(getVaultCol('cash_advances'), {
+                        empId: String(emp.id), amount: entry.type === 'payment' ? -Math.abs(amount) : Math.abs(amount),
+                        reason: entry.reason.trim(), date: entry.date, type: entry.type,
+                        recordedByUid: user.uid, recordedAt: window.fb.serverTimestamp()
+                    });
+                    saved = true;
+                });
+                return saved;
             };
 
             const handleDeleteEmployee = async (id, name) => {
@@ -1384,6 +1424,9 @@
                                     onClose={() => setViewProfile(null)} 
                                     onEdit={handleEditProfile} 
                                     onDelete={handleDeleteEmployee} 
+                                    isAdmin={isAdmin} 
+                                    onIssueCA={handleProfileIssueCA} 
+                                    caBusy={caBusy}
                                 />
                             </div>
                         );
