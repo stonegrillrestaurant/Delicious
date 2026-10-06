@@ -17,7 +17,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, onSnapshot, query, where, runTransaction, serverTimestamp, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -34,7 +34,7 @@
         const db = getFirestore(app);
         const appId = "stone-grill-v1";
 
-        window.fb = { db, auth, appId, signInWithPopup, signInWithRedirect, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, where, runTransaction, serverTimestamp, deleteDoc, updateDoc };
+        window.fb = { db, auth, appId, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, addDoc, onSnapshot, query, where, runTransaction, serverTimestamp, deleteDoc, updateDoc };
     </script>
 
     <style>
@@ -327,41 +327,36 @@
             const [showEmailLogin, setShowEmailLogin] = useState(false);
             const [emailInput, setEmailInput] = useState('');
             const [passwordInput, setPasswordInput] = useState('');
+            const [loginError, setLoginError] = useState('');
 
-            const handleGoogleLogin = async () => { 
-                setLoading(true); 
-                try { 
-                    const p = new window.fb.GoogleAuthProvider();
-                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                    if (isMobile) {
-                        await window.fb.signInWithRedirect(window.fb.auth, p);
-                    } else {
-                        await window.fb.signInWithPopup(window.fb.auth, p); 
-                    }
-                } catch (err) { 
-                    alert("Error: " + err.message); 
-                    setLoading(false); 
-                } 
+            // Keep the app open: redirect sign-in across domains can lose state on mobile.
+            const handleProviderLogin = async (provider) => {
+                setLoading(true); setLoginError('');
+                try {
+                    await window.fb.signInWithPopup(window.fb.auth, provider);
+                } catch (err) {
+                    const message = err.code === 'auth/popup-blocked'
+                        ? 'The sign-in window was blocked. Open this page directly in Safari or Chrome, allow pop-ups for this site, and tap sign-in again.'
+                        : err.code === 'auth/popup-closed-by-user'
+                        ? 'The sign-in window closed before completion. Tap sign-in again and finish selecting your account.'
+                        : err.code === 'auth/cancelled-popup-request'
+                        ? 'Another sign-in window is already open. Finish signing in there, or close it and try again.'
+                        : 'Sign-in failed (' + (err.code || 'unknown') + '): ' + err.message;
+                    setLoginError(message);
+                } finally {
+                    setLoading(false);
+                }
             };
-            
-            const handleFacebookLogin = async () => { 
-                setLoading(true); 
-                const p = new window.fb.FacebookAuthProvider(); 
-                p.addScope('email'); 
-                try { 
-                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                    if (isMobile) {
-                        await window.fb.signInWithRedirect(window.fb.auth, p);
-                    } else {
-                        await window.fb.signInWithPopup(window.fb.auth, p); 
-                    }
-                } catch (err) { 
-                    alert("Error: " + err.message); 
-                    setLoading(false); 
-                } 
+
+            const handleGoogleLogin = () => handleProviderLogin(new window.fb.GoogleAuthProvider());
+
+            const handleFacebookLogin = () => {
+                const provider = new window.fb.FacebookAuthProvider();
+                provider.addScope('email');
+                return handleProviderLogin(provider);
             };
-            
-            const handleEmailSubmit = async (e) => { e.preventDefault(); setLoading(true); try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); } catch (err) { alert("Login failed."); setLoading(false); } };
+
+            const handleEmailSubmit = async (e) => { e.preventDefault(); setLoading(true); setLoginError(''); try { await window.fb.signInWithEmailAndPassword(window.fb.auth, emailInput, passwordInput); } catch (err) { setLoginError('Sign-in failed (' + (err.code || 'unknown') + '): ' + err.message); } finally { setLoading(false); } };
 
             return (
                 <div className="fixed inset-0 bg-blue-950 flex items-center justify-center p-4 z-50">
@@ -369,6 +364,7 @@
                         <img src="/sys/icon.png" className="w-20 h-20 mb-6" alt="Logo" onError={(e)=>e.target.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}/>
                         <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-widest text-center">Stone Grill</h2>
                         <p className="text-slate-400 text-xs font-bold mb-8 uppercase tracking-widest">Secure Cloud Payroll</p>
+                        {loginError && <p role="alert" className="w-full mb-4 p-3 bg-rose-50 text-rose-700 rounded-xl text-xs">{loginError}</p>}
                         
                         {!showEmailLogin ? (
                             <div className="w-full space-y-4">
