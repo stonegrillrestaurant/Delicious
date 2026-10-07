@@ -872,6 +872,7 @@
           (snapshot) => {
             verifiedPayments = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
             renderVerifiedArrivals();
+            expireEndedVerifiedBookings();
           },
           (err) => {
             console.error("Verified arrivals listener failed:", err);
@@ -1072,9 +1073,114 @@
     }
 
     function bookingHasEnded(payment) {
-      if (!payment?.date || !payment?.endTime) return false;
-      const end = new Date(payment.date + "T" + payment.endTime + ":00");
-      return Number.isFinite(end.getTime()) && Date.now() > end.getTime();
+      const endMs = scheduledDateTimeMs(payment?.date, payment?.endTime, true, payment?.startTime);
+      return Number.isFinite(endMs) && Date.now() >= endMs;
+    }
+
+    async function expireVerifiedBooking(payment) {
+      if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) return false;
+      if (!payment || payment.status !== "verified" || payment.checkedIn === true || !bookingHasEnded(payment)) return false;
+
+      const sourceCollection = payment.bookingType === "private_rental"
+        ? "privateRentalBookings"
+        : "openPlayRegistrations";
+      const sourceId = payment.registrationId || payment.sessionId;
+      if (!sourceId) return false;
+
+      const paymentRef = doc(db, "paymentSubmissions", payment.id);
+      const sourceRef = doc(db, sourceCollection, sourceId);
+      const eventRef = doc(collection(db, "eventLogs"));
+      const archiveId = "expired_" + payment.id;
+
+      await runTransaction(db, async tx => {
+        const paymentSnap = await tx.get(paymentRef);
+        const sourceSnap = await tx.get(sourceRef);
+        const historySnap = await tx.get(historyRef);
+
+        if (!paymentSnap.exists() || !sourceSnap.exists()) return;
+
+        const livePayment = paymentSnap.data();
+        const source = sourceSnap.data();
+        if (livePayment.status !== "verified" || livePayment.checkedIn === true || source.checkedIn === true) return;
+
+        const existingHistory = historySnap.exists() && Array.isArray(historySnap.data().history)
+          ? historySnap.data().history
+          : [];
+
+        if (!existingHistory.some(item => item.id === archiveId)) {
+          const names = Array.isArray(livePayment.playerNames) && livePayment.playerNames.length
+            ? livePayment.playerNames
+            : [livePayment.customerName || "Customer"];
+
+          existingHistory.unshift({
+            id: archiveId,
+            kind: "expired_booking",
+            date: livePayment.date || "",
+            customerName: livePayment.customerName || "",
+            playerNames: names,
+            bookingType: livePayment.bookingType || "open_play",
+            courtId: Number(livePayment.courtId),
+            startTime: livePayment.startTime || "",
+            endTime: livePayment.endTime || "",
+            outcome: "expired_no_show",
+            paymentStatus: "verified",
+            checkedIn: false,
+            archivedAtMs: Date.now()
+          });
+
+          tx.set(historyRef, {
+            history: existingHistory,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        }
+
+        tx.update(paymentRef, {
+          status: "expired",
+          operationalOutcome: "expired_no_show",
+          expiredAt: serverTimestamp()
+        });
+
+        tx.update(sourceRef, {
+          status: "expired",
+          operationalOutcome: "expired_no_show",
+          expiredAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        tx.set(eventRef, {
+          eventType: "BOOKING_EXPIRED_NO_SHOW",
+          bookingId: sourceId,
+          paymentId: payment.id,
+          customerUid: livePayment.customerUid || source.customerUid || "",
+          customerName: livePayment.customerName || "",
+          courtId: Number(livePayment.courtId),
+          date: livePayment.date || "",
+          startTime: livePayment.startTime || "",
+          endTime: livePayment.endTime || "",
+          actorUid: auth.currentUser.uid,
+          actorEmail: auth.currentUser.email || "",
+          actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+          timestamp: serverTimestamp()
+        });
+      });
+
+      return true;
+    }
+
+    async function expireEndedVerifiedBookings() {
+      if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) return;
+      const expired = verifiedPayments.filter(p =>
+        p.status === "verified" &&
+        p.checkedIn !== true &&
+        bookingHasEnded(p)
+      );
+      for (const payment of expired) {
+        try {
+          await expireVerifiedBooking(payment);
+        } catch (err) {
+          console.error("Could not expire booking", payment.id, err);
+        }
+      }
     }
 
     function renderVerifiedArrivals() {
@@ -1087,8 +1193,9 @@
       const rows = verifiedPayments
         .filter(p =>
           p.status === "verified" &&
+          !bookingHasEnded(p) &&
           (
-            (p.checkedIn !== true && !bookingHasEnded(p)) ||
+            p.checkedIn !== true ||
             (p.checkedIn === true && p.date === today)
           )
         )
@@ -1183,8 +1290,13 @@
         window.showToast("Verified booking could not be found.", "warn");
         return;
       }
+      if (bookingHasEnded(payment)) {
+        window.showToast("This booking has expired and has been moved to History. The court is released for the next schedule.", "warn");
+        expireVerifiedBooking(payment);
+        return;
+      }
       if (!isWithinScheduledWindow(payment)) {
-        window.showToast("Check-in is only available during the booking's selected date and time.", "warn");
+        window.showToast("Check-in becomes active when the selected booking time starts.", "warn");
         return;
       }
       if (payment.checkedIn === true) return;
@@ -1551,6 +1663,8 @@
       if(!isConnected) return;
       render();
       const now = Date.now();
+
+      expireEndedVerifiedBookings();
 
       (state.courts || []).forEach(court => {
         if (!court?.isConfigured || autoEndingCourts.has(court.id)) return;
@@ -2272,12 +2386,34 @@
         container.innerHTML = `<p class="text-slate-500 text-sm italic p-4 text-center">No past days archived yet.</p>`;
         return;
       }
-      container.innerHTML = historyVault.map(archive => `
-        <div class="bg-slate-900 border border-slate-700 p-4 rounded-lg flex justify-between items-center">
-          <div><h3 class="font-bold text-white text-sm">${archive.date}</h3></div>
-          <button onclick="viewArchivePlayers('${archive.id}')" class="bg-slate-800 hover:bg-slate-700 transition text-white px-3 py-2 rounded text-xs font-bold border border-slate-600">View Summary</button>
-        </div>
-      `).join('');
+      container.innerHTML = historyVault.map(archive => {
+        if (archive.kind === "expired_booking") {
+          const names = Array.isArray(archive.playerNames) && archive.playerNames.length
+            ? archive.playerNames.join(", ")
+            : (archive.customerName || "Customer");
+          const type = archive.bookingType === "private_rental" ? "PRIVATE RENTAL" : "OPEN PLAY";
+          return `
+            <div class="bg-slate-900 border border-red-900/60 p-4 rounded-lg">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-[9px] font-black uppercase tracking-widest text-red-400">EXPIRED · NO SHOW</div>
+                  <h3 class="mt-1 font-bold text-white text-sm">${escapeHtml(names)}</h3>
+                  <div class="mt-1 text-[11px] text-slate-400">
+                    ${escapeHtml(archive.date)} · Court ${escapeHtml(archive.courtId)} ·
+                    ${escapeHtml(formatTime(archive.startTime))}–${escapeHtml(formatTime(archive.endTime))} ·
+                    ${type}
+                  </div>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        return `
+          <div class="bg-slate-900 border border-slate-700 p-4 rounded-lg flex justify-between items-center">
+            <div><h3 class="font-bold text-white text-sm">${archive.date}</h3></div>
+            <button onclick="viewArchivePlayers('${archive.id}')" class="bg-slate-800 hover:bg-slate-700 transition text-white px-3 py-2 rounded text-xs font-bold border border-slate-600">View Summary</button>
+          </div>`;
+      }).join('');
     }
 
     window.viewArchivePlayers = function(archiveId) {
