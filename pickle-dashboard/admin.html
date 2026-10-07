@@ -210,7 +210,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, getDocs, onSnapshot, deleteDoc, collection, query, where, runTransaction, Timestamp, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { firebaseConfig, isAuthorizedAdmin, isAuthorizedOperator, courtsideRole } from "../courtside/courtside-config.js";
 
     const app = initializeApp(firebaseConfig);
@@ -445,6 +445,70 @@
       document.getElementById("control-mode-bar")?.classList.add("hidden");
     }
 
+    function scheduleEndMinutes(startTime, endTime) {
+      const start = minutesFromClock(startTime);
+      let end = minutesFromClock(endTime);
+      if (end <= start && String(endTime) === "00:00") end += 24 * 60;
+      return end;
+    }
+
+    function publicScheduleHoldExpired(item) {
+      if (!item || item.status !== "pending_payment") return false;
+      const holdMs = item.holdUntil?.toMillis ? item.holdUntil.toMillis() : 0;
+      return holdMs > 0 && holdMs <= Date.now();
+    }
+
+    async function findPublicScheduleConflict({ courtId, date, startTime, endTime, ignoreAdminScheduleId = null }) {
+      if (!date || !startTime || !endTime) return null;
+
+      const requestedStart = minutesFromClock(startTime);
+      const requestedEnd = scheduleEndMinutes(startTime, endTime);
+      if (!(requestedEnd > requestedStart)) {
+        return {
+          invalidRange: true,
+          message: "End time must be after start time. Midnight may be entered as 12:00 AM."
+        };
+      }
+
+      const scheduleQ = query(
+        collection(db, "publicSchedule"),
+        where("date", "==", date)
+      );
+      const snap = await getDocs(scheduleQ);
+
+      const conflicts = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(item => {
+          if (Number(item.courtId) !== Number(courtId)) return false;
+          if (item.status === "cancelled" || item.status === "expired") return false;
+          if (item.type === "private" && publicScheduleHoldExpired(item)) return false;
+
+          if (
+            ignoreAdminScheduleId &&
+            item.id === ignoreAdminScheduleId &&
+            item.source === "admin_schedule"
+          ) return false;
+
+          const itemStart = minutesFromClock(item.startTime);
+          const itemEnd = scheduleEndMinutes(item.startTime, item.endTime);
+          return itemStart < requestedEnd && itemEnd > requestedStart;
+        })
+        .sort((a,b) => minutesFromClock(a.startTime) - minutesFromClock(b.startTime));
+
+      return conflicts[0] || null;
+    }
+
+    function conflictDescription(item) {
+      if (!item) return "";
+      if (item.invalidRange) return item.message || "Invalid time range.";
+      const label = item.type === "open_play"
+        ? "Open Play"
+        : item.status === "pending_payment"
+          ? "Customer hold / payment pending"
+          : "Private rental";
+      return label + " · " + formatTime(item.startTime) + "–" + formatTime(item.endTime);
+    }
+
     function scheduleRecordId(court) {
       if (!court || !court.isConfigured || !court.scheduleDate || !court.timeStart || !court.timeEnd) return null;
       return [
@@ -462,6 +526,21 @@
       const scheduleId = scheduleRecordId(court);
       if (!scheduleId) {
         throw new Error("Court schedule is incomplete: date, start time, and end time are required.");
+      }
+
+      const conflict = await findPublicScheduleConflict({
+        courtId: court.id,
+        date: court.scheduleDate,
+        startTime: court.timeStart,
+        endTime: court.timeEnd,
+        ignoreAdminScheduleId: previousScheduleId || scheduleId
+      });
+      if (conflict) {
+        throw new Error(
+          conflict.invalidRange
+            ? conflictDescription(conflict)
+            : "Court " + court.id + " already has " + conflictDescription(conflict) + " on " + court.scheduleDate + "."
+        );
       }
 
       if (previousScheduleId && previousScheduleId !== scheduleId) {
@@ -1854,6 +1933,7 @@
                </div>
              </div>
              <p id="time-diff-preview" class="text-center text-[10px] text-indigo-400 mt-2 font-bold hidden"></p>
+             <div id="config-conflict-status" class="mt-2 hidden rounded-lg border px-3 py-2 text-[10px] font-bold"></div>
           </div>
         </div>
 
@@ -1861,15 +1941,23 @@
           <button onclick="clearCourtConfig(${courtId})" class="px-3 py-2 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 rounded text-xs font-bold transition border border-transparent hover:border-red-500/30">Reset Court</button>
           <div class="flex gap-2">
             <button onclick="hideModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition">Cancel</button>
-            <button onclick="saveCourtConfig(${courtId})" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm font-bold transition">Save Config</button>
+            <button id="save-court-config-btn" onclick="saveCourtConfig(${courtId})" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm font-bold transition">Save Config</button>
           </div>
         </div>
       `;
       window.showModal(content);
 
-      document.getElementById('config-start').addEventListener('change', updateTimePreview);
-      document.getElementById('config-end').addEventListener('change', updateTimePreview);
-      updateTimePreview(); 
+      document.getElementById('config-start').addEventListener('change', () => {
+        updateTimePreview();
+        checkCourtConfigConflict();
+      });
+      document.getElementById('config-end').addEventListener('change', () => {
+        updateTimePreview();
+        checkCourtConfigConflict();
+      });
+      document.getElementById('config-date').addEventListener('change', checkCourtConfigConflict);
+      updateTimePreview();
+      checkCourtConfigConflict();
     };
     
     window.selectMode = function(mode) {
@@ -1915,6 +2003,67 @@
        }
     }
 
+    let courtConflictCheckSeq = 0;
+
+    async function checkCourtConfigConflict() {
+      const status = document.getElementById("config-conflict-status");
+      const saveBtn = document.getElementById("save-court-config-btn");
+      const courtId = Number(document.getElementById("config-court-id")?.value || 0);
+      const date = document.getElementById("config-date")?.value || "";
+      const startTime = document.getElementById("config-start")?.value || "";
+      const endTime = document.getElementById("config-end")?.value || "";
+      if (!status || !saveBtn) return false;
+
+      if (!courtId || !date || !startTime || !endTime) {
+        status.classList.add("hidden");
+        saveBtn.disabled = false;
+        saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        return false;
+      }
+
+      const court = state.courts.find(c => Number(c.id) === courtId);
+      const previousScheduleId = scheduleRecordId(court);
+      const seq = ++courtConflictCheckSeq;
+
+      status.classList.remove("hidden");
+      status.className = "mt-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-[10px] font-bold text-slate-400";
+      status.textContent = "Checking Booking Calendar…";
+
+      try {
+        const conflict = await findPublicScheduleConflict({
+          courtId,
+          date,
+          startTime,
+          endTime,
+          ignoreAdminScheduleId: previousScheduleId
+        });
+        if (seq !== courtConflictCheckSeq) return false;
+
+        if (conflict) {
+          status.className = "mt-2 rounded-lg border border-red-700 bg-red-950/40 px-3 py-2 text-[10px] font-bold text-red-200";
+          status.textContent = conflict.invalidRange
+            ? conflictDescription(conflict)
+            : "CONFLICT: Court " + courtId + " already has " + conflictDescription(conflict) + ".";
+          saveBtn.disabled = true;
+          saveBtn.classList.add("opacity-50", "cursor-not-allowed");
+          return true;
+        }
+
+        status.className = "mt-2 rounded-lg border border-emerald-700 bg-emerald-950/30 px-3 py-2 text-[10px] font-bold text-emerald-300";
+        status.textContent = "AVAILABLE — no conflict in Booking Calendar.";
+        saveBtn.disabled = false;
+        saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        return false;
+      } catch (err) {
+        console.error("Could not check booking-calendar conflict:", err);
+        status.className = "mt-2 rounded-lg border border-amber-700 bg-amber-950/30 px-3 py-2 text-[10px] font-bold text-amber-200";
+        status.textContent = "Could not verify Booking Calendar availability. Save is blocked for safety.";
+        saveBtn.disabled = true;
+        saveBtn.classList.add("opacity-50", "cursor-not-allowed");
+        return true;
+      }
+    }
+
     function calculateHourDifference(startStr, endStr) {
        const [sh, sm] = startStr.split(':').map(Number);
        const [eh, em] = endStr.split(':').map(Number);
@@ -1942,6 +2091,24 @@
       if (mode === 'rental' && !renter) {
           window.showToast("Renter name is required for rental mode.", "warn");
           return;
+      }
+
+      const conflict = await findPublicScheduleConflict({
+        courtId,
+        date: scheduleDate,
+        startTime: tStart,
+        endTime: tEnd,
+        ignoreAdminScheduleId: previousScheduleId
+      });
+      if (conflict) {
+        window.showToast(
+          conflict.invalidRange
+            ? conflictDescription(conflict)
+            : "Cannot save: Court " + courtId + " already has " + conflictDescription(conflict) + " on " + scheduleDate + ".",
+          "error"
+        );
+        await checkCourtConfigConflict();
+        return;
       }
 
       let revenue = 0;
@@ -1998,7 +2165,7 @@
       } catch (err) {
         console.error("Court schedule publish failed:", err);
         window.showToast(
-          "Court opened in Live Panel, but booking-calendar sync was blocked. Publish the latest Firestore rules and try Save again.",
+          err?.message || "Court schedule could not be synced to the Booking Calendar.",
           "error"
         );
       }
