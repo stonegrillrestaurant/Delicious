@@ -696,19 +696,19 @@
           <div class="text-[10px] font-black uppercase tracking-widest text-amber-300">
             SESSION ENDS IN ${Math.max(1, timing.minutesLeft)} MIN
           </div>
-          <div class="mt-2 grid grid-cols-2 gap-2">
+          <div class="mt-2 grid ${canExtend ? "grid-cols-2" : "grid-cols-1"} gap-2">
             <button onclick="endSession(${court.id})"
               class="rounded-lg bg-red-700 px-3 py-2 text-[10px] font-black text-white hover:bg-red-600">
               END NOW
             </button>
-            <button onclick="extendCourtOneHour(${court.id})"
-              ${canExtend ? "" : "disabled"}
-              class="rounded-lg px-3 py-2 text-[10px] font-black ${canExtend
-                ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                : "cursor-not-allowed bg-slate-800 text-slate-600"}">
-              ${canExtend ? "EXTEND +1 HOUR" : "NEXT HOUR UNAVAILABLE"}
-            </button>
+            ${canExtend ? `
+              <button onclick="extendCourtOneHour(${court.id})"
+                class="rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-500">
+                EXTEND +1 HOUR
+              </button>
+            ` : ""}
           </div>
+          ${!canExtend ? '<div class="mt-2 text-[9px] font-bold text-slate-400">Next hour is already scheduled. It will take over automatically.</div>' : ""}
         </div>`;
     }
 
@@ -1163,7 +1163,7 @@
                     const activeNow = isWithinScheduledWindow(p);
                     return activeNow
                       ? `<button type="button" onclick="checkInVerifiedBooking('${escapeHtml(p.id)}')" class="rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-500">CHECK IN</button>`
-                      : '<span class="text-[10px] font-bold text-slate-600">AVAILABLE DURING BOOKED TIME</span>';
+                      : '<button type="button" disabled class="cursor-not-allowed rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black text-slate-600" title="Check-in becomes active only during the selected booking date and time">CHECK IN</button>';
                   })()
               }
             </td>
