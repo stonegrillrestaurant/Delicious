@@ -528,11 +528,15 @@ function mergeScheduleSources() {
     return session ? { ...item, ...session, id: item.id, type: "open_play" } : item;
   });
 
-  const overlaps = (courtId, startTime, endTime) => merged.some(item =>
-    Number(item.courtId) === Number(courtId) &&
-    toMinutes(item.startTime) < toMinutes(endTime) &&
-    toMinutes(item.endTime) > toMinutes(startTime)
-  );
+  const overlaps = (courtId, startTime, endTime) => {
+    const requestedStart = toMinutes(startTime);
+    const requestedEnd = endMinutes(startTime, endTime);
+    return merged.some(item =>
+      Number(item.courtId) === Number(courtId) &&
+      toMinutes(item.startTime) < requestedEnd &&
+      endMinutes(item.startTime, item.endTime) > requestedStart
+    );
+  };
 
   currentLiveCourtStatus
     .filter(court =>
@@ -835,15 +839,24 @@ function toMinutes(time) {
   return (h * 60) + (m || 0);
 }
 
+function endMinutes(startTime, endTime) {
+  const start = toMinutes(startTime);
+  let end = toMinutes(endTime);
+  // Admin time inputs store midnight as 00:00. For a range such as
+  // 23:00–00:00, 00:00 means the next midnight, not the start of the same day.
+  if (end <= start && String(endTime) === "00:00") end += 24 * 60;
+  return end;
+}
+
 function rangeIsAvailable(courtId, startTime, endTime, items = currentItems) {
   const start = toMinutes(startTime);
-  const end = toMinutes(endTime);
+  const end = endMinutes(startTime, endTime);
   if (!(end > start)) return false;
 
   return !items.some(item => {
     if (Number(item.courtId) !== Number(courtId)) return false;
     const itemStart = toMinutes(item.startTime);
-    const itemEnd = toMinutes(item.endTime);
+    const itemEnd = endMinutes(item.startTime, item.endTime);
     return itemStart < end && itemEnd > start;
   });
 }
@@ -864,9 +877,9 @@ function isExpiredHold(data) {
 function rentalLockIds(slot) {
   const ids = [];
   const start = toMinutes(slot.startTime);
-  const end = toMinutes(slot.endTime);
+  const end = endMinutes(slot.startTime, slot.endTime);
   for (let minute = start; minute < end; minute += 60) {
-    const h = Math.floor(minute / 60);
+    const h = Math.floor((minute % (24 * 60)) / 60);
     const m = minute % 60;
     const hhmm = String(h).padStart(2, "0") + String(m).padStart(2, "0");
     ids.push(`${slot.date}_C${slot.courtId}_${hhmm}`);
@@ -1287,7 +1300,7 @@ function render(items) {
       const occupying = items.find(x => {
         if (Number(x.courtId) !== courtId) return false;
         const itemStart = toMinutes(x.startTime);
-        const itemEnd = toMinutes(x.endTime);
+        const itemEnd = endMinutes(x.startTime, x.endTime);
         return itemStart < rowEnd && itemEnd > rowStart;
       });
 
@@ -1308,7 +1321,7 @@ function render(items) {
         const inSelectedRange =
           hasSelectedRange &&
           rowStart >= toMinutes(selectedRentalSlot.startTime) &&
-          rowEnd <= toMinutes(selectedRentalSlot.endTime);
+          rowEnd <= endMinutes(selectedRentalSlot.startTime, selectedRentalSlot.endTime);
 
         if (inSelectedRange) {
           const firstSelected = row.start === selectedRentalSlot.startTime;
@@ -1352,8 +1365,10 @@ function render(items) {
           </div>`;
       }
 
-      const startsHere = toMinutes(occupying.startTime) >= rowStart && toMinutes(occupying.startTime) < rowEnd;
-      const endsHere = toMinutes(occupying.endTime) > rowStart && toMinutes(occupying.endTime) <= rowEnd;
+      const occupyingStart = toMinutes(occupying.startTime);
+      const occupyingEnd = endMinutes(occupying.startTime, occupying.endTime);
+      const startsHere = occupyingStart >= rowStart && occupyingStart < rowEnd;
+      const endsHere = occupyingEnd > rowStart && occupyingEnd <= rowEnd;
       const connectedCellStyle = endsHere ? "" : ' style="border-bottom-color: transparent"';
       const connectedPad = startsHere
         ? (endsHere ? "p-2" : "px-2 pt-2 pb-0")
@@ -1462,6 +1477,7 @@ function render(items) {
       <div class="schedule-grid">
         <div class="time-cell bg-slate-950 p-3 text-xs font-black text-white">
           <div>${formatTime12(row.start)}</div>
+          <div class="mt-1 text-[9px] font-semibold text-slate-600">to ${formatTime12(row.end === "24:00" ? "00:00" : row.end)}</div>
         </div>
         ${cells}
       </div>`;
@@ -1619,7 +1635,7 @@ schedule.addEventListener("click", async (event) => {
       const insideSelectedRange =
         Number(selectedRentalSlot.courtId) === courtId &&
         clickedMinute >= toMinutes(selectedRentalSlot.startTime) &&
-        clickedMinute < toMinutes(selectedRentalSlot.endTime);
+        clickedMinute < endMinutes(selectedRentalSlot.startTime, selectedRentalSlot.endTime);
 
       if (insideSelectedRange) {
         clearRentalSelection();
@@ -1647,7 +1663,7 @@ schedule.addEventListener("click", async (event) => {
           return;
         }
 
-        const hours = (toMinutes(selectionEnd) - toMinutes(selectionStart)) / 60;
+        const hours = (endMinutes(selectionStart, selectionEnd) - toMinutes(selectionStart)) / 60;
         selectedRentalSlot = {
           bookingType: "private_rental",
           date: dateInput.value,
@@ -1753,7 +1769,7 @@ schedule.addEventListener("click", async (event) => {
       return;
     }
 
-    const hours = (toMinutes(selectionEnd) - toMinutes(selectionStart)) / 60;
+    const hours = (endMinutes(selectionStart, selectionEnd) - toMinutes(selectionStart)) / 60;
     const total = rate * hours;
 
     rentalSelectionStart = {
