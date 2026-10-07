@@ -455,9 +455,13 @@
     }
 
     async function publishCourtSchedule(court, previousScheduleId = null) {
-      if (!requireLivePanelControl("Publishing the court schedule")) return;
+      if (!isAuthorizedOperator(auth.currentUser)) {
+        throw new Error("Authorized Admin/Staff sign-in is required to publish the booking schedule.");
+      }
       const scheduleId = scheduleRecordId(court);
-      if (!scheduleId) return;
+      if (!scheduleId) {
+        throw new Error("Court schedule is incomplete: date, start time, and end time are required.");
+      }
 
       if (previousScheduleId && previousScheduleId !== scheduleId) {
         await deleteDoc(doc(db, "publicSchedule", previousScheduleId)).catch(() => {});
@@ -489,7 +493,17 @@
         await deleteDoc(doc(db, "openPlaySessions", scheduleId)).catch(() => {});
       }
 
-      await setDoc(doc(db, "publicSchedule", scheduleId), publicData);
+      const publicRef = doc(db, "publicSchedule", scheduleId);
+      await setDoc(publicRef, {
+        ...publicData,
+        updatedAt: serverTimestamp()
+      });
+
+      const verifySnap = await getDoc(publicRef);
+      if (!verifySnap.exists()) {
+        throw new Error("Booking schedule mirror was not created.");
+      }
+      return scheduleId;
     }
 
     function configuredCourtScheduleSignature() {
@@ -515,7 +529,7 @@
     }
 
     async function syncConfiguredCourtsToBookingSchedule() {
-      if (!hasLivePanelControl || manualScheduleSyncInFlight) return;
+      if (!isAuthorizedOperator(auth.currentUser) || manualScheduleSyncInFlight) return;
 
       const configuredCourts = (Array.isArray(state.courts) ? state.courts : [])
         .filter(court =>
@@ -874,9 +888,12 @@
         name: court.name,
         mode: court.mode,
         isConfigured: Boolean(court.isConfigured),
-        renterName: court.mode === "rental" ? (court.renterName || "Reserved") : "",
+        scheduleDate: court.scheduleDate || "",
+        renterName: court.mode === "rental" ? "Reserved" : "",
         timeStart: court.timeStart || "",
         timeEnd: court.timeEnd || "",
+        openPlayPrice: Number(court.openPlayPrice || 120),
+        maxPlayers: Number(court.maxPlayers || 12),
         currentMatch: Array.isArray(court.currentMatch) ? [...court.currentMatch] : null
       }));
 
