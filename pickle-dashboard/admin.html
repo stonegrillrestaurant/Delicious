@@ -257,6 +257,8 @@
     let hasLivePanelControl = false;
     let lockRulesReady = true;
     let signedInAdmin = null;
+    let lastManualScheduleSyncSignature = "";
+    let manualScheduleSyncInFlight = false;
     const LIVE_PANEL_LEASE_MS = 90 * 1000;
 
     function controllerDisplayName(data) {
@@ -355,7 +357,10 @@
 
         lockRulesReady = true;
         applyControlMode(result.acquired, result.controller);
-        if (result.acquired) await initializeOperationalDocsIfNeeded();
+        if (result.acquired) {
+          await initializeOperationalDocsIfNeeded();
+          await syncConfiguredCourtsToBookingSchedule();
+        }
         return result.acquired;
       } catch (err) {
         if (err?.code === "permission-denied") {
@@ -485,6 +490,59 @@
       }
 
       await setDoc(doc(db, "publicSchedule", scheduleId), publicData);
+    }
+
+    function configuredCourtScheduleSignature() {
+      return (Array.isArray(state.courts) ? state.courts : [])
+        .filter(court =>
+          court?.isConfigured &&
+          court?.scheduleDate &&
+          court?.timeStart &&
+          court?.timeEnd
+        )
+        .map(court => [
+          court.id,
+          court.mode,
+          court.scheduleDate,
+          court.timeStart,
+          court.timeEnd,
+          court.renterName || "",
+          Number(court.openPlayPrice || 0),
+          Number(court.maxPlayers || 0)
+        ].join("|"))
+        .sort()
+        .join("||");
+    }
+
+    async function syncConfiguredCourtsToBookingSchedule() {
+      if (!hasLivePanelControl || manualScheduleSyncInFlight) return;
+
+      const configuredCourts = (Array.isArray(state.courts) ? state.courts : [])
+        .filter(court =>
+          court?.isConfigured &&
+          court?.scheduleDate &&
+          court?.timeStart &&
+          court?.timeEnd
+        );
+
+      const signature = configuredCourtScheduleSignature();
+      if (!configuredCourts.length || signature === lastManualScheduleSyncSignature) return;
+
+      manualScheduleSyncInFlight = true;
+      try {
+        for (const court of configuredCourts) {
+          await publishCourtSchedule(court);
+        }
+        lastManualScheduleSyncSignature = signature;
+      } catch (err) {
+        console.error("Manual court → booking calendar sync failed:", err);
+        window.showToast(
+          "A manual court status could not sync to the booking calendar. Publish the latest Firestore rules, then reopen/save the court.",
+          "error"
+        );
+      } finally {
+        manualScheduleSyncInFlight = false;
+      }
     }
 
     async function removePublishedSchedule(court) {
@@ -652,6 +710,8 @@
               if(!state.queues[i.toString()]) state.queues[i.toString()] = [];
           }
           render();
+          syncConfiguredCourtsToBookingSchedule();
+
         } else {
           saveState();
         }
@@ -1546,6 +1606,7 @@
       await saveState();
       try {
         await publishCourtSchedule(court, previousScheduleId);
+        lastManualScheduleSyncSignature = configuredCourtScheduleSignature();
         window.hideModal();
         window.showToast(`${court.name} is now active and synced to the booking calendar.`);
       } catch (err) {
