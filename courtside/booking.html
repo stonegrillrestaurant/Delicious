@@ -262,6 +262,7 @@ let selectedRentalSlot = null;
 let rentalSelectionStart = null;
 let unsubscribeSchedule = null;
 let unsubscribeOpenPlaySessions = null;
+let unsubscribePublicLiveCourtStatus = null;
 let unsubscribeRegistrations = null;
 let unsubscribeRentalBookings = null;
 let unsubscribePayments = null;
@@ -269,6 +270,7 @@ let unsubscribeBalance = null;
 let currentItems = [];
 let currentPublicItems = [];
 let currentOpenPlaySessions = [];
+let currentLiveCourtStatus = [];
 let currentRegistrations = [];
 let currentRentalBookings = [];
 let currentPayments = [];
@@ -514,14 +516,80 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function mergeScheduleSources() {
-  // Booking availability stays independent from pickleball/currentState.
-  // Public Open Play counts come from openPlaySessions, which is safe for the customer page to read.
+  // publicSchedule remains the customer booking authority.
+  // publicLive is a real-time fallback mirror of manually configured courts so a
+  // court opened/rented from the Admin Panel never appears falsely available.
+  const selectedDate = dateInput.value;
   const sessionById = new Map(currentOpenPlaySessions.map(session => [session.id, session]));
-  currentItems = currentPublicItems.map(item => {
+
+  const merged = currentPublicItems.map(item => {
     if (item.type !== "open_play") return item;
     const session = sessionById.get(item.id);
     return session ? { ...item, ...session, id: item.id, type: "open_play" } : item;
   });
+
+  const overlaps = (courtId, startTime, endTime) => merged.some(item =>
+    Number(item.courtId) === Number(courtId) &&
+    toMinutes(item.startTime) < toMinutes(endTime) &&
+    toMinutes(item.endTime) > toMinutes(startTime)
+  );
+
+  currentLiveCourtStatus
+    .filter(court =>
+      court?.isConfigured &&
+      court?.scheduleDate === selectedDate &&
+      court?.timeStart &&
+      court?.timeEnd
+    )
+    .forEach(court => {
+      if (overlaps(court.id, court.timeStart, court.timeEnd)) return;
+
+      if (court.mode === "open_play") {
+        const session = currentOpenPlaySessions.find(item =>
+          Number(item.courtId) === Number(court.id) &&
+          item.date === selectedDate &&
+          item.startTime === court.timeStart &&
+          item.endTime === court.timeEnd
+        );
+
+        if (session) {
+          merged.push({
+            ...session,
+            id: session.id,
+            type: "open_play",
+            source: session.source || "admin_live_fallback"
+          });
+        } else {
+          merged.push({
+            id: `live_${selectedDate}_C${court.id}_${String(court.timeStart).replace(":", "")}`,
+            type: "open_play",
+            source: "admin_live_fallback",
+            manualOnly: true,
+            courtId: Number(court.id),
+            date: selectedDate,
+            startTime: court.timeStart,
+            endTime: court.timeEnd,
+            pricePerPlayer: Number(court.openPlayPrice || 120),
+            maxPlayers: Number(court.maxPlayers || 12),
+            status: "active"
+          });
+        }
+      } else {
+        merged.push({
+          id: `live_${selectedDate}_C${court.id}_${String(court.timeStart).replace(":", "")}`,
+          type: "private",
+          bookingType: "private_rental",
+          source: "admin_live_fallback",
+          courtId: Number(court.id),
+          date: selectedDate,
+          startTime: court.timeStart,
+          endTime: court.timeEnd,
+          status: "confirmed"
+        });
+      }
+    });
+
+  currentItems = merged;
   render(currentItems);
 }
 
@@ -1295,6 +1363,18 @@ function render(items) {
         : (endsHere ? "rounded-b-lg rounded-t-none" : "rounded-none");
 
       if (occupying.type === "open_play") {
+        if (occupying.manualOnly === true) {
+          return `
+            <div class="slot-cell ${connectedPad} bg-slate-900/50"${connectedCellStyle}>
+              <div class="h-full min-h-[48px] w-full ${connectedRadius} border-x-2 ${startsHere ? "border-t-2" : "border-t-0"} ${endsHere ? "border-b-2" : "border-b-0"} border-cyan-300 bg-cyan-500/30 px-2 py-2 text-center shadow-[0_0_0_1px_rgba(103,232,249,.18)]">
+                ${startsHere ? `
+                  <div class="text-xs font-black text-cyan-100">OPEN PLAY</div>
+                  <div class="mt-1 text-[10px] font-bold text-cyan-200">ACTIVE · RENT DISABLED</div>
+                ` : ""}
+              </div>
+            </div>`;
+        }
+
         const myRegistration = currentRegistrations.find(r => r.sessionId === occupying.id);
 
         if (myRegistration) {
@@ -2361,7 +2441,28 @@ $("submitPaymentBtn").addEventListener("click", async () => {
   }
 });
 
+function startPublicLiveCourtStatus() {
+  if (unsubscribePublicLiveCourtStatus) return;
+
+  unsubscribePublicLiveCourtStatus = onSnapshot(
+    doc(db, "pickleball", "publicLive"),
+    (snap) => {
+      currentLiveCourtStatus = snap.exists() && Array.isArray(snap.data().courts)
+        ? snap.data().courts
+        : [];
+      mergeScheduleSources();
+    },
+    (err) => {
+      console.warn("Public live court status read failed:", err);
+      currentLiveCourtStatus = [];
+      mergeScheduleSources();
+    }
+  );
+}
+
 function loadSchedule() {
+  startPublicLiveCourtStatus();
+
   if (unsubscribeSchedule) {
     unsubscribeSchedule();
     unsubscribeSchedule = null;
