@@ -731,8 +731,30 @@
         : JSON.parse(JSON.stringify(DEFAULT_COURTS));
 
       return baseCourts.map(court => {
+        // The Live/Admin court board is a NOW view only.
+        // Future manual schedules remain stored in state.courts and mirrored to
+        // publicSchedule for the customer calendar, but they do not appear as
+        // the active court status before their actual date/time begins.
         const booking = activeBookingForCourt(court.id);
-        if (!booking) return court;
+
+        if (!booking) {
+          const manualIsActiveNow =
+            court.isConfigured === true &&
+            isWithinScheduledWindow({
+              date: court.scheduleDate,
+              startTime: court.timeStart,
+              endTime: court.timeEnd
+            });
+
+          if (manualIsActiveNow) return court;
+
+          // Visual standby only. Do NOT erase the saved advance schedule.
+          return {
+            ...court,
+            isConfigured: false,
+            liveSource: "standby_now"
+          };
+        }
 
         if (booking.type === "open_play") {
           return {
