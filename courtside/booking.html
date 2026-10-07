@@ -114,6 +114,14 @@
       <button id="closeJoinX" type="button" aria-label="Close" class="absolute right-4 top-4 h-9 w-9 rounded-full border border-slate-700 bg-slate-800 text-xl text-slate-300 hover:text-white">×</button>
       <h2 class="pr-12 text-2xl font-bold">Join Open Play</h2>
       <div id="joinDetails" class="mt-4 text-slate-300 space-y-1"></div>
+      <div id="adminJoinFields" class="mt-4 hidden rounded-2xl border border-indigo-700/60 bg-indigo-950/20 p-4">
+        <div class="text-xs font-black tracking-[.14em] text-indigo-300">ADMIN DIRECT ENTRY</div>
+        <label class="mt-3 block text-sm font-semibold text-slate-300" for="adminOpenPlayNames">Player Names</label>
+        <textarea id="adminOpenPlayNames" rows="4" placeholder="One player name per line"
+          class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"></textarea>
+        <div id="adminOpenPlayAmount" class="mt-3 rounded-xl bg-slate-950/70 p-3 text-sm text-slate-300"></div>
+        <p class="mt-2 text-xs text-slate-500">Admin entries skip payment and verification, but the calculated amount is recorded for reference.</p>
+      </div>
       <div id="joinStatus" class="mt-4 hidden rounded-xl border p-3 text-sm"></div>
       <div class="mt-6 flex gap-3">
         <button id="cancelJoinBtn" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 font-semibold">Cancel</button>
@@ -128,6 +136,13 @@
       <button id="closeRentalX" type="button" aria-label="Close" class="absolute right-4 top-4 h-9 w-9 rounded-full border border-slate-700 bg-slate-800 text-xl text-slate-300 hover:text-white">×</button>
       <h2 class="pr-12 text-2xl font-bold">Rent Court</h2>
       <div id="rentalDetails" class="mt-4 text-slate-300 space-y-1"></div>
+      <div id="adminRentalFields" class="mt-4 hidden rounded-2xl border border-indigo-700/60 bg-indigo-950/20 p-4">
+        <div class="text-xs font-black tracking-[.14em] text-indigo-300">ADMIN DIRECT BOOKING</div>
+        <label class="mt-3 block text-sm font-semibold text-slate-300" for="adminRenterName">Renter / Group Name</label>
+        <input id="adminRenterName" type="text" placeholder="e.g. LGU, Juan Dela Cruz"
+          class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white" />
+        <p class="mt-2 text-xs text-slate-500">No payment submission is required. The calculated rental amount is still recorded.</p>
+      </div>
       <div id="rentalStatus" class="mt-4 hidden rounded-xl border p-3 text-sm"></div>
       <div class="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <button id="cancelRentalBtn" type="button" class="rounded-xl border border-red-800 bg-red-950/20 px-4 py-3 font-semibold text-red-200">Cancel Selection</button>
@@ -214,7 +229,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { firebaseConfig } from "./courtside-config.js";
+import { firebaseConfig, isAuthorizedAdmin } from "./courtside-config.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import {
   getFirestore, collection, query, where, onSnapshot, getDocs,
@@ -254,6 +269,11 @@ const playerPaymentSection = $("playerPaymentSection");
 const rentalModal = $("rentalModal");
 const rentalDetails = $("rentalDetails");
 const rentalStatus = $("rentalStatus");
+const adminJoinFields = $("adminJoinFields");
+const adminOpenPlayNames = $("adminOpenPlayNames");
+const adminOpenPlayAmount = $("adminOpenPlayAmount");
+const adminRentalFields = $("adminRentalFields");
+const adminRenterName = $("adminRenterName");
 
 const PAYMENT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoOPIwuXbdA9V_vMjx_-3mELKQPyojUmmCGvXVbhfxcn1kfAxw02KeqQ9zXOy_7HFY/exec";
 
@@ -277,6 +297,285 @@ let currentPayments = [];
 let currentBalance = 0;
 let paymentRegistration = null;
 let authTimer = null;
+let adminBookingMode = false;
+
+function adminDirectPaymentId(prefix) {
+  return prefix + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+function adminPlayerNames() {
+  return String(adminOpenPlayNames?.value || "")
+    .split("\n")
+    .map(name => name.trim())
+    .filter(Boolean);
+}
+
+function updateAdminOpenPlayAmount() {
+  if (!adminBookingMode || !selectedOpenPlay || !adminOpenPlayAmount) return;
+  const names = adminPlayerNames();
+  const count = Math.max(1, names.length);
+  const rate = Number(selectedOpenPlay.pricePerPlayer || 0);
+  adminOpenPlayAmount.innerHTML =
+    "<strong>" + count + " player" + (count === 1 ? "" : "s") + "</strong> × ₱" +
+    rate.toLocaleString("en-PH") +
+    " = <strong>₱" + (count * rate).toLocaleString("en-PH") + "</strong>";
+}
+
+function setAdminBookingUI() {
+  if (adminJoinFields) adminJoinFields.classList.toggle("hidden", !adminBookingMode);
+  if (adminRentalFields) adminRentalFields.classList.toggle("hidden", !adminBookingMode);
+  if ($("confirmJoinBtn")) $("confirmJoinBtn").textContent = adminBookingMode ? "Add Player(s)" : "Continue";
+  if ($("continueRentalBtn")) $("continueRentalBtn").textContent = adminBookingMode ? "Book Direct" : "Continue to Payment";
+  if (adminBookingMode) {
+    updateAdminOpenPlayAmount();
+  }
+}
+
+async function createAdminOpenPlayEntry(session, names, adminUser) {
+  if (!isAuthorizedAdmin(adminUser)) throw new Error("Admin authorization required.");
+  const playerNames = names.map(name => name.trim()).filter(Boolean);
+  if (!playerNames.length) throw new Error("Enter at least one player name.");
+
+  const sessionRef = doc(db, "openPlaySessions", session.id);
+  const registrationRef = doc(collection(db, "openPlayRegistrations"));
+  const registrationId = registrationRef.id;
+  const paymentId = adminDirectPaymentId("ADMIN_OP");
+  const paymentRef = doc(db, "paymentSubmissions", paymentId);
+  const eventRef = doc(collection(db, "eventLogs"));
+
+  await runTransaction(db, async tx => {
+    const sessionSnap = await tx.get(sessionRef);
+    if (!sessionSnap.exists()) throw new Error("Open Play session is no longer available.");
+    const liveSession = sessionSnap.data();
+    const maxPlayers = Math.max(1, Number(liveSession.maxPlayers || 12));
+    const seatRefs = Array.from({length:maxPlayers}, (_,i) =>
+      doc(db, "openPlaySeatLocks", session.id + "__S" + (i + 1))
+    );
+    const seatSnaps = await Promise.all(seatRefs.map(ref => tx.get(ref)));
+    const freeIndexes = [];
+    seatSnaps.forEach((snap, index) => {
+      if (!snap.exists() || isExpiredHold(snap.data())) freeIndexes.push(index);
+    });
+    if (freeIndexes.length < playerNames.length) {
+      throw capacityConflictError(freeIndexes.length);
+    }
+
+    const chosen = freeIndexes.slice(0, playerNames.length);
+    const chosenIds = chosen.map(i => session.id + "__S" + (i + 1));
+    const amount = Number(liveSession.pricePerPlayer || 0) * playerNames.length;
+
+    chosen.forEach(i => {
+      tx.set(seatRefs[i], {
+        sessionId: session.id,
+        registrationId,
+        customerUid: adminUser.uid,
+        seatNumber: i + 1,
+        status: "verified",
+        source: "admin_direct",
+        updatedAt: serverTimestamp()
+      });
+    });
+
+    tx.set(registrationRef, {
+      sessionId: session.id,
+      customerUid: adminUser.uid,
+      customerName: playerNames[0],
+      customerEmail: adminUser.email || "",
+      playerNames,
+      date: liveSession.date,
+      courtId: Number(liveSession.courtId),
+      startTime: liveSession.startTime,
+      endTime: liveSession.endTime,
+      pricePerPlayer: Number(liveSession.pricePerPlayer || 0),
+      reservedPlayers: playerNames.length,
+      paidPlayers: playerNames.length,
+      seatLockIds: chosenIds,
+      paymentStatus: "verified",
+      status: "confirmed",
+      paymentExempt: true,
+      source: "admin_direct",
+      checkedIn: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    tx.update(sessionRef, {
+      joinedPlayers: Math.min(maxPlayers, Number(liveSession.joinedPlayers || 0) + playerNames.length),
+      updatedAt: serverTimestamp()
+    });
+
+    tx.set(paymentRef, {
+      status: "verified",
+      bookingType: "open_play",
+      sessionId: session.id,
+      registrationId,
+      customerUid: adminUser.uid,
+      customerName: playerNames[0],
+      customerEmail: adminUser.email || "",
+      playerNames,
+      playersCovered: playerNames.length,
+      courtId: Number(liveSession.courtId),
+      date: liveSession.date,
+      startTime: liveSession.startTime,
+      endTime: liveSession.endTime,
+      expectedAmount: amount,
+      actualReceivedAmount: 0,
+      amountPaid: 0,
+      paymentExempt: true,
+      paymentDecision: "admin_direct",
+      paymentMethod: "admin_direct_no_payment",
+      checkedIn: false,
+      verifiedAt: serverTimestamp(),
+      verifiedBy: adminUser.uid,
+      verifiedByEmail: adminUser.email || "",
+      createdAt: serverTimestamp()
+    });
+
+    tx.set(eventRef, {
+      eventType: "ADMIN_DIRECT_OPEN_PLAY_BOOKING",
+      bookingId: registrationId,
+      paymentId,
+      playerNames,
+      playersCovered: playerNames.length,
+      expectedAmount: amount,
+      courtId: Number(liveSession.courtId),
+      date: liveSession.date,
+      startTime: liveSession.startTime,
+      endTime: liveSession.endTime,
+      actorUid: adminUser.uid,
+      actorEmail: adminUser.email || "",
+      actorName: adminUser.displayName || adminUser.email || "Admin",
+      timestamp: serverTimestamp()
+    });
+  });
+
+  return { registrationId, paymentId };
+}
+
+async function createAdminRentalEntry(slot, renterName, adminUser) {
+  if (!isAuthorizedAdmin(adminUser)) throw new Error("Admin authorization required.");
+  const name = String(renterName || "").trim();
+  if (!name) throw new Error("Enter the renter or group name.");
+
+  const bookingId = [
+    slot.date,
+    "C" + slot.courtId,
+    slot.startTime.replace(":", ""),
+    slot.endTime.replace(":", "")
+  ].join("_");
+  const bookingRef = doc(db, "privateRentalBookings", bookingId);
+  const scheduleRef = doc(db, "publicSchedule", bookingId);
+  const lockIds = rentalLockIds(slot);
+  const lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
+  const paymentId = adminDirectPaymentId("ADMIN_RENT");
+  const paymentRef = doc(db, "paymentSubmissions", paymentId);
+  const eventRef = doc(collection(db, "eventLogs"));
+
+  await runTransaction(db, async tx => {
+    const lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
+    for (const snap of lockSnaps) {
+      if (!snap.exists()) continue;
+      const data = snap.data();
+      if (!isExpiredHold(data)) throw rentalConflictError();
+    }
+
+    const amount = Number(slot.amountDue || (Number(slot.hourlyRate || 0) * Number(slot.hours || 1)));
+
+    tx.set(bookingRef, {
+      bookingType: "private_rental",
+      slotId: bookingId,
+      customerUid: adminUser.uid,
+      customerName: name,
+      customerEmail: adminUser.email || "",
+      date: slot.date,
+      courtId: Number(slot.courtId),
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      hourlyRate: Number(slot.hourlyRate || 0),
+      hours: Number(slot.hours || 1),
+      amountDue: amount,
+      status: "confirmed",
+      paymentStatus: "verified",
+      paymentExempt: true,
+      source: "admin_direct",
+      checkedIn: false,
+      lockIds,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    lockRefs.forEach((ref,index) => tx.set(ref, {
+      lockId: lockIds[index],
+      bookingId,
+      customerUid: adminUser.uid,
+      date: slot.date,
+      courtId: Number(slot.courtId),
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      status: "verified",
+      source: "admin_direct",
+      updatedAt: serverTimestamp()
+    }));
+
+    tx.set(scheduleRef, {
+      type: "private",
+      bookingType: "private_rental",
+      bookingId,
+      customerUid: adminUser.uid,
+      courtId: Number(slot.courtId),
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      hourlyRate: Number(slot.hourlyRate || 0),
+      status: "confirmed",
+      source: "admin_direct",
+      updatedAt: serverTimestamp()
+    });
+
+    tx.set(paymentRef, {
+      status: "verified",
+      bookingType: "private_rental",
+      sessionId: bookingId,
+      registrationId: bookingId,
+      customerUid: adminUser.uid,
+      customerName: name,
+      customerEmail: adminUser.email || "",
+      courtId: Number(slot.courtId),
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      expectedAmount: amount,
+      actualReceivedAmount: 0,
+      amountPaid: 0,
+      paymentExempt: true,
+      paymentDecision: "admin_direct",
+      paymentMethod: "admin_direct_no_payment",
+      checkedIn: false,
+      verifiedAt: serverTimestamp(),
+      verifiedBy: adminUser.uid,
+      verifiedByEmail: adminUser.email || "",
+      createdAt: serverTimestamp()
+    });
+
+    tx.set(eventRef, {
+      eventType: "ADMIN_DIRECT_PRIVATE_RENTAL",
+      bookingId,
+      paymentId,
+      renterName: name,
+      expectedAmount: amount,
+      courtId: Number(slot.courtId),
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      actorUid: adminUser.uid,
+      actorEmail: adminUser.email || "",
+      actorName: adminUser.displayName || adminUser.email || "Admin",
+      timestamp: serverTimestamp()
+    });
+  });
+
+  return { bookingId, paymentId };
+}
 
 function showStatus(type, title, detail) {
   statusBox.classList.remove("hidden");
@@ -339,6 +638,8 @@ function todayLocal() {
 
 dateInput.value = todayLocal();
 
+adminOpenPlayNames?.addEventListener("input", updateAdminOpenPlayAmount);
+
 calendarBtn.addEventListener("click", () => {
   if (typeof dateInput.showPicker === "function") {
     dateInput.showPicker();
@@ -398,6 +699,8 @@ $("googleBtn").addEventListener("click", async () => {
 
 onAuthStateChanged(auth, (user) => {
   const signedInAs = $("signedInAs");
+  adminBookingMode = Boolean(user && isAuthorizedAdmin(user));
+  setAdminBookingUI();
   $("googleBtnText").textContent = user ? "Switch Google Account" : "Sign in with Google";
   if (user) {
     signedInAs.classList.remove("hidden");
@@ -432,6 +735,17 @@ onAuthStateChanged(auth, (user) => {
   customerBalanceNotice.innerHTML = "";
 
   if (user) {
+    if (adminBookingMode) {
+      showStatus(
+        "success",
+        "Admin booking mode",
+        "Choose a court or Open Play session. You can enter the actual renter/player names and skip customer payment verification."
+      );
+      render(currentItems);
+      renderCustomerPasses();
+      return;
+    }
+
     showStatus("success", "Google account connected", `${user.displayName || user.email} · UID ${user.uid}`);
 
     const balanceRef = doc(db, "customerBalances", user.uid);
@@ -607,7 +921,7 @@ function holdRemainingText(booking) {
 }
 
 function renderCustomerPasses() {
-  if (!auth.currentUser) {
+  if (!auth.currentUser || adminBookingMode) {
     customerPasses.classList.add("hidden");
     customerPasses.innerHTML = "";
     return;
@@ -1237,8 +1551,8 @@ function openRentalReviewModal() {
   if (!selectedRentalSlot) return;
   const slot = selectedRentalSlot;
   const rentalAmount = Number(slot.amountDue || 0);
-  const totalToPay = rentalAmount + Math.max(0, Number(currentBalance || 0));
-  const balanceLine = currentBalance > 0
+  const totalToPay = adminBookingMode ? rentalAmount : rentalAmount + Math.max(0, Number(currentBalance || 0));
+  const balanceLine = !adminBookingMode && currentBalance > 0
     ? `<div class="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/25 p-3 text-amber-100">
          <div class="text-xs uppercase tracking-[.14em] text-amber-300">Previous balance</div>
          <div class="mt-1 text-sm">₱${currentBalance.toLocaleString("en-PH")} will be included below.</div>
@@ -1253,13 +1567,15 @@ function openRentalReviewModal() {
     <div><strong>Rental:</strong> ₱${rentalAmount.toLocaleString("en-PH")}</div>
     ${balanceLine}
     <div class="mt-4 rounded-2xl border border-emerald-700 bg-emerald-950/30 p-4 text-center">
-      <div class="text-xs font-black tracking-[.16em] text-emerald-300">TOTAL AMOUNT TO PAY LATER</div>
+      <div class="text-xs font-black tracking-[.16em] text-emerald-300">${adminBookingMode ? "CALCULATED RENTAL AMOUNT" : "TOTAL AMOUNT TO PAY LATER"}</div>
       <div class="mt-1 text-3xl font-black text-emerald-100">₱${totalToPay.toLocaleString("en-PH")}</div>
       ${currentBalance > 0 ? `<div class="mt-1 text-xs text-slate-400">Rental ₱${rentalAmount.toLocaleString("en-PH")} + previous balance ₱${currentBalance.toLocaleString("en-PH")}</div>` : ""}
     </div>
   `;
   rentalStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
   rentalStatus.textContent = "";
+  if (adminBookingMode && adminRenterName) adminRenterName.value = "";
+  setAdminBookingUI();
   rentalModal.classList.remove("hidden");
   rentalModal.classList.add("flex");
 }
@@ -1808,11 +2124,27 @@ schedule.addEventListener("click", async (event) => {
   selectedOpenPlay = currentItems.find(x => x.id === button.dataset.sessionId);
   if (!selectedOpenPlay) return;
 
-  // Preflight before showing the confirmation modal. If Firebase already has
-  // this user's registration, send them to the existing booking/payment state
-  // instead of asking them to confirm something that will be rejected.
+  // Preflight before showing the confirmation modal.
   try {
     const user = await ensureSignedIn();
+
+    if (isAuthorizedAdmin(user)) {
+      adminBookingMode = true;
+      if (adminOpenPlayNames) adminOpenPlayNames.value = "";
+      joinDetails.innerHTML = `
+        <div><strong>Date:</strong> ${selectedOpenPlay.date}</div>
+        <div><strong>Court:</strong> ${selectedOpenPlay.courtId}</div>
+        <div><strong>Time:</strong> ${formatTime12(selectedOpenPlay.startTime)}–${formatTime12(selectedOpenPlay.endTime)}</div>
+        <div><strong>Price:</strong> ₱${selectedOpenPlay.pricePerPlayer}/player</div>
+        <div><strong>Capacity:</strong> Maximum ${selectedOpenPlay.maxPlayers || "—"} players</div>
+      `;
+      joinStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
+      setAdminBookingUI();
+      joinModal.classList.remove("hidden");
+      joinModal.classList.add("flex");
+      updateAdminOpenPlayAmount();
+      return;
+    }
 
     // Query only this signed-in user's records. This is compatible with the
     // owner-scoped Firestore read rule even when no registration exists yet.
@@ -1887,6 +2219,7 @@ schedule.addEventListener("click", async (event) => {
 
   joinStatus.className = "mt-4 hidden rounded-xl border p-3 text-sm";
   joinStatus.textContent = "";
+  setAdminBookingUI();
   joinModal.classList.remove("hidden");
   joinModal.classList.add("flex");
 });
@@ -1924,6 +2257,27 @@ $("continueRentalBtn").addEventListener("click", async () => {
   try {
     const user = await ensureSignedIn();
     const slot = { ...selectedRentalSlot };
+
+    if (isAuthorizedAdmin(user)) {
+      adminBookingMode = true;
+      btn.textContent = "Booking…";
+      const renterName = adminRenterName?.value.trim() || "";
+      await createAdminRentalEntry(slot, renterName, user);
+
+      rentalModal.classList.add("hidden");
+      rentalModal.classList.remove("flex");
+      selectedRentalSlot = null;
+      rentalSelectionStart = null;
+      render(currentItems);
+      showStatus(
+        "success",
+        "Admin rental booked",
+        renterName + " · Court " + slot.courtId + " · ₱" + Number(slot.amountDue || 0).toLocaleString("en-PH") +
+        " calculated · payment and verification skipped."
+      );
+      return;
+    }
+
     const reservation = await reservePrivateRentalAtomically(slot, user);
     const slotId = reservation.bookingId;
 
@@ -1968,7 +2322,7 @@ $("continueRentalBtn").addEventListener("click", async () => {
           : (err?.message || "Could not reserve this slot.");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Continue to Payment";
+    btn.textContent = adminBookingMode ? "Book Direct" : "Continue to Payment";
   }
 });
 
@@ -1996,6 +2350,25 @@ $("confirmJoinBtn").addEventListener("click", async () => {
   try {
     const user = await ensureSignedIn();
     const session = { ...selectedOpenPlay };
+
+    if (isAuthorizedAdmin(user)) {
+      adminBookingMode = true;
+      const names = adminPlayerNames();
+      await createAdminOpenPlayEntry(session, names, user);
+
+      joinModal.classList.add("hidden");
+      joinModal.classList.remove("flex");
+      savedSuccessfully = true;
+      showStatus(
+        "success",
+        "Admin Open Play entry added",
+        names.join(", ") + " · ₱" +
+        (Number(session.pricePerPlayer || 0) * names.length).toLocaleString("en-PH") +
+        " calculated · payment and verification skipped."
+      );
+      return;
+    }
+
     const reserved = await reserveOpenPlaySeatsAtomically(session, user, 1);
 
     if (reserved.existingState === "verified") {
@@ -2070,7 +2443,7 @@ $("confirmJoinBtn").addEventListener("click", async () => {
     }
   } finally {
     btn.disabled = false;
-    btn.textContent = "Continue";
+    btn.textContent = adminBookingMode ? "Add Player(s)" : "Continue";
     if (savedSuccessfully) selectedOpenPlay = null;
   }
 });
