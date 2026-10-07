@@ -1330,8 +1330,9 @@
         const checkedIn = p.checkedIn === true;
         const decision = paymentExempt ? "ADMIN DIRECT" : String(p.paymentDecision || "verify").toUpperCase();
 
+        const manualPanelRental = p.source === "admin_panel_manual";
         const playerSubtitle = p.bookingType === "private_rental"
-          ? `${payer} · Private renter`
+          ? `${payer} · ${manualPanelRental ? "Manual Admin rental" : "Private renter"}`
           : `${payer} · ${playerCount} player${playerCount === 1 ? "" : "s"}`;
 
         const paymentSubtitle = paymentExempt
@@ -2126,6 +2127,119 @@
        return diff;
     }
 
+    async function syncManualRentalToVerifiedWaiting(court, previousScheduleId = null) {
+      if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) return;
+      if (!court || court.mode !== "rental" || !court.isConfigured) return;
+
+      const scheduleId = scheduleRecordId(court);
+      if (!scheduleId) return;
+
+      const bookingRef = doc(db, "privateRentalBookings", scheduleId);
+      const paymentId = "ADMIN_PANEL_RENT_" + scheduleId;
+      const paymentRef = doc(db, "paymentSubmissions", paymentId);
+      const eventRef = doc(collection(db, "eventLogs"));
+      const rate = (Number(court.id) === 5 || Number(court.id) === 6) ? 350 : 250;
+      const hours = calculateHourDifference(court.timeStart, court.timeEnd);
+      const amount = Number(court.rentalRevenue || (rate * hours));
+
+      await runTransaction(db, async tx => {
+        let previousPaymentRef = null;
+        let previousBookingRef = null;
+        let previousPaymentSnap = null;
+        let previousBookingSnap = null;
+
+        if (previousScheduleId && previousScheduleId !== scheduleId) {
+          previousPaymentRef = doc(db, "paymentSubmissions", "ADMIN_PANEL_RENT_" + previousScheduleId);
+          previousBookingRef = doc(db, "privateRentalBookings", previousScheduleId);
+          previousPaymentSnap = await tx.get(previousPaymentRef);
+          previousBookingSnap = await tx.get(previousBookingRef);
+        }
+
+        if (previousPaymentSnap?.exists()) {
+          tx.update(previousPaymentRef, {
+            status: "superseded",
+            operationalOutcome: "admin_schedule_changed",
+            supersededBy: paymentId,
+            updatedAt: serverTimestamp()
+          });
+        }
+
+        if (previousBookingSnap?.exists()) {
+          tx.update(previousBookingRef, {
+            status: "superseded",
+            operationalOutcome: "admin_schedule_changed",
+            supersededBy: scheduleId,
+            updatedAt: serverTimestamp()
+          });
+        }
+
+        tx.set(bookingRef, {
+          bookingType: "private_rental",
+          slotId: scheduleId,
+          customerUid: auth.currentUser.uid,
+          customerName: court.renterName || "Manual Renter",
+          customerEmail: auth.currentUser.email || "",
+          date: court.scheduleDate,
+          courtId: Number(court.id),
+          startTime: court.timeStart,
+          endTime: court.timeEnd,
+          hourlyRate: rate,
+          hours,
+          amountDue: amount,
+          status: "confirmed",
+          paymentStatus: "verified",
+          paymentExempt: true,
+          source: "admin_panel_manual",
+          checkedIn: false,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        tx.set(paymentRef, {
+          status: "verified",
+          bookingType: "private_rental",
+          sessionId: scheduleId,
+          registrationId: scheduleId,
+          customerUid: auth.currentUser.uid,
+          customerName: court.renterName || "Manual Renter",
+          customerEmail: auth.currentUser.email || "",
+          courtId: Number(court.id),
+          date: court.scheduleDate,
+          startTime: court.timeStart,
+          endTime: court.timeEnd,
+          expectedAmount: amount,
+          actualReceivedAmount: 0,
+          amountPaid: 0,
+          paymentExempt: true,
+          paymentDecision: "admin_panel_manual",
+          paymentMethod: "admin_direct_no_payment",
+          source: "admin_panel_manual",
+          checkedIn: false,
+          verifiedAt: serverTimestamp(),
+          verifiedBy: auth.currentUser.uid,
+          verifiedByEmail: auth.currentUser.email || "",
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        tx.set(eventRef, {
+          eventType: previousScheduleId && previousScheduleId !== scheduleId
+            ? "ADMIN_MANUAL_RENTAL_UPDATED"
+            : "ADMIN_MANUAL_RENTAL_CREATED",
+          bookingId: scheduleId,
+          paymentId,
+          renterName: court.renterName || "Manual Renter",
+          expectedAmount: amount,
+          courtId: Number(court.id),
+          date: court.scheduleDate,
+          startTime: court.timeStart,
+          endTime: court.timeEnd,
+          actorUid: auth.currentUser.uid,
+          actorEmail: auth.currentUser.email || "",
+          actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+          timestamp: serverTimestamp()
+        });
+      });
+    }
+
     window.saveCourtConfig = async function(courtId) {
       if (!requireLivePanelControl("Court configuration")) return;
       const court = state.courts.find(c => c.id === courtId);
@@ -2217,9 +2331,18 @@
       await saveState();
       try {
         await publishCourtSchedule(court, previousScheduleId);
+
+        if (mode === "rental") {
+          await syncManualRentalToVerifiedWaiting(court, previousScheduleId);
+        }
+
         lastManualScheduleSyncSignature = configuredCourtScheduleSignature();
         window.hideModal();
-        window.showToast(`${court.name} is now active and synced to the booking calendar.`);
+        window.showToast(
+          mode === "rental"
+            ? `${court.name} rental saved and added to VERIFIED / waiting for check-in.`
+            : `${court.name} Open Play session is active and synced to the booking calendar.`
+        );
       } catch (err) {
         console.error("Court schedule publish failed:", err);
         window.showToast(
@@ -2275,6 +2398,49 @@
     window.clearCourtConfig = async function(courtId) {
        if (!requireLivePanelControl("Court configuration")) return;
        const court = state.courts.find(c => c.id === courtId);
+
+       if (court?.mode === "rental" && court?.isConfigured) {
+         const oldScheduleId = scheduleRecordId(court);
+         if (oldScheduleId && isAuthorizedAdmin(auth.currentUser)) {
+           const oldPaymentRef = doc(db, "paymentSubmissions", "ADMIN_PANEL_RENT_" + oldScheduleId);
+           const oldBookingRef = doc(db, "privateRentalBookings", oldScheduleId);
+           const eventRef = doc(collection(db, "eventLogs"));
+           try {
+             await runTransaction(db, async tx => {
+               const [paymentSnap, bookingSnap] = await Promise.all([
+                 tx.get(oldPaymentRef),
+                 tx.get(oldBookingRef)
+               ]);
+               if (paymentSnap.exists()) tx.update(oldPaymentRef, {
+                 status: "cancelled",
+                 operationalOutcome: "admin_manual_reset",
+                 updatedAt: serverTimestamp()
+               });
+               if (bookingSnap.exists()) tx.update(oldBookingRef, {
+                 status: "cancelled",
+                 operationalOutcome: "admin_manual_reset",
+                 updatedAt: serverTimestamp()
+               });
+               tx.set(eventRef, {
+                 eventType: "ADMIN_MANUAL_RENTAL_RESET",
+                 bookingId: oldScheduleId,
+                 renterName: court.renterName || "",
+                 courtId: Number(court.id),
+                 date: court.scheduleDate || "",
+                 startTime: court.timeStart || "",
+                 endTime: court.timeEnd || "",
+                 actorUid: auth.currentUser.uid,
+                 actorEmail: auth.currentUser.email || "",
+                 actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+                 timestamp: serverTimestamp()
+               });
+             });
+           } catch (err) {
+             console.error("Manual rental waiting-list cleanup failed:", err);
+           }
+         }
+       }
+
        await removePublishedSchedule(court);
        court.mode = 'open_play';
        court.renterName = '';
