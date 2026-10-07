@@ -259,6 +259,7 @@
     let signedInAdmin = null;
     let lastManualScheduleSyncSignature = "";
     let manualScheduleSyncInFlight = false;
+    const autoEndingCourts = new Set();
     const LIVE_PANEL_LEASE_MS = 90 * 1000;
 
     function controllerDisplayName(data) {
@@ -610,6 +611,105 @@
     function currentMinuteOfDay() {
       const now = new Date();
       return now.getHours() * 60 + now.getMinutes();
+    }
+
+    function scheduledDateTimeMs(dateKey, timeValue, isEnd = false, startTime = "") {
+      if (!dateKey || !timeValue) return NaN;
+      const [y, m, d] = String(dateKey).split("-").map(Number);
+      const [hh, mm] = String(timeValue).split(":").map(Number);
+      if (![y,m,d,hh,mm].every(Number.isFinite)) return NaN;
+      const dt = new Date(y, m - 1, d, hh, mm, 0, 0);
+      if (isEnd && timeValue === "00:00" && startTime && startTime !== "00:00") {
+        dt.setDate(dt.getDate() + 1);
+      }
+      return dt.getTime();
+    }
+
+    function isWithinScheduledWindow(item, nowMs = Date.now()) {
+      const startMs = scheduledDateTimeMs(item?.date || item?.scheduleDate, item?.startTime || item?.timeStart);
+      const endMs = scheduledDateTimeMs(
+        item?.date || item?.scheduleDate,
+        item?.endTime || item?.timeEnd,
+        true,
+        item?.startTime || item?.timeStart
+      );
+      return Number.isFinite(startMs) && Number.isFinite(endMs) && nowMs >= startMs && nowMs < endMs;
+    }
+
+    function courtTiming(court, nowMs = Date.now()) {
+      const startMs = scheduledDateTimeMs(court?.scheduleDate, court?.timeStart);
+      const endMs = scheduledDateTimeMs(court?.scheduleDate, court?.timeEnd, true, court?.timeStart);
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+        return { startMs, endMs, active: false, expired: false, minutesLeft: Infinity };
+      }
+      return {
+        startMs,
+        endMs,
+        active: nowMs >= startMs && nowMs < endMs,
+        expired: nowMs >= endMs,
+        minutesLeft: Math.ceil((endMs - nowMs) / 60000)
+      };
+    }
+
+    function nextHourEnd(timeValue) {
+      const [hh, mm] = String(timeValue || "").split(":").map(Number);
+      if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+      const minutes = hh * 60 + mm + 60;
+      if (minutes > 24 * 60) return null;
+      if (minutes === 24 * 60) return "00:00";
+      return String(Math.floor(minutes / 60)).padStart(2, "0") + ":" + String(minutes % 60).padStart(2, "0");
+    }
+
+    function canExtendCourtOneHour(court) {
+      if (!court?.isConfigured || !court.scheduleDate || !court.timeEnd) return false;
+      const newEnd = nextHourEnd(court.timeEnd);
+      if (!newEnd) return false;
+      // Customer booking calendar currently ends at midnight, so do not silently
+      // create an extension beyond that visible booking window.
+      if (court.timeEnd === "00:00") return false;
+
+      const extensionStart = minutesFromClock(court.timeEnd);
+      const extensionEnd = newEnd === "00:00" ? 24 * 60 : minutesFromClock(newEnd);
+
+      return !todayPublicSchedule.some(item => {
+        if (Number(item.courtId) !== Number(court.id)) return false;
+        if (item.date !== court.scheduleDate) return false;
+        const sameCurrentBlock =
+          item.startTime === court.timeStart &&
+          item.endTime === court.timeEnd;
+        if (sameCurrentBlock) return false;
+
+        const itemStart = minutesFromClock(item.startTime);
+        const itemEnd = item.endTime === "00:00" && item.startTime !== "00:00"
+          ? 24 * 60
+          : minutesFromClock(item.endTime);
+        return itemStart < extensionEnd && itemEnd > extensionStart;
+      });
+    }
+
+    function courtEndActionHTML(court) {
+      const timing = courtTiming(court);
+      if (!timing.active || timing.minutesLeft > 5) return "";
+      const canExtend = canExtendCourtOneHour(court);
+      return `
+        <div class="mt-3 rounded-xl border border-amber-500/50 bg-amber-950/35 p-3">
+          <div class="text-[10px] font-black uppercase tracking-widest text-amber-300">
+            SESSION ENDS IN ${Math.max(1, timing.minutesLeft)} MIN
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <button onclick="endSession(${court.id})"
+              class="rounded-lg bg-red-700 px-3 py-2 text-[10px] font-black text-white hover:bg-red-600">
+              END NOW
+            </button>
+            <button onclick="extendCourtOneHour(${court.id})"
+              ${canExtend ? "" : "disabled"}
+              class="rounded-lg px-3 py-2 text-[10px] font-black ${canExtend
+                ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                : "cursor-not-allowed bg-slate-800 text-slate-600"}">
+              ${canExtend ? "EXTEND +1 HOUR" : "NEXT HOUR UNAVAILABLE"}
+            </button>
+          </div>
+        </div>`;
     }
 
     function activeBookingForCourt(courtId) {
@@ -1059,12 +1159,133 @@
             <td class="px-4 py-3 align-top text-right">
               ${checkedIn
                 ? '<span class="text-[10px] font-bold text-slate-600">DONE</span>'
-                : '<button type="button" class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-[10px] font-black text-slate-400" disabled title="Check-in workflow will be connected after the venue process is finalized">CHECK IN</button>'
+                : (() => {
+                    const activeNow = isWithinScheduledWindow(p);
+                    return activeNow
+                      ? `<button type="button" onclick="checkInVerifiedBooking('${escapeHtml(p.id)}')" class="rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-500">CHECK IN</button>`
+                      : '<span class="text-[10px] font-bold text-slate-600">AVAILABLE DURING BOOKED TIME</span>';
+                  })()
               }
             </td>
           </tr>`;
       }).join("");
     }
+
+    window.checkInVerifiedBooking = async function(paymentId) {
+      if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) {
+        window.showToast("Check-in from this table currently requires an Admin account.", "warn");
+        return;
+      }
+      if (!requireLivePanelControl("Customer check-in")) return;
+
+      const payment = verifiedPayments.find(p => p.id === paymentId);
+      if (!payment) {
+        window.showToast("Verified booking could not be found.", "warn");
+        return;
+      }
+      if (!isWithinScheduledWindow(payment)) {
+        window.showToast("Check-in is only available during the booking's selected date and time.", "warn");
+        return;
+      }
+      if (payment.checkedIn === true) return;
+
+      const sourceCollection = payment.bookingType === "private_rental"
+        ? "privateRentalBookings"
+        : "openPlayRegistrations";
+      const sourceId = payment.registrationId || payment.sessionId;
+      if (!sourceId) {
+        window.showToast("Booking link is missing.", "warn");
+        return;
+      }
+
+      const sourceRef = doc(db, sourceCollection, sourceId);
+      const paymentRef = doc(db, "paymentSubmissions", payment.id);
+      const eventRef = doc(collection(db, "eventLogs"));
+      const checkedAtMs = Date.now();
+
+      try {
+        await runTransaction(db, async tx => {
+          const sourceSnap = await tx.get(sourceRef);
+          if (!sourceSnap.exists()) throw new Error("Linked booking no longer exists.");
+          const source = sourceSnap.data();
+
+          if (source.paymentStatus !== "verified" && source.status !== "confirmed") {
+            throw new Error("Only verified bookings can be checked in.");
+          }
+          if (source.checkedIn === true) return;
+
+          tx.update(sourceRef, {
+            checkedIn: true,
+            checkedInAt: serverTimestamp(),
+            checkedInByUid: auth.currentUser.uid,
+            checkedInByEmail: auth.currentUser.email || "",
+            updatedAt: serverTimestamp()
+          });
+
+          tx.update(paymentRef, {
+            checkedIn: true,
+            checkedInAt: serverTimestamp(),
+            checkedInByUid: auth.currentUser.uid,
+            checkedInByEmail: auth.currentUser.email || ""
+          });
+
+          tx.set(eventRef, {
+            eventType: "PLAYER_CHECKED_IN",
+            bookingId: sourceId,
+            paymentId: payment.id,
+            customerUid: payment.customerUid,
+            customerName: payment.customerName || "",
+            courtId: Number(payment.courtId),
+            date: payment.date,
+            startTime: payment.startTime,
+            endTime: payment.endTime,
+            actorUid: auth.currentUser.uid,
+            actorEmail: auth.currentUser.email || "",
+            actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+            timestamp: serverTimestamp()
+          });
+        });
+
+        if (payment.bookingType !== "private_rental") {
+          const names = Array.isArray(payment.playerNames) && payment.playerNames.length
+            ? payment.playerNames
+            : [payment.customerName || "Player"];
+          const endMs = scheduledDateTimeMs(payment.date, payment.endTime, true, payment.startTime);
+          names.forEach((name, index) => {
+            const playerId = `online_${sourceId}_${index + 1}`;
+            if (state.players.some(p => p.id === playerId)) return;
+            state.players.push({
+              id: playerId,
+              name,
+              category: "Beginner",
+              queueCourt: String(payment.courtId),
+              gamesPlayed: 0,
+              timeIn: new Date(checkedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              timeOut: new Date(endMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              expireTimestamp: endMs,
+              isExpired: false,
+              paid: true,
+              source: "online",
+              onlineVerified: true,
+              checkedIn: true,
+              registrationId: sourceId
+            });
+            if (!state.queues[String(payment.courtId)]) state.queues[String(payment.courtId)] = [];
+            state.queues[String(payment.courtId)].push(playerId);
+          });
+          await saveState();
+        }
+
+        window.showToast(
+          payment.bookingType === "private_rental"
+            ? "Renter checked in."
+            : "Player(s) checked in and added to the live Open Play queue."
+        );
+      } catch (err) {
+        console.error("Check-in failed:", err);
+        window.showToast(err?.message || "Check-in failed.", "error");
+      }
+    };
 
     window.switchTab = function(tabId) {
       if (document.body.classList.contains("role-staff") && tabId !== "dashboard") {
@@ -1330,6 +1551,18 @@
       if(!isConnected) return;
       render();
       const now = Date.now();
+
+      (state.courts || []).forEach(court => {
+        if (!court?.isConfigured || autoEndingCourts.has(court.id)) return;
+        const timing = courtTiming(court, now);
+        if (!timing.expired) return;
+
+        autoEndingCourts.add(court.id);
+        Promise.resolve(window.endSession(court.id, { auto: true, silent: true }))
+          .catch(err => console.error("Automatic court end failed:", err))
+          .finally(() => autoEndingCourts.delete(court.id));
+      });
+
       let changed = false;
       state.players.forEach(p => {
         if (!p.expireTimestamp) return; 
@@ -1635,6 +1868,49 @@
       }
     };
 
+    window.extendCourtOneHour = async function(courtId) {
+      if (!requireLivePanelControl("Extending a court session")) return;
+      const court = state.courts.find(c => Number(c.id) === Number(courtId));
+      if (!court?.isConfigured) return;
+
+      if (!canExtendCourtOneHour(court)) {
+        window.showToast("The next hour is not available for this court.", "warn");
+        return;
+      }
+
+      const previousScheduleId = scheduleRecordId(court);
+      const oldEnd = court.timeEnd;
+      const newEnd = nextHourEnd(oldEnd);
+      if (!newEnd) {
+        window.showToast("This session cannot be extended beyond the booking calendar window.", "warn");
+        return;
+      }
+
+      court.timeEnd = newEnd;
+      if (court.mode === "rental") {
+        const rate = (Number(court.id) === 5 || Number(court.id) === 6) ? 350 : 250;
+        court.rentalRevenue = Number(court.rentalRevenue || 0) + rate;
+      }
+
+      if (court.mode === "open_play") {
+        const endMs = scheduledDateTimeMs(court.scheduleDate, court.timeEnd, true, court.timeStart);
+        (state.queues?.[String(court.id)] || []).forEach(playerId => {
+          const player = state.players.find(p => p.id === playerId);
+          if (player) {
+            player.expireTimestamp = endMs;
+            player.timeOut = new Date(endMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            player.isExpired = false;
+          }
+        });
+      }
+
+      await saveState();
+      await publishCourtSchedule(court, previousScheduleId);
+      lastManualScheduleSyncSignature = configuredCourtScheduleSignature();
+      window.showToast(`${court.name} extended to ${formatTime(newEnd)}.`);
+      render();
+    };
+
     window.clearCourtConfig = async function(courtId) {
        if (!requireLivePanelControl("Court configuration")) return;
        const court = state.courts.find(c => c.id === courtId);
@@ -1655,9 +1931,10 @@
        window.showToast(`${court.name} configuration reset.`);
     }
 
-    window.endSession = async function(courtId) {
+    window.endSession = async function(courtId, options = {}) {
         if (!requireLivePanelControl("Ending a session")) return;
         const court = state.courts.find(c => c.id === courtId);
+        if (!court || !court.isConfigured) return;
         await removePublishedSchedule(court);
         
         if (court.mode === 'rental') {
@@ -1668,7 +1945,7 @@
                 revenue: court.rentalRevenue || 0,
                 time: `${formatTime(court.timeStart)} - ${formatTime(court.timeEnd)}`
             });
-            window.showToast("Rental ended & logged for today.");
+            if (!options.silent) window.showToast("Rental ended & logged for today.");
         } else {
             if (!state.dailyOpenPlayLogs) state.dailyOpenPlayLogs = [];
             state.dailyOpenPlayLogs.push({
@@ -1676,7 +1953,7 @@
                 time: `${formatTime(court.timeStart)} - ${formatTime(court.timeEnd)}`,
                 queueClearedCount: (state.queues[court.id.toString()] || []).length
             });
-            window.showToast("Open Play session ended & logged.");
+            if (!options.silent) window.showToast("Open Play session ended & logged.");
         }
 
         court.mode = 'open_play';
@@ -1693,6 +1970,10 @@
         state.queues[court.id.toString()] = [];
         
         await saveState();
+        lastManualScheduleSyncSignature = configuredCourtScheduleSignature();
+        if (options.auto) {
+          window.showToast(`${court.name} ended automatically at its scheduled time.`, "warn");
+        }
     };
 
 
@@ -2233,6 +2514,7 @@
                   <p class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-1">Rented By</p>
                   <p class="text-lg font-black text-white truncate px-2">${court.renterName || 'Unknown'}</p>
                 </div>
+                ${courtEndActionHTML(court)}
                 ${court.liveSource === "booking_page" ? `
                   <div class="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-[10px] font-bold text-amber-300">
                     Booking Page · ${String(court.bookingStatus || "reserved").replaceAll("_", " ").toUpperCase()}
@@ -2261,6 +2543,7 @@
                     </div>
                 </div>
                 
+                ${courtEndActionHTML(court)}
                 <div class="my-1 flex-1 flex flex-col justify-center">
                   ${matchPlayers ? `
                     <div class="grid grid-cols-2 gap-2 text-xs">
