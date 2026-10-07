@@ -140,6 +140,8 @@ const toast = $("toast");
 let unsubscribePending = null;
 let unsubscribeVerified = null;
 let toastTimer = null;
+let pendingPaymentsCache = [];
+let pendingExpiryRunning = false;
 
 function esc(v) {
   return String(v ?? "")
@@ -158,6 +160,23 @@ function formatTime12(value) {
   return `${hour}:${m} ${suffix}`;
 }
 
+function scheduledDateTimeMs(dateKey, timeValue, isEnd = false, startTime = "") {
+  if (!dateKey || !timeValue) return NaN;
+  const [y, m, d] = String(dateKey).split("-").map(Number);
+  const [hh, mm] = String(timeValue).split(":").map(Number);
+  if (![y,m,d,hh,mm].every(Number.isFinite)) return NaN;
+  const dt = new Date(y, m - 1, d, hh, mm, 0, 0);
+  if (isEnd && timeValue === "00:00" && startTime && startTime !== "00:00") {
+    dt.setDate(dt.getDate() + 1);
+  }
+  return dt.getTime();
+}
+
+function paymentBookingHasEnded(payment) {
+  const endMs = scheduledDateTimeMs(payment?.date, payment?.endTime, true, payment?.startTime);
+  return Number.isFinite(endMs) && Date.now() >= endMs;
+}
+
 function statusLabel(payment) {
   if (payment.checkedIn === true) return "CHECKED-IN";
   if (payment.status === "verified") return "VERIFIED";
@@ -174,6 +193,165 @@ function showToast(type, message) {
       : "border-red-500 bg-red-950 text-red-100");
   toast.textContent = message;
   toastTimer = setTimeout(() => toast.classList.add("hidden"), 4200);
+}
+
+async function expirePendingVerification(payment) {
+  if (!auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) return false;
+  if (!payment || payment.status !== "pending_verification" || !paymentBookingHasEnded(payment)) return false;
+  if (!payment.registrationId) return false;
+
+  const paymentRef = doc(db, "paymentSubmissions", payment.id);
+  const sourceCollection = payment.bookingType === "private_rental"
+    ? "privateRentalBookings"
+    : "openPlayRegistrations";
+  const sourceRef = doc(db, sourceCollection, payment.registrationId);
+  const historyRef = doc(db, "pickleball", "historyVault");
+  const eventRef = doc(collection(db, "eventLogs"));
+  const archiveId = "expired_payment_" + payment.id;
+
+  await runTransaction(db, async tx => {
+    const paymentSnap = await tx.get(paymentRef);
+    const sourceSnap = await tx.get(sourceRef);
+    const historySnap = await tx.get(historyRef);
+
+    if (!paymentSnap.exists()) return;
+    const livePayment = paymentSnap.data();
+    if (livePayment.status !== "pending_verification") return;
+    if (!paymentBookingHasEnded(livePayment)) return;
+
+    const source = sourceSnap.exists() ? sourceSnap.data() : null;
+
+    let privatePublicRef = null;
+    let privatePublicSnap = null;
+    let lockRefs = [];
+    let lockSnaps = [];
+
+    if (livePayment.bookingType === "private_rental" && source) {
+      privatePublicRef = doc(db, "publicSchedule", livePayment.registrationId);
+      privatePublicSnap = await tx.get(privatePublicRef);
+      const lockIds = Array.isArray(source.lockIds) ? source.lockIds : [];
+      lockRefs = lockIds.map(id => doc(db, "slotLocks", id));
+      lockSnaps = await Promise.all(lockRefs.map(ref => tx.get(ref)));
+    }
+
+    let seatLockRefs = [];
+    if (livePayment.bookingType !== "private_rental" && source) {
+      const seatLockIds = Array.isArray(source.seatLockIds) ? source.seatLockIds : [];
+      seatLockRefs = seatLockIds.map(id => doc(db, "openPlaySeatLocks", id));
+      await Promise.all(seatLockRefs.map(ref => tx.get(ref)));
+    }
+
+    const history = historySnap.exists() && Array.isArray(historySnap.data().history)
+      ? historySnap.data().history
+      : [];
+
+    if (!history.some(item => item.id === archiveId)) {
+      const names = Array.isArray(livePayment.playerNames) && livePayment.playerNames.length
+        ? livePayment.playerNames
+        : [livePayment.customerName || "Customer"];
+
+      history.unshift({
+        id: archiveId,
+        kind: "expired_payment_verification",
+        date: livePayment.date || "",
+        customerName: livePayment.customerName || "",
+        playerNames: names,
+        bookingType: livePayment.bookingType || "open_play",
+        courtId: Number(livePayment.courtId),
+        startTime: livePayment.startTime || "",
+        endTime: livePayment.endTime || "",
+        outcome: "expired_pending_verification",
+        paymentStatus: "expired",
+        reference: livePayment.reference || "",
+        checkedIn: false,
+        archivedAtMs: Date.now()
+      });
+
+      tx.set(historyRef, {
+        history,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    tx.update(paymentRef, {
+      status: "expired",
+      operationalOutcome: "expired_pending_verification",
+      expiredAt: serverTimestamp(),
+      expiredBy: auth.currentUser.uid,
+      expiredByEmail: auth.currentUser.email || ""
+    });
+
+    if (sourceSnap.exists()) {
+      tx.update(sourceRef, {
+        status: "expired",
+        paymentStatus: "expired",
+        operationalOutcome: "expired_pending_verification",
+        expiredAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    if (livePayment.bookingType === "private_rental") {
+      if (privatePublicRef && privatePublicSnap?.exists()) {
+        const publicData = privatePublicSnap.data();
+        if (
+          publicData.bookingId === livePayment.registrationId ||
+          privatePublicSnap.id === livePayment.registrationId
+        ) {
+          tx.delete(privatePublicRef);
+        }
+      }
+
+      lockRefs.forEach((ref, index) => {
+        const snap = lockSnaps[index];
+        if (!snap?.exists()) return;
+        const lock = snap.data();
+        if (lock.bookingId === livePayment.registrationId) tx.delete(ref);
+      });
+    } else {
+      seatLockRefs.forEach(ref => tx.delete(ref));
+    }
+
+    tx.set(eventRef, {
+      eventType: "PAYMENT_VERIFICATION_EXPIRED",
+      paymentId: payment.id,
+      bookingId: livePayment.registrationId,
+      customerUid: livePayment.customerUid || "",
+      customerName: livePayment.customerName || "",
+      courtId: Number(livePayment.courtId),
+      date: livePayment.date || "",
+      startTime: livePayment.startTime || "",
+      endTime: livePayment.endTime || "",
+      actorUid: auth.currentUser.uid,
+      actorEmail: auth.currentUser.email || "",
+      actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+      timestamp: serverTimestamp()
+    });
+  });
+
+  return true;
+}
+
+async function expireEndedPendingPayments() {
+  if (pendingExpiryRunning || !auth.currentUser || !isAuthorizedAdmin(auth.currentUser)) return;
+  const expired = pendingPaymentsCache.filter(p =>
+    p.status === "pending_verification" &&
+    paymentBookingHasEnded(p)
+  );
+  if (!expired.length) return;
+
+  pendingExpiryRunning = true;
+  try {
+    for (const payment of expired) {
+      try {
+        await expirePendingVerification(payment);
+      } catch (err) {
+        console.error("Could not expire pending verification", payment.id, err);
+      }
+    }
+  } finally {
+    pendingExpiryRunning = false;
+  }
 }
 
 function renderPending(payments) {
@@ -261,7 +439,9 @@ function startPendingListener() {
   if (unsubscribePending) unsubscribePending();
   const q = query(collection(db, "paymentSubmissions"), where("status", "==", "pending_verification"));
   unsubscribePending = onSnapshot(q, snap => {
-    renderPending(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    pendingPaymentsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPending(pendingPaymentsCache.filter(p => !paymentBookingHasEnded(p)));
+    expireEndedPendingPayments();
   }, err => {
     console.warn(err);
     pendingList.innerHTML = '<div class="rounded-2xl border border-red-800 bg-red-950/30 p-4 text-sm text-red-200">Could not load pending submissions.</div>';
@@ -273,6 +453,7 @@ function stopPendingListener() {
     unsubscribePending();
     unsubscribePending = null;
   }
+  pendingPaymentsCache = [];
   pendingCount.textContent = "0";
   pendingList.innerHTML = "";
 }
@@ -392,6 +573,10 @@ onAuthStateChanged(auth, user => {
   }
 });
 
+setInterval(() => {
+  expireEndedPendingPayments();
+}, 30000);
+
 googleBtn.addEventListener("click", async () => {
   if (auth.currentUser) {
     await signOut(auth);
@@ -433,6 +618,9 @@ async function confirmPayment(paymentId, options = {}) {
 
       if (payment.status === "verified") {
         throw new Error("This payment has already been verified.");
+      }
+      if (payment.status === "pending_verification" && paymentBookingHasEnded(payment)) {
+        throw new Error("This booking time has already ended. It will be marked EXPIRED and removed from Pending Verification.");
       }
       if (payment.status !== "pending_verification") {
         throw new Error(`Unexpected payment status: ${payment.status || "missing"}`);
