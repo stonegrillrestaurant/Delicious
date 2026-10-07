@@ -1324,20 +1324,23 @@
         const playerCount = Math.max(1, Number(p.playersCovered || p.paidPlayers || (Array.isArray(p.playerNames) ? p.playerNames.length : 1)));
         const service = p.bookingType === "private_rental" ? "Rent Court" : "Open Play";
         const expected = Number(p.expectedAmount ?? p.amountPaid ?? 0);
-        const received = Number(p.actualReceivedAmount ?? expected);
+        const paymentExempt = p.paymentExempt === true || p.paymentMethod === "admin_direct_no_payment";
+        const received = paymentExempt ? 0 : Number(p.actualReceivedAmount ?? expected);
         const difference = Number((expected - received).toFixed(2));
         const checkedIn = p.checkedIn === true;
-        const decision = String(p.paymentDecision || "verify").toUpperCase();
+        const decision = paymentExempt ? "ADMIN DIRECT" : String(p.paymentDecision || "verify").toUpperCase();
 
         const playerSubtitle = p.bookingType === "private_rental"
           ? `${payer} · Private renter`
           : `${payer} · ${playerCount} player${playerCount === 1 ? "" : "s"}`;
 
-        const paymentSubtitle = difference === 0
-          ? `${decision} · exact payment`
-          : difference > 0
-            ? `${decision} · ₱${difference.toLocaleString("en-PH")} short`
-            : `${decision} · ₱${Math.abs(difference).toLocaleString("en-PH")} over`;
+        const paymentSubtitle = paymentExempt
+          ? "ADMIN DIRECT · payment/verification skipped"
+          : difference === 0
+            ? `${decision} · exact payment`
+            : difference > 0
+              ? `${decision} · ₱${difference.toLocaleString("en-PH")} short`
+              : `${decision} · ₱${Math.abs(difference).toLocaleString("en-PH")} over`;
 
         return `
           <tr class="${checkedIn ? "bg-cyan-950/10" : "bg-emerald-950/5"}">
@@ -1354,7 +1357,7 @@
               <div class="mt-1 text-[10px] text-slate-500">${escapeHtml(formatTime(p.startTime))}–${escapeHtml(formatTime(p.endTime))}</div>
             </td>
             <td class="px-3 py-3 align-top whitespace-nowrap">
-              <div class="font-bold text-slate-200">₱${received.toLocaleString("en-PH")} / ₱${expected.toLocaleString("en-PH")}</div>
+              <div class="font-bold text-slate-200">${paymentExempt ? "₱" + expected.toLocaleString("en-PH") + " calculated" : "₱" + received.toLocaleString("en-PH") + " / ₱" + expected.toLocaleString("en-PH")}</div>
               <div class="mt-1 text-[10px] ${difference === 0 ? "text-slate-500" : "text-amber-300"}">${escapeHtml(paymentSubtitle)}</div>
             </td>
             <td class="px-3 py-3 align-top">
