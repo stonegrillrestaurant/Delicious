@@ -776,7 +776,7 @@
             SESSION ENDS IN ${Math.max(1, timing.minutesLeft)} MIN
           </div>
           <div class="mt-2 grid ${canExtend ? "grid-cols-2" : "grid-cols-1"} gap-2">
-            <button onclick="endSession(${court.id})"
+            <button onclick="confirmEndActiveSession(${court.id})"
               class="rounded-lg bg-red-700 px-3 py-2 text-[10px] font-black text-white hover:bg-red-600">
               END NOW
             </button>
@@ -1921,6 +1921,30 @@
       const suggestedStartHour = now.getHours();
       const suggestedStart = normalizeHourStart(court.timeStart, suggestedStartHour);
       const suggestedEnd = normalizeHourEnd(court.timeEnd, Number(suggestedStart.split(":")[0]));
+
+      let lifecycleAction = "";
+      if (court.isConfigured && court.scheduleDate && court.timeStart && court.timeEnd) {
+        const timing = courtTiming(court);
+        if (timing.active) {
+          lifecycleAction = `
+            <button onclick="confirmEndActiveSession(${courtId})"
+              class="px-3 py-2 bg-amber-950/30 hover:bg-amber-900/50 text-amber-300 rounded text-xs font-bold transition border border-amber-700/50">
+              End Session Now
+            </button>`;
+        } else if (!timing.expired) {
+          lifecycleAction = `
+            <button onclick="cancelScheduledCourt(${courtId})"
+              class="px-3 py-2 bg-red-950/25 hover:bg-red-900/50 text-red-300 rounded text-xs font-bold transition border border-red-800/50">
+              Cancel Schedule
+            </button>`;
+        } else {
+          lifecycleAction = `
+            <button onclick="confirmEndActiveSession(${courtId})"
+              class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-bold transition border border-slate-600">
+              Close Expired Session
+            </button>`;
+        }
+      }
       
       const content = `
         <h3 class="text-lg font-black text-white mb-2">Configure ${court.name}</h3>
@@ -1944,7 +1968,7 @@
 
           <div>
             <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Schedule Date</label>
-            <input type="date" id="config-date" value="${court.scheduleDate || new Date().toISOString().split('T')[0]}" required
+            <input type="date" id="config-date" value="${court.scheduleDate || localDateKey()}" required
               class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-indigo-500 outline-none">
           </div>
 
@@ -1983,7 +2007,7 @@
         </div>
 
         <div class="flex justify-between gap-3">
-          <button onclick="clearCourtConfig(${courtId})" class="px-3 py-2 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 rounded text-xs font-bold transition border border-transparent hover:border-red-500/30">Reset Court</button>
+          <div>${lifecycleAction}</div>
           <div class="flex gap-2">
             <button onclick="hideModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition">Cancel</button>
             <button id="save-court-config-btn" onclick="saveCourtConfig(${courtId})" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm font-bold transition">Save Config</button>
@@ -2395,53 +2419,7 @@
       render();
     };
 
-    window.clearCourtConfig = async function(courtId) {
-       if (!requireLivePanelControl("Court configuration")) return;
-       const court = state.courts.find(c => c.id === courtId);
-
-       if (court?.mode === "rental" && court?.isConfigured) {
-         const oldScheduleId = scheduleRecordId(court);
-         if (oldScheduleId && isAuthorizedAdmin(auth.currentUser)) {
-           const oldPaymentRef = doc(db, "paymentSubmissions", "ADMIN_PANEL_RENT_" + oldScheduleId);
-           const oldBookingRef = doc(db, "privateRentalBookings", oldScheduleId);
-           const eventRef = doc(collection(db, "eventLogs"));
-           try {
-             await runTransaction(db, async tx => {
-               const [paymentSnap, bookingSnap] = await Promise.all([
-                 tx.get(oldPaymentRef),
-                 tx.get(oldBookingRef)
-               ]);
-               if (paymentSnap.exists()) tx.update(oldPaymentRef, {
-                 status: "cancelled",
-                 operationalOutcome: "admin_manual_reset",
-                 updatedAt: serverTimestamp()
-               });
-               if (bookingSnap.exists()) tx.update(oldBookingRef, {
-                 status: "cancelled",
-                 operationalOutcome: "admin_manual_reset",
-                 updatedAt: serverTimestamp()
-               });
-               tx.set(eventRef, {
-                 eventType: "ADMIN_MANUAL_RENTAL_RESET",
-                 bookingId: oldScheduleId,
-                 renterName: court.renterName || "",
-                 courtId: Number(court.id),
-                 date: court.scheduleDate || "",
-                 startTime: court.timeStart || "",
-                 endTime: court.timeEnd || "",
-                 actorUid: auth.currentUser.uid,
-                 actorEmail: auth.currentUser.email || "",
-                 actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
-                 timestamp: serverTimestamp()
-               });
-             });
-           } catch (err) {
-             console.error("Manual rental waiting-list cleanup failed:", err);
-           }
-         }
-       }
-
-       await removePublishedSchedule(court);
+    async function clearCourtStateOnly(court) {
        court.mode = 'open_play';
        court.renterName = '';
        court.timeStart = '';
@@ -2452,11 +2430,122 @@
        court.maxPlayers = 12;
        court.isConfigured = false;
        court.currentMatch = null;
-
+       state.queues[String(court.id)] = [];
        await saveState();
-       window.hideModal();
-       window.showToast(`${court.name} configuration reset.`);
+       lastManualScheduleSyncSignature = configuredCourtScheduleSignature();
     }
+
+    window.cancelScheduledCourt = async function(courtId) {
+       if (!requireLivePanelControl("Cancelling a scheduled court")) return;
+       const court = state.courts.find(c => Number(c.id) === Number(courtId));
+       if (!court?.isConfigured) return;
+
+       const timing = courtTiming(court);
+       if (timing.active) {
+         window.showToast("This session is already active. Use End Session Now instead.", "warn");
+         return;
+       }
+       if (timing.expired) {
+         window.showToast("This session time has already ended. Close the expired session instead.", "warn");
+         return;
+       }
+
+       const ok = window.confirm(
+         "Cancel this future schedule?\n\n" +
+         court.name + " · " + court.scheduleDate + " · " +
+         formatTime(court.timeStart) + "–" + formatTime(court.timeEnd) +
+         "\n\nThis will release the time in the Booking Calendar and record the Admin cancellation."
+       );
+       if (!ok) return;
+
+       const oldScheduleId = scheduleRecordId(court);
+       const eventRef = doc(collection(db, "eventLogs"));
+
+       try {
+         if (court.mode === "rental" && oldScheduleId && isAuthorizedAdmin(auth.currentUser)) {
+           const oldPaymentRef = doc(db, "paymentSubmissions", "ADMIN_PANEL_RENT_" + oldScheduleId);
+           const oldBookingRef = doc(db, "privateRentalBookings", oldScheduleId);
+
+           await runTransaction(db, async tx => {
+             const [paymentSnap, bookingSnap] = await Promise.all([
+               tx.get(oldPaymentRef),
+               tx.get(oldBookingRef)
+             ]);
+
+             if (paymentSnap.exists()) tx.update(oldPaymentRef, {
+               status: "cancelled",
+               operationalOutcome: "admin_schedule_cancelled",
+               cancelledAt: serverTimestamp(),
+               cancelledByUid: auth.currentUser.uid,
+               cancelledByEmail: auth.currentUser.email || "",
+               updatedAt: serverTimestamp()
+             });
+
+             if (bookingSnap.exists()) tx.update(oldBookingRef, {
+               status: "cancelled",
+               operationalOutcome: "admin_schedule_cancelled",
+               cancelledAt: serverTimestamp(),
+               updatedAt: serverTimestamp()
+             });
+
+             tx.set(eventRef, {
+               eventType: "ADMIN_FUTURE_SCHEDULE_CANCELLED",
+               bookingId: oldScheduleId,
+               renterName: court.renterName || "",
+               mode: court.mode,
+               courtId: Number(court.id),
+               date: court.scheduleDate,
+               startTime: court.timeStart,
+               endTime: court.timeEnd,
+               actorUid: auth.currentUser.uid,
+               actorEmail: auth.currentUser.email || "",
+               actorName: auth.currentUser.displayName || auth.currentUser.email || "Admin",
+               timestamp: serverTimestamp()
+             });
+           });
+         } else if (isAuthorizedOperator(auth.currentUser)) {
+           await setDoc(eventRef, {
+             eventType: "ADMIN_FUTURE_SCHEDULE_CANCELLED",
+             bookingId: oldScheduleId || "",
+             mode: court.mode,
+             courtId: Number(court.id),
+             date: court.scheduleDate,
+             startTime: court.timeStart,
+             endTime: court.timeEnd,
+             actorUid: auth.currentUser.uid,
+             actorEmail: auth.currentUser.email || "",
+             actorName: auth.currentUser.displayName || auth.currentUser.email || "Operator",
+             timestamp: serverTimestamp()
+           });
+         }
+
+         await removePublishedSchedule(court);
+         await clearCourtStateOnly(court);
+         window.hideModal();
+         window.showToast(court.name + " future schedule cancelled and released.", "warn");
+       } catch (err) {
+         console.error("Schedule cancellation failed:", err);
+         window.showToast(err?.message || "Could not cancel this schedule.", "error");
+       }
+    };
+
+    window.confirmEndActiveSession = async function(courtId) {
+       const court = state.courts.find(c => Number(c.id) === Number(courtId));
+       if (!court?.isConfigured) return;
+
+       const timing = courtTiming(court);
+       const label = timing.expired ? "Close this expired session?" : "End this active session now?";
+       const ok = window.confirm(
+         label + "\n\n" +
+         court.name + " · " + (court.scheduleDate || "") + " · " +
+         formatTime(court.timeStart) + "–" + formatTime(court.timeEnd) +
+         "\n\nThis action will be logged."
+       );
+       if (!ok) return;
+
+       window.hideModal();
+       await window.endSession(courtId, { manual: true });
+    };
 
     window.endSession = async function(courtId, options = {}) {
         if (!requireLivePanelControl("Ending a session")) return;
@@ -2483,21 +2572,23 @@
             if (!options.silent) window.showToast("Open Play session ended & logged.");
         }
 
-        court.mode = 'open_play';
-        court.renterName = '';
-        court.timeStart = '';
-        court.timeEnd = '';
-        court.rentalRevenue = 0;
-        court.scheduleDate = '';
-        court.openPlayPrice = 120;
-        court.maxPlayers = 12;
-        court.isConfigured = false;
-        if(court.currentMatch) court.currentMatch = null;
-        
-        state.queues[court.id.toString()] = [];
-        
-        await saveState();
-        lastManualScheduleSyncSignature = configuredCourtScheduleSignature();
+        if (options.manual && isAuthorizedOperator(auth.currentUser)) {
+          await addDoc(collection(db, "eventLogs"), {
+            eventType: "ADMIN_SESSION_ENDED_EARLY",
+            courtId: Number(court.id),
+            mode: court.mode,
+            date: court.scheduleDate || "",
+            startTime: court.timeStart || "",
+            endTime: court.timeEnd || "",
+            renterName: court.renterName || "",
+            actorUid: auth.currentUser.uid,
+            actorEmail: auth.currentUser.email || "",
+            actorName: auth.currentUser.displayName || auth.currentUser.email || "Operator",
+            timestamp: serverTimestamp()
+          });
+        }
+
+        await clearCourtStateOnly(court);
         if (options.auto) {
           window.showToast(`${court.name} ended automatically at its scheduled time.`, "warn");
         }
@@ -3070,7 +3161,7 @@
                   </div>
                 ` : `
                   <div class="grid grid-cols-2 gap-2 mt-2">
-                    <button onclick="endSession(${court.id})" class="w-full bg-amber-600/80 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">End & Log</button>
+                    <button onclick="confirmEndActiveSession(${court.id})" class="w-full bg-amber-600/80 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-[10px] transition shadow-md">End Session</button>
                     <button onclick="openCourtConfig(${court.id})" class="w-full bg-slate-900/50 hover:bg-slate-900 border border-amber-500/30 text-amber-400 font-bold py-2 rounded-lg text-[10px] transition">Adjust Time</button>
                   </div>
                 `}
