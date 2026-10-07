@@ -1881,9 +1881,45 @@
 
     // --- COURT CONFIGURATION ---
 
+    function hourValue(hour) {
+      const normalized = ((Number(hour) % 24) + 24) % 24;
+      return String(normalized).padStart(2, "0") + ":00";
+    }
+
+    function normalizeHourStart(value, fallbackHour) {
+      if (/^\d{2}:00$/.test(String(value || ""))) return value;
+      if (/^\d{2}:\d{2}$/.test(String(value || ""))) {
+        return hourValue(Number(String(value).split(":")[0]));
+      }
+      return hourValue(fallbackHour);
+    }
+
+    function normalizeHourEnd(value, startHour) {
+      if (/^\d{2}:00$/.test(String(value || ""))) return value;
+      if (/^\d{2}:\d{2}$/.test(String(value || ""))) {
+        const [h, m] = String(value).split(":").map(Number);
+        return hourValue(h + (m > 0 ? 1 : 0));
+      }
+      return hourValue(startHour + 1);
+    }
+
+    function hourSelectOptions(selectedValue, includeMidnight = true) {
+      const values = [];
+      for (let hour = 0; hour < 24; hour++) values.push(hourValue(hour));
+      return values.map(value => {
+        const selected = value === selectedValue ? " selected" : "";
+        return '<option value="' + value + '"' + selected + '>' + formatTime(value) + '</option>';
+      }).join("");
+    }
+
     window.openCourtConfig = function(courtId) {
       const court = state.courts.find(c => c.id === courtId);
       const isRental = court.mode === 'rental';
+
+      const now = new Date();
+      const suggestedStartHour = now.getHours();
+      const suggestedStart = normalizeHourStart(court.timeStart, suggestedStartHour);
+      const suggestedEnd = normalizeHourEnd(court.timeEnd, Number(suggestedStart.split(":")[0]));
       
       const content = `
         <h3 class="text-lg font-black text-white mb-2">Configure ${court.name}</h3>
@@ -1928,13 +1964,18 @@
              <div class="grid grid-cols-2 gap-3">
                <div>
                  <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Start Time</label>
-                 <input type="time" id="config-start" value="${court.timeStart || ''}" required class="w-full px-3 py-2 bg-slate-950 border border-slate-600 rounded text-sm text-white outline-none focus:border-indigo-500">
+                 <select id="config-start" required class="w-full px-3 py-2 bg-slate-950 border border-slate-600 rounded text-sm text-white outline-none focus:border-indigo-500">
+                   ${hourSelectOptions(suggestedStart)}
+                 </select>
                </div>
                <div>
                  <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">End Time</label>
-                 <input type="time" id="config-end" value="${court.timeEnd || ''}" required class="w-full px-3 py-2 bg-slate-950 border border-slate-600 rounded text-sm text-white outline-none focus:border-indigo-500">
+                 <select id="config-end" required class="w-full px-3 py-2 bg-slate-950 border border-slate-600 rounded text-sm text-white outline-none focus:border-indigo-500">
+                   ${hourSelectOptions(suggestedEnd)}
+                 </select>
                </div>
              </div>
+             <p class="mt-2 text-center text-[9px] font-semibold text-slate-500">Whole-hour scheduling only · minutes are fixed at :00</p>
              <p id="time-diff-preview" class="text-center text-[10px] text-indigo-400 mt-2 font-bold hidden"></p>
              <div id="config-conflict-status" class="mt-2 hidden rounded-lg border px-3 py-2 text-[10px] font-bold"></div>
           </div>
@@ -1951,6 +1992,16 @@
       window.showModal(content);
 
       document.getElementById('config-start').addEventListener('change', () => {
+        const startSelect = document.getElementById('config-start');
+        const endSelect = document.getElementById('config-end');
+        const startHour = Number(startSelect.value.split(":")[0]);
+        const startMin = minutesFromClock(startSelect.value);
+        let endMin = endSelect.value === "00:00" ? 24 * 60 : minutesFromClock(endSelect.value);
+
+        if (endMin <= startMin) {
+          endSelect.value = hourValue(startHour + 1);
+        }
+
         updateTimePreview();
         checkCourtConfigConflict();
       });
@@ -2089,6 +2140,10 @@
 
       if (!scheduleDate || !tStart || !tEnd) {
           window.showToast("Schedule date, start time, and end time are required.", "warn");
+          return;
+      }
+      if (!/^\d{2}:00$/.test(tStart) || !/^\d{2}:00$/.test(tEnd)) {
+          window.showToast("Court schedules must use whole hours only (:00).", "warn");
           return;
       }
       if (mode === 'rental' && !renter) {
