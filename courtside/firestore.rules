@@ -84,6 +84,22 @@ service cloud.firestore {
 
       allow create: if isAdmin()
         || (
+          isStaff()
+          && request.resource.data.source == "admin_schedule"
+          && request.resource.data.status == "confirmed"
+          && request.resource.data.courtId is int
+          && request.resource.data.date is string
+          && request.resource.data.startTime is string
+          && request.resource.data.endTime is string
+          && (
+            request.resource.data.type == "open_play"
+            || (
+              request.resource.data.type == "private"
+              && request.resource.data.bookingType == "private_rental"
+            )
+          )
+        )
+        || (
           signedIn()
           && request.resource.data.type == "private"
           && request.resource.data.bookingType == "private_rental"
@@ -95,6 +111,23 @@ service cloud.firestore {
         );
 
       allow update: if isAdmin()
+        || (
+          isStaff()
+          && resource.data.source == "admin_schedule"
+          && request.resource.data.source == "admin_schedule"
+          && request.resource.data.status == "confirmed"
+          && request.resource.data.courtId == resource.data.courtId
+          && request.resource.data.date is string
+          && request.resource.data.startTime is string
+          && request.resource.data.endTime is string
+          && (
+            request.resource.data.type == "open_play"
+            || (
+              request.resource.data.type == "private"
+              && request.resource.data.bookingType == "private_rental"
+            )
+          )
+        )
         || (
           signedIn()
           && resource.data.type == "private"
@@ -110,6 +143,10 @@ service cloud.firestore {
 
       allow delete: if isAdmin()
         || (
+          isStaff()
+          && resource.data.source == "admin_schedule"
+        )
+        || (
           signedIn()
           && resource.data.type == "private"
           && resource.data.status == "pending_payment"
@@ -124,15 +161,49 @@ service cloud.firestore {
     // pages; customers never write this counter directly.
     match /openPlaySessions/{sessionId} {
       allow read: if true;
-      allow create, delete: if isAdmin();
+
+      // Admin may manage all sessions. Staff may create/delete only sessions
+      // published from the authorized Live Panel court configuration.
+      allow create: if isAdmin()
+        || (
+          isStaff()
+          && request.resource.data.source == "admin_schedule"
+          && request.resource.data.type == "open_play"
+          && request.resource.data.status == "active"
+          && request.resource.data.sessionId == sessionId
+          && request.resource.data.courtId is int
+          && request.resource.data.date is string
+          && request.resource.data.startTime is string
+          && request.resource.data.endTime is string
+          && request.resource.data.maxPlayers >= 1
+        );
+
+      allow delete: if isAdmin()
+        || (
+          isStaff()
+          && resource.data.source == "admin_schedule"
+        );
+
       allow update: if isAdmin()
         || (
           isStaff()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "joinedPlayers", "updatedAt"
-          ])
-          && request.resource.data.joinedPlayers >= 0
-          && request.resource.data.joinedPlayers <= resource.data.maxPlayers
+          && (
+            (
+              resource.data.source == "admin_schedule"
+              && request.resource.data.source == "admin_schedule"
+              && request.resource.data.type == "open_play"
+              && request.resource.data.sessionId == sessionId
+              && request.resource.data.courtId == resource.data.courtId
+              && request.resource.data.maxPlayers >= 1
+            )
+            || (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                "joinedPlayers", "updatedAt"
+              ])
+              && request.resource.data.joinedPlayers >= 0
+              && request.resource.data.joinedPlayers <= resource.data.maxPlayers
+            )
+          )
         );
     }
 
