@@ -480,6 +480,8 @@
       } else {
         publicData.bookingType = "private_rental";
         publicData.hourlyRate = (Number(court.id) === 5 || Number(court.id) === 6) ? 350 : 250;
+        // If this exact slot used to be Open Play, remove the stale session.
+        await deleteDoc(doc(db, "openPlaySessions", scheduleId)).catch(() => {});
       }
 
       await setDoc(doc(db, "publicSchedule", scheduleId), publicData);
@@ -1542,9 +1544,17 @@
       }
 
       await saveState();
-      await publishCourtSchedule(court, previousScheduleId);
-      window.hideModal();
-      window.showToast(`${court.name} is now active and published to the booking schedule.`);
+      try {
+        await publishCourtSchedule(court, previousScheduleId);
+        window.hideModal();
+        window.showToast(`${court.name} is now active and synced to the booking calendar.`);
+      } catch (err) {
+        console.error("Court schedule publish failed:", err);
+        window.showToast(
+          "Court opened in Live Panel, but booking-calendar sync was blocked. Publish the latest Firestore rules and try Save again.",
+          "error"
+        );
+      }
     };
 
     window.clearCourtConfig = async function(courtId) {
