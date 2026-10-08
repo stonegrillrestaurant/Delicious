@@ -21,6 +21,11 @@ export const ADMIN_EMAILS = new Set([
   "ninoxx@gmail.com"
 ]);
 
+// Liezl Lopez — confirmed admin Firebase UID.
+export const ADMIN_UIDS = new Set([
+  "0vm1YjSUohR15LGiduxUdSx2eD92"
+]);
+
 // Confirmed Staff 1 account. Add Staff 2 here when its Firebase UID is confirmed.
 export const STAFF_UIDS = new Set([
   "r4UwTxOgiKcEkHimmlAkVVlUJMt1"
@@ -37,7 +42,10 @@ export function isSystemOwner(user) {
 
 export function isAuthorizedAdmin(user) {
   if (!user || !user.emailVerified) return false;
-  return isSystemOwner(user) || ADMIN_EMAILS.has(normalizedEmail(user));
+
+  return isSystemOwner(user)
+    || ADMIN_EMAILS.has(normalizedEmail(user))
+    || ADMIN_UIDS.has(String(user.uid || ""));
 }
 
 export function isAuthorizedStaff(user) {
