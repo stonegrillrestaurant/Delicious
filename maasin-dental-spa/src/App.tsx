@@ -245,7 +245,7 @@ export default function App() {
           </header>
 
           <section className="relative isolate mt-6 grid min-h-[500px] overflow-hidden rounded-[2rem] bg-teal-950 shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
-            <img src="/maasin-dental-spa/clinic/clinic-sign-front.jpg" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+            <img src="/maasin-dental-spa/clinic-hero.jpg" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
             <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950/90 via-teal-950/75 to-teal-950/45" />
             <div className="flex flex-col justify-center p-6 sm:p-10 lg:p-12">
               <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-teal-100">Thoughtful dental care · Maasin City</p>
