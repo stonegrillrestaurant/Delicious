@@ -7,7 +7,7 @@ import {
   GoogleAuthProvider, onAuthStateChanged,
   signInWithPopup, signOut, User as FirebaseUser,
 } from 'firebase/auth';
-import { CalendarDays, Check, LogOut, Phone, UserRound } from 'lucide-react';
+import { CalendarDays, Check, LogOut, MapPin, Phone, UserRound } from 'lucide-react';
 import { auth, db, firebaseConfigured } from './firebase';
 
 type Role = 'patient' | 'clinicDesk' | 'adminDoctor';
@@ -235,29 +235,66 @@ export default function App() {
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-teal-50 via-white to-slate-50 px-4 py-8 sm:py-14">
-        <div className="mx-auto max-w-4xl">
-          <Brand />
-          <section className="mt-10 grid gap-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10 md:grid-cols-2">
-            <div className="self-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Maasin City · Southern Leyte</p>
-              <h1 className="mt-3 text-3xl font-bold leading-tight text-slate-900 sm:text-4xl">Dental appointments, made simple.</h1>
-              <p className="mt-4 text-sm leading-6 text-slate-600">Request a visit, choose a service, and the clinic desk will confirm your schedule.</p>
-              <button onClick={signIn} className="mt-6 inline-flex items-center rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white hover:bg-teal-800">
+      <main className="min-h-screen bg-[#f3f7f5] px-4 py-5 sm:py-8">
+        <div className="mx-auto max-w-6xl">
+          <header className="flex flex-wrap items-center justify-between gap-3">
+            <Brand />
+            <a href="tel:0535708220" className="inline-flex items-center rounded-full border border-teal-200 bg-white px-4 py-2.5 text-sm font-bold text-teal-900 shadow-sm hover:bg-teal-50">
+              <Phone className="mr-2 h-4 w-4" />053 570 8220
+            </a>
+          </header>
+
+          <section className="mt-6 grid overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_70px_-35px_rgba(15,72,65,0.35)] md:min-h-[440px] md:grid-cols-[1fr_0.92fr]">
+            <div className="flex flex-col justify-center p-6 sm:p-10 lg:p-14">
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-teal-700">Thoughtful dental care · Maasin City</p>
+              <h1 className="mt-4 max-w-xl text-4xl font-extrabold leading-[1.08] tracking-tight text-slate-950 sm:text-5xl">A healthier smile starts with a simple visit.</h1>
+              <p className="mt-5 max-w-lg text-base leading-7 text-slate-600">Request an appointment online. Choose the care you need, send your preferred schedule, and our clinic desk will confirm availability with you.</p>
+
+              <div className="mt-6 rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-800">Your dentist</p>
+                <p className="mt-1 text-lg font-extrabold text-slate-900">Dr. Alfred G. Roa III, DMD</p>
+                <p className="mt-1 text-sm text-slate-600">Maasin Dental Spa · Southern Leyte</p>
+              </div>
+
+              <button onClick={signIn} className="mt-6 inline-flex w-fit items-center rounded-xl bg-teal-800 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-teal-900/15 transition hover:-translate-y-0.5 hover:bg-teal-900">
                 <GoogleMark /> Continue with Google
               </button>
-              <p className="mt-3 text-xs text-slate-500">Sign in to request an appointment and view your bookings.</p>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Sign in to request an appointment and view your bookings. Your first sign-in creates a patient account.</p>
             </div>
-            <div className="rounded-2xl bg-slate-50 p-5">
-              <h2 className="font-bold text-slate-900">Common appointments</h2>
-              <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                {SERVICES.slice(0, 4).map((service) => <li key={service} className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-teal-700" />{service}</li>)}
-              </ul>
-              <p className="mt-5 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500">The clinic will confirm availability and any applicable fee before your visit.</p>
-              <a href="tel:0535708220" className="mt-3 inline-flex items-center text-sm font-semibold text-teal-800"><Phone className="mr-2 h-4 w-4" />053 570 8220</a>
+
+            <div className="relative min-h-[280px] overflow-hidden bg-teal-950 md:min-h-full">
+              <img src="/maasin-dental-spa/clinic-hero.png" alt="Illustrative dental-clinic setting" className="absolute inset-0 h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-teal-950/5" />
+              <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/25 bg-white/90 p-4 shadow-xl backdrop-blur sm:bottom-7 sm:left-7 sm:right-7">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-800">Maasin Dental Spa</p>
+                <p className="mt-1 text-base font-bold text-slate-900">Dental appointments, made simple.</p>
+                <p className="mt-1 text-xs text-slate-600">Illustrative image · actual clinic may differ</p>
+              </div>
             </div>
           </section>
-          {error && <Alert kind="error">{error}</Alert>}
+
+          <section className="mt-5 grid gap-4 md:grid-cols-3">
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-800"><MapPin className="h-5 w-5" /></div>
+              <h2 className="mt-4 font-bold text-slate-900">Visit our clinic</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Ruperto K. Kangleon St, Maasin City, 6600 Southern Leyte</p>
+              <a href="https://maps.google.com/?q=Maasin+Dental+Spa+Ruperto+K+Kangleon+Street+Maasin+City" target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-bold text-teal-800 hover:text-teal-950">Open map <span className="ml-1" aria-hidden="true">↗</span></a>
+            </article>
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-800"><Check className="h-5 w-5" /></div>
+              <h2 className="mt-4 font-bold text-slate-900">Common appointments</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Consultation, cleaning, fillings, and tooth extractions. Choose “Other” to describe a different concern.</p>
+            </article>
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-800"><Phone className="h-5 w-5" /></div>
+              <h2 className="mt-4 font-bold text-slate-900">Call the clinic</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Have a question or need help with booking? Contact the clinic desk.</p>
+              <a href="tel:0535708220" className="mt-3 inline-flex text-sm font-bold text-teal-800 hover:text-teal-950">053 570 8220</a>
+            </article>
+          </section>
+
+          <p className="mx-auto mt-5 max-w-3xl pb-4 text-center text-xs leading-5 text-slate-500">Appointment requests are not confirmed until the clinic contacts you. The clinic will confirm the schedule and any applicable fee before your visit.</p>
+          {error && <div className="mx-auto max-w-3xl"><Alert kind="error">{error}</Alert></div>}
         </div>
       </main>
     );
@@ -284,6 +321,17 @@ export default function App() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-7">
+        {!isStaff && (
+          <section className="mb-6 grid overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm sm:grid-cols-[220px_1fr]">
+            <img src="/maasin-dental-spa/clinic-hero.png" alt="Illustrative dental-clinic setting" className="h-40 w-full object-cover sm:h-full sm:min-h-44" />
+            <div className="p-5 sm:p-6">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-teal-800">Your dentist · Maasin Dental Spa</p>
+              <h2 className="mt-1 text-xl font-extrabold text-slate-950">Dr. Alfred G. Roa III, DMD</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Ruperto K. Kangleon St, Maasin City, Southern Leyte. Request your preferred appointment and the clinic desk will contact you to confirm.</p>
+              <a href="tel:0535708220" className="mt-3 inline-flex items-center text-sm font-bold text-teal-800"><Phone className="mr-2 h-4 w-4" />053 570 8220</a>
+            </div>
+          </section>
+        )}
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-teal-700">Maasin Dental Spa</p>
