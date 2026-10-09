@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function roleOf(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function clinicDesk() {
+      return signedIn() && roleOf(request.auth.uid) == 'clinicDesk';
+    }
+
+    function adminDoctor() {
+      return signedIn() && roleOf(request.auth.uid) == 'adminDoctor';
+    }
+
+    function clinicStaff() {
+      return clinicDesk() || adminDoctor();
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || clinicStaff());
+      allow list: if adminDoctor();
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == 'patient';
+
+      allow update, delete: if adminDoctor();
+    }
+
+    match /appointments/{appointmentId} {
+      allow create: if signedIn()
+        && request.resource.data.patientUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly([
+          'patientUid', 'patientName', 'patientEmail', 'patientPhone',
+          'service', 'date', 'time', 'notes', 'status', 'requestedAt'
+        ]);
+
+      allow get, list: if signedIn()
+        && (resource.data.patientUid == request.auth.uid || clinicStaff());
+
+      allow update: if signedIn() && (
+        (clinicStaff()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'updatedAt']))
+        ||
+        (resource.data.patientUid == request.auth.uid
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'updatedAt']))
+      );
+
+      allow delete: if adminDoctor();
+    }
+  }
+}

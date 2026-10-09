@@ -1,522 +1,435 @@
-import React, { useState } from 'react';
-import { 
-  UserRole, 
-  Appointment, 
-  ToothRecord, 
-  TreatmentPlan, 
-  DentalXRay, 
-  ClinicalSOAPNote, 
-  Prescription, 
-  Invoice, 
-  WaitlistEntry, 
-  AuditLogEntry, 
-  MedicalIntakeFormData 
-} from './types/dental';
-import { 
-  DEMO_USERS, 
-  CLINIC_LOCATIONS, 
-  DENTISTS, 
-  DENTAL_SERVICES, 
-  INITIAL_APPOINTMENTS, 
-  INITIAL_WAITLIST, 
-  createDefaultOdontogram, 
-  INITIAL_TREATMENT_PLAN, 
-  INITIAL_XRAYS, 
-  INITIAL_SOAP_NOTES, 
-  INITIAL_PRESCRIPTIONS, 
-  INITIAL_INVOICES, 
-  INITIAL_AUDIT_LOGS 
-} from './data/mockData';
+import React, { FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  addDoc, collection, doc, getDoc, onSnapshot, orderBy, query, where,
+  serverTimestamp, setDoc, updateDoc,
+} from 'firebase/firestore';
+import {
+  GoogleAuthProvider, getRedirectResult, onAuthStateChanged,
+  signInWithRedirect, signOut, User as FirebaseUser,
+} from 'firebase/auth';
+import { CalendarDays, Check, LogOut, Phone, UserRound } from 'lucide-react';
+import { auth, db, firebaseConfigured } from './firebase';
 
-// Common Components
-import { Navbar } from './components/common/Navbar';
-import { RoleBanner } from './components/common/RoleBanner';
-import { ClinicShowcaseBanner } from './components/common/ClinicShowcaseBanner';
+type Role = 'patient' | 'clinicDesk' | 'adminDoctor';
+type UserProfile = { uid: string; displayName: string; email: string; photoURL: string; role: Role };
+type Appointment = {
+  id: string; patientUid: string; patientName: string; patientEmail: string;
+  patientPhone: string; service: string; date: string; time: string; notes: string;
+  status: 'pending' | 'confirmed' | 'checkedIn' | 'completed' | 'cancelled';
+};
+type StaffProfile = UserProfile;
 
-// Patient Components
-import { PatientBookingWizard } from './components/patient/PatientBookingWizard';
-import { PatientPortal } from './components/patient/PatientPortal';
-import { AiTriageModal } from './components/patient/AiTriageModal';
-import { VoiceBookingModal } from './components/patient/VoiceBookingModal';
-import { DigitalIntakeForm } from './components/patient/DigitalIntakeForm';
-import { TelehealthRoom } from './components/patient/TelehealthRoom';
-
-// Clinic Components
-import { OdontogramChart } from './components/clinic/OdontogramChart';
-import { TreatmentPlanBuilder } from './components/clinic/TreatmentPlanBuilder';
-import { ClinicCalendar } from './components/clinic/ClinicCalendar';
-import { WaitlistManager } from './components/clinic/WaitlistManager';
-import { ClinicalNotesEditor } from './components/clinic/ClinicalNotesEditor';
-import { XRayViewer } from './components/clinic/XRayViewer';
-import { InsuranceEligibilityModal } from './components/clinic/InsuranceEligibilityModal';
-import { RecallAndNoShowDashboard } from './components/clinic/RecallAndNoShowDashboard';
-
-// Admin Components
-import { PracticeAnalytics } from './components/admin/PracticeAnalytics';
-import { AuditLogViewer } from './components/admin/AuditLogViewer';
-import { SuperAdminConsole } from './components/admin/SuperAdminConsole';
-
-// Docs Component
-import { SystemDocsModal } from './components/docs/SystemDocsModal';
-
-import { 
-  Sparkles, 
-  CheckCircle2, 
-  Clock, 
-  Calendar, 
-  MapPin, 
-  ShieldCheck, 
-  ArrowRight,
-  HeartPulse,
-  Activity
-} from 'lucide-react';
+const SERVICES = [
+  'Dental consultation / check-up',
+  'Cleaning / scaling',
+  'Tooth filling',
+  'Tooth extraction',
+  'Other (please describe in notes)',
+];
+const ROLE_LABEL: Record<Role, string> = {
+  patient: 'Patient',
+  clinicDesk: 'Clinic desk attendant',
+  adminDoctor: 'Admin / Doctor',
+};
+const STATUS_LABEL: Record<Appointment['status'], string> = {
+  pending: 'For confirmation',
+  confirmed: 'Confirmed',
+  checkedIn: 'Checked in',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+const today = new Date().toLocaleDateString('en-CA');
 
 export default function App() {
-  // Active User / Role State
-  const [currentRole, setCurrentRole] = useState<UserRole>('patient');
-  const [activeView, setActiveView] = useState<string>('portal');
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [profiles, setProfiles] = useState<StaffProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [tab, setTab] = useState<'appointments' | 'book' | 'users'>('appointments');
+  const [form, setForm] = useState({ service: SERVICES[0], date: '', time: '', phone: '', notes: '' });
 
-  // Core Data Collections
-  const [appointments, setAppointments] = useState<Appointment[]>(INITIAL_APPOINTMENTS);
-  const [teeth, setTeeth] = useState<ToothRecord[]>(createDefaultOdontogram());
-  const [treatmentPlan, setTreatmentPlan] = useState<TreatmentPlan>(INITIAL_TREATMENT_PLAN);
-  const [xrays, setXrays] = useState<DentalXRay[]>(INITIAL_XRAYS);
-  const [soapNotes, setSoapNotes] = useState<ClinicalSOAPNote[]>(INITIAL_SOAP_NOTES);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(INITIAL_PRESCRIPTIONS);
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
-  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>(INITIAL_WAITLIST);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
-  const [intakeData, setIntakeData] = useState<MedicalIntakeFormData | null>(null);
+  const isDesk = profile?.role === 'clinicDesk';
+  const isAdmin = profile?.role === 'adminDoctor';
+  const isStaff = isDesk || isAdmin;
 
-  // Modal States
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [isTriageOpen, setIsTriageOpen] = useState(false);
-  const [isVoiceBookingOpen, setIsVoiceBookingOpen] = useState(false);
-  const [isTelehealthOpen, setIsTelehealthOpen] = useState(false);
-  const [isIntakeOpen, setIsIntakeOpen] = useState(false);
-  const [isInsuranceModalOpen, setIsInsuranceModalOpen] = useState(false);
-  const [isDocsOpen, setIsDocsOpen] = useState(false);
+  useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+    const authClient = auth;
+    getRedirectResult(authClient).catch((err: Error) => setError(authMessage(err)));
+    return onAuthStateChanged(authClient, (nextUser) => {
+      setUser(nextUser);
+      setProfile(null);
+      setAppointments([]);
+      setProfiles([]);
+      setError('');
+      if (!nextUser) setLoading(false);
+    });
+  }, []);
 
-  // Temporary selection passed to booking wizard
-  const [presetServiceId, setPresetServiceId] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!user || !db) return;
+    const userRef = doc(db, 'users', user.uid);
+    let unsubscribeProfile = () => {};
 
-  // Active user object based on role
-  const currentUser = DEMO_USERS[currentRole] || DEMO_USERS.patient;
+    const prepareProfile = async () => {
+      try {
+        const existing = await getDoc(userRef);
+        if (!existing.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            displayName: user.displayName || 'Patient',
+            email: user.email || '',
+            photoURL: user.photoURL || '',
+            role: 'patient',
+            createdAt: serverTimestamp(),
+          });
+        }
+        unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
+          const data = snapshot.data();
+          if (!data) return;
+          setProfile({
+            uid: user.uid,
+            displayName: data.displayName || user.displayName || 'Patient',
+            email: data.email || user.email || '',
+            photoURL: data.photoURL || user.photoURL || '',
+            role: isRole(data.role) ? data.role : 'patient',
+          });
+          setLoading(false);
+        }, (err) => {
+          setError('Could not load your clinic role. ' + authMessage(err));
+          setLoading(false);
+        });
+      } catch (err) {
+        setError('Could not create your patient profile. Check the Firestore rules. ' + authMessage(err));
+        setLoading(false);
+      }
+    };
 
-  const handleRoleChange = (newRole: UserRole) => {
-    setCurrentRole(newRole);
-    if (newRole === 'patient') {
-      setActiveView('portal');
-    } else if (newRole === 'dentist') {
-      setActiveView('odontogram');
-    } else if (newRole === 'receptionist') {
-      setActiveView('calendar');
-    } else if (newRole === 'admin') {
-      setActiveView('analytics');
-    } else if (newRole === 'superadmin') {
-      setActiveView('superadmin');
+    setLoading(true);
+    void prepareProfile();
+    return () => unsubscribeProfile();
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user || !profile || !db) return;
+    const source = collection(db, 'appointments');
+    const appointmentQuery = isStaff
+      ? query(source, orderBy('requestedAt', 'desc'))
+      : query(source, where('patientUid', '==', user.uid));
+    const unsubscribe = onSnapshot(appointmentQuery, (snapshot) => {
+      const rows = snapshot.docs
+        .map((item) => ({ id: item.id, ...item.data() } as Appointment))
+        .filter((item) => isStaff || item.patientUid === user.uid)
+        .sort((a, b) => (b.date + 'T' + b.time).localeCompare(a.date + 'T' + a.time));
+      setAppointments(rows);
+    }, (err) => setError('Could not load appointments. ' + authMessage(err)));
+
+    let unsubscribeProfiles = () => {};
+    if (isAdmin) {
+      unsubscribeProfiles = onSnapshot(collection(db, 'users'), (snapshot) => {
+        setProfiles(snapshot.docs.map((item) => item.data() as StaffProfile)
+          .sort((a, b) => a.displayName.localeCompare(b.displayName)));
+      }, (err) => setError('Could not load clinic access. ' + authMessage(err)));
+    }
+    return () => {
+      unsubscribe();
+      unsubscribeProfiles();
+    };
+  }, [user?.uid, profile?.role]);
+
+  const visibleAppointments = useMemo(
+    () => appointments.filter((item) => isStaff || item.patientUid === user?.uid),
+    [appointments, isStaff, user?.uid],
+  );
+  const waitingCount = visibleAppointments.filter((item) => item.status === 'pending').length;
+
+  const signIn = async () => {
+    if (!auth) return;
+    setError('');
+    try {
+      await signInWithRedirect(auth, new GoogleAuthProvider());
+    } catch (err) {
+      setError(authMessage(err));
+    }
+  };
+
+  const submitBooking = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user || !db) return;
+    if (!form.date || !form.time || !form.phone.trim()) {
+      setError('Enter your mobile number and preferred date and time.');
+      return;
+    }
+    if (form.date < today) {
+      setError('Choose today or a future date.');
+      return;
     }
 
-    // Append HIPAA Audit Log entry for role session switch
-    logAuditAction('SWITCHED_ROLE_VIEW', `Active persona set to ${newRole}`);
+    setSaving(true);
+    setError('');
+    try {
+      await addDoc(collection(db, 'appointments'), {
+        patientUid: user.uid,
+        patientName: user.displayName || 'Patient',
+        patientEmail: user.email || '',
+        patientPhone: form.phone.trim(),
+        service: form.service,
+        date: form.date,
+        time: form.time,
+        notes: form.notes.trim(),
+        status: 'pending',
+        requestedAt: serverTimestamp(),
+      });
+      setForm({ service: SERVICES[0], date: '', time: '', phone: '', notes: '' });
+      setNotice('Request sent. The clinic desk will contact you to confirm it.');
+      setTab('appointments');
+    } catch (err) {
+      setError('Booking could not be saved. ' + authMessage(err));
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const logAuditAction = (action: string, resource: string, patientName?: string) => {
-    const newEntry: AuditLogEntry = {
-      id: `log_${Date.now()}`,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      actorName: currentUser.name,
-      actorRole: currentRole,
-      action,
-      resource,
-      patientName,
-      ipAddress: '192.168.1.104',
-      hipaaComplianceVerified: true,
-    };
-    setAuditLogs((prev) => [newEntry, ...prev]);
+  const updateStatus = async (appointment: Appointment, status: Appointment['status']) => {
+    if (!db) return;
+    try {
+      await updateDoc(doc(db, 'appointments', appointment.id), { status, updatedAt: serverTimestamp() });
+      setNotice('Appointment marked ' + STATUS_LABEL[status].toLowerCase() + '.');
+      setError('');
+    } catch (err) {
+      setError('Could not update appointment. ' + authMessage(err));
+    }
   };
 
-  // Appointment Actions
-  const handleBookingComplete = (newApt: Appointment) => {
-    setAppointments((prev) => [newApt, ...prev]);
-    logAuditAction('CREATED_CHAIR_APPOINTMENT', `${newApt.serviceName} at ${newApt.locationName}`, newApt.patientName);
+  const changeRole = async (person: StaffProfile, role: Role) => {
+    if (!db || !isAdmin || person.uid === user?.uid) return;
+    try {
+      await updateDoc(doc(db, 'users', person.uid), { role, updatedAt: serverTimestamp() });
+      setNotice(person.displayName + ' is now ' + ROLE_LABEL[role] + '.');
+      setError('');
+    } catch (err) {
+      setError('Could not update role. ' + authMessage(err));
+    }
   };
 
-  const handleUpdateAppointmentStatus = (aptId: string, newStatus: Appointment['status']) => {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === aptId ? { ...a, status: newStatus } : a))
+  if (!firebaseConfigured) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-12">
+        <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <Brand />
+          <h1 className="mt-8 text-2xl font-bold text-slate-900">Online booking is being set up</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Please call the clinic while online booking is being configured.</p>
+          <a className="mt-5 inline-flex rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white" href="tel:0535708220">
+            <Phone className="mr-2 h-4 w-4" /> Call 053 570 8220
+          </a>
+        </div>
+      </main>
     );
-    const targetApt = appointments.find((a) => a.id === aptId);
-    logAuditAction('UPDATED_APPOINTMENT_STATUS', `Status changed to ${newStatus}`, targetApt?.patientName);
-  };
+  }
 
-  const handleRescheduleAppointment = (aptId: string, newTime: string, newChair: string) => {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === aptId ? { ...a, time: newTime, operatoryChair: newChair } : a))
+  if (!user) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-teal-50 via-white to-slate-50 px-4 py-8 sm:py-14">
+        <div className="mx-auto max-w-4xl">
+          <Brand />
+          <section className="mt-10 grid gap-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10 md:grid-cols-2">
+            <div className="self-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Maasin City · Southern Leyte</p>
+              <h1 className="mt-3 text-3xl font-bold leading-tight text-slate-900 sm:text-4xl">Dental appointments, made simple.</h1>
+              <p className="mt-4 text-sm leading-6 text-slate-600">Request a visit, choose a service, and the clinic desk will confirm your schedule.</p>
+              <button onClick={signIn} className="mt-6 inline-flex items-center rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white hover:bg-teal-800">
+                <GoogleMark /> Continue with Google
+              </button>
+              <p className="mt-3 text-xs text-slate-500">Sign in to request an appointment and view your bookings.</p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-5">
+              <h2 className="font-bold text-slate-900">Common appointments</h2>
+              <ul className="mt-4 space-y-3 text-sm text-slate-700">
+                {SERVICES.slice(0, 4).map((service) => <li key={service} className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-teal-700" />{service}</li>)}
+              </ul>
+              <p className="mt-5 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500">The clinic will confirm availability and any applicable fee before your visit.</p>
+              <a href="tel:0535708220" className="mt-3 inline-flex items-center text-sm font-semibold text-teal-800"><Phone className="mr-2 h-4 w-4" />053 570 8220</a>
+            </div>
+          </section>
+          {error && <Alert kind="error">{error}</Alert>}
+        </div>
+      </main>
     );
-    const targetApt = appointments.find((a) => a.id === aptId);
-    logAuditAction('RESCHEDULED_CHAIR_TIME', `Moved to ${newTime} (${newChair})`, targetApt?.patientName);
-  };
+  }
 
-  // Odontogram Actions
-  const handleUpdateTooth = (updatedTooth: ToothRecord) => {
-    setTeeth((prev) =>
-      prev.map((t) => (t.toothNumber === updatedTooth.toothNumber ? updatedTooth : t))
-    );
-    logAuditAction(
-      'UPDATED_ODONTOGRAM_CHART',
-      `Tooth #${updatedTooth.toothNumber} marked ${updatedTooth.generalCondition}`,
-      'Emma Watson'
-    );
-  };
-
-  const handleAddTreatmentItem = (
-    toothNumber: number,
-    description: string,
-    cdtCode: string,
-    fee: number
-  ) => {
-    const newItem = {
-      id: `tx_${Date.now()}`,
-      toothNumber,
-      cdtCode,
-      description,
-      phase: 2 as const,
-      fee,
-      insuranceEstimatedCoverage: Math.round(fee * 0.75),
-      patientEstimatedCost: Math.round(fee * 0.25),
-      status: 'planned' as const,
-      priority: 'recommended' as const,
-    };
-
-    const updatedItems = [...treatmentPlan.items, newItem];
-    const totalFee = updatedItems.reduce((acc, i) => acc + i.fee, 0);
-    const insTotal = updatedItems.reduce((acc, i) => acc + i.insuranceEstimatedCoverage, 0);
-
-    setTreatmentPlan({
-      ...treatmentPlan,
-      items: updatedItems,
-      totalFee,
-      insuranceEstimatedTotal: insTotal,
-      patientEstimatedTotal: totalFee - insTotal,
-    });
-
-    logAuditAction('ADDED_TREATMENT_ITEM', `${description} (${cdtCode}) for Tooth #${toothNumber}`, 'Emma Watson');
-  };
-
-  // Waitlist Auto-fill
-  const handleFillWaitlistSlot = (entry: WaitlistEntry) => {
-    const newApt: Appointment = {
-      id: `apt_${Date.now()}`,
-      patientId: `pat_${Date.now()}`,
-      patientName: entry.patientName,
-      patientPhone: entry.patientPhone,
-      patientEmail: `${entry.patientName.toLowerCase().replace(' ', '.')}@example.com`,
-      dentistId: entry.dentistPreferredId || 'dent_1',
-      dentistName: entry.dentistPreferredName || 'Dr. Alfred G. Roa III, DMD',
-      serviceId: 'serv_emergency',
-      serviceName: entry.serviceName,
-      serviceCode: 'D0140',
-      locationId: 'loc_maasin_main',
-      locationName: 'Maasin Dental Spa (Main Clinic)',
-      operatoryChair: 'Spa Operatory 1 (Blue Suite)',
-      date: '2026-10-08',
-      time: '13:00',
-      durationMinutes: 45,
-      status: 'confirmed',
-      type: 'in_person',
-      totalCost: 1200,
-      insuranceStatus: 'verified',
-      noShowRiskScore: 'low',
-      notes: `Auto-filled from standby waitlist. ${entry.notes}`,
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-
-    setAppointments((prev) => [newApt, ...prev]);
-    setWaitlist((prev) => prev.filter((w) => w.id !== entry.id));
-    logAuditAction('AUTO_FILLED_CANCELLATION_SLOT', `Promoted standby patient ${entry.patientName} to chair slot`);
-  };
-
-  // Invoicing & Payment
-  const handlePayInvoice = (invoiceId: string) => {
-    setInvoices((prev) =>
-      prev.map((i) => (i.id === invoiceId ? { ...i, status: 'paid' } : i))
-    );
-    const inv = invoices.find((i) => i.id === invoiceId);
-    logAuditAction('COLLECTED_PATIENT_PAYMENT', `Settled ${inv?.invoiceNumber} (₱${inv?.patientPortion?.toLocaleString()}) via Contactless Payment`);
-  };
+  if (loading || !profile) {
+    return <main className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-600">Loading your clinic account…</main>;
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-teal-500 selection:text-white">
-      {/* Top Navbar */}
-      <Navbar
-        currentUser={currentUser}
-        onSelectRole={handleRoleChange}
-        onOpenTriage={() => setIsTriageOpen(true)}
-        onOpenVoiceBooking={() => setIsVoiceBookingOpen(true)}
-        onOpenDocs={() => setIsDocsOpen(true)}
-        onOpenInsuranceModal={() => setIsInsuranceModalOpen(true)}
-      />
-
-      {/* Role Navigation Banner */}
-      <RoleBanner
-        currentRole={currentRole}
-        activeView={activeView}
-        onChangeView={setActiveView}
-        onOpenBooking={() => setIsBookingOpen(true)}
-        onOpenTriage={() => setIsTriageOpen(true)}
-      />
-
-      {/* Main Workspace Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Real Clinic Showcase & Contact Header */}
-        <ClinicShowcaseBanner
-          onBookClick={() => setIsBookingOpen(true)}
-          onTriageClick={() => setIsTriageOpen(true)}
-        />
-
-        {/* Render View based on activeView */}
-        {activeView === 'portal' && (
-          <PatientPortal
-            appointments={appointments.filter((a) => a.patientName === 'Emma Watson')}
-            treatmentPlan={treatmentPlan}
-            xrays={xrays}
-            invoices={invoices}
-            prescriptions={prescriptions}
-            intakeData={intakeData}
-            onOpenBooking={() => setIsBookingOpen(true)}
-            onOpenTelehealth={() => setIsTelehealthOpen(true)}
-            onOpenIntake={() => setIsIntakeOpen(true)}
-            onPayInvoice={handlePayInvoice}
-          />
-        )}
-
-        {activeView === 'odontogram' && (
-          <div className="space-y-6">
-            <OdontogramChart
-              teeth={teeth}
-              onUpdateTooth={handleUpdateTooth}
-              onAddTreatmentItem={handleAddTreatmentItem}
-            />
+    <main className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+          <Brand compact />
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <div className="text-sm font-semibold text-slate-900">{profile.displayName}</div>
+              <div className="text-xs text-slate-500">{ROLE_LABEL[profile.role]}</div>
+            </div>
+            {profile.photoURL ? <img src={profile.photoURL} alt="" className="h-9 w-9 rounded-full" /> : <UserRound className="h-8 w-8 text-slate-400" />}
+            <button onClick={() => auth && signOut(auth)} aria-label="Sign out" className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><LogOut className="h-4 w-4" /></button>
           </div>
-        )}
+        </div>
+      </header>
 
-        {activeView === 'treatment_plan' && (
-          <div className="space-y-6">
-            <TreatmentPlanBuilder
-              plan={treatmentPlan}
-              onUpdatePlan={(updated) => {
-                setTreatmentPlan(updated);
-                logAuditAction('UPDATED_TREATMENT_PLAN', `Total plan adjusted to ₱${updated.totalFee.toLocaleString()}`);
-              }}
-            />
+      <div className="mx-auto max-w-6xl px-4 py-7">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-teal-700">Maasin Dental Spa</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900">{ROLE_LABEL[profile.role]} portal</h1>
+            <p className="mt-1 text-sm text-slate-600">{isStaff ? 'Manage appointment requests and clinic access.' : 'Request a visit and keep track of your appointments.'}</p>
           </div>
+          {isStaff && <div className="rounded-xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm text-teal-900"><strong>{waitingCount}</strong> waiting for confirmation</div>}
+        </div>
+
+        <nav className="mb-5 flex flex-wrap gap-2">
+          <Tab active={tab === 'appointments'} onClick={() => setTab('appointments')}>Appointments</Tab>
+          {!isStaff && <Tab active={tab === 'book'} onClick={() => setTab('book')}>Request appointment</Tab>}
+          {isAdmin && <Tab active={tab === 'users'} onClick={() => setTab('users')}>Clinic access</Tab>}
+        </nav>
+
+        {notice && <Alert kind="success">{notice}</Alert>}
+        {error && <Alert kind="error">{error}</Alert>}
+
+        {tab === 'book' && !isStaff && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <h2 className="text-lg font-bold text-slate-900">Request an appointment</h2>
+            <p className="mt-1 text-sm text-slate-500">Your request stays pending until the clinic confirms it.</p>
+            <form onSubmit={submitBooking} className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">Service
+                <select value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm">
+                  {SERVICES.map((service) => <option key={service}>{service}</option>)}
+                </select>
+              </label>
+              <label className="text-sm font-medium text-slate-700">Mobile number
+                <input required type="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm" placeholder="09XX XXX XXXX" />
+              </label>
+              <label className="text-sm font-medium text-slate-700">Preferred date
+                <input required type="date" min={today} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm" />
+              </label>
+              <label className="text-sm font-medium text-slate-700">Preferred time
+                <input required type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm" />
+              </label>
+              <label className="text-sm font-medium text-slate-700 sm:col-span-2">Notes (optional)
+                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} maxLength={500} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm" placeholder="Anything the clinic should know?" />
+              </label>
+              <div className="sm:col-span-2">
+                <button disabled={saving} className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:opacity-60">{saving ? 'Sending request…' : 'Send appointment request'}</button>
+              </div>
+            </form>
+          </section>
         )}
 
-        {activeView === 'soap_notes' && (
-          <div className="space-y-6">
-            <ClinicalNotesEditor
-              notes={soapNotes}
-              prescriptions={prescriptions}
-              onAddNote={(newNote) => {
-                setSoapNotes((prev) => [newNote, ...prev]);
-                logAuditAction('CREATED_SOAP_CLINICAL_NOTE', 'SOAP Note signed with PRC dental key', 'Emma Watson');
-              }}
-              onAddPrescription={(newRx) => {
-                setPrescriptions((prev) => [newRx, ...prev]);
-                logAuditAction('DISPATCHED_E_PRESCRIPTION', `${newRx.medication} ${newRx.dosage} sent to Mercury Drug / Rose Pharmacy`, 'Emma Watson');
-              }}
-            />
-          </div>
+        {tab === 'appointments' && (
+          <section className="space-y-3">
+            {visibleAppointments.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+                <CalendarDays className="mx-auto h-8 w-8 text-teal-700" />
+                <h2 className="mt-3 font-bold text-slate-900">No appointments yet</h2>
+                <p className="mt-1 text-sm text-slate-500">{isStaff ? 'New patient requests will appear here.' : 'Request your first appointment when you are ready.'}</p>
+                {!isStaff && <button onClick={() => setTab('book')} className="mt-4 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white">Request an appointment</button>}
+              </div>
+            ) : visibleAppointments.map((appointment) => (
+              <AppointmentCard key={appointment.id} appointment={appointment} clinicStaff={Boolean(isStaff)} patientUid={user.uid} onStatus={updateStatus} />
+            ))}
+          </section>
         )}
 
-        {activeView === 'xrays' && (
-          <div className="space-y-6">
-            <XRayViewer xrays={xrays} />
-          </div>
+        {tab === 'users' && isAdmin && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Clinic access</h2>
+            <p className="mt-1 text-sm text-slate-500">A person must sign in once before their role can be changed. The first admin/doctor role is assigned in Firebase Console.</p>
+            <div className="mt-4 divide-y divide-slate-100">
+              {profiles.map((person) => (
+                <div key={person.uid} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="min-w-0"><div className="truncate text-sm font-semibold text-slate-900">{person.displayName}</div><div className="truncate text-xs text-slate-500">{person.email}</div></div>
+                  <select disabled={person.uid === user.uid} value={person.role} onChange={(e) => changeRole(person, e.target.value as Role)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100" aria-label={'Role for ' + person.displayName}>
+                    <option value="patient">Patient</option>
+                    <option value="clinicDesk">Clinic desk attendant</option>
+                    <option value="adminDoctor">Admin / Doctor</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
-        {activeView === 'calendar' && (
-          <div className="space-y-6">
-            <ClinicCalendar
-              appointments={appointments}
-              dentists={DENTISTS}
-              locations={CLINIC_LOCATIONS}
-              onUpdateStatus={handleUpdateAppointmentStatus}
-              onReschedule={handleRescheduleAppointment}
-              onNewAppointmentClick={() => setIsBookingOpen(true)}
-            />
-          </div>
-        )}
-
-        {activeView === 'waitlist' && (
-          <div className="space-y-6">
-            <WaitlistManager
-              waitlist={waitlist}
-              onFillSlot={handleFillWaitlistSlot}
-              onRemoveEntry={(id) => setWaitlist((prev) => prev.filter((w) => w.id !== id))}
-              onAddEntry={(entry) => setWaitlist((prev) => [entry, ...prev])}
-            />
-          </div>
-        )}
-
-        {activeView === 'recall' && (
-          <div className="space-y-6">
-            <RecallAndNoShowDashboard appointments={appointments} />
-          </div>
-        )}
-
-        {activeView === 'analytics' && (
-          <div className="space-y-6">
-            <PracticeAnalytics locations={CLINIC_LOCATIONS} />
-          </div>
-        )}
-
-        {activeView === 'audit_logs' && (
-          <div className="space-y-6">
-            <AuditLogViewer logs={auditLogs} />
-          </div>
-        )}
-
-        {activeView === 'superadmin' && (
-          <div className="space-y-6">
-            <SuperAdminConsole />
-          </div>
-        )}
-      </main>
-
-      {/* Floating Action Badge for Booking & Triage */}
-      <div className="fixed bottom-6 right-6 z-30 flex items-center gap-2">
-        <button
-          onClick={() => setIsTriageOpen(true)}
-          className="p-3 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold transition-all hover:scale-105 active:scale-95"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span className="hidden sm:inline">AI Triage</span>
-        </button>
-        <button
-          onClick={() => setIsBookingOpen(true)}
-          className="py-3 px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold transition-all hover:scale-105 active:scale-95"
-        >
-          <Calendar className="w-4 h-4 text-teal-400" />
-          <span>Book Appointment</span>
-        </button>
+        <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 py-5 text-xs text-slate-500">
+          <span>Maasin Dental Spa · Ruperto K. Kangleon St, Maasin City, Southern Leyte</span>
+          <a href="tel:0535708220" className="font-semibold text-teal-800">Call 053 570 8220</a>
+        </footer>
       </div>
+    </main>
+  );
+}
 
-      {/* MODALS */}
+function AppointmentCard({ appointment, clinicStaff, patientUid, onStatus }: {
+  appointment: Appointment; clinicStaff: boolean; patientUid: string;
+  onStatus: (appointment: Appointment, status: Appointment['status']) => void;
+}) {
+  const canCancel = appointment.patientUid === patientUid && appointment.status === 'pending';
+  const nextStatus: Appointment['status'] | null =
+    appointment.status === 'pending' ? 'confirmed' :
+    appointment.status === 'confirmed' ? 'checkedIn' :
+    appointment.status === 'checkedIn' ? 'completed' : null;
+  const badge = appointment.status === 'confirmed' || appointment.status === 'completed'
+    ? 'bg-emerald-50 text-emerald-800'
+    : appointment.status === 'cancelled' ? 'bg-rose-50 text-rose-700'
+    : 'bg-amber-50 text-amber-800';
 
-      {/* 1. Patient Booking Wizard Modal */}
-      {isBookingOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="relative w-full max-w-4xl animate-in fade-in zoom-in-95 duration-150 my-6">
-            <button
-              onClick={() => setIsBookingOpen(false)}
-              className="absolute top-4 right-4 z-10 text-slate-400 hover:text-slate-600 p-2"
-            >
-              ✕
-            </button>
-            <PatientBookingWizard
-              services={DENTAL_SERVICES}
-              dentists={DENTISTS}
-              locations={CLINIC_LOCATIONS}
-              initialSelectedServiceId={presetServiceId}
-              onBookingComplete={(newApt) => {
-                handleBookingComplete(newApt);
-              }}
-              onOpenIntakeForm={() => {
-                setIsBookingOpen(false);
-                setIsIntakeOpen(true);
-              }}
-            />
-          </div>
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          {clinicStaff && <p className="text-sm font-bold text-slate-900">{appointment.patientName}</p>}
+          <p className="mt-0.5 font-semibold text-slate-800">{appointment.service}</p>
+          <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><CalendarDays className="h-4 w-4 text-teal-700" />{appointment.date} · {appointment.time}</p>
+          {clinicStaff && <p className="mt-1 flex items-center gap-2 text-sm text-slate-600"><Phone className="h-4 w-4 text-teal-700" />{appointment.patientPhone}</p>}
+          {appointment.notes && <p className="mt-2 text-sm text-slate-500">Note: {appointment.notes}</p>}
+        </div>
+        <span className={'rounded-full px-3 py-1 text-xs font-bold ' + badge}>{STATUS_LABEL[appointment.status]}</span>
+      </div>
+      {(canCancel || (clinicStaff && nextStatus)) && (
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+          {canCancel && <button onClick={() => onStatus(appointment, 'cancelled')} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700">Cancel request</button>}
+          {clinicStaff && nextStatus && <button onClick={() => onStatus(appointment, nextStatus)} className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-semibold text-white">{nextStatus === 'confirmed' ? 'Confirm appointment' : nextStatus === 'checkedIn' ? 'Check in patient' : 'Mark completed'}</button>}
+          {clinicStaff && appointment.status !== 'cancelled' && appointment.status !== 'completed' && <button onClick={() => onStatus(appointment, 'cancelled')} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700">Cancel</button>}
         </div>
       )}
-
-      {/* 2. AI Triage Symptom Modal */}
-      <AiTriageModal
-        isOpen={isTriageOpen}
-        onClose={() => setIsTriageOpen(false)}
-        onSelectBooking={(serviceName) => {
-          const matched = DENTAL_SERVICES.find((s) => s.name.includes(serviceName) || serviceName.includes(s.name));
-          if (matched) setPresetServiceId(matched.id);
-          setIsTriageOpen(false);
-          setIsBookingOpen(true);
-        }}
-      />
-
-      {/* 3. Voice Booking Modal */}
-      <VoiceBookingModal
-        isOpen={isVoiceBookingOpen}
-        onClose={() => setIsVoiceBookingOpen(false)}
-        onApplyBookingIntent={(intent) => {
-          if (intent.serviceKeywords) {
-            const matched = DENTAL_SERVICES.find((s) =>
-              s.name.toLowerCase().includes(intent.serviceKeywords!.toLowerCase())
-            );
-            if (matched) setPresetServiceId(matched.id);
-          }
-          setIsVoiceBookingOpen(false);
-          setIsBookingOpen(true);
-        }}
-      />
-
-      {/* 4. Digital Intake Form Modal */}
-      <DigitalIntakeForm
-        isOpen={isIntakeOpen}
-        onClose={() => setIsIntakeOpen(false)}
-        onSaveIntake={(data) => {
-          setIntakeData(data);
-          logAuditAction('SUBMITTED_DIGITAL_INTAKE', 'E-signed medical questionnaire', data.fullName);
-        }}
-      />
-
-      {/* 5. Telehealth Video Room Modal */}
-      <TelehealthRoom
-        isOpen={isTelehealthOpen}
-        onClose={() => setIsTelehealthOpen(false)}
-        doctorName="Dr. Alfred G. Roa III, DMD"
-        patientName="Emma Watson"
-      />
-
-      {/* 6. Insurance 270 Verification Modal */}
-      <InsuranceEligibilityModal
-        isOpen={isInsuranceModalOpen}
-        onClose={() => setIsInsuranceModalOpen(false)}
-        patientName="Emma Watson"
-      />
-
-      {/* 7. System Docs & Architecture Artifacts Modal */}
-      <SystemDocsModal
-        isOpen={isDocsOpen}
-        onClose={() => setIsDocsOpen(false)}
-      />
-
-      {/* Modern Footer */}
-      <footer className="bg-white border-t border-slate-200/80 py-6 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-bold text-slate-900">Maasin Dental Spa</span>
-            <span>·</span>
-            <span>Dr. Alfred G. Roa III, DMD</span>
-            <span>·</span>
-            <span className="text-slate-600">Ruperto K. Kangleon St, Maasin, 6600 Southern Leyte</span>
-            <span>·</span>
-            <a href="tel:0535708220" className="font-mono font-bold text-teal-800 hover:text-teal-900">
-              Tel: 053 570 -8220
-            </a>
-          </div>
-
-          <div className="flex items-center gap-4 text-slate-600">
-            <button onClick={() => setIsDocsOpen(true)} className="hover:text-teal-600 underline">
-              Architecture &amp; PRD Docs
-            </button>
-            <span>·</span>
-            <span className="flex items-center gap-1 text-emerald-700">
-              <ShieldCheck className="w-3.5 h-3.5" /> Licensed Dental Practice
-            </span>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </article>
   );
+}
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  return <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-teal-700 text-white"><CalendarDays className="h-5 w-5" /></div><div><div className={'font-extrabold tracking-tight text-slate-900 ' + (compact ? 'text-base' : 'text-lg')}>Maasin Dental Spa</div>{!compact && <div className="text-xs text-slate-500">Appointment booking</div>}</div></div>;
+}
+function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button onClick={onClick} className={'rounded-xl border px-4 py-2.5 text-sm font-semibold ' + (active ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100')}>{children}</button>;
+}
+function Alert({ kind, children }: { kind: 'error' | 'success'; children: React.ReactNode }) {
+  return <div role="status" className={'mb-4 rounded-xl border px-4 py-3 text-sm ' + (kind === 'error' ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-emerald-200 bg-emerald-50 text-emerald-900')}>{children}</div>;
+}
+function GoogleMark() {
+  return <span aria-hidden className="mr-2 grid h-5 w-5 place-items-center rounded-full bg-white text-sm font-bold text-blue-600">G</span>;
+}
+function isRole(value: unknown): value is Role {
+  return value === 'patient' || value === 'clinicDesk' || value === 'adminDoctor';
+}
+function authMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Please try again.';
+  if (message.includes('permission-denied')) return 'Your Google account is not allowed to do that. Ask the clinic admin to check its Firebase role.';
+  if (message.includes('auth/unauthorized-domain')) return 'Add this website to Firebase Authentication authorized domains.';
+  return message;
 }

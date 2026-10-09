@@ -1,4 +1,4 @@
-name: Deploy Maasin Dental Spa demo
+name: Deploy Maasin Dental Spa booking app
 
 on:
   push:
@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   build-and-publish:
+    if: vars.VITE_FIREBASE_API_KEY != '' && vars.VITE_FIREBASE_AUTH_DOMAIN != '' && vars.VITE_FIREBASE_PROJECT_ID != '' && vars.VITE_FIREBASE_APP_ID != ''
     runs-on: ubuntu-latest
     steps:
       - name: Check out the dental app
@@ -33,11 +34,22 @@ jobs:
 
       - name: Install dependencies
         working-directory: maasin-dental-spa
-        run: bun install --frozen-lockfile
+        run: bun install
+
+      - name: Type-check app
+        working-directory: maasin-dental-spa
+        run: bun run lint
 
       - name: Build static app
         working-directory: maasin-dental-spa
         run: bun run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
 
       - name: Publish app files to the Pages source folder
         run: |
@@ -50,10 +62,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add maasin-dental-spa/index.html maasin-dental-spa/assets
+          git add maasin-dental-spa/index.html maasin-dental-spa/assets maasin-dental-spa/bun.lock
           if git diff --cached --quiet; then
             echo "No generated files changed."
           else
-            git commit -m "Deploy Maasin Dental Spa demo"
+            git commit -m "Deploy Maasin Dental Spa booking app"
             git push origin HEAD:main
           fi
