@@ -1,17 +1,19 @@
-import { FirebaseOptions, initializeApp, getApp, getApps } from 'firebase/app';
+import { getApp, getApps, initializeApp, type FirebaseOptions } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+// Firebase Web App configuration for the dedicated Maasin Dental Spa project.
+// These values are public identifiers; Firestore Security Rules protect the data.
 const config: FirebaseOptions = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  apiKey: 'AIzaSyCYReglMApNISJMDQyftjN0XJfotPgzmno',
+  authDomain: 'spa-booking-a4fb7.firebaseapp.com',
+  projectId: 'spa-booking-a4fb7',
+  storageBucket: 'spa-booking-a4fb7.firebasestorage.app',
+  messagingSenderId: '1022117536494',
+  appId: '1:1022117536494:web:f6d538ba738ea2676d89ff',
 };
 
-export const firebaseConfigured = Boolean(config.apiKey && config.authDomain && config.projectId && config.appId);
-const app = firebaseConfigured ? (getApps().length ? getApp() : initializeApp(config)) : null;
-export const auth = app ? getAuth(app) : null;
-export const db = app ? getFirestore(app) : null;
+export const firebaseConfigured = true;
+const app = getApps().length ? getApp() : initializeApp(config);
+export const auth = getAuth(app);
+export const db = getFirestore(app);

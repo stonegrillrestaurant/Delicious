@@ -17,7 +17,6 @@ concurrency:
 
 jobs:
   build-and-publish:
-    if: vars.VITE_FIREBASE_API_KEY != '' && vars.VITE_FIREBASE_AUTH_DOMAIN != '' && vars.VITE_FIREBASE_PROJECT_ID != '' && vars.VITE_FIREBASE_APP_ID != ''
     runs-on: ubuntu-latest
     steps:
       - name: Check out the dental app
@@ -43,13 +42,6 @@ jobs:
       - name: Build static app
         working-directory: maasin-dental-spa
         run: bun run build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
 
       - name: Publish app files to the Pages source folder
         run: |
