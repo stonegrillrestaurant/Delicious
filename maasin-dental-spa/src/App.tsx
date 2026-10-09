@@ -7,7 +7,7 @@ import {
   GoogleAuthProvider, onAuthStateChanged,
   signInWithPopup, signOut, User as FirebaseUser,
 } from 'firebase/auth';
-import { CalendarDays, Check, LogOut, MapPin, Phone, UserRound } from 'lucide-react';
+import { CalendarDays, Check, LogOut, MapPin, MessageCircle, Phone, UserRound } from 'lucide-react';
 import { auth, db, firebaseConfigured } from './firebase';
 
 type Role = 'patient' | 'clinicDesk' | 'adminDoctor';
@@ -239,9 +239,14 @@ export default function App() {
         <div className="mx-auto max-w-6xl">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <Brand />
-            <a href="tel:0535708220" className="inline-flex items-center rounded-full border border-teal-200 bg-white px-4 py-2.5 text-sm font-bold text-teal-900 shadow-sm hover:bg-teal-50">
-              <Phone className="mr-2 h-4 w-4" />053 570 8220
-            </a>
+            <div className="flex flex-wrap items-center gap-2">
+              <a href="https://m.me/maasindentalspa" target="_blank" rel="noreferrer" className="inline-flex items-center rounded-full border border-teal-200 bg-white px-4 py-2.5 text-sm font-bold text-teal-900 shadow-sm hover:bg-teal-50">
+                <MessageCircle className="mr-2 h-4 w-4" />Message us
+              </a>
+              <a href="tel:0535708220" className="inline-flex items-center rounded-full border border-teal-200 bg-white px-4 py-2.5 text-sm font-bold text-teal-900 shadow-sm hover:bg-teal-50">
+                <Phone className="mr-2 h-4 w-4" />053 570 8220
+              </a>
+            </div>
           </header>
 
           <section className="relative isolate mt-6 grid min-h-[500px] overflow-hidden rounded-[2rem] bg-teal-950 shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
