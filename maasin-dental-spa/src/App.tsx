@@ -266,6 +266,7 @@ export default function App() {
               <button onClick={signIn} className="mt-6 inline-flex w-fit items-center rounded-xl bg-teal-700 px-5 py-3.5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-600">
                 <GoogleMark /> Continue with Google
               </button>
+              {error && <div className="mt-4 max-w-xl"><Alert kind="error">{error}</Alert></div>}
               <p className="mt-3 text-xs leading-5 text-white/75">Sign in to request an appointment and view your bookings. Your first sign-in creates a patient account.</p>
             </div>
 
@@ -312,7 +313,7 @@ export default function App() {
           </section>
 
           <p className="mx-auto mt-6 max-w-3xl pb-4 text-center text-xs leading-5 text-slate-500">Appointment requests are not confirmed until the clinic contacts you. The clinic will confirm the schedule and any applicable fee before your visit.</p>
-          {error && <div className="mx-auto max-w-3xl"><Alert kind="error">{error}</Alert></div>}
+          
         </div>
       </main>
     );
@@ -493,10 +494,14 @@ function isRole(value: unknown): value is Role {
   return value === 'patient' || value === 'clinicDesk' || value === 'adminDoctor';
 }
 function authMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : 'Please try again.';
+  const firebaseError = error as { code?: unknown; message?: unknown };
+  const code = typeof firebaseError?.code === 'string' ? firebaseError.code : '';
+  const message = typeof firebaseError?.message === 'string' ? firebaseError.message : 'Please try again.';
+  if (code === 'auth/unauthorized-domain') return 'This website is not authorized in Firebase. In Firebase Console, open Authentication → Settings → Authorized domains and add stonegrillresto.net.';
+  if (code === 'auth/popup-blocked') return 'Your phone browser blocked the Google sign-in window. Allow pop-ups for stonegrillresto.net, then try again.';
+  if (code === 'auth/popup-closed-by-user') return 'Google sign-in closed before it finished. Reopen it and complete the sign-in.';
+  if (code === 'auth/operation-not-allowed') return 'Google sign-in is disabled for this Firebase project. Enable the Google provider in Authentication → Sign-in method.';
+  if (code === 'auth/network-request-failed') return 'The sign-in request could not reach Google or Firebase. Check your connection and try again.';
   if (message.includes('permission-denied')) return 'Your Google account is not allowed to do that. Ask the clinic admin to check its Firebase role.';
-  if (message.includes('auth/unauthorized-domain')) return 'Add this website to Firebase Authentication authorized domains.';
-  if (message.includes('auth/popup-blocked')) return 'Your browser blocked the Google sign-in window. Allow pop-ups for stonegrillresto.net and try again.';
-  if (message.includes('auth/popup-closed-by-user')) return 'Google sign-in was closed before it finished. Try again.';
-  return message;
+  return 'Google sign-in failed' + (code ? ' (' + code + ')' : '') + ': ' + message;
 }
