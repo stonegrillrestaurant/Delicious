@@ -7,7 +7,7 @@ import {
   GoogleAuthProvider, onAuthStateChanged,
   signInWithPopup, signOut, User as FirebaseUser,
 } from 'firebase/auth';
-import { CalendarDays, Check, LogOut, MapPin, MessageCircle, Phone, UserRound } from 'lucide-react';
+import { CalendarDays, Check, LogOut, MapPin, Phone, UserRound } from 'lucide-react';
 import { auth, db, firebaseConfigured } from './firebase';
 
 type Role = 'patient' | 'clinicDesk' | 'adminDoctor';
@@ -240,8 +240,11 @@ export default function App() {
           <header className="flex flex-wrap items-center justify-between gap-3">
             <Brand />
             <div className="flex flex-wrap items-center gap-2">
-              <a href="https://m.me/maasindentalspa" target="_blank" rel="noreferrer" className="inline-flex items-center rounded-full border border-teal-200 bg-white px-4 py-2.5 text-sm font-bold text-teal-900 shadow-sm hover:bg-teal-50">
-                <MessageCircle className="mr-2 h-4 w-4" />Message us
+              <a href="https://m.me/maasindentalspa" target="_blank" rel="noreferrer" className="inline-flex items-center rounded-full bg-[#0866ff] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#0759dd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0866ff]">
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="mr-2 h-5 w-5 fill-current">
+                  <path d="M12 2C6.48 2 2 6.17 2 11.32c0 2.93 1.49 5.52 3.82 7.2.2.14.31.37.32.62l.07 2.29c.02.4.43.66.8.5l2.56-1.13c.21-.09.44-.11.66-.05.99.27 2.05.42 3.17.42 5.52 0 10-4.17 10-9.32S17.52 2 12 2zm1.06 12.52-2.53-2.62a1.5 1.5 0 0 0-1.82 0l-4.05 3.03c-.54.4-1.25-.25-.9-.82l2.47-4.13a1.5 1.5 0 0 1 2.33-.34l2.53 2.62a1.5 1.5 0 0 0 1.82 0l4.05-3.03c.54-.4 1.25.25.9.82l-2.47 4.13a1.5 1.5 0 0 1-2.33.34z" />
+                </svg>
+                Message us
               </a>
               <a href="tel:0535708220" className="inline-flex items-center rounded-full border border-teal-200 bg-white px-4 py-2.5 text-sm font-bold text-teal-900 shadow-sm hover:bg-teal-50">
                 <Phone className="mr-2 h-4 w-4" />053 570 8220
