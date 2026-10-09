@@ -4,8 +4,8 @@ import {
   serverTimestamp, setDoc, updateDoc,
 } from 'firebase/firestore';
 import {
-  GoogleAuthProvider, getRedirectResult, onAuthStateChanged,
-  signInWithRedirect, signOut, User as FirebaseUser,
+  GoogleAuthProvider, onAuthStateChanged,
+  signInWithPopup, signOut, User as FirebaseUser,
 } from 'firebase/auth';
 import { CalendarDays, Check, LogOut, Phone, UserRound } from 'lucide-react';
 import { auth, db, firebaseConfigured } from './firebase';
@@ -62,7 +62,6 @@ export default function App() {
       return;
     }
     const authClient = auth;
-    getRedirectResult(authClient).catch((err: Error) => setError(authMessage(err)));
     return onAuthStateChanged(authClient, (nextUser) => {
       setUser(nextUser);
       setProfile(null);
@@ -154,7 +153,7 @@ export default function App() {
     if (!auth) return;
     setError('');
     try {
-      await signInWithRedirect(auth, new GoogleAuthProvider());
+      await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (err) {
       setError(authMessage(err));
     }
@@ -431,5 +430,7 @@ function authMessage(error: unknown) {
   const message = error instanceof Error ? error.message : 'Please try again.';
   if (message.includes('permission-denied')) return 'Your Google account is not allowed to do that. Ask the clinic admin to check its Firebase role.';
   if (message.includes('auth/unauthorized-domain')) return 'Add this website to Firebase Authentication authorized domains.';
+  if (message.includes('auth/popup-blocked')) return 'Your browser blocked the Google sign-in window. Allow pop-ups for stonegrillresto.net and try again.';
+  if (message.includes('auth/popup-closed-by-user')) return 'Google sign-in was closed before it finished. Try again.';
   return message;
 }
