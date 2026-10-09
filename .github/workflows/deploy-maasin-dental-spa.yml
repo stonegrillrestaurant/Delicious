@@ -1,0 +1,55 @@
+name: Deploy Maasin Dental Spa demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'maasin-dental-spa/**'
+      - '.github/workflows/deploy-maasin-dental-spa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: maasin-dental-spa-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the site
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: maasin-dental-spa
+        run: bun install --frozen-lockfile
+
+      - name: Build static app
+        working-directory: maasin-dental-spa
+        run: bun run build
+
+      - name: Publish app files to the Pages source folder
+        run: |
+          rm -rf maasin-dental-spa/assets
+          cp -R maasin-dental-spa/dist/assets maasin-dental-spa/assets
+          cp maasin-dental-spa/dist/index.html maasin-dental-spa/index.html
+          rm -rf maasin-dental-spa/dist
+
+      - name: Commit deployed app files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add maasin-dental-spa/index.html maasin-dental-spa/assets
+          if git diff --cached --quiet; then
+            echo "No generated files changed."
+          else
+            git commit -m "Deploy Maasin Dental Spa demo"
+            git push origin HEAD:main
+          fi
