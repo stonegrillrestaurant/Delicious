@@ -244,56 +244,74 @@ export default function App() {
             </a>
           </header>
 
-          <section className="mt-6 grid overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_70px_-35px_rgba(15,72,65,0.35)] md:min-h-[440px] md:grid-cols-[1fr_0.92fr]">
-            <div className="flex flex-col justify-center p-6 sm:p-10 lg:p-14">
-              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-teal-700">Thoughtful dental care · Maasin City</p>
-              <h1 className="mt-4 max-w-xl text-4xl font-extrabold leading-[1.08] tracking-tight text-slate-950 sm:text-5xl">A healthier smile starts with a simple visit.</h1>
-              <p className="mt-5 max-w-lg text-base leading-7 text-slate-600">Request an appointment online. Choose the care you need, send your preferred schedule, and our clinic desk will confirm availability with you.</p>
+          <section className="relative isolate mt-6 grid min-h-[500px] overflow-hidden rounded-[2rem] bg-teal-950 shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
+            <img src="/maasin-dental-spa/clinic/clinic-sign-front.jpg" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950/90 via-teal-950/75 to-teal-950/45" />
+            <div className="flex flex-col justify-center p-6 sm:p-10 lg:p-12">
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-teal-100">Thoughtful dental care · Maasin City</p>
+              <h1 className="mt-4 max-w-xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl">A healthier smile starts with a simple visit.</h1>
+              <p className="mt-5 max-w-lg text-base leading-7 text-white/85">Request an appointment online. Choose the care you need, send your preferred schedule, and our clinic desk will contact you to confirm availability.</p>
 
-              <div className="mt-6 rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-800">Your dentist</p>
-                <p className="mt-1 text-lg font-extrabold text-slate-900">Dr. Alfred G. Roa III, DMD</p>
-                <p className="mt-1 text-sm text-slate-600">Maasin Dental Spa · Southern Leyte</p>
+              <div className="mt-6 flex items-center gap-4 rounded-2xl border border-white/20 bg-white/95 p-4 shadow-lg">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-teal-100">
+                  <img src="/maasin-dental-spa/clinic/dentist-profile.jpg" alt="Dr. Alfred G. Roa III" className="absolute right-0 top-0 h-[185%] w-auto max-w-none" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-800">Your dentist</p>
+                  <p className="mt-1 text-lg font-extrabold text-slate-900">Dr. Alfred G. Roa III, DMD</p>
+                  <p className="mt-0.5 text-sm text-slate-600">Maasin Dental Spa · Southern Leyte</p>
+                </div>
               </div>
 
-              <button onClick={signIn} className="mt-6 inline-flex w-fit items-center rounded-xl bg-teal-800 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-teal-900/15 transition hover:-translate-y-0.5 hover:bg-teal-900">
+              <button onClick={signIn} className="mt-6 inline-flex w-fit items-center rounded-xl bg-teal-700 px-5 py-3.5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-600">
                 <GoogleMark /> Continue with Google
               </button>
-              <p className="mt-3 text-xs leading-5 text-slate-500">Sign in to request an appointment and view your bookings. Your first sign-in creates a patient account.</p>
+              <p className="mt-3 text-xs leading-5 text-white/75">Sign in to request an appointment and view your bookings. Your first sign-in creates a patient account.</p>
             </div>
 
-            <div className="relative min-h-[280px] overflow-hidden bg-teal-950 md:min-h-full">
-              <img src="/maasin-dental-spa/clinic-hero.png" alt="Illustrative dental-clinic setting" className="absolute inset-0 h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-teal-950/5" />
-              <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/25 bg-white/90 p-4 shadow-xl backdrop-blur sm:bottom-7 sm:left-7 sm:right-7">
-                <p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-800">Maasin Dental Spa</p>
-                <p className="mt-1 text-base font-bold text-slate-900">Dental appointments, made simple.</p>
-                <p className="mt-1 text-xs text-slate-600">Illustrative image · actual clinic may differ</p>
+            <aside className="m-5 flex flex-col justify-end rounded-3xl border border-white/70 bg-white/95 p-5 shadow-2xl backdrop-blur sm:m-8 sm:p-7 lg:self-center">
+              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-teal-800">Maasin Dental Spa</p>
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-950">Care close to home.</h2>
+              <div className="mt-5 border-t border-slate-200 pt-4">
+                <p className="text-sm font-bold text-slate-900">Visit the clinic</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">Ruperto K. Kangleon St, Maasin City, 6600 Southern Leyte</p>
+                <a href="https://maps.google.com/?q=Maasin+Dental+Spa+Ruperto+K+Kangleon+Street+Maasin+City" target="_blank" rel="noreferrer" className="mt-2 inline-flex text-sm font-bold text-teal-800 hover:text-teal-950">Open map <span className="ml-1" aria-hidden="true">↗</span></a>
               </div>
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <p className="text-sm font-bold text-slate-900">Common appointments</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">Consultation, cleaning, fillings, and tooth extractions. Choose “Other” to describe a different concern.</p>
+              </div>
+              <a href="tel:0535708220" className="mt-5 inline-flex items-center justify-center rounded-xl bg-teal-800 px-4 py-3 text-sm font-bold text-white hover:bg-teal-900"><Phone className="mr-2 h-4 w-4" />Call 053 570 8220</a>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Requests are not confirmed until the clinic contacts you. The clinic will confirm schedule and any applicable fee.</p>
+            </aside>
+          </section>
+
+          <section className="mt-10">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-teal-800">A look inside</p><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950">Maasin Dental Spa gallery</h2></div>
+              <p className="max-w-md text-sm leading-6 text-slate-600">A few photos of our clinic, dentist, and care team.</p>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <img src="/maasin-dental-spa/clinic/dentist-and-patient.jpg" alt="Dentist caring for a patient" loading="lazy" className="h-52 w-full object-cover" />
+                <figcaption className="px-4 py-3 text-sm font-semibold text-slate-800">Personal dental care</figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <img src="/maasin-dental-spa/clinic/clinic-room.jpg" alt="Dental treatment room" loading="lazy" className="h-52 w-full object-cover" />
+                <figcaption className="px-4 py-3 text-sm font-semibold text-slate-800">Our treatment room</figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <img src="/maasin-dental-spa/clinic/care-team.jpg" alt="Dental care team at work" loading="lazy" className="h-52 w-full object-cover" />
+                <figcaption className="px-4 py-3 text-sm font-semibold text-slate-800">Our care team</figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <img src="/maasin-dental-spa/clinic/clinic-sign.jpg" alt="Maasin Dental Spa clinic sign" loading="lazy" className="h-52 w-full object-cover" />
+                <figcaption className="px-4 py-3 text-sm font-semibold text-slate-800">Welcome to our clinic</figcaption>
+              </figure>
             </div>
           </section>
 
-          <section className="mt-5 grid gap-4 md:grid-cols-3">
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-800"><MapPin className="h-5 w-5" /></div>
-              <h2 className="mt-4 font-bold text-slate-900">Visit our clinic</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">Ruperto K. Kangleon St, Maasin City, 6600 Southern Leyte</p>
-              <a href="https://maps.google.com/?q=Maasin+Dental+Spa+Ruperto+K+Kangleon+Street+Maasin+City" target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-bold text-teal-800 hover:text-teal-950">Open map <span className="ml-1" aria-hidden="true">↗</span></a>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-800"><Check className="h-5 w-5" /></div>
-              <h2 className="mt-4 font-bold text-slate-900">Common appointments</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">Consultation, cleaning, fillings, and tooth extractions. Choose “Other” to describe a different concern.</p>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-800"><Phone className="h-5 w-5" /></div>
-              <h2 className="mt-4 font-bold text-slate-900">Call the clinic</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">Have a question or need help with booking? Contact the clinic desk.</p>
-              <a href="tel:0535708220" className="mt-3 inline-flex text-sm font-bold text-teal-800 hover:text-teal-950">053 570 8220</a>
-            </article>
-          </section>
-
-          <p className="mx-auto mt-5 max-w-3xl pb-4 text-center text-xs leading-5 text-slate-500">Appointment requests are not confirmed until the clinic contacts you. The clinic will confirm the schedule and any applicable fee before your visit.</p>
+          <p className="mx-auto mt-6 max-w-3xl pb-4 text-center text-xs leading-5 text-slate-500">Appointment requests are not confirmed until the clinic contacts you. The clinic will confirm the schedule and any applicable fee before your visit.</p>
           {error && <div className="mx-auto max-w-3xl"><Alert kind="error">{error}</Alert></div>}
         </div>
       </main>
@@ -323,7 +341,7 @@ export default function App() {
       <div className="mx-auto max-w-6xl px-4 py-7">
         {!isStaff && (
           <section className="mb-6 grid overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm sm:grid-cols-[220px_1fr]">
-            <img src="/maasin-dental-spa/clinic-hero.png" alt="Illustrative dental-clinic setting" className="h-40 w-full object-cover sm:h-full sm:min-h-44" />
+            <div className="relative h-40 overflow-hidden bg-teal-100 sm:h-full sm:min-h-44"><img src="/maasin-dental-spa/clinic/dentist-profile.jpg" alt="Dr. Alfred G. Roa III" className="absolute right-0 top-0 h-[185%] w-auto max-w-none" /></div>
             <div className="p-5 sm:p-6">
               <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-teal-800">Your dentist · Maasin Dental Spa</p>
               <h2 className="mt-1 text-xl font-extrabold text-slate-950">Dr. Alfred G. Roa III, DMD</h2>
