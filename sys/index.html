@@ -145,9 +145,20 @@
         const DollarSign = (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
         const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
 
-        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, isAdmin = false, onIssueCA, caBusy = false }) {
+        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, isAdmin = false, onIssueCA, caBusy = false, onAddAdjustment }) {
             const [activeTab, setActiveTab] = useState('payslip');
             const [profileCA, setProfileCA] = useState({ amount: '', reason: '', date: new Date().toISOString().slice(0, 10), type: 'advance' });
+            const [adjustment,setAdjustment] = useState({type:'Bonus',amount:'',note:''});
+            const [adjustmentBusy,setAdjustmentBusy] = useState(false);
+            const handleAdjustmentSubmit = async (event) => {
+                event.preventDefault();
+                if (!isAdmin || !onAddAdjustment || adjustmentBusy) return;
+                const amount = Number(adjustment.amount);
+                if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000 || !adjustment.note.trim()) { alert('Enter a positive amount and reason.'); return; }
+                setAdjustmentBusy(true);
+                try { if (await onAddAdjustment(emp,selectedMonth,{...adjustment,amount})) setAdjustment({type:'Bonus',amount:'',note:''}); }
+                finally {setAdjustmentBusy(false);}
+            };
             const handleProfileCASubmit = async (event) => {
                 event.preventDefault();
                 const amount = Number(profileCA.amount);
@@ -160,6 +171,9 @@
             const basicPay = emp.days * (Number(emp.periodDailyRate ?? salaryRateForDate(emp, `${selectedMonth}-01`)) || 0);
             
             const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
+            const monthLedger = Array.isArray(savedPayroll?.data?.ledger) ? savedPayroll.data.ledger : [];
+            const ledgerCredits = monthLedger.reduce((n,x)=>n+Math.max(0,Number(x.amount)||0),0);
+            const ledgerDebits = monthLedger.reduce((n,x)=>n+Math.max(0,-(Number(x.amount)||0)),0);
             const bonusAmount = emp.bonusAmount || 0;
 
             const earnings = [
@@ -173,8 +187,8 @@
                 ...((parseFloat(emp.miscRate) || 0) > 0 ? [{ id: 3, label: "Misc / Uniform", amount: parseFloat(emp.miscRate) }] : [])
             ];
 
-            const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0);
-            const totalDeductions = deductions.reduce((sum, item) => sum + item.amount, 0);
+            const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0) + ledgerCredits;
+            const totalDeductions = deductions.reduce((sum, item) => sum + item.amount, 0) + ledgerDebits;
             const netPay = totalEarnings - totalDeductions;
 
             const ledger = cashAdvances
@@ -285,6 +299,17 @@
                                     )}
                                 </div>
 
+                                {isAdmin && onAddAdjustment && (
+                                    <form onSubmit={handleAdjustmentSubmit} className="mt-4 p-4 rounded-xl border border-blue-200 bg-blue-50 space-y-2 print-hidden">
+                                        <p className="text-xs font-black text-blue-900">One-time Bonus / Incentive / Deduction</p>
+                                        <p className="text-[10px] text-slate-600">Applies only to {monthLabel}. Choose the month above first. Does not repeat next month.</p>
+                                        <select value={adjustment.type} onChange={e=>setAdjustment({...adjustment,type:e.target.value})} className="w-full p-2 border rounded-lg text-sm"><option>Bonus</option><option>Incentive</option><option>Commission</option><option>Deduction</option></select>
+                                        <input type="number" min="0.01" step="0.01" required placeholder="Amount in pesos" value={adjustment.amount} onChange={e=>setAdjustment({...adjustment,amount:e.target.value})} className="w-full p-2 border rounded-lg text-sm"/>
+                                        <input type="text" maxLength="300" required placeholder="Reason / description" value={adjustment.note} onChange={e=>setAdjustment({...adjustment,note:e.target.value})} className="w-full p-2 border rounded-lg text-sm"/>
+                                        <button type="submit" disabled={adjustmentBusy} className="w-full bg-blue-700 disabled:opacity-50 text-white p-2 rounded-lg text-xs font-black">{adjustmentBusy?'Saving...':'Add to Selected Month'}</button>
+                                        {monthLedger.length>0 && <div className="space-y-1 text-xs">{monthLedger.map((x,i)=><div key={x.id||i} className="flex justify-between gap-2"><span>{x.type}: {x.note}</span><b>{Number(x.amount)>0?'+':'-'}₱{formatMoney(Math.abs(Number(x.amount)||0))}</b></div>)}</div>}
+                                    </form>
+                                )}
                                 {(onEdit || onDelete) && (
                                     <div className="flex gap-3 mt-4 print-hidden">
                                         {onEdit && <button onClick={() => onEdit(emp)} className="flex-1 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-blue-50 transition-colors shadow-sm">Edit Profile</button>}
@@ -551,10 +576,13 @@
 
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
+                    const oneTimeLedger = Array.isArray(savedPayroll?.data?.ledger) ? savedPayroll.data.ledger : [];
+                    const oneTimeCredits = oneTimeLedger.reduce((n,x)=>n+Math.max(0,Number(x.amount)||0),0);
+                    const oneTimeDebits = oneTimeLedger.reduce((n,x)=>n+Math.max(0,-(Number(x.amount)||0)),0);
 
                     const periodDailyRate = payrollRateForMonth(emp,selectedMonth,savedPayroll);
-                    const gross = savedPayroll?.data?.gross_pay != null ? Number(savedPayroll.data.gross_pay) : days * periodDailyRate + bonusAmount;
-                    const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0);
+                    const gross = savedPayroll?.data?.gross_pay != null ? Number(savedPayroll.data.gross_pay) : days * periodDailyRate + bonusAmount + oneTimeCredits;
+                    const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0) - oneTimeDebits;
                     
                     return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount, lifetimeDays, periodDailyRate };
                 });
@@ -576,8 +604,9 @@
                     const rCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === dashSearchMonth).reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
                     const rPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === dashSearchMonth || getMonthKey(p.startDate) === dashSearchMonth));
                     const rBonus = rPayroll ? (parseFloat(rPayroll.data?.bonus) || 0) : 0;
-                    const rGross = (rDays * payrollRateForMonth(emp,dashSearchMonth,rPayroll)) + rBonus;
-                    const rNet = rGross - rCA - (parseFloat(emp.sssRate)||0) - (parseFloat(emp.miscRate)||0);
+                    const rLedger = Array.isArray(rPayroll?.data?.ledger) ? rPayroll.data.ledger : [];
+                    const rGross = (rDays * payrollRateForMonth(emp,dashSearchMonth,rPayroll)) + rBonus + rLedger.reduce((n,x)=>n+Math.max(0,Number(x.amount)||0),0);
+                    const rNet = rGross - rCA - (parseFloat(emp.sssRate)||0) - (parseFloat(emp.miscRate)||0) - rLedger.reduce((n,x)=>n+Math.max(0,-(Number(x.amount)||0)),0);
                     quickView = { ...emp, rangeDays: rDays, rangeGross: rGross, rangeCA: rCA, rangeNet: rNet };
                 }
             }
@@ -774,6 +803,30 @@
                     alert(isEditing?'Employee profile updated.':'Employee registered.');
                 } catch(err) { alert('Employee save failed: '+(err.message||err)); }
                 finally {staffSaveLock.current=false;setStaffSaving(false);}
+            };
+
+            const handleAddAdjustment = async (emp, month, entry) => {
+                if (!isAdmin || !emp?.id || !/^\\d{4}-\\d{2}$/.test(month)) return false;
+                const value = Number(entry.amount);
+                if (!Number.isFinite(value) || value<=0 || !entry.note?.trim()) return false;
+                const positive = ['Bonus','Incentive','Commission'].includes(entry.type);
+                if (!positive && entry.type!=='Deduction') return false;
+                const signedAmount = positive ? value : -value;
+                if (!window.confirm(`Add ${entry.type} of ₱${formatMoney(value)} for ${emp.name} in ${month}? This is a one-time entry.`)) return false;
+                try {
+                    const key = `${normalizeId(emp.id)}_${month}`;
+                    await window.fb.runTransaction(window.fb.db, async tx=>{
+                        const ref = getVaultDoc('payroll_entries',key);
+                        const snap = await tx.get(ref);
+                        const old = snap.exists() ? snap.data() : null;
+                        if (old?.status==='Finalized' || old?.status==='Paid' || old?.isFinalized===true) throw new Error('This payroll is finalized; adjustments require a separate correction.');
+                        const data = old?.data || {};
+                        const ledger = Array.isArray(data.ledger) ? data.ledger : [];
+                        const adjustment = {id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,type:entry.type,amount:signedAmount,note:entry.note.trim(),date:new Date().toISOString().slice(0,10),month,createdByUid:user.uid,createdAt:new Date().toISOString(),status:'Logged',isBonus:positive};
+                        tx.set(ref,{recordKey:key,empId:normalizeId(emp.id),month,startDate:old?.startDate||`${month}-01`,endDate:old?.endDate||`${month}-31`,data:{...data,ledger:[...ledger,adjustment]}},{merge:true});
+                    });
+                    alert('One-time adjustment saved to '+month+'.'); return true;
+                } catch(err) { alert('Adjustment not saved: '+(err.message||err)); return false; }
             };
 
             const handleIssueCA = async () => {
@@ -1437,7 +1490,8 @@
                                     onEdit={handleEditProfile} 
                                     onDelete={handleDeleteEmployee} 
                                     isAdmin={isAdmin} 
-                                    onIssueCA={handleProfileIssueCA} 
+                                    onIssueCA={handleProfileIssueCA}
+                                    onAddAdjustment={handleAddAdjustment} 
                                     caBusy={caBusy}
                                 />
                             </div>
