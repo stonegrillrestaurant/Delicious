@@ -44,20 +44,44 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Thermal paper: 58mm roll, approximately 48mm printable width. */
+        @page { size: 58mm auto; margin: 0; }
         @media print {
+            html, body, #root { width: 58mm !important; min-width: 0 !important; max-width: 58mm !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; background: white !important; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #print-section, #interactive-print-section, #pos-receipt-print, #payroll-list-thermal { box-sizing: border-box; width: 58mm !important; max-width: 58mm !important; padding: 2mm !important; margin: 0 !important; font-family: monospace !important; font-size: 9px !important; line-height: 1.25 !important; color: black !important; background: white !important; }
+            #print-section *, #interactive-print-section *, #pos-receipt-print *, #payroll-list-thermal * { box-sizing: border-box; max-width: 100% !important; overflow-wrap: anywhere !important; box-shadow: none !important; }
+            #print-section, #interactive-print-section { position: absolute !important; left: 0 !important; top: 0 !important; border: none !important; border-radius: 0 !important; transform: none !important; }
+            #interactive-print-section { display: block !important; }
+            .payroll-list-active #payroll-list-thermal { visibility: visible !important; }
+            #interactive-print-section .grid { display: block !important; }
+            #interactive-print-section .absolute { position: static !important; width: auto !important; }
+            #interactive-print-section .p-10, #interactive-print-section .p-4, #interactive-print-section .p-2 { padding: 1mm !important; }
+            #interactive-print-section .text-2xl { font-size: 13px !important; }
+            #interactive-print-section input { border: none !important; padding: 0 !important; font-size: 9px !important; width: 100% !important; }
+            #payroll-list-thermal { position: absolute !important; top: 0; left: 0; display: block !important; visibility: visible !important; }
+            #payroll-list-thermal * { visibility: visible !important; }
+            .thermal-row { display: block; border-bottom: 1px dashed #000; padding: 2mm 0; break-inside: avoid; }
+            .thermal-title { text-align: center; font-size: 13px; font-weight: bold; }
+            .thermal-small { font-size: 9px; }
+            .print-hidden { display: none !important; }
+
             body * { visibility: hidden; }
             #print-section, #print-section * { visibility: visible; }
             #interactive-print-section, #interactive-print-section * { visibility: visible; }
             #interactive-print-section { position: absolute; left: 0; top: 0; width: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
             
-            .pos-receipt-active #print-section { visibility: hidden; display: none !important; }
+            .pos-receipt-active #print-section, .pos-receipt-active #interactive-print-section, .pos-receipt-active #payroll-list-thermal { display: none !important; }
+            .interactive-receipt-active #print-section, .interactive-receipt-active #pos-receipt-print, .interactive-receipt-active #payroll-list-thermal { display: none !important; }
+            .payroll-list-active #print-section, .payroll-list-active #interactive-print-section, .payroll-list-active #pos-receipt-print { display: none !important; }
+            .payroll-list-active #payroll-list-thermal { display: block !important; }
             #pos-receipt-print, #pos-receipt-print * { visibility: visible; }
-            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 0; font-family: monospace; color: black; display: block !important; }
+            #pos-receipt-print { position: absolute; left: 0; top: 0; width: 58mm !important; margin: 0; padding: 2mm; font-family: monospace; color: black; display: block !important; }
             
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
         }
-        #pos-receipt-print { display: none; }
+        #pos-receipt-print, #payroll-list-thermal { display: none; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
@@ -704,7 +728,7 @@
                 // Printing does not prove cash was handed over or received.
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
                 setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown' });
-                alert("IMPORTANT: Make sure to select the 58mm KITCHEN PRINTER from the dropdown list before printing!");
+                // Browser printing stays local: do not expose private voucher data to a public bprint JSON URL.
                 document.body.classList.add('pos-receipt-active'); setTimeout(() => { window.print(); document.body.classList.remove('pos-receipt-active'); }, 300);
             };
 
@@ -1224,7 +1248,7 @@
                                                             </div>
                                                         </div>
                                                     )}
-                                                    <button onClick={() => window.print()} className="mt-10 w-full bg-slate-800 text-white py-3 rounded-full font-black uppercase text-[10px] print-hidden flex items-center justify-center gap-2 hover:bg-black"><Printer/> Print Card</button>
+                                                    <button onClick={() => { document.body.classList.add('interactive-receipt-active'); window.print(); document.body.classList.remove('interactive-receipt-active'); }} className="mt-10 w-full bg-slate-800 text-white py-3 rounded-full font-black uppercase text-[10px] print-hidden flex items-center justify-center gap-2 hover:bg-black"><Printer/> Print Card</button>
                                                 </div>
                                                 );
                                             })() : <div className="py-24 text-slate-300 italic flex flex-col items-center"><FileText className="w-16 h-16 opacity-10 mb-4"/>Select employee to view payslip</div>}
@@ -1342,7 +1366,20 @@
                                     <div className="bg-white w-full p-4 lg:p-8 animate-slide-up">
                                         <div className="flex justify-between items-center mb-8 print-hidden">
                                             <div className="flex items-center gap-4"><h2 className="text-2xl font-black text-slate-900 uppercase">Payroll List</h2><select className="border-2 rounded-xl px-4 py-2 text-sm font-bold outline-none" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>{monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                                            <button onClick={() => window.print()} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><Printer className="w-4 h-4"/> Print</button>
+                                            <button onClick={() => { document.body.classList.add('payroll-list-active'); window.print(); document.body.classList.remove('payroll-list-active'); }} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><Printer className="w-4 h-4"/> Print</button>
+                                        </div>
+                                        <div id="payroll-list-thermal">
+                                            <div className="thermal-title">STONE GRILL</div>
+                                            <div style={{textAlign:'center',marginBottom:'2mm'}}>PAYROLL • {selectedMonth}</div>
+                                            {payrollSummary.map(row=><div className="thermal-row" key={row.id}>
+                                                <strong>{row.name}</strong>
+                                                <div>ID: {row.id} | Days: {row.days}</div>
+                                                <div>Rate: PHP {formatMoney(row.periodDailyRate ?? row.dailyRate ?? row.rate)} | CA: PHP {formatMoney(row.monthlyCA)}</div>
+                                                <div><strong>NET: PHP {formatMoney(row.net)}</strong></div>
+                                                <div style={{paddingTop:'5mm'}}>Signature: __________________</div>
+                                            </div>)}
+                                            <div style={{fontWeight:'bold',marginTop:'3mm'}}>TOTAL NET: PHP {formatMoney(payrollSummary.reduce((sum,row)=>sum+row.net,0))}</div>
+                                            <div style={{height:'8mm'}}></div>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left text-sm min-w-[800px]">
