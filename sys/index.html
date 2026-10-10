@@ -732,6 +732,52 @@
                 }));
             };
 
+            // Thermer custom URL scheme: receipt stays on device; no public payroll JSON endpoint.
+            // Requires an iOS print app that has registered the thermer:// scheme.
+            const handleBluetoothCAVoucher = (req) => {
+                if (!['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status)) {
+                    alert('Only approved cash advance vouchers may be printed.');
+                    return;
+                }
+                const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
+                const name = (emp?.name || 'Unknown Employee').toUpperCase();
+                const line = (value, bold = 0, align = 0) => ({ type: 0, content: String(value), bold, align, format: 0 });
+                const wrap = (value, width = 32) => {
+                    const words = String(value ?? '').split(/\\s+/);
+                    const lines = []; let current = '';
+                    words.forEach(word => {
+                        if ((current + ' ' + word).trim().length > width && current) { lines.push(current); current = ''; }
+                        while (word.length > width) { if (current) { lines.push(current); current = ''; } lines.push(word.slice(0,width)); word = word.slice(width); }
+                        current = (current ? current + ' ' : '') + word;
+                    });
+                    if (current) lines.push(current);
+                    return lines.join('\\n');
+                };
+                const entries = [
+                    line('STONE GRILL', 1, 1),
+                    line('CASH ADVANCE VOUCHER', 1, 1),
+                    line('--------------------------------'),
+                    line('Date: ' + timestampLabel(req.approvedAt || req.dateApproved)),
+                    line(wrap('Employee: ' + name)),
+                    line(wrap('Voucher: ' + req.id)),
+                    line(wrap('Reason: ' + (req.reason || '-'))),
+                    line('--------------------------------'),
+                    line('AMOUNT: PHP ' + formatMoney(req.amount), 1),
+                    line('Status: ' + req.status),
+                    line('--------------------------------'),
+                    line('Employee signature:'),
+                    line('____________________________'),
+                    line('Date/Time: _________________'),
+                    line('Cashier signature:'),
+                    line('____________________________'),
+                    line('Date/Time: _________________'),
+                    line(wrap('Cashier: verify unpaid before releasing cash. Printed voucher is not proof of payment.')),
+                    line('\\n\\n\\n\\n\\n')
+                ];
+                // Launch synchronously from the click to avoid iOS popup restrictions.
+                window.location.href = 'thermer://' + encodeURIComponent(JSON.stringify(entries));
+            };
+
             const handlePrintReceipt = async (req) => {
                 // Printing does not prove cash was handed over or received.
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
@@ -1070,7 +1116,7 @@
                                                                                     {req.status === 'Received' && <span className="text-emerald-600">RECEIVED<br/><small>{timestampLabel(req.receivedAt)}</small></span>}
                                                                                 </td>
                                                                                 <td className="p-3 text-center">
-                                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase"><Printer className="w-3 h-3 inline mr-1"/> Print</button>}
+                                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase"><Printer className="w-3 h-3 inline mr-1"/> Print</button>} {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handleBluetoothCAVoucher(req)} className="ml-1 bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Bluetooth 58mm</button>}
                                                                                     {req.status === 'Disbursed' && req.requesterUid === user.uid && <button disabled={caBusy} onClick={() => handleConfirmCAReceived(req)} className="block mt-2 bg-emerald-600 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase">I received the cash</button>}
                                                                                 </td>
                                                                             </tr>
@@ -1314,7 +1360,7 @@
                                                                 </td>
                                                                 <td className="p-4">
                                                                     {req.status === 'Approved' && req.approvalFlow === 'handover-v1' && <button disabled={caBusy} onClick={() => handleDisburseCARequest(req)} className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold">Record cash handed over</button>}
-                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="block mt-2 border px-3 py-2 rounded-lg">Print voucher</button>}
+                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="block mt-2 border px-3 py-2 rounded-lg">Print voucher</button>} {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handleBluetoothCAVoucher(req)} className="block mt-2 border border-blue-600 text-blue-700 px-3 py-2 rounded-lg">Bluetooth 58mm</button>}
                                                                 </td>
                                                             </tr>
                                                         ))}
