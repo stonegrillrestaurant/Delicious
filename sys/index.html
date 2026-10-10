@@ -70,6 +70,8 @@
 
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
+        const salaryRateForDate = (emp, date) => { const h = (Array.isArray(emp?.salaryHistory) ? emp.salaryHistory : []).filter(x=>x.effectiveDate).slice().sort((a,b)=>a.effectiveDate.localeCompare(b.effectiveDate)); const valid = h.filter(x=>x.effectiveDate<=date).pop(); return Number(valid ? valid.dailyRate : (h.length ? h[0].previousRate : (emp?.dailyRate ?? emp?.rate))) || 0; };
+        const payrollRateForMonth = (emp, month, saved) => saved?.data?.daily_rate != null ? Number(saved.data.daily_rate) : salaryRateForDate(emp, `${month}-01`);
 
         const normalizeId = (id) => {
             if (!id) return '';
@@ -155,7 +157,7 @@
                 if (saved) setProfileCA({ amount: '', reason: '', date: new Date().toISOString().slice(0, 10), type: 'advance' });
             };
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
-            const basicPay = emp.days * (parseFloat(emp.dailyRate || emp.rate) || 0);
+            const basicPay = emp.days * (Number(emp.periodDailyRate ?? salaryRateForDate(emp, `${selectedMonth}-01`)) || 0);
             
             const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
             const bonusAmount = emp.bonusAmount || 0;
@@ -415,10 +417,12 @@
             const [viewProfile, setViewProfile] = useState(null);
             const [showAddStaff, setShowAddStaff] = useState(false);
             const [isEditing, setIsEditing] = useState(false);
+            const [staffSaving,setStaffSaving] = useState(false);
+            const staffSaveLock = React.useRef(false);
             const [rawInput, setRawInput] = useState('');
             const [caType, setCaType] = useState('advance');
             const [newCa, setNewCa] = useState({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
-            const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', staffEmail: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active' });
+            const [newEmpForm, setNewEmpForm] = useState({ biometricId: '', firstName: '', lastName: '', position: '', dailyRate: '', staffEmail: '', contactNumber: '', sssNumber: '', sssRate: '', miscRate: '', status: 'active', hireDate: '', salaryEffectiveDate: new Date().toISOString().slice(0,10), changeReason: '' });
 
             const [dashSearchEmpId, setDashSearchEmpId] = useState('');
             const [dashSearchMonth, setDashSearchMonth] = useState(() => new Date().toISOString().slice(0, 7));
@@ -533,7 +537,7 @@
                         .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
                         .reduce((sum, p) => sum + (parseFloat(p.data?.bonus) || 0), 0);
 
-                    const lifetimeGross = (lifetimeDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + lifetimeBonuses;
+                    const lifetimeGross = lifetimeAtt.reduce((sum, a) => sum + Math.min(Math.max(Number(a.dayEquivalent)||0,0),1)*salaryRateForDate(emp,cleanDate(a.date)),0) + lifetimeBonuses;
 
                     const totalCashReceived = cashAdvances
                         .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
@@ -548,10 +552,11 @@
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
 
-                    const gross = days * (parseFloat(emp.dailyRate || emp.rate) || 0) + bonusAmount;
+                    const periodDailyRate = payrollRateForMonth(emp,selectedMonth,savedPayroll);
+                    const gross = savedPayroll?.data?.gross_pay != null ? Number(savedPayroll.data.gross_pay) : days * periodDailyRate + bonusAmount;
                     const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0);
                     
-                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount, lifetimeDays };
+                    return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount, lifetimeDays, periodDailyRate };
                 });
             }, [employees, attendance, cashAdvances, interactivePayrolls, selectedMonth]);
 
@@ -571,7 +576,7 @@
                     const rCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === dashSearchMonth).reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
                     const rPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === dashSearchMonth || getMonthKey(p.startDate) === dashSearchMonth));
                     const rBonus = rPayroll ? (parseFloat(rPayroll.data?.bonus) || 0) : 0;
-                    const rGross = (rDays * (parseFloat(emp.dailyRate || emp.rate) || 0)) + rBonus;
+                    const rGross = (rDays * payrollRateForMonth(emp,dashSearchMonth,rPayroll)) + rBonus;
                     const rNet = rGross - rCA - (parseFloat(emp.sssRate)||0) - (parseFloat(emp.miscRate)||0);
                     quickView = { ...emp, rangeDays: rDays, rangeGross: rGross, rangeCA: rCA, rangeNet: rNet };
                 }
@@ -589,7 +594,7 @@
                         const prevSaved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === prevMonth || getMonthKey(p.startDate) === prevMonth));
                         const bonus = saved ? (parseFloat(saved.data?.bonus) || 0) : 0;
                         const carryover = saved ? (parseFloat(saved.data?.carryover) || 0) : (prevSaved ? (parseFloat(prevSaved.data?.carryover) || 0) : 0);
-                        const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: calcDays, cash_advance: rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
+                        const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: saved.data?.days_worked ?? calcDays, cash_advance: saved.data?.cash_advance ?? rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
                         setIcForm(baseForm); setIcLedgerEntries(saved ? (saved.data?.ledger || []) : []);
                     }
                 }
@@ -675,7 +680,7 @@
             };
 
             const handleEditProfile = (emp) => {
-                setNewEmpForm({ biometricId: emp.id, firstName: emp.firstName || emp.name.split(' ')[0] || '', lastName: emp.lastName || emp.name.split(' ').slice(1).join(' ') || '', position: emp.position || '', dailyRate: emp.dailyRate || emp.rate || '', staffEmail: emp.staffEmail || '', contactNumber: emp.contactNumber || '', sssNumber: emp.sssNumber || '', sssRate: emp.sssRate || '', miscRate: emp.miscRate || '', status: emp.status || 'active' });
+                setNewEmpForm({ biometricId: emp.id, firstName: emp.firstName || emp.name.split(' ')[0] || '', lastName: emp.lastName || emp.name.split(' ').slice(1).join(' ') || '', position: emp.position || '', dailyRate: emp.dailyRate || emp.rate || '', staffEmail: emp.staffEmail || '', contactNumber: emp.contactNumber || '', sssNumber: emp.sssNumber || '', sssRate: emp.sssRate || '', miscRate: emp.miscRate || '', status: emp.status || 'active', hireDate: emp.hireDate || '', salaryEffectiveDate: new Date().toISOString().slice(0,10), changeReason: '' });
                 setIsEditing(true); setShowAddStaff(true); setViewProfile(null); 
             };
 
@@ -732,15 +737,43 @@
             };
 
             const handleAddStaffSubmit = async (e) => {
-                e.preventDefault(); if (!isAdmin) return;
+                e.preventDefault();
+                if (!isAdmin || staffSaveLock.current) return;
                 const bId = normalizeId(newEmpForm.biometricId);
-                const staffEmail = newEmpForm.staffEmail.trim().toLowerCase();
-                if (staffEmail && employees.some(emp => emp.id !== bId && emp.staffEmail?.trim().toLowerCase() === staffEmail)) {
-                    alert('This email is already assigned to another employee.'); return;
+                const original = employees.find(emp=>normalizeId(emp.id)===bId);
+                const staffEmail = (newEmpForm.staffEmail||'').trim().toLowerCase();
+                const rate = Number(newEmpForm.dailyRate);
+                if (!bId || !newEmpForm.firstName.trim() || !newEmpForm.lastName.trim() || !Number.isFinite(rate) || rate <= 0) { alert('Enter a valid biometric ID, name and positive daily rate.'); return; }
+                if (!isEditing && original) { alert('This biometric ID already belongs to an employee. Open their profile to edit.'); return; }
+                if (isEditing && !original) { alert('Employee not found. Refresh and try again.'); return; }
+                if (staffEmail && employees.some(emp=>normalizeId(emp.id)!==bId && emp.staffEmail?.trim().toLowerCase()===staffEmail)) { alert('This email belongs to another employee.'); return; }
+                const oldRate = original ? Number(original.dailyRate ?? original.rate) : null;
+                const salaryChanged = isEditing && oldRate !== rate;
+                const effectiveDate = newEmpForm.salaryEffectiveDate;
+                if (salaryChanged && (!/^\\d{4}-\\d{2}-\\d{2}$/.test(effectiveDate) || !Number.isFinite(new Date(effectiveDate).getTime()))) { alert('Enter a valid salary effective date.'); return; }
+                if (salaryChanged && !newEmpForm.changeReason.trim()) { alert('Provide a reason for the salary adjustment.'); return; }
+                if (salaryChanged && !window.confirm(`Change salary from ₱${formatMoney(oldRate)} to ₱${formatMoney(rate)} effective ${effectiveDate}? Archived payroll will not be overwritten by this action.`)) return;
+                const history = Array.isArray(original?.salaryHistory) ? [...original.salaryHistory] : [];
+                if (salaryChanged) {
+                    if (history.some(h=>h.effectiveDate===effectiveDate)) { alert('A salary change is already recorded for this date.'); return; }
+                    if (history.some(h=>h.effectiveDate>effectiveDate)) { alert('An existing salary change has a later date. Review history before backdating.'); return; }
+                    history.push({ effectiveDate, dailyRate: rate, previousRate: oldRate, reason: newEmpForm.changeReason.trim(), changedByUid: user.uid, changedByEmail: user.email || '', changedAt: new Date().toISOString() });
                 }
-                const payload = { ...newEmpForm, staffEmail, dailyRate: parseFloat(newEmpForm.dailyRate), sssRate: parseFloat(newEmpForm.sssRate) || 0, miscRate: parseFloat(newEmpForm.miscRate) || 0, name: `${newEmpForm.firstName} ${newEmpForm.lastName}`.trim() };
-                await window.fb.setDoc(getVaultDoc('employees', bId), payload, { merge: true });
-                setShowAddStaff(false); setIsEditing(false);
+                const { salaryEffectiveDate, changeReason, ...fields } = newEmpForm;
+                const payload = { ...fields, biometricId: bId, staffEmail, dailyRate: rate, sssRate: Number(fields.sssRate)||0, miscRate: Number(fields.miscRate)||0, name: `${fields.firstName.trim()} ${fields.lastName.trim()}`, ...(salaryChanged?{salaryHistory:history}:{}), updatedByUid: user.uid, updatedAt: window.fb.serverTimestamp() };
+                staffSaveLock.current=true; setStaffSaving(true);
+                try {
+                    await window.fb.runTransaction(window.fb.db,async tx=>{
+                        const target=getVaultDoc('employees',bId); const snap=await tx.get(target);
+                        if (isEditing && !snap.exists()) throw new Error('Employee was deleted. Refresh.');
+                        if (!isEditing && snap.exists()) throw new Error('Biometric ID already exists.');
+                        if (isEditing && salaryChanged && Number(snap.data().dailyRate ?? snap.data().rate)!==oldRate) throw new Error('Salary changed elsewhere. Refresh before updating.');
+                        tx.set(target,payload,{merge:isEditing});
+                    });
+                    setShowAddStaff(false); setIsEditing(false);
+                    alert(isEditing?'Employee profile updated.':'Employee registered.');
+                } catch(err) { alert('Employee save failed: '+(err.message||err)); }
+                finally {staffSaveLock.current=false;setStaffSaving(false);}
             };
 
             const handleIssueCA = async () => {
@@ -1070,7 +1103,7 @@
                                             </div>
                                             <button onClick={async () => {
                                                 if (!icEmpId) return; const key = `${normalizeId(icEmpId)}_${icMonth}`;
-                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries} });
+                                                await window.fb.setDoc(getVaultDoc('payroll_entries', key), { recordKey: key, empId: normalizeId(icEmpId), month: icMonth, startDate: `${icMonth}-01`, endDate: `${icMonth}-31`, data: {...icForm, ledger: icLedgerEntries, daily_rate: payrollRateForMonth(employees.find(e=>normalizeId(e.id)===normalizeId(icEmpId)),icMonth,interactivePayrolls.find(p=>normalizeId(p.empId)===normalizeId(icEmpId) && p.month===icMonth))} });
                                                 alert("Saved to archive.");
                                             }} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black uppercase">Save to Archive</button>
                                         </div>
@@ -1078,7 +1111,8 @@
                                         <div className="flex-1 bg-slate-200/50 p-10 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center">
                                             {icEmpId ? (() => {
                                                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
-                                                const dailyRate = parseFloat(emp?.dailyRate || emp?.rate) || 0;
+                                                const savedPeriod = interactivePayrolls.find(p=>normalizeId(p.empId)===normalizeId(icEmpId) && (p.month===icMonth || getMonthKey(p.startDate)===icMonth));
+                                                const dailyRate = payrollRateForMonth(emp,icMonth,savedPeriod);
                                                 const totalEarnings = icForm.days_worked * dailyRate;
                                                 const salaryPaidAmount = parseFloat(icForm.salary_pay) || 0;
                                                 const ledgerCredit = icLedgerEntries.filter(entry => entry.amount > 0).reduce((sum, entry) => sum + entry.amount, 0);
@@ -1357,12 +1391,14 @@
 
                     {showAddStaff && isAdmin && (
                         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-                            <form onSubmit={handleAddStaffSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 space-y-5 animate-in zoom-in-95">
+                            <form onSubmit={handleAddStaffSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto p-8 space-y-5 animate-in zoom-in-95">
                                 <div className="flex justify-between items-center mb-2"><h3 className="font-black uppercase tracking-widest text-blue-900">{isEditing ? 'Edit Staff Profile' : 'Add Staff'}</h3><button type="button" onClick={()=>{setShowAddStaff(false); setIsEditing(false);}} className="text-slate-400"><X/></button></div>
                                 
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Biometric ID</label><input type="text" required value={newEmpForm.biometricId} disabled={isEditing} onChange={e=>setNewEmpForm({...newEmpForm, biometricId: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black disabled:opacity-50"/></div>
                                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Registered Email (Google/Facebook/Direct)</label><input type="email" placeholder="staff@gmail.com" value={newEmpForm.staffEmail} onChange={e=>setNewEmpForm({...newEmpForm, staffEmail: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold text-blue-600"/></div>
 
+                                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Date Hired</label><input type="date" value={newEmpForm.hireDate||''} onChange={e=>setNewEmpForm({...newEmpForm,hireDate:e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50"/></div>
+                                {isEditing && <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 space-y-2"><p className="text-xs font-bold text-blue-900">Salary change effective date and reason</p><input type="date" value={newEmpForm.salaryEffectiveDate} onChange={e=>setNewEmpForm({...newEmpForm,salaryEffectiveDate:e.target.value})} className="w-full border rounded-lg p-2"/><input type="text" placeholder="Reason (required if rate changes)" value={newEmpForm.changeReason} onChange={e=>setNewEmpForm({...newEmpForm,changeReason:e.target.value})} className="w-full border rounded-lg p-2"/></div>}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">First Name</label><input type="text" required value={newEmpForm.firstName} onChange={e=>setNewEmpForm({...newEmpForm, firstName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Last Name</label><input type="text" required value={newEmpForm.lastName} onChange={e=>setNewEmpForm({...newEmpForm, lastName: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-bold"/></div>
@@ -1381,7 +1417,7 @@
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">SSS Ded.</label><input type="number" value={newEmpForm.sssRate} onChange={e=>setNewEmpForm({...newEmpForm, sssRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-rose-600"/></div>
                                     <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Misc Ded.</label><input type="number" value={newEmpForm.miscRate} onChange={e=>setNewEmpForm({...newEmpForm, miscRate: e.target.value})} className="w-full border p-3 rounded-2xl bg-slate-50 outline-none font-black text-rose-600"/></div>
                                 </div>
-                                <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-xl mt-4">Save to Cloud</button>
+                                <button type="submit" disabled={staffSaving} className="w-full bg-blue-600 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase shadow-xl mt-4">{staffSaving?'Saving...':'Save to Cloud'}</button>
                             </form>
                         </div>
                     )}
