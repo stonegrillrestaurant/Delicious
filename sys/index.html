@@ -14,6 +14,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -779,6 +780,52 @@
                 window.location.href = 'thermer://' + encodeURIComponent(JSON.stringify(entries));
             };
 
+            const handleSaveCAVoucherPDF = (req) => {
+                const jsPDF = window.jspdf?.jsPDF;
+                if (!jsPDF) { alert('PDF generator has not loaded. Check your connection and try again.'); return; }
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 120] });
+                const margin = 4, width = 50;
+                let y = 7;
+                const put = (value, options = {}) => {
+                    const size = options.size || 9;
+                    pdf.setFont('courier', options.bold ? 'bold' : 'normal');
+                    pdf.setFontSize(size);
+                    const lines = pdf.splitTextToSize(String(value ?? ''), width);
+                    for (const ln of lines) { pdf.text(ln, options.center ? 29 : margin, y, options.center ? { align: 'center' } : undefined); y += size * 0.42; }
+                    y += options.gap ?? 1;
+                };
+                put('STONE GRILL', { bold: true, size: 12, center: true });
+                put('CASH ADVANCE VOUCHER', { bold: true, center: true });
+                put('--------------------------------');
+                put('Approved: ' + timestampLabel(req.approvedAt || req.dateApproved));
+                put('Employee: ' + req.empName);
+                put('Voucher: ' + req.id);
+                put('Reason: ' + (req.reason || '-'));
+                put('--------------------------------');
+                put('PHP ' + formatMoney(req.amount), { bold: true, size: 14, center: true });
+                put('Status: ' + req.status);
+                put('--------------------------------');
+                y += 5;
+                put('Employee signature:');
+                put('____________________________');
+                y += 4;
+                put('Cashier signature:');
+                put('____________________________');
+                y += 3;
+                put('Printing is not proof of cash release.', { size: 7 });
+                // Set final page height to content plus cutter feed, rather than wasting paper.
+                const bytes = pdf.output('arraybuffer');
+                // jsPDF page sizes are fixed at creation: rebuild only if the content exceeds the initial page.
+                if (y > 112) { alert('Voucher content is too long for one PDF page. Use Print instead.'); return; }
+                const blob = new Blob([bytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'Stone-Grill-CA-' + String(req.id).replace(/[^a-z0-9_-]/gi, '-') + '.pdf';
+                document.body.appendChild(link); link.click(); link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            };
+
             const handlePrintReceipt = async (req) => {
                 // Printing does not prove cash was handed over or received.
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
@@ -1530,7 +1577,8 @@
                                         <p className="mt-4 text-[10px]">Printing does not confirm cash release. Cashier must verify before disbursement.</p>
                                     </div>
                                     <div className="p-3 border-t flex gap-2">
-                                        <button type="button" onClick={() => { document.body.classList.add('pos-receipt-active'); setTimeout(() => { window.print(); document.body.classList.remove('pos-receipt-active'); }, 300); }} className="flex-1 bg-slate-900 text-white rounded p-3 font-bold">Print / Save PDF</button>
+                                        <button type="button" onClick={() => handleSaveCAVoucherPDF(receiptToPrint)} className="flex-1 bg-blue-700 text-white rounded p-3 font-bold">Save PDF</button>
+                                        <button type="button" onClick={() => { document.body.classList.add('pos-receipt-active'); setTimeout(() => { window.print(); document.body.classList.remove('pos-receipt-active'); }, 300); }} className="flex-1 bg-slate-900 text-white rounded p-3 font-bold">Print</button>
                                         <button type="button" onClick={() => setReceiptToPrint(null)} className="border rounded px-3">Done</button>
                                     </div>
                                 </div>
