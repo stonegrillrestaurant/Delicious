@@ -180,7 +180,7 @@
         // A local PDF/image for ordinary device Save, Share and Print actions.
         // No printer app, public endpoint, or database write is needed.
         const buildVoucherDocument = (req) => {
-            const width = 576, margin = 32;
+            const width = 576, margin = 44;
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             if (!ctx) throw new Error('This browser cannot create a voucher file.');
@@ -210,28 +210,29 @@
             };
             add('STONE GRILL', true, true, 48);
             add('CASH ADVANCE VOUCHER', true, true, 40);
-            add('');
+            add('----------------------------', false, true, 30);
             add('Approved: ' + req.approvedLabel);
             add('Employee: ' + req.empName, true);
-            add('Voucher: ' + req.id);
-            add('Reason: ' + (req.reason || '-'));
-            add('');
-            add('AMOUNT: PHP ' + formatMoney(req.amount), true, true, 44);
+            add('Voucher No: ' + req.id);
+            add('Purpose: ' + (req.reason || '-'));
+            add('----------------------------', false, true, 30);
+            add('CASH ADVANCE', true, true, 30);
+            add('PHP ' + formatMoney(req.amount), true, true, 48);
             add('Status: ' + req.status);
             add('Receipt confirmed: ' + req.receivedLabel);
-            add('Printing does not confirm cash received.', false, false, 30);
-            add('');
+            add('Printing alone does not confirm cash release.', false, false, 30);
+            add('----------------------------', false, true, 30);
             add('I received PHP ' + formatMoney(req.amount) + '.');
             add(''); add('____________________________');
-            add('Employee signature');
+            add('EMPLOYEE SIGNATURE', true, false, 30);
             add('Date/Time: _________________');
             add('');
             add('I released PHP ' + formatMoney(req.amount) + ' to the employee.');
             add(''); add('____________________________');
-            add('Cashier signature');
+            add('CASHIER SIGNATURE', true, false, 30);
             add('Date/Time: _________________');
-            add('');
-            add('Cashier: verify unpaid before release. Keep the signed voucher as the cash-register money-out receipt.', false, false, 30);
+            add('----------------------------', false, true, 30);
+            add('Cashier: verify this voucher is unpaid before releasing cash. Keep the signed copy as the cash-register money-out receipt.', false, false, 30);
             // Readable thermal receipt with a short trailing feed allowance.
             const rowHeight = row => Math.ceil(row.size * 1.28);
             canvas.width = width; canvas.height = margin * 2 + rows.reduce((sum, row) => sum + rowHeight(row), 0) + 100;
@@ -295,7 +296,7 @@
                     </div>
                     {documentFile.error ? <p role="alert">Unable to prepare the file: {documentFile.error}</p> : <>
                         <div className="grid grid-cols-2 gap-2 mb-3">
-                            <a href={documentFile.url} target="_blank" rel="noopener" className="col-span-2 bg-blue-700 text-white rounded-lg px-4 py-3 font-bold flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>Open Clean Voucher to Print</a>
+                            <a href={documentFile.url} target="_blank" rel="noopener" className="col-span-2 bg-blue-700 text-white rounded-lg px-4 py-3 font-bold flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>Open Official PDF Voucher</a>
                             <a href={documentFile.url} download={documentFile.file.name} className="border rounded-lg px-4 py-3 text-center font-bold" onClick={() => setMessage('If your phone opens the PDF, use its Share menu to Save to Files or Downloads.')}>Save PDF</a>
                             <button onClick={share} className="border rounded-lg px-4 py-3">Share PDF</button>
                         </div>
@@ -303,7 +304,7 @@
                         {message && <p role="status" className="text-sm bg-blue-50 p-3 mb-3 rounded-lg">{message}</p>}
                         <img src={documentFile.image} alt="Complete cash advance voucher preview" className="w-full max-w-[290px] mx-auto border" />
                     </>}
-                    <details className="mt-4 border-t pt-3"><summary className="cursor-pointer text-sm">Optional: Thermer printing</summary><p className="text-xs text-slate-600 my-2">For devices with Thermer installed and a printer already connected in that app.</p><button onClick={() => onThermer(req)} className="border rounded-lg px-3 py-2">Open Thermer</button></details>
+                    <details className="mt-4 border-t pt-3"><summary className="cursor-pointer text-sm">Optional: Thermer plain-text print</summary><p className="text-xs text-slate-600 my-2">Use this for a fast plain-text copy. The official signed business voucher is the PDF above.</p><button onClick={() => onThermer(req)} className="border rounded-lg px-3 py-2">Print Plain Voucher in Thermer</button></details>
                 </div>
             </div>;
         }
@@ -873,7 +874,7 @@
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
                 const name = (emp?.name || 'Unknown Employee').toUpperCase();
                 const line = (value, bold = 0, align = 0) => ({ type: 0, content: String(value), bold, align, format: 0 });
-                const wrap = (value, width = 32) => {
+                const wrapLines = (value, width = 28) => {
                     const words = String(value ?? '').split(/\\s+/);
                     const lines = []; let current = '';
                     words.forEach(word => {
@@ -882,27 +883,38 @@
                         current = (current ? current + ' ' : '') + word;
                     });
                     if (current) lines.push(current);
-                    return lines.join('\\n');
+                    return lines;
                 };
+                const wrappedEntries = (value, bold = 0, align = 0) => wrapLines(value).map(text => line(text, bold, align));
                 const entries = [
                     line('STONE GRILL', 1, 1),
                     line('CASH ADVANCE VOUCHER', 1, 1),
-                    line('--------------------------------'),
-                    line('Date: ' + timestampLabel(req.approvedAt || req.dateApproved)),
-                    line(wrap('Employee: ' + name)),
-                    line(wrap('Voucher: ' + req.id)),
-                    line(wrap('Reason: ' + (req.reason || '-'))),
-                    line('--------------------------------'),
-                    line('AMOUNT: PHP ' + formatMoney(req.amount), 1),
-                    line('Status: ' + req.status),
-                    line('--------------------------------'),
-                    line('Employee signature:'),
-                    line('____________________________'),
-                    line('Date/Time: _________________'),
-                    line('Cashier signature:'),
-                    line('____________________________'),
-                    line('Date/Time: _________________'),
-                    line(wrap('Cashier: verify unpaid before releasing cash. Printed voucher is not proof of payment.')),
+                    line('----------------------------'),
+                    ...wrappedEntries('Approved: ' + timestampLabel(req.approvedAt || req.dateApproved)),
+                    ...wrappedEntries('Employee: ' + name, 1),
+                    ...wrappedEntries('Voucher No: ' + req.id),
+                    ...wrappedEntries('Purpose: ' + (req.reason || '-')),
+                    line('----------------------------'),
+                    line('CASH ADVANCE', 1, 1),
+                    line('PHP ' + formatMoney(req.amount), 1, 1),
+                    ...wrappedEntries('Status: ' + req.status),
+                    ...wrappedEntries('Receipt confirmed: ' + timestampLabel(req.receivedAt)),
+                    ...wrappedEntries('Printing alone does not confirm cash release.'),
+                    line('----------------------------'),
+                    ...wrappedEntries('I received PHP ' + formatMoney(req.amount) + '.'),
+                    line(''),
+                    line('----------------------------'),
+                    line('EMPLOYEE SIGNATURE', 1, 1),
+                    line('Date/Time: ______________'),
+                    line(''),
+                    ...wrappedEntries('I released PHP ' + formatMoney(req.amount) + ' to the employee.'),
+                    line(''),
+                    line('----------------------------'),
+                    line('CASHIER SIGNATURE', 1, 1),
+                    line('Date/Time: ______________'),
+                    line('----------------------------'),
+                    ...wrappedEntries('Cashier: verify this voucher is unpaid before releasing cash.'),
+                    ...wrappedEntries('Keep the signed copy as the cash-register money-out receipt.'),
                     line('\\n\\n\\n\\n\\n')
                 ];
                 // Launch synchronously from the click to avoid iOS popup restrictions.
