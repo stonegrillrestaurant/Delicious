@@ -804,7 +804,7 @@
                         dateRequested: new Date().toISOString(), requestedAt: window.fb.serverTimestamp(), status: 'Pending'
                     });
                     setStaffCaRequest({ amount: '', reason: '' });
-                    alert('Request sent to Admin. Approval does not mean cash has been handed over.');
+                    alert('Request sent to Admin for approval or rejection.');
                 });
             };
 
@@ -812,10 +812,21 @@
                 if (!isAdmin) return;
                 await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
                     const ref = getVaultDoc('ca_requests', req.id);
+                    const ledgerId = 'request_' + req.id;
+                    const ledgerRef = getVaultDoc('cash_advances', ledgerId);
                     const snapshot = await transaction.get(ref);
-                    if (!snapshot.exists() || snapshot.data().status !== 'Pending') throw new Error('This request has already been processed.');
-                    transaction.update(ref, { status: 'Approved', approvalFlow: 'handover-v1', approvedByUid: user.uid,
-                        approvedAt: window.fb.serverTimestamp(), dateApproved: new Date().toISOString() });
+                    const ledgerSnapshot = await transaction.get(ledgerRef);
+                    const data = snapshot.data();
+                    if (!snapshot.exists() || data.status !== 'Pending') throw new Error('This request has already been processed.');
+                    if (!Number.isFinite(Number(data.amount)) || Number(data.amount) <= 0) throw new Error('Invalid request amount.');
+                    if (!ledgerSnapshot.exists()) transaction.set(ledgerRef, {
+                        empId: data.empId, amount: Number(data.amount), reason: data.reason,
+                        date: new Date().toISOString().slice(0,10), type: 'advance', requestId: req.id,
+                        recordedByUid: user.uid, recordedAt: window.fb.serverTimestamp()
+                    });
+                    transaction.update(ref, { status: 'Approved', approvalFlow: 'approval-v2', ledgerId,
+                        approvedByUid: user.uid, approvedAt: window.fb.serverTimestamp(),
+                        recordedAt: window.fb.serverTimestamp(), dateApproved: new Date().toISOString() });
                 }));
             };
 
@@ -826,26 +837,6 @@
                     const snapshot = await transaction.get(ref);
                     if (!snapshot.exists() || snapshot.data().status !== 'Pending') throw new Error('This request has already been processed.');
                     transaction.update(ref, { status: 'Rejected', rejectedByUid: user.uid, rejectedAt: window.fb.serverTimestamp() });
-                }));
-            };
-
-            const handleDisburseCARequest = async (req) => {
-                if (!isAdmin || !window.confirm(`Have you handed ₱${formatMoney(req.amount)} to this employee? This records the cash advance in the ledger.`)) return;
-                await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
-                    const ref = getVaultDoc('ca_requests', req.id);
-                    const ledgerId = 'request_' + req.id;
-                    const ledgerRef = getVaultDoc('cash_advances', ledgerId);
-                    const snapshot = await transaction.get(ref);
-                    const ledgerSnapshot = await transaction.get(ledgerRef);
-                    const data = snapshot.data();
-                    if (!snapshot.exists() || data.status !== 'Approved' || data.approvalFlow !== 'handover-v1') throw new Error('Only a new approved request can be handed over here.');
-                    if (ledgerSnapshot.exists()) throw new Error('This request already has a cash ledger entry.');
-                    if (!Number.isFinite(data.amount) || data.amount <= 0) throw new Error('Invalid request amount.');
-                    transaction.set(ledgerRef, { empId: data.empId, amount: data.amount,
-                        reason: 'Requested cash advance: ' + data.reason, date: new Date().toISOString().slice(0,10),
-                        type: 'advance', requestId: req.id, disbursedByUid: user.uid, disbursedAt: window.fb.serverTimestamp() });
-                    transaction.update(ref, { status: 'Disbursed', ledgerId, disbursedByUid: user.uid,
-                        disbursedAt: window.fb.serverTimestamp(), dateDisbursed: new Date().toISOString() });
                 }));
             };
 
@@ -1038,15 +1029,49 @@
                 const amount = Math.abs(Number(entry.amount));
                 const reason = String(entry.reason || '').trim();
                 if (!empId || !Number.isFinite(amount) || amount <= 0 || !reason) throw new Error('Select an employee and enter a valid amount and reason.');
-                return window.fb.addDoc(getVaultCol('ca_requests'), {
-                    empId: String(empId), amount, reason,
-                    dateRequested: new Date().toISOString(), requestedAt: window.fb.serverTimestamp(),
-                    dateApproved: new Date().toISOString(), approvedAt: window.fb.serverTimestamp(),
-                    effectiveDate: entry.date || new Date().toISOString().slice(0, 10),
-                    status: 'Approved', approvalFlow: 'handover-v1', source: 'admin-manual',
-                    requestedByUid: user.uid, approvedByUid: user.uid
+                const requestRef = window.fb.doc(getVaultCol('ca_requests'));
+                const ledgerId = 'request_' + requestRef.id;
+                const ledgerRef = getVaultDoc('cash_advances', ledgerId);
+                const effectiveDate = entry.date || new Date().toISOString().slice(0, 10);
+                await window.fb.runTransaction(window.fb.db, async transaction => {
+                    transaction.set(requestRef, {
+                        empId: String(empId), amount, reason,
+                        dateRequested: new Date().toISOString(), requestedAt: window.fb.serverTimestamp(),
+                        dateApproved: new Date().toISOString(), approvedAt: window.fb.serverTimestamp(),
+                        effectiveDate, status: 'Approved', approvalFlow: 'approval-v2', ledgerId,
+                        source: 'admin-manual', requestedByUid: user.uid, approvedByUid: user.uid,
+                        recordedAt: window.fb.serverTimestamp()
+                    });
+                    transaction.set(ledgerRef, {
+                        empId: String(empId), amount, reason, date: effectiveDate, type: 'advance',
+                        requestId: requestRef.id, recordedByUid: user.uid, recordedAt: window.fb.serverTimestamp()
+                    });
                 });
+                return requestRef;
             };
+
+            // One-time compatibility for approvals created before approval directly recorded the ledger entry.
+            useEffect(() => {
+                if (!isAdmin || !user) return;
+                caRequests.filter(req => req.status === 'Approved' && req.approvalFlow === 'handover-v1' && !req.ledgerId).forEach(req => {
+                    window.fb.runTransaction(window.fb.db, async transaction => {
+                        const requestRef = getVaultDoc('ca_requests', req.id);
+                        const ledgerId = 'request_' + req.id;
+                        const ledgerRef = getVaultDoc('cash_advances', ledgerId);
+                        const requestSnapshot = await transaction.get(requestRef);
+                        const ledgerSnapshot = await transaction.get(ledgerRef);
+                        const data = requestSnapshot.data();
+                        if (!requestSnapshot.exists() || data.status !== 'Approved' || data.ledgerId) return;
+                        if (!ledgerSnapshot.exists()) transaction.set(ledgerRef, {
+                            empId: data.empId, amount: Number(data.amount), reason: data.reason,
+                            date: data.effectiveDate || String(data.dateApproved || new Date().toISOString()).slice(0,10),
+                            type: 'advance', requestId: req.id, recordedByUid: user.uid,
+                            recordedAt: window.fb.serverTimestamp()
+                        });
+                        transaction.update(requestRef, { approvalFlow: 'approval-v2', ledgerId, recordedAt: window.fb.serverTimestamp() });
+                    }).catch(err => console.error('Could not update earlier approved cash advance:', err));
+                });
+            }, [isAdmin, user, caRequests]);
 
             const handleIssueCA = async () => {
                 if (!isAdmin || !newCa.empId) return;
@@ -1055,7 +1080,7 @@
                 await runCAAction(async () => {
                     if (caType === 'advance') {
                         await createManualApprovedCA(newCa.empId, newCa);
-                        alert('Cash advance approved. It is now in the voucher list. Print the voucher before handing over the cash.');
+                        alert('Cash advance recorded. The voucher is ready to print or save.');
                     } else {
                         await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: -Math.abs(amount), type: 'payment', recordedByUid: user.uid, recordedAt: window.fb.serverTimestamp() });
                     }
@@ -1071,7 +1096,7 @@
                 await runCAAction(async () => {
                     if (entry.type === 'advance') {
                         await createManualApprovedCA(emp.id, entry);
-                        alert('Cash advance approved. It is now in the voucher list. Print the voucher before handing over the cash.');
+                        alert('Cash advance recorded. The voucher is ready to print or save.');
                     } else {
                         await window.fb.addDoc(getVaultCol('cash_advances'), {
                             empId: String(emp.id), amount: -Math.abs(amount),
@@ -1266,7 +1291,7 @@
                                                                                     {req.status === 'Approved' && <span className="text-emerald-600">APPROVED</span>}
                                                                                     {req.status === 'Rejected' && <span className="text-rose-500">REJECTED</span>}
                                                                                     {req.status === 'Printed' && <span className="text-blue-600">LEGACY PRINTED — RECEIPT UNVERIFIED</span>}
-                                                                                    {req.status === 'Disbursed' && <span className="text-blue-600">CASH HANDED OVER — CONFIRM RECEIPT</span>}
+                                                                                    {req.status === 'Disbursed' && <span className="text-blue-600">APPROVED AND RECORDED</span>}
                                                                                     {req.status === 'Received' && <span className="text-emerald-600">RECEIVED<br/><small>{timestampLabel(req.receivedAt)}</small></span>}
                                                                                 </td>
                                                                                 <td className="p-3 text-center">
@@ -1505,8 +1530,8 @@
                                         </div>
 
                                         <div className="bg-white rounded-3xl border shadow-xl overflow-hidden">
-                                            <h3 className="p-5 bg-blue-50 font-black text-blue-900 uppercase text-xs">Cash Advance Request History &amp; Handover</h3>
-                                            <p className="px-5 pt-4 text-xs text-slate-500">Approve first, record the actual cash handover, then let the employee confirm receipt. Printing does not confirm payment. Older approvals were already posted to the ledger; do not issue them again.</p>
+                                            <h3 className="p-5 bg-blue-50 font-black text-blue-900 uppercase text-xs">Cash Advance History</h3>
+                                            <p className="px-5 pt-4 text-xs text-slate-500">Approving a request records the cash advance immediately. Reject requests that should not be recorded. The voucher is available after approval.</p>
                                             <div className="hidden md:block overflow-x-auto">
                                                 <table className="w-full text-left text-xs">
                                                     <thead className="bg-slate-50"><tr><th className="p-4">Employee / Reason</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Audit trail</th><th className="p-4">Action</th></tr></thead>
@@ -1519,12 +1544,11 @@
                                                                 <td className="p-4 text-slate-500">
                                                                     <p>Requested: {timestampLabel(req.requestedAt || req.dateRequested)}</p>
                                                                     <p>Approved: {timestampLabel(req.approvedAt || req.dateApproved)}</p>
-                                                                    <p>Handed over: {timestampLabel(req.disbursedAt)}</p>
+                                                                    <p>Recorded: {timestampLabel(req.recordedAt || req.approvedAt || req.dateApproved)}</p>
                                                                     <p>Employee received: {timestampLabel(req.receivedAt)}</p>
                                                                     {req.rejectedAt && <p>Rejected: {timestampLabel(req.rejectedAt)}</p>}
                                                                 </td>
                                                                 <td className="p-4 min-w-[170px]">
-                                                                    {req.status === 'Approved' && req.approvalFlow === 'handover-v1' && <button disabled={caBusy} onClick={() => handleDisburseCARequest(req)} className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold">Record cash handed over</button>}
                                                                     {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="block mt-2 border border-blue-600 text-blue-700 px-3 py-2 rounded-lg font-bold">Print or Save Voucher</button>}
                                                                 </td>
                                                             </tr>
@@ -1542,10 +1566,9 @@
                                                             <strong className="text-lg whitespace-nowrap">₱{formatMoney(req.amount)}</strong>
                                                         </div>
                                                         <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"><span className="text-[10px] font-black uppercase text-slate-400">Status</span><strong className="text-sm">{req.status === 'Printed' ? 'Legacy printed' : req.status}</strong></div>
-                                                        <details className="text-xs text-slate-500"><summary className="cursor-pointer font-bold text-slate-700">View dates and audit trail</summary><div className="mt-2 space-y-1 pl-2 border-l-2"><p>Requested: {timestampLabel(req.requestedAt || req.dateRequested)}</p><p>Approved: {timestampLabel(req.approvedAt || req.dateApproved)}</p><p>Handed over: {timestampLabel(req.disbursedAt)}</p><p>Employee received: {timestampLabel(req.receivedAt)}</p>{req.rejectedAt && <p>Rejected: {timestampLabel(req.rejectedAt)}</p>}</div></details>
+                                                        <details className="text-xs text-slate-500"><summary className="cursor-pointer font-bold text-slate-700">View dates and audit trail</summary><div className="mt-2 space-y-1 pl-2 border-l-2"><p>Requested: {timestampLabel(req.requestedAt || req.dateRequested)}</p><p>Approved: {timestampLabel(req.approvedAt || req.dateApproved)}</p><p>Recorded: {timestampLabel(req.recordedAt || req.approvedAt || req.dateApproved)}</p><p>Employee received: {timestampLabel(req.receivedAt)}</p>{req.rejectedAt && <p>Rejected: {timestampLabel(req.rejectedAt)}</p>}</div></details>
                                                         <div className="grid gap-2">
                                                             {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="w-full bg-slate-900 text-white px-4 py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>Print or Save Voucher</button>}
-                                                            {req.status === 'Approved' && req.approvalFlow === 'handover-v1' && <button disabled={caBusy} onClick={() => handleDisburseCARequest(req)} className="w-full bg-blue-600 disabled:opacity-50 text-white px-4 py-3 rounded-xl font-black uppercase text-xs">Record Cash Handed Over</button>}
                                                         </div>
                                                     </article>;
                                                 })}
