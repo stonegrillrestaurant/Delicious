@@ -284,14 +284,6 @@
                 try { await navigator.share({files, title: 'Stone Grill cash advance voucher'}); setMessage(''); }
                 catch (error) { if (error.name !== 'AbortError') setMessage('Sharing could not open. Use Save PDF or Open PDF.'); }
             };
-            const print = () => {
-                const popup = window.open('', '_blank');
-                if (!popup) { setMessage('Allow pop-ups for this page, or use Open PDF and print from the PDF viewer.'); return; }
-                popup.opener = null;
-                popup.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stone Grill voucher</title><style>*{box-sizing:border-box}body{margin:0;background:#eee;font:16px Arial}nav{padding:16px;text-align:center}button{padding:12px 24px}img{display:block;width:min(100%,58mm);height:auto;margin:0 auto;background:white}@page{size:58mm ${documentFile.pageHeight.toFixed(2)}mm;margin:0}@media print{nav{display:none}html,body{width:100%!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;background:white}img{display:block!important;width:100%!important;max-width:none!important;height:auto!important;margin:0!important}}</style></head><body><nav><button id="print">Print</button><p>Choose your printer or Save as PDF in the device print menu.</p></nav><img alt="Cash advance voucher" src="${documentFile.image}"></body></html>`);
-                popup.document.close();
-                popup.document.getElementById('print').onclick = () => popup.print();
-            };
             return <div className="fixed inset-0 z-[80] bg-slate-950/60 flex items-center justify-center p-3 print-hidden" role="dialog" aria-modal="true" aria-label="Cash advance voucher">
                 <div className="bg-white rounded-2xl w-full max-w-lg max-h-[94vh] overflow-y-auto p-4">
                     <div className="flex justify-between items-center gap-3 mb-3"><div><h2 className="font-bold text-lg">Cash Advance Voucher</h2><p className="text-xs text-slate-500">Review the voucher below before saving or printing.</p></div><button onClick={onClose} className="border rounded-lg px-3 py-2">Close</button></div>
@@ -303,12 +295,11 @@
                     </div>
                     {documentFile.error ? <p role="alert">Unable to prepare the file: {documentFile.error}</p> : <>
                         <div className="grid grid-cols-2 gap-2 mb-3">
-                            <button onClick={print} className="col-span-2 bg-blue-700 text-white rounded-lg px-4 py-3 font-bold flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>Print 58mm Voucher</button>
+                            <a href={documentFile.url} target="_blank" rel="noopener" className="col-span-2 bg-blue-700 text-white rounded-lg px-4 py-3 font-bold flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>Open Clean Voucher to Print</a>
                             <a href={documentFile.url} download={documentFile.file.name} className="border rounded-lg px-4 py-3 text-center font-bold" onClick={() => setMessage('If your phone opens the PDF, use its Share menu to Save to Files or Downloads.')}>Save PDF</a>
                             <button onClick={share} className="border rounded-lg px-4 py-3">Share PDF</button>
-                            <a href={documentFile.url} target="_blank" rel="noopener" className="col-span-2 border rounded-lg px-4 py-3 text-center">Open PDF in Full Screen</a>
                         </div>
-                        <p className="text-xs text-slate-600 mb-3">Print opens the 58mm voucher and your device print menu. On iPhone, Save PDF may open the file first; use Share → Save to Files.</p>
+                        <p className="text-xs text-slate-600 mb-3">This opens only the white 58mm voucher PDF. In the PDF viewer, use Share → Print. The cash-advance screen and its yellow theme will not be included.</p>
                         {message && <p role="status" className="text-sm bg-blue-50 p-3 mb-3 rounded-lg">{message}</p>}
                         <img src={documentFile.image} alt="Complete cash advance voucher preview" className="w-full max-w-[290px] mx-auto border" />
                     </>}
