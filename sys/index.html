@@ -852,10 +852,21 @@
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = 'Stone-Grill-CA-' + String(req.id).replace(/[^a-z0-9_-]/gi, '-') + '.pdf';
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                // iOS Safari may silently ignore programmatic downloads from blob URLs.
+                // Show the PDF in a new browser tab, where Share > Save to Files works.
+                // Open the tab synchronously from the button tap to avoid popup blocking.
+                const viewer = window.open('', '_blank');
+                if (viewer) {
+                    viewer.document.title = 'Stone Grill Cash Advance Voucher';
+                    viewer.document.body.innerHTML = '<p style="font:16px system-ui;padding:20px">Opening voucher PDF… Use Share → Save to Files.</p>';
+                    viewer.location.replace(url);
+                } else {
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    alert('If no PDF opens, allow pop-ups for this website and try again.');
+                }
+                setTimeout(() => URL.revokeObjectURL(url), 300000);
             };
 
             const handlePrintReceipt = async (req) => {
