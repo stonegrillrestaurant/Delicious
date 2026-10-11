@@ -1034,11 +1034,33 @@
                 } catch(err) { alert('Adjustment not saved: '+(err.message||err)); return false; }
             };
 
+            const createManualApprovedCA = async (empId, entry) => {
+                const amount = Math.abs(Number(entry.amount));
+                const reason = String(entry.reason || '').trim();
+                if (!empId || !Number.isFinite(amount) || amount <= 0 || !reason) throw new Error('Select an employee and enter a valid amount and reason.');
+                return window.fb.addDoc(getVaultCol('ca_requests'), {
+                    empId: String(empId), amount, reason,
+                    dateRequested: new Date().toISOString(), requestedAt: window.fb.serverTimestamp(),
+                    dateApproved: new Date().toISOString(), approvedAt: window.fb.serverTimestamp(),
+                    effectiveDate: entry.date || new Date().toISOString().slice(0, 10),
+                    status: 'Approved', approvalFlow: 'handover-v1', source: 'admin-manual',
+                    requestedByUid: user.uid, approvedByUid: user.uid
+                });
+            };
+
             const handleIssueCA = async () => {
                 if (!isAdmin || !newCa.empId) return;
-                let amt = parseFloat(newCa.amount) || 0; if (caType === 'payment') amt = -Math.abs(amt);
-                await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: amt, type: caType });
-                setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
+                const amount = Number(newCa.amount);
+                if (!Number.isFinite(amount) || amount <= 0 || !newCa.reason.trim()) { alert('Select an employee and enter a valid amount and reason.'); return; }
+                await runCAAction(async () => {
+                    if (caType === 'advance') {
+                        await createManualApprovedCA(newCa.empId, newCa);
+                        alert('Cash advance approved. It is now in the voucher list. Print the voucher before handing over the cash.');
+                    } else {
+                        await window.fb.addDoc(getVaultCol('cash_advances'), { ...newCa, amount: -Math.abs(amount), type: 'payment', recordedByUid: user.uid, recordedAt: window.fb.serverTimestamp() });
+                    }
+                    setNewCa({ empId: '', amount: '', reason: '', date: new Date().toISOString().slice(0, 10) });
+                });
             };
 
             const handleProfileIssueCA = async (emp, entry) => {
@@ -1047,11 +1069,16 @@
                 if (!Number.isFinite(amount) || amount <= 0) return false;
                 let saved = false;
                 await runCAAction(async () => {
-                    await window.fb.addDoc(getVaultCol('cash_advances'), {
-                        empId: String(emp.id), amount: entry.type === 'payment' ? -Math.abs(amount) : Math.abs(amount),
-                        reason: entry.reason.trim(), date: entry.date, type: entry.type,
-                        recordedByUid: user.uid, recordedAt: window.fb.serverTimestamp()
-                    });
+                    if (entry.type === 'advance') {
+                        await createManualApprovedCA(emp.id, entry);
+                        alert('Cash advance approved. It is now in the voucher list. Print the voucher before handing over the cash.');
+                    } else {
+                        await window.fb.addDoc(getVaultCol('cash_advances'), {
+                            empId: String(emp.id), amount: -Math.abs(amount),
+                            reason: entry.reason.trim(), date: entry.date, type: 'payment',
+                            recordedByUid: user.uid, recordedAt: window.fb.serverTimestamp()
+                        });
+                    }
                     saved = true;
                 });
                 return saved;
@@ -1561,7 +1588,10 @@
                                                                     <td className="p-4 font-mono text-slate-400">{formatDisplayDate(ca.date)}</td>
                                                                     <td className="p-4 font-black uppercase text-slate-700">{employees.find(e=>normalizeId(e.id)===normalizeId(ca.empId))?.name || ca.empId} <span className="italic text-slate-400 font-normal ml-2">{ca.reason}</span></td>
                                                                     <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-500'}`}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</td>
-                                                                    <td className="p-4 text-center"><button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button></td>
+                                                                    <td className="p-4 text-center">
+                                                                        {ca.amount > 0 && !ca.requestId && <button onClick={() => handlePrintReceipt({...ca, amount: Math.abs(ca.amount), status: 'Approved', approvedAt: ca.recordedAt, dateApproved: ca.date})} className="mr-2 border border-blue-600 text-blue-700 px-2 py-2 rounded-lg text-[9px] font-black uppercase"><Printer className="w-3 h-3 inline mr-1"/>Voucher</button>}
+                                                                        <button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button>
+                                                                    </td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
