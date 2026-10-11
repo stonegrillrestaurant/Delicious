@@ -180,19 +180,19 @@
         // A local PDF/image for ordinary device Save, Share and Print actions.
         // No printer app, public endpoint, or database write is needed.
         const buildVoucherDocument = (req) => {
-            const width = 576, margin = 50, lineHeight = 36;
+            const width = 576, margin = 32;
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             if (!ctx) throw new Error('This browser cannot create a voucher file.');
-            ctx.font = '27px Arial, sans-serif';
+            ctx.font = '34px Arial, sans-serif';
             const rows = [];
-            const add = (text, bold = false, center = false) => {
-                ctx.font = `${bold ? 'bold ' : ''}27px Arial, sans-serif`;
+            const add = (text, bold = false, center = false, size = 34) => {
+                ctx.font = `${bold ? 'bold ' : ''}${size}px Arial, sans-serif`;
                 for (const paragraph of String(text ?? '').split('\n')) {
                     let current = '';
                     for (let word of paragraph.trim().split(/\s+/)) {
                         if (current && ctx.measureText(current + ' ' + word).width > width - margin * 2) {
-                            rows.push({text: current, bold, center}); current = '';
+                            rows.push({text: current, bold, center, size}); current = '';
                         }
                         // Split only words/IDs which cannot fit on a line.
                         while (ctx.measureText(word).width > width - margin * 2) {
@@ -201,25 +201,25 @@
                                 if (chunk && ctx.measureText(chunk + char).width > width - margin * 2) break;
                                 chunk += char;
                             }
-                            rows.push({text: chunk, bold, center}); word = word.slice(chunk.length);
+                            rows.push({text: chunk, bold, center, size}); word = word.slice(chunk.length);
                         }
                         if (word) current += (current ? ' ' : '') + word;
                     }
-                    rows.push({text: current, bold, center});
+                    rows.push({text: current, bold, center, size});
                 }
             };
-            add('STONE GRILL', true, true);
-            add('CASH ADVANCE VOUCHER', true, true);
+            add('STONE GRILL', true, true, 48);
+            add('CASH ADVANCE VOUCHER', true, true, 40);
             add('');
             add('Approved: ' + req.approvedLabel);
             add('Employee: ' + req.empName, true);
             add('Voucher: ' + req.id);
             add('Reason: ' + (req.reason || '-'));
             add('');
-            add('AMOUNT: PHP ' + formatMoney(req.amount), true, true);
+            add('AMOUNT: PHP ' + formatMoney(req.amount), true, true, 44);
             add('Status: ' + req.status);
             add('Receipt confirmed: ' + req.receivedLabel);
-            add('Printing does not confirm cash received.');
+            add('Printing does not confirm cash received.', false, false, 30);
             add('');
             add('I received PHP ' + formatMoney(req.amount) + '.');
             add(''); add('____________________________');
@@ -231,15 +231,18 @@
             add('Cashier signature');
             add('Date/Time: _________________');
             add('');
-            add('Cashier: verify unpaid before release. Keep the signed voucher as the cash-register money-out receipt.');
-            // Compact receipt with a short trailing feed allowance.
-            canvas.width = width; canvas.height = margin * 2 + rows.length * lineHeight + 80;
+            add('Cashier: verify unpaid before release. Keep the signed voucher as the cash-register money-out receipt.', false, false, 30);
+            // Readable thermal receipt with a short trailing feed allowance.
+            const rowHeight = row => Math.ceil(row.size * 1.28);
+            canvas.width = width; canvas.height = margin * 2 + rows.reduce((sum, row) => sum + rowHeight(row), 0) + 100;
             ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, canvas.height);
             ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
-            rows.forEach((row, index) => {
-                ctx.font = `${row.bold ? 'bold ' : ''}27px Arial, sans-serif`;
+            let y = margin;
+            rows.forEach(row => {
+                ctx.font = `${row.bold ? 'bold ' : ''}${row.size}px Arial, sans-serif`;
                 ctx.textAlign = row.center ? 'center' : 'left';
-                ctx.fillText(row.text, row.center ? width / 2 : margin, margin + index * lineHeight);
+                ctx.fillText(row.text, row.center ? width / 2 : margin, y);
+                y += rowHeight(row);
             });
             const image = canvas.toDataURL('image/png');
             const jpeg = Uint8Array.from(atob(canvas.toDataURL('image/jpeg', 0.98).split(',')[1]), ch => ch.charCodeAt(0));
@@ -285,7 +288,7 @@
                 const popup = window.open('', '_blank');
                 if (!popup) { setMessage('Allow pop-ups for this page, or use Open PDF and print from the PDF viewer.'); return; }
                 popup.opener = null;
-                popup.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stone Grill voucher</title><style>body{margin:0;background:#eee;font:16px Arial}nav{padding:16px;text-align:center}button{padding:12px 24px}img{display:block;width:58mm;height:auto;margin:0 auto;background:white}@page{size:58mm ${documentFile.pageHeight.toFixed(2)}mm;margin:0}@media print{nav{display:none}html,body{margin:0;padding:0;background:white}img{margin:0;width:58mm}}</style></head><body><nav><button id="print">Print</button><p>Choose your printer or Save as PDF in the device print menu.</p></nav><img alt="Cash advance voucher" src="${documentFile.image}"></body></html>`);
+                popup.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stone Grill voucher</title><style>*{box-sizing:border-box}body{margin:0;background:#eee;font:16px Arial}nav{padding:16px;text-align:center}button{padding:12px 24px}img{display:block;width:min(100%,58mm);height:auto;margin:0 auto;background:white}@page{size:58mm ${documentFile.pageHeight.toFixed(2)}mm;margin:0}@media print{nav{display:none}html,body{width:100%!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;background:white}img{display:block!important;width:100%!important;max-width:none!important;height:auto!important;margin:0!important}}</style></head><body><nav><button id="print">Print</button><p>Choose your printer or Save as PDF in the device print menu.</p></nav><img alt="Cash advance voucher" src="${documentFile.image}"></body></html>`);
                 popup.document.close();
                 popup.document.getElementById('print').onclick = () => popup.print();
             };
