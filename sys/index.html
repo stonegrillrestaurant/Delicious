@@ -14,7 +14,6 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -781,48 +780,81 @@
             };
 
             const handleSaveCAVoucherPDF = (req) => {
-                const jsPDF = window.jspdf?.jsPDF;
-                if (!jsPDF) { alert('PDF generator has not loaded. Check your connection and try again.'); return; }
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 120] });
-                const margin = 4, width = 50;
-                let y = 7;
-                const put = (value, options = {}) => {
-                    const size = options.size || 9;
-                    pdf.setFont('courier', options.bold ? 'bold' : 'normal');
-                    pdf.setFontSize(size);
-                    const lines = pdf.splitTextToSize(String(value ?? ''), width);
-                    for (const ln of lines) { pdf.text(ln, options.center ? 29 : margin, y, options.center ? { align: 'center' } : undefined); y += size * 0.42; }
-                    y += options.gap ?? 1;
+                // Self-contained PDF writer: no CDN, third-party library or server required.
+                // Uses standard PDF Courier fonts and a 58mm-wide page.
+                const ascii = value => String(value ?? '').normalize('NFKD')
+                    .replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?');
+                const esc = value => ascii(value).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+                const lines = [];
+                const add = (value, size = 9, bold = false, center = false) => {
+                    const limit = size >= 13 ? 21 : size <= 7 ? 40 : 32;
+                    const words = ascii(value).split(/\s+/);
+                    let current = '';
+                    const flush = () => { if (current) { lines.push({ text: current, size, bold, center }); current = ''; } };
+                    for (let word of words) {
+                        while (word.length > limit) { flush(); lines.push({ text: word.slice(0, limit), size, bold, center }); word = word.slice(limit); }
+                        if (current && (current.length + word.length + 1 > limit)) flush();
+                        current += (current ? ' ' : '') + word;
+                    }
+                    flush();
                 };
-                put('STONE GRILL', { bold: true, size: 12, center: true });
-                put('CASH ADVANCE VOUCHER', { bold: true, center: true });
-                put('--------------------------------');
-                put('Approved: ' + timestampLabel(req.approvedAt || req.dateApproved));
-                put('Employee: ' + req.empName);
-                put('Voucher: ' + req.id);
-                put('Reason: ' + (req.reason || '-'));
-                put('--------------------------------');
-                put('PHP ' + formatMoney(req.amount), { bold: true, size: 14, center: true });
-                put('Status: ' + req.status);
-                put('--------------------------------');
-                y += 5;
-                put('Employee signature:');
-                put('____________________________');
-                y += 4;
-                put('Cashier signature:');
-                put('____________________________');
-                y += 3;
-                put('Printing is not proof of cash release.', { size: 7 });
-                // Set final page height to content plus cutter feed, rather than wasting paper.
-                const bytes = pdf.output('arraybuffer');
-                // jsPDF page sizes are fixed at creation: rebuild only if the content exceeds the initial page.
-                if (y > 112) { alert('Voucher content is too long for one PDF page. Use Print instead.'); return; }
-                const blob = new Blob([bytes], { type: 'application/pdf' });
+                add('STONE GRILL', 12, true, true);
+                add('CASH ADVANCE VOUCHER', 9, true, true);
+                add('--------------------------------');
+                add('Approved: ' + timestampLabel(req.approvedAt || req.dateApproved));
+                add('Employee: ' + req.empName);
+                add('Voucher: ' + req.id);
+                add('Reason: ' + (req.reason || '-'));
+                add('--------------------------------');
+                add('PHP ' + formatMoney(req.amount), 13, true, true);
+                add('Status: ' + req.status);
+                add('--------------------------------');
+                lines.push({ text: '', size: 10 });
+                add('Employee signature:');
+                add('____________________________');
+                lines.push({ text: '', size: 10 });
+                add('Cashier signature:');
+                add('____________________________');
+                lines.push({ text: '', size: 10 });
+                add('Printing does not confirm cash release.', 7);
+                const width = 164.41; // 58mm in PDF points
+                const height = Math.max(170, 28 + lines.reduce((sum, item) => sum + item.size * 1.45, 0) + 26);
+                let y = height - 16;
+                const commands = [];
+                for (const item of lines) {
+                    const font = item.bold ? 'F2' : 'F1';
+                    const estimatedWidth = item.text.length * item.size * 0.6;
+                    const x = item.center ? Math.max(7, (width - estimatedWidth) / 2) : 11;
+                    commands.push('BT /' + font + ' ' + item.size + ' Tf 1 0 0 1 ' + x.toFixed(2) + ' ' + y.toFixed(2) + ' Tm (' + esc(item.text) + ') Tj ET');
+                    y -= item.size * 1.45;
+                }
+                const stream = commands.join('\n') + '\n';
+                const objects = [
+                    '<< /Type /Catalog /Pages 2 0 R >>',
+                    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+                    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + width + ' ' + height.toFixed(2) + '] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+                    '<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>',
+                    '<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>',
+                    '<< /Length ' + stream.length + ' >>\nstream\n' + stream + 'endstream'
+                ];
+                let pdf = '%PDF-1.4\n';
+                const offsets = [0];
+                for (let i = 0; i < objects.length; i++) {
+                    offsets.push(pdf.length);
+                    pdf += (i + 1) + ' 0 obj\n' + objects[i] + '\nendobj\n';
+                }
+                const xref = pdf.length;
+                pdf += 'xref\n0 ' + (objects.length + 1) + '\n0000000000 65535 f \n';
+                for (const offset of offsets.slice(1)) pdf += String(offset).padStart(10, '0') + ' 00000 n \n';
+                pdf += 'trailer\n<< /Size ' + (objects.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF';
+                const blob = new Blob([pdf], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = 'Stone-Grill-CA-' + String(req.id).replace(/[^a-z0-9_-]/gi, '-') + '.pdf';
-                document.body.appendChild(link); link.click(); link.remove();
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             };
 
