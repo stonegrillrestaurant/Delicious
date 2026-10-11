@@ -266,7 +266,7 @@
             return {file: new File(chunks, filename, {type: 'application/pdf'}), image, pageHeight: pageHeight / 72 * 25.4};
         };
 
-        function VoucherDialog({req, onClose, onThermer, isAdmin = false, caBusy = false, onRecordCash}) {
+        function VoucherDialog({req, onClose, onThermer}) {
             const [message, setMessage] = useState('');
             const documentFile = useMemo(() => {
                 try { const result = buildVoucherDocument(req); return {...result, url: URL.createObjectURL(result.file)}; }
@@ -289,9 +289,6 @@
                 popup.document.close();
                 popup.document.getElementById('print').onclick = () => popup.print();
             };
-            const recordCash = async () => {
-                if (await onRecordCash(req)) onClose();
-            };
             return <div className="fixed inset-0 z-[80] bg-slate-950/60 flex items-center justify-center p-3 print-hidden" role="dialog" aria-modal="true" aria-label="Cash advance voucher">
                 <div className="bg-white rounded-2xl w-full max-w-lg max-h-[94vh] overflow-y-auto p-4">
                     <div className="flex justify-between items-center gap-3 mb-3"><div><h2 className="font-bold text-lg">Cash Advance Voucher</h2><p className="text-xs text-slate-500">Review the voucher below before saving or printing.</p></div><button onClick={onClose} className="border rounded-lg px-3 py-2">Close</button></div>
@@ -312,7 +309,6 @@
                         {message && <p role="status" className="text-sm bg-blue-50 p-3 mb-3 rounded-lg">{message}</p>}
                         <img src={documentFile.image} alt="Complete cash advance voucher preview" className="w-full max-w-[290px] mx-auto border" />
                     </>}
-                    {isAdmin && req.status === 'Approved' && req.approvalFlow === 'handover-v1' && <div className="mt-4 border-t pt-4"><p className="text-xs text-slate-600 mb-2">After the cashier physically gives the money to the employee:</p><button disabled={caBusy} onClick={recordCash} className="w-full bg-emerald-600 disabled:opacity-50 text-white rounded-lg px-4 py-3 font-bold">Record Cash Handed Over</button></div>}
                     <details className="mt-4 border-t pt-3"><summary className="cursor-pointer text-sm">Optional: Thermer printing</summary><p className="text-xs text-slate-600 my-2">For devices with Thermer installed and a printer already connected in that app.</p><button onClick={() => onThermer(req)} className="border rounded-lg px-3 py-2">Open Thermer</button></details>
                 </div>
             </div>;
@@ -803,10 +799,10 @@
             }, [icEmpId, icMonth, employees, attendance, cashAdvances, interactivePayrolls]);
 
             const runCAAction = async (action) => {
-                if (caActionLock.current) return false;
+                if (caActionLock.current) return;
                 caActionLock.current = true; setCaBusy(true);
-                try { await action(); return true; }
-                catch (err) { alert('Cash advance action failed: ' + err.message); return false; }
+                try { await action(); }
+                catch (err) { alert('Cash advance action failed: ' + err.message); }
                 finally { caActionLock.current = false; setCaBusy(false); }
             };
 
@@ -847,8 +843,8 @@
             };
 
             const handleDisburseCARequest = async (req) => {
-                if (!isAdmin || !window.confirm(`Have you handed ₱${formatMoney(req.amount)} to this employee? This records the cash advance in the ledger.`)) return false;
-                return await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
+                if (!isAdmin || !window.confirm(`Have you handed ₱${formatMoney(req.amount)} to this employee? This records the cash advance in the ledger.`)) return;
+                await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
                     const ref = getVaultDoc('ca_requests', req.id);
                     const ledgerId = 'request_' + req.id;
                     const ledgerRef = getVaultDoc('cash_advances', ledgerId);
@@ -1514,7 +1510,7 @@
                                                                 </td>
                                                                 <td className="p-4 min-w-[170px]">
                                                                     {req.status === 'Approved' && req.approvalFlow === 'handover-v1' && <button disabled={caBusy} onClick={() => handleDisburseCARequest(req)} className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold">Record cash handed over</button>}
-                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="block mt-2 border border-blue-600 text-blue-700 px-3 py-2 rounded-lg font-bold">View &amp; Print Voucher</button>}
+                                                                    {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="block mt-2 border border-blue-600 text-blue-700 px-3 py-2 rounded-lg font-bold">Print or Save Voucher</button>}
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -1533,7 +1529,7 @@
                                                         <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"><span className="text-[10px] font-black uppercase text-slate-400">Status</span><strong className="text-sm">{req.status === 'Printed' ? 'Legacy printed' : req.status}</strong></div>
                                                         <details className="text-xs text-slate-500"><summary className="cursor-pointer font-bold text-slate-700">View dates and audit trail</summary><div className="mt-2 space-y-1 pl-2 border-l-2"><p>Requested: {timestampLabel(req.requestedAt || req.dateRequested)}</p><p>Approved: {timestampLabel(req.approvedAt || req.dateApproved)}</p><p>Handed over: {timestampLabel(req.disbursedAt)}</p><p>Employee received: {timestampLabel(req.receivedAt)}</p>{req.rejectedAt && <p>Rejected: {timestampLabel(req.rejectedAt)}</p>}</div></details>
                                                         <div className="grid gap-2">
-                                                            {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="w-full bg-slate-900 text-white px-4 py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>View &amp; Print Voucher</button>}
+                                                            {['Approved', 'Disbursed', 'Received', 'Printed'].includes(req.status) && <button onClick={() => handlePrintReceipt(req)} className="w-full bg-slate-900 text-white px-4 py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>Print or Save Voucher</button>}
                                                             {req.status === 'Approved' && req.approvalFlow === 'handover-v1' && <button disabled={caBusy} onClick={() => handleDisburseCARequest(req)} className="w-full bg-blue-600 disabled:opacity-50 text-white px-4 py-3 rounded-xl font-black uppercase text-xs">Record Cash Handed Over</button>}
                                                         </div>
                                                     </article>;
@@ -1677,7 +1673,7 @@
                             </div>
                         </div>
 
-                        {receiptToPrint && <VoucherDialog req={receiptToPrint} onClose={() => setReceiptToPrint(null)} onThermer={handleBluetoothCAVoucher} isAdmin={isAdmin} caBusy={caBusy} onRecordCash={handleDisburseCARequest} />}
+                        {receiptToPrint && <VoucherDialog req={receiptToPrint} onClose={() => setReceiptToPrint(null)} onThermer={handleBluetoothCAVoucher} />}
                     </main>
 
                     {showAddStaff && isAdmin && (
