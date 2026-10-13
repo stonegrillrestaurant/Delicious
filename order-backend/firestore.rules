@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn() { return request.auth != null; }
+  function owner() { return signedIn() && request.auth.uid == 'qhf2nu7zlOXcj6t5mU7e9gjWyRz2'; }
+  function staff() {
+   return signedIn() && exists(/databases/$(database)/documents/sgStaff/$(request.auth.uid))
+    && get(/databases/$(database)/documents/sgStaff/$(request.auth.uid)).data.active == true
+    && get(/databases/$(database)/documents/sgStaff/$(request.auth.uid)).data.role in ['owner','admin','cashier','staff'];
+  }
+  function reviewer() { return staff() && get(/databases/$(database)/documents/sgStaff/$(request.auth.uid)).data.role in ['owner','cashier']; }
+  // Preserve the existing public comments submission flow. Moderation is a separate migration.
+  match /comments/{id} {
+   allow read: if resource.data.approved == true || owner();
+   allow create: if request.resource.data.approved == true;
+   allow update, delete: if owner();
+  }
+  match /transactions/{path=**} {
+   allow read, write: if signedIn() && request.auth.uid in ['qhf2nu7zlOXcj6t5mU7e9gjWyRz2','dYqA7rVgDNRP7nRY9ghoUtVfcHj1'];
+  }
+  match /sgCustomers/{uid} {
+   allow read: if signedIn() && (request.auth.uid == uid || owner());
+   allow write: if false;
+   match /signIns/{id} { allow read: if owner(); allow write: if false; }
+  }
+  match /sgStaff/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+  match /sgOrders/{id} {
+   allow read: if staff() || (signedIn() && resource.data.customerUid == request.auth.uid);
+   allow write: if false;
+   match /receipts/{id} { allow read: if reviewer(); allow write: if false; }
+   match /audit/{id} { allow read: if staff(); allow write: if false; }
+  }
+  match /sgRoleAudit/{id} { allow read: if owner(); allow write: if false; }
+  match /{document=**} { allow read, write: if false; }
+ }
+}
