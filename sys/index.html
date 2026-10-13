@@ -180,7 +180,7 @@
         // A local PDF/image for ordinary device Save, Share and Print actions.
         // No printer app, public endpoint, or database write is needed.
         const buildVoucherDocument = (req) => {
-            const width = 576, margin = 36;
+            const width = 576, margin = 36, bottomFeed = 160;
             const voucherRef = String(req.id || 'voucher').slice(-8).toUpperCase();
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -188,13 +188,13 @@
 
             const rows = [];
             const maxTextWidth = width - margin * 2;
-            const add = (text, bold = false, size = 30) => {
+            const add = (text, bold = false, size = 30, center = false) => {
                 ctx.font = `${bold ? 'bold ' : ''}${size}px Arial, sans-serif`;
                 for (const paragraph of String(text ?? '').split('\n')) {
                     let current = '';
                     for (let word of paragraph.trim().split(/\s+/)) {
                         if (current && ctx.measureText(current + ' ' + word).width > maxTextWidth) {
-                            rows.push({text: current, bold, size}); current = '';
+                            rows.push({text: current, bold, size, center}); current = '';
                         }
                         while (ctx.measureText(word).width > maxTextWidth) {
                             let chunk = '';
@@ -202,12 +202,12 @@
                                 if (chunk && ctx.measureText(chunk + char).width > maxTextWidth) break;
                                 chunk += char;
                             }
-                            rows.push({text: chunk, bold, size});
+                            rows.push({text: chunk, bold, size, center});
                             word = word.slice(chunk.length);
                         }
                         if (word) current += (current ? ' ' : '') + word;
                     }
-                    if (current || !paragraph.trim()) rows.push({text: current, bold, size});
+                    if (current || !paragraph.trim()) rows.push({text: current, bold, size, center});
                 }
             };
             const gap = height => rows.push({type: 'gap', height});
@@ -220,27 +220,34 @@
             add('STONE GRILL', true, 48);
             gap(20);
             add('CASH ADVANCE VOUCHER', true, 34);
-            gap(14);
+            gap(18);
             add('Ref: ' + voucherRef, false, 28);
-            if (approvalTime) add('Time: ' + approvalTime, false, 28);
-            if (approvalDate) add('Date: ' + approvalDate, false, 28);
-            gap(16);
-            add('EMPLOYEE', true, 26);
-            add(req.empName, true, 42);
-            add('Purpose: ' + (req.reason || '-'), false, 28);
+            gap(12);
+            if (approvalTime) { add('Time: ' + approvalTime, false, 28); gap(12); }
+            if (approvalDate) { add('Date: ' + approvalDate, false, 28); gap(18); }
+
+            add('EMPLOYEE', true, 26, true);
+            gap(10);
+            add(req.empName, true, 42, true);
+            gap(12);
+            add('Purpose: ' + (req.reason || '-'), false, 28, true);
             gap(22);
-            add('AMOUNT RECEIVED', true, 30);
-            add('PHP ' + formatMoney(req.amount), true, 48);
+
+            add('AMOUNT RECEIVED', true, 30, true);
+            gap(10);
+            add('PHP ' + formatMoney(req.amount), true, 48, true);
             gap(30);
+
             add('I CONFIRM RECEIPT', true, 30);
-            add(req.empName, true, 36);
+            gap(10);
+            add(req.empName, true, 36, true);
             gap(20);
             signatureLine();
             add('EMPLOYEE SIGNATURE', true, 26);
 
             const rowHeight = row => row.height || Math.ceil(row.size * 1.28);
             canvas.width = width;
-            canvas.height = margin * 2 + rows.reduce((sum, row) => sum + rowHeight(row), 0) + 28;
+            canvas.height = margin * 2 + rows.reduce((sum, row) => sum + rowHeight(row), 0) + bottomFeed;
             ctx.fillStyle = '#fff';
             ctx.fillRect(0, 0, width, canvas.height);
             ctx.fillStyle = '#000';
@@ -259,8 +266,8 @@
                     return;
                 }
                 ctx.font = `${row.bold ? 'bold ' : ''}${row.size}px Arial, sans-serif`;
-                ctx.textAlign = 'left';
-                ctx.fillText(row.text, margin, y);
+                ctx.textAlign = row.center ? 'center' : 'left';
+                ctx.fillText(row.text, row.center ? width / 2 : margin, y);
                 y += rowHeight(row);
             });
 
