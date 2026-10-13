@@ -188,13 +188,13 @@
 
             const rows = [];
             const maxTextWidth = width - margin * 2;
-            const add = (text, bold = false, size = 30, center = false) => {
-                ctx.font = `${bold ? 'bold ' : ''}${size}px Arial, sans-serif`;
+            const add = (text, bold = false, size = 30, align = 'left', family = 'Arial, sans-serif') => {
+                ctx.font = `${bold ? 'bold ' : ''}${size}px ${family}`;
                 for (const paragraph of String(text ?? '').split('\n')) {
                     let current = '';
                     for (let word of paragraph.trim().split(/\s+/)) {
                         if (current && ctx.measureText(current + ' ' + word).width > maxTextWidth) {
-                            rows.push({text: current, bold, size, center}); current = '';
+                            rows.push({text: current, bold, size, align, family}); current = '';
                         }
                         while (ctx.measureText(word).width > maxTextWidth) {
                             let chunk = '';
@@ -202,45 +202,54 @@
                                 if (chunk && ctx.measureText(chunk + char).width > maxTextWidth) break;
                                 chunk += char;
                             }
-                            rows.push({text: chunk, bold, size, center});
+                            rows.push({text: chunk, bold, size, align, family});
                             word = word.slice(chunk.length);
                         }
                         if (word) current += (current ? ' ' : '') + word;
                     }
-                    if (current || !paragraph.trim()) rows.push({text: current, bold, size, center});
+                    if (current || !paragraph.trim()) rows.push({text: current, bold, size, align, family});
                 }
             };
+            const addPair = (left, right, size = 28) => rows.push({type: 'pair', left, right, size});
             const gap = height => rows.push({type: 'gap', height});
             const signatureLine = () => rows.push({type: 'line', height: 30});
 
             const approvalParts = String(req.approvedLabel || '').split(/,\s*/);
             const approvalDate = approvalParts[0] || '';
             const approvalTime = approvalParts.slice(1).join(', ');
+            const amount = Number(req.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-            add('STONE GRILL', true, 48);
-            gap(20);
-            add('CASH ADVANCE VOUCHER', true, 34);
-            gap(18);
-            add('Ref: ' + voucherRef, false, 28);
-            gap(12);
-            if (approvalTime) { add('Time: ' + approvalTime, false, 28); gap(12); }
-            if (approvalDate) { add('Date: ' + approvalDate, false, 28); gap(18); }
-
-            add('EMPLOYEE', true, 26, true);
-            add(req.empName, true, 42, true);
-            gap(12);
-            add('Purpose: ' + (req.reason || '-'), false, 28, true);
+            add('STONE GRILL', true, 48, 'center', 'Georgia, serif');
+            gap(16);
+            add('CASH ADVANCE VOUCHER', false, 28, 'center');
             gap(22);
 
-            add('AMOUNT RECEIVED', true, 30, true);
-            add('PHP ' + formatMoney(req.amount), true, 48, true);
-            gap(30);
+            addPair('Ref: ' + voucherRef, 'Date: ' + approvalDate, 28);
+            if (approvalTime) {
+                gap(8);
+                add('Time: ' + approvalTime, false, 28);
+            }
+            gap(22);
 
-            add('I CONFIRM RECEIPT', true, 30);
-            add(req.empName, true, 36, true);
-            gap(20);
+            add('EMPLOYEE', false, 26);
+            gap(4);
+            add(req.empName, true, 40);
+            gap(16);
+            add('PURPOSE: ' + (req.reason || '-'), false, 28);
+            gap(24);
+
+            add('AMOUNT RECEIVED', false, 30, 'center');
+            gap(8);
+            add('PHP ' + amount, true, 48, 'center');
+            gap(34);
+
+            add('I confirm receipt', true, 30, 'center');
+            gap(34);
             signatureLine();
-            add('EMPLOYEE SIGNATURE', true, 26);
+            gap(4);
+            add('EMPLOYEE SIGNATURE', false, 26, 'center');
+            gap(6);
+            add(req.empName, true, 32, 'center');
 
             const rowHeight = row => row.height || Math.ceil(row.size * 1.28);
             canvas.width = width;
@@ -254,17 +263,27 @@
                 if (row.type === 'gap') { y += row.height; return; }
                 if (row.type === 'line') {
                     ctx.beginPath();
-                    ctx.moveTo(margin, y + 15);
-                    ctx.lineTo(width - margin, y + 15);
+                    ctx.moveTo(margin + 60, y + 15);
+                    ctx.lineTo(width - margin - 60, y + 15);
                     ctx.lineWidth = 2;
                     ctx.strokeStyle = '#000';
                     ctx.stroke();
                     y += row.height;
                     return;
                 }
-                ctx.font = `${row.bold ? 'bold ' : ''}${row.size}px Arial, sans-serif`;
-                ctx.textAlign = row.center ? 'center' : 'left';
-                ctx.fillText(row.text, row.center ? width / 2 : margin, y);
+                if (row.type === 'pair') {
+                    ctx.font = `${row.size}px Arial, sans-serif`;
+                    ctx.textAlign = 'left';
+                    ctx.fillText(row.left, margin, y);
+                    ctx.textAlign = 'right';
+                    ctx.fillText(row.right, width - margin, y);
+                    y += rowHeight(row);
+                    return;
+                }
+                ctx.font = `${row.bold ? 'bold ' : ''}${row.size}px ${row.family}`;
+                ctx.textAlign = row.align;
+                const x = row.align === 'center' ? width / 2 : (row.align === 'right' ? width - margin : margin);
+                ctx.fillText(row.text, x, y);
                 y += rowHeight(row);
             });
 
