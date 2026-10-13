@@ -1,6 +1,6 @@
 # Staff dashboard review branch
 
-The Firebase staff dashboard is now tracked in GitHub. This branch adds the previously deployed Firebase backend and staff source, then improves the dashboard for phones. It does not replace the legacy customer ordering page in `order/index.html` or `order/main.js`. Do not deploy the repository root to Firebase: the current Firebase customer checkout remains in the existing Cloud Shell `order-backend/public/order` folder until its source is brought into a separate change.
+The Firebase staff dashboard and backend are tracked in GitHub. The complete Firebase customer frontend is now in `order-backend/web/order`; `npm run build` combines it with `order/staff` into a generated test Hosting folder. The legacy production customer pages remain separate. See `README.md` for the combined build and deployment.
 
 ## Behavior
 
@@ -25,7 +25,9 @@ npm test
 Staff UI:
 
 ```sh
-cd order-backend/ui-tests
+cd order-backend
+npm run build
+cd ui-tests
 npm ci
 npm test
 ```
