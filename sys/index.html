@@ -180,63 +180,90 @@
         // A local PDF/image for ordinary device Save, Share and Print actions.
         // No printer app, public endpoint, or database write is needed.
         const buildVoucherDocument = (req) => {
-            const width = 576, margin = 44;
+            const width = 576, margin = 36;
             const voucherRef = String(req.id || 'voucher').slice(-8).toUpperCase();
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             if (!ctx) throw new Error('This browser cannot create a voucher file.');
-            ctx.font = '34px Arial, sans-serif';
+
             const rows = [];
-            const add = (text, bold = false, center = false, size = 34) => {
+            const maxTextWidth = width - margin * 2;
+            const add = (text, bold = false, size = 30) => {
                 ctx.font = `${bold ? 'bold ' : ''}${size}px Arial, sans-serif`;
                 for (const paragraph of String(text ?? '').split('\n')) {
                     let current = '';
                     for (let word of paragraph.trim().split(/\s+/)) {
-                        if (current && ctx.measureText(current + ' ' + word).width > width - margin * 2) {
-                            rows.push({text: current, bold, center, size}); current = '';
+                        if (current && ctx.measureText(current + ' ' + word).width > maxTextWidth) {
+                            rows.push({text: current, bold, size}); current = '';
                         }
-                        // Split only words/IDs which cannot fit on a line.
-                        while (ctx.measureText(word).width > width - margin * 2) {
+                        while (ctx.measureText(word).width > maxTextWidth) {
                             let chunk = '';
                             for (const char of word) {
-                                if (chunk && ctx.measureText(chunk + char).width > width - margin * 2) break;
+                                if (chunk && ctx.measureText(chunk + char).width > maxTextWidth) break;
                                 chunk += char;
                             }
-                            rows.push({text: chunk, bold, center, size}); word = word.slice(chunk.length);
+                            rows.push({text: chunk, bold, size});
+                            word = word.slice(chunk.length);
                         }
                         if (word) current += (current ? ' ' : '') + word;
                     }
-                    rows.push({text: current, bold, center, size});
+                    if (current || !paragraph.trim()) rows.push({text: current, bold, size});
                 }
             };
-            add('STONE GRILL', true, true, 48);
-            add('CASH ADVANCE VOUCHER', true, true, 40);
-            add('----------------------------', false, true, 30);
-            add('Ref: ' + voucherRef);
-            add('Approved: ' + req.approvedLabel);
-            add('Employee: ' + req.empName, true);
-            add('Purpose: ' + (req.reason || '-'));
-            add('----------------------------', false, true, 30);
-            add('AMOUNT RECEIVED', true, true, 30);
-            add('PHP ' + formatMoney(req.amount), true, true, 48);
-            add('----------------------------', false, true, 30);
-            add('I CONFIRM RECEIPT', true, true, 30);
-            add(req.empName, true, true, 36);
-            add(''); add('____________________________');
-            add('EMPLOYEE SIGNATURE', true, true, 30);
-            add('Date/Time: _________________');
-            // Readable thermal receipt with a short trailing feed allowance.
-            const rowHeight = row => Math.ceil(row.size * 1.28);
-            canvas.width = width; canvas.height = margin * 2 + rows.reduce((sum, row) => sum + rowHeight(row), 0) + 100;
-            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, canvas.height);
-            ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
+            const gap = height => rows.push({type: 'gap', height});
+            const signatureLine = () => rows.push({type: 'line', height: 30});
+
+            const approvalParts = String(req.approvedLabel || '').split(/,\s*/);
+            const approvalDate = approvalParts[0] || '';
+            const approvalTime = approvalParts.slice(1).join(', ');
+
+            add('STONE GRILL', true, 48);
+            gap(20);
+            add('CASH ADVANCE VOUCHER', true, 34);
+            gap(14);
+            add('Ref: ' + voucherRef, false, 28);
+            if (approvalTime) add('Time: ' + approvalTime, false, 28);
+            if (approvalDate) add('Date: ' + approvalDate, false, 28);
+            gap(16);
+            add('EMPLOYEE', true, 26);
+            add(req.empName, true, 42);
+            add('Purpose: ' + (req.reason || '-'), false, 28);
+            gap(22);
+            add('AMOUNT RECEIVED', true, 30);
+            add('PHP ' + formatMoney(req.amount), true, 48);
+            gap(30);
+            add('I CONFIRM RECEIPT', true, 30);
+            add(req.empName, true, 36);
+            gap(20);
+            signatureLine();
+            add('EMPLOYEE SIGNATURE', true, 26);
+
+            const rowHeight = row => row.height || Math.ceil(row.size * 1.28);
+            canvas.width = width;
+            canvas.height = margin * 2 + rows.reduce((sum, row) => sum + rowHeight(row), 0) + 28;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, width, canvas.height);
+            ctx.fillStyle = '#000';
+            ctx.textBaseline = 'top';
             let y = margin;
             rows.forEach(row => {
+                if (row.type === 'gap') { y += row.height; return; }
+                if (row.type === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(margin, y + 15);
+                    ctx.lineTo(width - margin, y + 15);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#000';
+                    ctx.stroke();
+                    y += row.height;
+                    return;
+                }
                 ctx.font = `${row.bold ? 'bold ' : ''}${row.size}px Arial, sans-serif`;
-                ctx.textAlign = row.center ? 'center' : 'left';
-                ctx.fillText(row.text, row.center ? width / 2 : margin, y);
+                ctx.textAlign = 'left';
+                ctx.fillText(row.text, margin, y);
                 y += rowHeight(row);
             });
+
             const image = canvas.toDataURL('image/png');
             const jpeg = Uint8Array.from(atob(canvas.toDataURL('image/jpeg', 0.98).split(',')[1]), ch => ch.charCodeAt(0));
             const pageWidth = 58 * 72 / 25.4;
