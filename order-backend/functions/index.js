@@ -144,13 +144,4 @@ if(b.action==='seen'||b.action==='acknowledge'){
   t.update(ref,{...patch,updatedAt:now});t.create(ref.collection('audit').doc(randomUUID()),{action:b.action,actorUid:user.uid,actorEmail:user.email,at:now,fromStatus:s.data().status,toStatus:patch.status||s.data().status,reason:typeof b.reason==='string'?b.reason.slice(0,300):b.action==='verifyPayment'?(original.submittedPaymentReference||''):'',...(extra.reservationStatus?{tableAccepted:true}:{}),...(extra.paymentMethod?{paymentMethod:extra.paymentMethod}:{})});
  });res.json({ok:true,...(req.printResult?{order:req.printResult}:{})});
 },20000));
-exports.notifyStaff=onDocumentCreated({document:'sgStaffAlerts/{alertId}',region:'asia-southeast1',retry:true,maxInstances:3},async event=>{
- const snap=event.data;if(!snap)return;const current=await snap.ref.get();if(current.data().notificationStatus==='sent')return;
- const profiles=await db.collection('sgStaff').where('active','==',true).get(),allowed=new Set(profiles.docs.filter(s=>d.isStaff(s.data())).map(s=>s.id));
- const devices=await db.collection('sgPushDevices').get(),targets=devices.docs.filter(s=>allowed.has(s.data().uid));
- const alert=snap.data();
- for(let i=0;i<targets.length;i+=500){const group=targets.slice(i,i+500);const result=await getMessaging().sendEachForMulticast({tokens:group.map(s=>s.data().token),notification:{title:['receipt','payment'].includes(alert.kind)?'Payment details to review':'New Stone Grill order',body:'Open the staff desk to review.'},data:{requestId:alert.requestId,alertId:event.params.alertId},webpush:{headers:{TTL:'3600'},notification:{tag:event.params.alertId,icon:'https://stone-grill-orders-test.web.app/order/assets/icons/icon-192.png'},fcmOptions:{link:'https://stone-grill-orders-test.web.app/order/staff/?order='+alert.requestId}}});
-  let failed=false;await Promise.all(result.responses.map(async(r,j)=>{if(r.success)return;if(['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(r.error?.code))await group[j].ref.delete();else failed=true;}));if(failed)throw new Error('Notification retry needed');
- }
- await snap.ref.update({notificationStatus:targets.length?'sent':'no_devices',notifiedAt:Timestamp.now()});
-});
+exports.notifyStaff=onDocumentCreated({document:'sgStaffAlerts/{alertId}',region:'asia-southeast1',retry:true,maxInstances:3},require('./notifications').createNotifier({db,getMessaging,Timestamp,isStaff:d.isStaff}));
