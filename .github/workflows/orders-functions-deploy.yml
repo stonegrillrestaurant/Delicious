@@ -1,0 +1,61 @@
+name: Deploy Stone Grill order functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "order-backend/functions/**"
+      - "order-backend/firebase.json"
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Source to deploy (use the PR branch for the first release)
+        required: true
+        default: main
+        type: choice
+        options:
+          - main
+          - codex/staff-dashboard-mobile
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stone-grill-orders-production-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source || github.sha }}
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: order-backend/functions/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --prefix order-backend/functions
+      - name: Test order functions
+        run: npm test --prefix order-backend/functions
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: stone-grill-app
+          workload_identity_provider: projects/724825019953/locations/global/workloadIdentityPools/github-actions/providers/github-actions
+          service_account: id-github-orders-deploy@stone-grill-app.iam.gserviceaccount.com
+          create_credentials_file: true
+      - name: Deploy order Functions
+        working-directory: order-backend
+        run: firebase deploy --only functions:stone-grill-orders --project stone-grill-app --non-interactive
