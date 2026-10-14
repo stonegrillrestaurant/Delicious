@@ -26,7 +26,7 @@ function receipt(b){identity(b);check(typeof b.data==='string'&&b.data.length<=7
 const isStaff=p=>p?.active===true&&['owner','admin','cashier','staff'].includes(p.role);
 function transition(o,action,role,reason=''){
  if(!['owner','admin','cashier','staff'].includes(role))throw error(403,'Staff access required');
- if(['completed','cancelled'].includes(o.status))throw error(409,'Order already closed');
+ if(['ready','completed','cancelled'].includes(o.status))throw error(409,'Order already closed');
  if(action==='confirmReservation'){
   if(!['owner','admin','cashier'].includes(role))throw error(403,'Admin access required');
   if(!['Dine-in','Reservation'].includes(o.orderType)||o.reservationStatus==='confirmed')throw error(409,'Reservation already confirmed or not required');
@@ -45,7 +45,6 @@ function transition(o,action,role,reason=''){
  }
  if(action==='prepare'&&['new','acknowledged'].includes(o.status)){if(o.paymentStatus!=='verified')throw error(409,'Verify payment before preparation');if(['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed')throw error(409,'Confirm table availability before preparation');return {status:'preparing'};}
  if(action==='ready'&&['new','acknowledged','preparing'].includes(o.status)){if(o.paymentStatus!=='verified')throw error(409,'Verify payment before marking ready');if(['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed')throw error(409,'Confirm table availability before marking ready');return {status:'ready'};}
- if(action==='complete'&&o.status==='ready')return {status:'completed'};
  throw error(409,'Order changed. Check its current status');
 }
 function roleChange(actorUid,targetUid,role,ownerUid){
