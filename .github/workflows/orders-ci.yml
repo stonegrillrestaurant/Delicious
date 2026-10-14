@@ -1,0 +1,57 @@
+name: Stone Grill orders checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "order-backend/**"
+      - "order/**"
+      - "order/firebase-config.js"
+      - ".github/workflows/orders-ci.yml"
+  push:
+    branches: [codex/staff-dashboard-mobile]
+    paths:
+      - "order-backend/**"
+      - "order/staff/**"
+      - "order/firebase-config.js"
+      - ".github/workflows/orders-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stone-grill-orders-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            order-backend/functions/package-lock.json
+            order-backend/ui-tests/package-lock.json
+      - name: Install locked test dependencies
+        run: |
+          npm ci --prefix order-backend/functions
+          npm ci --prefix order-backend/ui-tests
+      - name: Build and run backend and browser-flow tests
+        run: npm test --prefix order-backend
+      - name: Validate production /order entry files
+        run: |
+          test -f order/index.html
+          test -f order/account/index.html
+          test -f order/staff/index.html
+          test -f order/firebase-config.js
+          test -f order/assets/menu.json
+          ! grep -q 'stone-grill-orders-test.web.app' order/index.html
+          grep -q 'https://stonegrillresto.net/order/' order/index.html
+
+      - name: Confirm deployment remains test-only
+        run: npm run deploy:test --prefix order-backend -- --dry-run

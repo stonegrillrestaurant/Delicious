@@ -1,31 +1,4 @@
-/* =========================================================================
-   Stone Grill — main.js (v16.4)
-   - Defer refresh until AFTER GCash receipt upload (keeps name/mobile)
-   - How to Order popup binds to #howToOrderLink or #howtoOrder
-   - FIX: addToCart increments found.qty correctly
-   - ADD: Infobip SMS confirmation to customer after Telegram send
-   ========================================================================= */
 'use strict';
-
-/* ---- Config compatibility layer ---- */
-(function attachConfig() {
-  var sources = [window.CFG, window.APP_CONFIG, window.app_config, window.config, window].filter(Boolean);
-  function pick() {
-    for (var i = 0; i < sources.length; i++) {
-      var src = sources[i];
-      for (var a = 0; a < arguments.length; a++) {
-        var k = arguments[a];
-        if (src && src[k] != null) return src[k];
-      }
-    }
-    return undefined;
-  }
-  window.APP = Object.assign(window.APP || {}, {
-    TELEGRAM_BOT_TOKEN: pick('TELEGRAM_BOT_TOKEN', 'telegramBotToken'),
-    TELEGRAM_CHAT_ID: pick('TELEGRAM_CHAT_ID', 'telegramChatId'),
-    GOOGLE_APPS_SCRIPT_URL: pick('GOOGLE_APPS_SCRIPT_URL','appsScriptUrl','GOOGLE_SHEETS_WEBAPP_URL','SHEETS_ENDPOINT')
-  });
-})();
 
 /* ---- Helpers ---- */
 function $(sel){ return document.querySelector(sel); }
@@ -39,71 +12,6 @@ function showToast(msg, ms){
   el.classList.remove('hidden');
   el.classList.add('show');
   setTimeout(function(){ el.classList.remove('show'); }, ms);
-}
-
-/* Generate a compact Order ID like SG202509011230 */
-function generateOrderId(){
-  var d = new Date();
-  function p(n){ return String(n).padStart(2,'0'); }
-  return 'SG' + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes());
-}
-
-/* ---- Infobip SMS Sender (customer confirmation) ----
-   NOTE: This runs client-side because your site is static.
-   If you later prefer to hide your API key, move this call to Apps Script.
--------------------------------------------------------------------------- */
-function sendInfobipSMS(toNumber, custName, orderId) {
-  try {
-    if (!toNumber) return;
-
-    // ✅ Ensure E.164 format (e.g., +639XXXXXXXXX)
-    // Accepts: 09XXXXXXXXX, +63 9xx xxx xxxx, 63xxxxxxxxxx, with spaces/dashes
-    var cleanNum = String(toNumber)
-      .trim()
-      .replace(/[^\d+]/g, ''); // keep digits and +
-
-    // Convert 09XXXXXXXXX -> +639XXXXXXXXX
-    if (cleanNum.startsWith('09')) cleanNum = '+63' + cleanNum.slice(1);
-
-    // Convert 63XXXXXXXXXX -> +63XXXXXXXXXX
-    if (cleanNum.startsWith('63')) cleanNum = '+' + cleanNum;
-
-    // Fix odd case: +6309XXXXXXXXX -> +639XXXXXXXXX
-    if (cleanNum.startsWith('+6309')) cleanNum = '+63' + cleanNum.slice(4);
-
-    var gcashName = "NI****** A.";        // <-- edit if needed
-    var gcashNumber = "+639178366126";   // <-- ✅ EDIT THIS to your NEW payment number (no spaces)
-
-    var smsText =
-      `Hi ${custName || 'Customer'}! ✅ We received your order #${orderId}.\n` +
-      `To proceed, please pay via GCash:\n` +
-      `• Account: ${gcashName}\n` +
-      `• Number: ${gcashNumber}\n` +
-      `We’ll start preparing once paid. Thank you! – Stone Grill`;
-
-    fetch("https://xk649q.api.infobip.com/sms/2/text/advanced", {
-      method: "POST",
-      headers: {
-        "Authorization": "App 536fed848779025c9feef75dc507639e-9fef9036-b887-4059-99ee-9a8ea8a22070",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            destinations: [{ to: cleanNum }],
-            text: smsText,
-            from: "STONEGRILL"
-          }
-        ]
-      })
-    })
-    .then(r => r.json())
-    .then(data => console.log("Infobip SMS sent:", data))
-    .catch(err => console.error("Infobip SMS error:", err));
-  } catch (e) {
-    console.error("Infobip SMS exception:", e);
-  }
 }
 
 /* ---- Fallback MENU ---- */
@@ -303,7 +211,7 @@ function clearCart(){ cart = []; renderCart(); }
 function updatePersonsVisibility(){
   var selected = document.querySelector('input[name="orderType"]:checked');
   var wrap = $('#personsWrap'); if(!wrap) return;
-  var isDineIn = selected && /dine[\s-]*in/i.test(String(selected.value||''));  
+  var isDineIn = selected && (/dine[\s-]*in/i.test(String(selected.value||''))||selected.value==='Reservation');  
   if(isDineIn) wrap.classList.remove('hidden'); else wrap.classList.add('hidden');
 }
 
@@ -317,33 +225,16 @@ function normalizeMobile(inputEl){
   inputEl.value = val;
 }
 
-/* ---- Telegram / Sheets ---- */
-function sendToTelegram(text){
-  return new Promise(function(resolve, reject){
-    var token  = (window.APP && window.APP.TELEGRAM_BOT_TOKEN) || '';
-    var chatId = (window.APP && window.APP.TELEGRAM_CHAT_ID)   || '';
-    if(!token || !chatId) return reject(new Error('Missing Telegram token or chat id in config.js'));
-    var url = 'https://api.telegram.org/bot' + encodeURIComponent(token) + '/sendMessage';
-    fetch(url, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ chat_id:chatId, text:text, parse_mode:'HTML' })
-    }).then(r=>{ if(!r.ok) return r.text().then(t=>{ throw new Error(t||r.status); }); return r.json(); })
-      .then(resolve).catch(reject);
-  });
+/* Durable order reference, kept for safe retries in this browser tab. */
+function randomHex(n){return Array.from(crypto.getRandomValues(new Uint8Array(n)),v=>v.toString(16).padStart(2,'0')).join('');}
+async function orderApi(body){
+ if(!window.APP?.ORDER_API_URL)throw Error('Online ordering is not configured. Please contact Stone Grill.');
+ if(!window.SG_AUTH)throw Error('Sign-in is still loading. Please try again.');
+ const token=await window.SG_AUTH.getToken();
+ const r=await fetch(window.APP.ORDER_API_URL,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
+ const data=await r.json();if(!r.ok||!data.ok)throw Object.assign(Error(data.error||'Unable to confirm. Retry with the same order details.'),{status:r.status});return data;
 }
-function logToSheets(payload){
-  return new Promise(function(resolve){
-    var endpoint = (window.APP && window.APP.GOOGLE_APPS_SCRIPT_URL) || '';
-    if(!endpoint) return resolve({ok:false, skipped:true});
-    fetch(endpoint, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify(payload)
-    }).then(r=>{ resolve({ok: !!r && r.ok}); })
-      .catch(()=>{ resolve({ok:false}); });
-  });
-}
+window.backendOrder=null;
 
 /* ---- Date/Time formatting ---- */
 function formatOrderDateTime(dateStr, timeStr){
@@ -357,120 +248,40 @@ function formatOrderDateTime(dateStr, timeStr){
   return { human:human, iso:iso };
 }
 
-/* ---- Build Telegram message ---- */
-function buildOrderMessage(form, orderId){
-  var name = ($('#fullName')||{}).value || '';
-  var mobile = ($('#mobileNumber')||{}).value || '';
-  var orderType = (form.querySelector('input[name="orderType"]:checked')||{}).value || '';
-  var persons = ($('#persons')||{}).value || '';
-  var date = ($('#orderDate')||{}).value || '';
-  var time = ($('#orderTime')||{}).value || '';
-  var notes = ($('#specialRequests')||{}).value || '';
-  var items = cart.map(it=> '• '+it.name+' x'+it.qty+' — '+money(it.qty*it.price)).join('\n') || '—';
-  var when = formatOrderDateTime(date, time);
-  var msg = '<b>Stone Grill — New Order</b>\n';
-  if (orderId) msg += '\n<b>Order ID:</b> ' + orderId;
-  msg += '\n<b>Customer:</b> ' + name;
-  msg += '\n<b>Mobile:</b> ' + mobile;
-  msg += '\n<b>Type:</b> ' + orderType;
-  if (/dine/i.test(orderType)) msg += '\n<b>Persons:</b> ' + (persons || 1);
-  msg += '\n<b>Date/Time:</b> ' + when.human + '  <i>(' + when.iso + ')</i>';
-  msg += '\n<b>Items:</b>\n' + items;
-  msg += '\n<b>Subtotal:</b> ' + money(cartSubtotal());
-  if (notes) msg += '\n<b>Requests:</b> ' + notes;
-  msg += '\n\n(Automated message)';
-  return msg;
+
+function checkoutPayload(){
+ normalizeMobile($('#mobileNumber'));
+ const form=$('#orderForm');
+ return {name:$('#fullName').value,mobile:$('#mobileNumber').value,orderType:form.querySelector('input[name="orderType"]:checked')?.value,persons:$('#persons').value,date:$('#orderDate').value,time:$('#orderTime').value,requests:$('#specialRequests').value,items:cart.map(i=>({name:i.name,qty:i.qty,price:i.price})),subtotal:cartSubtotal()};
 }
-
-function handleSubmit(e){
-  e.preventDefault();
-
-  var form = e.currentTarget;
-  var submitBtn = form.querySelector('button[type="submit"]');
-
-  // Prevent duplicate / multiple submit
-  if (form.dataset.submitting === 'true') {
-    showToast('✅ Your order was already submitted. Please scan the GCash QR or upload your receipt.', 5000);
-
-    if (typeof window.showGcashPopup === 'function' && window.pendingOrder) {
-      window.showGcashPopup(window.pendingOrder.orderId, window.pendingOrder.total);
-    }
-
-    return;
-  }
-
-  if(cart.length === 0){
-    showToast('Add at least 1 item to your order.');
-    return;
-  }
-
-  var mobileEl = $('#mobileNumber');
-  if(mobileEl) normalizeMobile(mobileEl);
-
-  // Lock the form immediately
-  form.dataset.submitting = 'true';
-
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Submitting... Please wait';
-  }
-
-  // Prepare order details
-  var orderId = generateOrderId();
-  var totalBefore = cartSubtotal();
-
-  window.pendingOrder = {
-    orderId: orderId,
-    total: totalBefore,
-    name: ($('#fullName') || {}).value || '',
-    mobile: ($('#mobileNumber') || {}).value || '',
-    formEl: form
-  };
-
-  window.currentOrderId = orderId;
-  window.currentOrderTotal = totalBefore;
-
-  var message = buildOrderMessage(form, orderId);
-
-  var payload = {
-    orderId: orderId,
-    name: window.pendingOrder.name,
-    mobile: window.pendingOrder.mobile,
-    orderType: (form.querySelector('input[name="orderType"]:checked') || {}).value || '',
-    persons: ($('#persons') || {}).value || '',
-    date: ($('#orderDate') || {}).value || '',
-    time: ($('#orderTime') || {}).value || '',
-    requests: ($('#specialRequests') || {}).value || '',
-    items: cart.map(it => ({ name: it.name, qty: it.qty, price: it.price })),
-    subtotal: totalBefore,
-    createdAt: new Date().toISOString()
-  };
-
-  // IMPORTANT FIX:
-  // Show QR popup immediately. Do not wait for Telegram.
-  showToast('✅ Order submitted. Please scan the GCash QR or upload your receipt. Order ID: ' + orderId, 7000);
-
-  if (typeof window.showGcashPopup === 'function') {
-    window.showGcashPopup(orderId, totalBefore);
-  }
-
-  // Send to Telegram in the background
-  sendToTelegram(message).then(function(){
-    logToSheets(payload);
-  }).catch(function(err){
-    console.error(err);
-
-    showToast('⚠️ Telegram sending failed. Please try again or contact Stone Grill staff.', 8000);
-
-    // Unlock only if Telegram really failed
-    form.dataset.submitting = 'false';
-
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit Order';
-    }
-  });
+async function handleSubmit(e){
+ e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');
+ if(!cart.length){showToast('Add at least one menu item.');return;}
+ btn.disabled=true;btn.textContent='Checking order…';
+ try{
+  await window.SG_AUTH.getToken();const uid=window.SG_AUTH.auth.currentUser.uid;
+  const saved=JSON.parse(sessionStorage.getItem('sgPrepaidAttempt:'+uid)||'null');
+  if(saved&&!saved.confirmed){window.pendingCheckout=saved;window.openCheckout(saved);return;}
+  const payload=checkoutPayload(),draft={uid,payload,requestId:randomHex(16),receiptKey:randomHex(32)};
+  const quote=await orderApi({action:'quote',...payload,requestId:draft.requestId,receiptKey:draft.receiptKey});
+  draft.payload=quote.order;
+  if(window.SG_AUTH.auth.currentUser?.uid!==uid)throw Error('Account changed. Please try again.');
+  sessionStorage.setItem('sgPrepaidAttempt:'+uid,JSON.stringify(draft));
+  window.pendingCheckout=draft;window.openCheckout(draft);
+ }catch(err){showToast(err.message,9000);}
+ finally{btn.disabled=false;btn.textContent='Continue to payment';}
 }
+window.submitPrepaidOrder=async function(method,reference){
+ const draft=window.pendingCheckout;
+ if(!draft||draft.uid!==window.SG_AUTH.auth.currentUser?.uid)throw Error('Sign in with the account that started this order.');
+ if(!draft.submitted){draft.paymentMethod=method;draft.submittedPaymentReference=reference;draft.submitted=true;
+  sessionStorage.setItem('sgPrepaidAttempt:'+draft.uid,JSON.stringify(draft));}
+ const result=await orderApi({...draft.payload,action:draft.legacy?'payment':'order',paymentMethod:draft.paymentMethod,submittedPaymentReference:draft.submittedPaymentReference,paymentMobile:draft.payload.mobile,requestId:draft.requestId,receiptKey:draft.receiptKey});
+ if(window.SG_AUTH.auth.currentUser?.uid!==draft.uid)throw Error('Account changed. Sign back in to see the saved order.');
+ draft.confirmed=true;sessionStorage.setItem('sgPrepaidAttempt:'+draft.uid,JSON.stringify(draft));
+ window.closeCheckout();clearCart();location.assign('account/?submitted='+encodeURIComponent(draft.requestId));
+ return result;
+};
 
 /* ---- How to Order popup ---- */
 function wireHowToPopup(){
