@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "order-backend/**"
-      - "order/staff/**"
+      - "order/**"
       - "order/firebase-config.js"
       - ".github/workflows/orders-ci.yml"
   push:
@@ -43,5 +43,15 @@ jobs:
           npm ci --prefix order-backend/ui-tests
       - name: Build and run backend and browser-flow tests
         run: npm test --prefix order-backend
+      - name: Validate production /order entry files
+        run: |
+          test -f order/index.html
+          test -f order/account/index.html
+          test -f order/staff/index.html
+          test -f order/firebase-config.js
+          test -f order/assets/menu.json
+          ! grep -q 'stone-grill-orders-test.web.app' order/index.html
+          grep -q 'https://stonegrillresto.net/order/' order/index.html
+
       - name: Confirm deployment remains test-only
         run: npm run deploy:test --prefix order-backend -- --dry-run
