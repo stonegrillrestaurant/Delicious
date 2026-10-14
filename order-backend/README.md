@@ -29,6 +29,8 @@ Only the `stone-grill-orders` functions codebase and `stone-grill-orders-test` H
 
 The site root redirects to `/order/`. Production `stonegrillresto.net` is not switched, and production origins are still excluded from backend CORS. Authentication provider settings, authorized domains and the public Web Push key remain those previously configured for this Firebase project.
 
+GitHub automatically builds this branch and runs the backend and customer/staff flow tests on pull requests and branch updates. The check also verifies that the deployment command targets the test site. It does not deploy Firebase or touch production. Open the pull request’s **Checks** tab to see the result; no terminal is needed for this validation.
+
 ## Build and check without deployment
 
 ```sh
