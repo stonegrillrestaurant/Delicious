@@ -13,7 +13,7 @@ const OWNER_UID='qhf2nu7zlOXcj6t5mU7e9gjWyRz2';
 const INITIAL_ADMIN_UID='dYqA7rVgDNRP7nRY9ghoUtVfcHj1';
 initializeApp();const db=getFirestore(),bucketName=defineString('ORDER_STORAGE_BUCKET');
 const hash=s=>createHash('sha256').update(s).digest('hex');
-const origins=['https://stone-grill-orders-test.web.app'];
+const origins=['https://stone-grill-orders-test.web.app','https://stonegrillresto.net'];
 const options={region:'asia-southeast1',cors:origins,maxInstances:3,timeoutSeconds:60,memory:'256MiB',invoker:'public'};
 const bucket=()=>getStorage().bucket(bucketName.value());
 function endpoint(fn,max=7100000){return async(req,res)=>{
