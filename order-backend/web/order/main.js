@@ -324,6 +324,17 @@ function wireHowToPopup(){
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !popup.classList.contains('hidden')) closeHowto(); });
 }
 
+function populateOrderTimeSuggestions(){
+  var list=$('#orderTimeOptions');if(!list)return;
+  var options=document.createDocumentFragment();
+  for(var minute=10*60;minute<21*60;minute+=15){
+    var option=document.createElement('option');
+    option.value=String(Math.floor(minute/60)).padStart(2,'0')+':'+String(minute%60).padStart(2,'0');
+    options.appendChild(option);
+  }
+  list.replaceChildren(options);
+}
+
 /* ---- Boot ---- */
 document.addEventListener('DOMContentLoaded', async function(){
   try {
@@ -336,6 +347,7 @@ document.addEventListener('DOMContentLoaded', async function(){
     var radios = document.querySelectorAll('input[name="orderType"]');
     for (var i = 0; i < radios.length; i++){ radios[i].addEventListener('change', updatePersonsVisibility); }
     updatePersonsVisibility();
+    populateOrderTimeSuggestions();
     var m = $('#mobileNumber');
     if(m){ m.addEventListener('blur', ()=>normalizeMobile(m)); m.addEventListener('input', ()=>{ if(m.value.indexOf('+63')!==0) m.value = '+63 '; }); }
     var form = $('#orderForm'); if(form) form.addEventListener('submit', handleSubmit);

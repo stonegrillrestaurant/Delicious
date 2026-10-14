@@ -1,5 +1,17 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{JSDOM}=require('jsdom');
 const root=path.resolve(__dirname,'../public');
+test('quarter-hour order time suggestions remain manually editable and the ordering page keeps its Stone Grill mark',()=>{
+ const html=fs.readFileSync(root+'/order/index.html','utf8'),source=fs.readFileSync(root+'/order/main.js','utf8');
+ assert(html.includes('id="orderTime" list="orderTimeOptions"'));
+ assert(html.includes('<datalist id="orderTimeOptions"></datalist>'));
+ assert(html.includes('id="logoImg"'));
+ const input=new JSDOM(html).window.document.getElementById('orderTime');assert.equal(input.getAttribute('step'),null);
+ const fn=source.match(/function populateOrderTimeSuggestions\(\)\{[\s\S]*?\n\}/)?.[0];assert(fn);
+ const dom=new JSDOM('<input id="orderTime"><datalist id="orderTimeOptions"></datalist>',{runScripts:'outside-only'}),w=dom.window;w.$=s=>w.document.querySelector(s);w.eval(fn+';populateOrderTimeSuggestions();');
+ const values=[...w.document.getElementById('orderTimeOptions').options].map(o=>o.value);
+ assert.equal(values.length,44);for(const value of ['15:00','15:15','15:30','15:45','20:45'])assert(values.includes(value));
+ dom.window.close();
+});
 test('customer history subscribes only to current UID and clears on account change',async()=>{const dom=new JSDOM(fs.readFileSync(root+'/order/account/index.html','utf8'),{url:'https://example.test/order/account/',runScripts:'outside-only'}),w=dom.window;let onAuth;const subscriptions=[];w.auth={currentUser:{uid:'customer-a',email:'a@example.invalid'}};w.a={onAuthStateChanged:(_,cb)=>{onAuth=cb;},signOut:async()=>{}};w.db={};w.f={doc:(...args)=>({kind:'doc',args}),collection:(...args)=>({kind:'collection',args}),where:(...args)=>({kind:'where',args}),orderBy:(...args)=>({kind:'order',args}),limit:n=>({kind:'limit',n}),query:(...args)=>({kind:'query',args}),onSnapshot:(q,...rest)=>{const callback=rest.find(x=>typeof x==='function');subscriptions.push(q);if(q.kind==='doc')callback({data:()=>q.args.includes('sgStaff')?{role:'customer',active:false}:{name:'Customer A',mobile:'+639171234567'}});else callback({metadata:{fromCache:false},size:0,docs:[]});return ()=>{};}};w.esc=s=>String(s||'');w.syncProfile=async()=>{};w.api=async()=>({ok:true});w.loginMarkup=()=>'<p>Sign in</p>';w.wireLogin=()=>{};w.eval(fs.readFileSync(root+'/order/account/account.js','utf8').replace(/^\s*import .*\n/,''));await onAuth(w.auth.currentUser);const query=subscriptions.find(q=>q.kind==='query');assert(query.args.some(x=>x.kind==='where'&&x.args[0]==='customerUid'&&x.args[2]==='customer-a'));assert.equal(w.document.getElementById('name').value,'Customer A');w.auth.currentUser=null;await onAuth(null);assert.equal(w.document.getElementById('name').value,'');assert.equal(w.document.getElementById('orders').textContent,'');assert.equal(w.document.getElementById('signedIn').hidden,true);dom.window.close();});
 test('submission success requires the saved current-account order; tracking stays distinct from submission',async()=>{
  const dom=new JSDOM(fs.readFileSync(root+'/order/account/index.html','utf8'),{url:'https://example.test/order/account/?submitted=order-a',runScripts:'outside-only'}),w=dom.window;let onAuth,snapshot;
