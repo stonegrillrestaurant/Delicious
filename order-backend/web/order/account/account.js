@@ -2,7 +2,7 @@
 import {auth,a,f,db,esc,api,syncProfile,loginMarkup,wireLogin} from '../customer-auth.js';
 const $=id=>document.getElementById(id),money=n=>'₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
 const history=new URLSearchParams(location.search).has('history');
-let stop,stopProfile,stopRole,stopLatest,lastOrder=null,ordersLoaded=false,live=[],older=[],cursor=null,revision=0,
+let stop,stopProfile,stopRole,stopLatest,lastOrder=null,ordersLoaded=false,live=[],older=[],cursor=null,revision=0;
 const notice=s=>{$('notice').textContent=s;$('notice').hidden=!s;};
 const submittedId=new URLSearchParams(location.search).get('submitted');
 function confirmSubmission(rows,fromCache){if(!fromCache&&submittedId&&rows.some(o=>o.id===submittedId&&o.customerUid===auth.currentUser?.uid)){const u=new URL(location.href);u.searchParams.delete('submitted');window.history.replaceState(null,'',u);}}
