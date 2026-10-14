@@ -1,5 +1,15 @@
 import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js';
 const box=document.getElementById('customerAccount');let stop,revision=0;
+function restoreCheckoutIntent(uid){
+ let saved;try{saved=JSON.parse(sessionStorage.getItem('sgCheckoutIntent')||'null');}catch{}
+ if(!saved)return;
+ for(const [id,key] of [['fullName','name'],['mobileNumber','mobile'],['persons','persons'],['orderDate','date'],['orderTime','time'],['specialRequests','requests']]){
+  const el=document.getElementById(id);if(el&&saved[key])el.value=saved[key];
+ }
+ if(saved.orderType){const radio=[...document.querySelectorAll('input[name="orderType"]')].find(x=>x.value===saved.orderType);if(radio){radio.checked=true;radio.dispatchEvent(new Event('change',{bubbles:true}));}}
+ try{sessionStorage.removeItem('sgCheckoutIntent');}catch{}
+ document.getElementById('orderForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
 function notice(text){document.getElementById('accountNotice').textContent=text;}
 a.onAuthStateChanged(auth,async user=>{
  const r=++revision;stop?.();stop=null;
@@ -7,7 +17,7 @@ a.onAuthStateChanged(auth,async user=>{
  const old=window.backendOrder;
  if(!user||old?.uid!==user.uid){for(const id of ['fullName','mobileNumber']){const el=document.getElementById(id);if(el)el.value='';}}
  if(!user||old?.uid!==user.uid)window.backendOrder=null;
- box.innerHTML=user?`<div class="signed-account"><span class="account-avatar" aria-hidden="true">${esc((user.displayName||user.email||"S").slice(0,1).toUpperCase())}</span><a href="account/">${esc(user.displayName||user.email)}<small>My profile & orders →</small></a><button id="customerSignOut" class="account-signout" type="button">Sign out</button></div><p id="accountNotice" role="status" aria-live="polite"></p>`:`<div class="header-login"><span class="signin-hint">Browse freely. Sign in before checkout.</span>${loginMarkup()}</div><p id="accountNotice" role="status" aria-live="polite"></p>`;
+ box.innerHTML=user?`<div class="signed-account"><span class="account-avatar" aria-hidden="true">${esc((user.displayName||user.email||"S").slice(0,1).toUpperCase())}</span><a href="account/">${esc(user.displayName||user.email)}<small>My profile & orders →</small></a><button id="customerSignOut" class="account-signout" type="button">Sign out</button></div><p id="accountNotice" role="status" aria-live="polite"></p>`:`<div class="header-login"><span class="signin-hint">Sign in with Google to continue checkout.</span>${loginMarkup()}</div><p id="accountNotice" role="status" aria-live="polite"></p>`;
  if(!user){wireLogin(notice);return;}
  document.getElementById('customerSignOut').onclick=()=>a.signOut(auth);
  try{await syncProfile();if(r!==revision)return;
@@ -28,6 +38,6 @@ a.onAuthStateChanged(auth,async user=>{
     window.openCheckout(window.pendingCheckout);
    }else notice('Check My Orders for the latest payment status. Do not pay again.');
   }else if(savedDraft&&!savedDraft.confirmed){window.pendingCheckout=savedDraft;window.openCheckout(savedDraft);}
-  stop=f.onSnapshot(f.doc(db,'sgCustomers',user.uid),s=>{if(r!==revision)return;const p=s.data();if(!p)return;for(const [id,value] of [['fullName',p.name],['mobileNumber',p.mobile]]){const el=document.getElementById(id);if(el&&!el.value.trim())el.value=value||'';}},e=>notice(e.message));
+  stop=f.onSnapshot(f.doc(db,'sgCustomers',user.uid),s=>{if(r!==revision)return;const p=s.data();if(!p)return;for(const [id,value] of [['fullName',p.name],['mobileNumber',p.mobile]]){const el=document.getElementById(id);if(el&&!el.value.trim())el.value=value||'';}restoreCheckoutIntent(user.uid);},e=>notice(e.message));
  }catch(e){if(r===revision)notice('Account setup failed: '+e.message);}
 });

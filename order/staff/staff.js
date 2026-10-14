@@ -18,8 +18,8 @@ function closeDetail(){if(busy)return;document.body.classList.remove('detail-ope
 function clearOwnerView(){stopSignIns?.();stopSignIns=null;users=[];userCursor=null;$('usersPanel').hidden=true;$('usersList').replaceChildren();$('signInHistory').replaceChildren();$('usersView').classList.remove('active');}
 function connection(s,live=false){connected=live;$('connection').textContent=s;$('connection').classList.toggle('live',live);}
 const closedOrder=o=>['completed','cancelled'].includes(o.status);
-const teamState=o=>o.paymentStatus==='verified'?'verified':(o.seenAt||o.acknowledgedAt||o.status==='acknowledged')?'acknowledged':'received';
-const stateName={received:'Received',acknowledged:'Acknowledged',verified:'Verified'};
+const teamState=o=>o.status==='preparing'?'preparing':o.paymentStatus==='verified'?'verified':(o.seenAt||o.acknowledgedAt||o.status==='acknowledged')?'acknowledged':'received';
+const stateName={received:'Received',acknowledged:'Acknowledged',verified:'Verified',preparing:'Cooking'};
 const phDate=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(date(t));
 $('historyDate').value=phDate(Date.now());
 function render(){
@@ -27,7 +27,7 @@ function render(){
  const active=liveOrders.filter(o=>!closedOrder(o));$('navCount').textContent=active.length;
  $('newCount').textContent=active.filter(o=>teamState(o)==='received').length;
  $('receiptCount').textContent=active.filter(o=>teamState(o)==='acknowledged').length;
- $('kitchenCount').textContent=active.filter(o=>teamState(o)==='verified').length;
+ $('kitchenCount').textContent=active.filter(o=>o.status==='preparing').length;
  const q=$('search').value.trim().toLowerCase();
  const visible=orders.filter(o=>(history?closedOrder(o)&&phDate(o.createdAt)===$('historyDate').value:!closedOrder(o))&&[o.name,o.mobile,o.customerEmail,o.orderId,o.submittedPaymentReference].join(' ').toLowerCase().includes(q)).sort((a,b)=>date(a.createdAt)-date(b.createdAt)||a.id.localeCompare(b.id));
  $('historyCount').textContent=visible.length+' loaded orders';
@@ -43,7 +43,7 @@ function render(){
 function renderDetail(){const cancelOpen=detailId===selected&&$('cancelForm')&&!$('cancelForm').hidden,cancelText=cancelOpen?$('cancelReason').value:'',cancelFocus=cancelOpen&&document.activeElement?.id==='cancelReason',cursor=cancelFocus?$('cancelReason').selectionStart:0;detailId=selected;const o=orders.find(o=>o.id===selected);if(!o){$('detail').innerHTML='<div class="empty"><b>▤</b><h2>A clear view of every order.</h2><p>Select an order to see its payment and next steps.</p></div>';return;}
  const closed=['completed','cancelled'].includes(o.status),button=(a,label,cls='primary')=>`<button data-action="${a}" class="${cls}" ${!connected||busy?'disabled':''}>${label}</button>`;
  const needsTable=['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed',tableReviewer=['owner','admin','cashier'].includes(profile?.role);
- let actions='';if(o.paymentStatus==='verified'&&['new','acknowledged'].includes(o.status)&&(!needsTable||tableReviewer))actions+=button('prepare',needsTable?'Accept table & start cooking':'Start cooking (optional)');if(o.paymentStatus==='verified'&&['new','acknowledged','preparing'].includes(o.status)&&(!needsTable||tableReviewer))actions+=button('ready',needsTable?'Accept table & mark ready':'Mark ready');if(o.status==='ready')actions+=button('complete','Finished · claimed / served');if(['owner','admin','cashier'].includes(profile?.role)&&!closed)actions+=button('cancel','Cancel order','danger');
+ let actions='';if(o.paymentStatus==='verified'&&['new','acknowledged','preparing'].includes(o.status)&&(!needsTable||tableReviewer)){const readyLabel=o.orderType==='Take-out'?'Mark ready for pickup':'Mark ready to serve';actions+=button('ready',needsTable?'Accept table & '+readyLabel:readyLabel);}if(o.status==='ready')actions+=button('complete','Finished · claimed / served');if(['owner','admin','cashier'].includes(profile?.role)&&!closed)actions+=button('cancel','Cancel order','danger');
  const reference=o.submittedPaymentReference||'',verifyLabel=needsTable?'Verify payment & accept table':'Verify payment';
  const verifyButton=reference&&canVerify(o)&&!closed&&o.paymentStatus!=='verified'?button('verifyPayment',verifyLabel):'';
  const legacyButtons=profile?.role==='owner'&&!o.paymentMethod&&reference&&!closed&&o.paymentStatus!=='verified'?button('verifyQR',needsTable?'Verify QR payment & accept table':'Verify QR payment')+button('verifyNumber',needsTable?'Verify GCash number & accept table':'Verify GCash number payment'):'';
@@ -106,7 +106,7 @@ const r=e.target.closest('[data-receipt]');if(r){if(demo){notice('Demo only: no 
 };
 async function performAction(body){
  if(busy)return;busy=true;renderDetail();
- try{if(demo){const o=orders.find(o=>o.id===body.requestId);if(body.paymentMethod)o.paymentMethod=body.paymentMethod;if(body.confirmReservation)o.reservationStatus='confirmed';if(body.action==='verifyPayment'){o.paymentStatus='verified';o.paymentReference=body.reason;}else{o.status={prepare:'preparing',ready:'ready',complete:'completed',cancel:'cancelled'}[body.action];if(body.action==='cancel')o.cancelReason=body.reason;}notice('Demo only — no real order changed.');}
+ try{if(demo){const o=orders.find(o=>o.id===body.requestId);if(body.paymentMethod)o.paymentMethod=body.paymentMethod;if(body.confirmReservation)o.reservationStatus='confirmed';if(body.action==='verifyPayment'){o.paymentStatus='verified';o.paymentReference=body.reason;o.status='preparing';}else{o.status={prepare:'preparing',ready:'ready',complete:'completed',cancel:'cancelled'}[body.action];if(body.action==='cancel')o.cancelReason=body.reason;}notice('Demo only — no real order changed.');}
  else await api(body);if(!demo)notice(body.action==='verifyPayment'?'Payment verified.':body.action==='complete'?'Finished — moved to history.':'Order updated.');
  }catch(err){notice(err.message);}finally{busy=false;render();}
 }

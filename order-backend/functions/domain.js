@@ -38,7 +38,10 @@ function transition(o,action,role,reason=''){
   if(action==='cancel')return {status:'cancelled',cancelReason:reason.trim()};
   if(!canVerify(o,role))throw error(403,'GCash number payments require the owner; QR payments require the owner, admin or cashier');
   if(!o.submittedPaymentReference)throw error(409,'Payment reference required');
-  if(o.paymentStatus==='verified')throw error(409,'Payment already verified');return {paymentStatus:'verified',paymentReference:reason.trim()};
+  if(o.paymentStatus==='verified')throw error(409,'Payment already verified');
+  if(!['new','acknowledged','preparing'].includes(o.status))throw error(409,'Order is not waiting for payment verification');
+  if(['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed')throw error(409,'Confirm table availability before preparing');
+  return {paymentStatus:'verified',paymentReference:reason.trim(),status:'preparing'};
  }
  if(action==='prepare'&&['new','acknowledged'].includes(o.status)){if(o.paymentStatus!=='verified')throw error(409,'Verify payment before preparation');if(['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed')throw error(409,'Confirm table availability before preparation');return {status:'preparing'};}
  if(action==='ready'&&['new','acknowledged','preparing'].includes(o.status)){if(o.paymentStatus!=='verified')throw error(409,'Verify payment before marking ready');if(['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed')throw error(409,'Confirm table availability before marking ready');return {status:'ready'};}

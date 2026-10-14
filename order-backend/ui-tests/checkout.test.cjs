@@ -12,6 +12,7 @@ function setup(){
 }
 test('review only requests a quote; QR/number choices display one method and bold total without upload',async()=>{
  const {dom,w,d,event}=setup(),calls=[];
+ assert(d.getElementById('checkoutBtn').closest('.cart-totals'));assert.equal(d.getElementById('submissionSuccess'),null);
  assert.equal(d.querySelector('.order-steps').children.length,3);assert(d.querySelector('.menu-heading').textContent.includes('Choose your food'));assert(d.querySelector('#payTitle').textContent.includes('Step 3'));assert(d.querySelector('#orderForm button[type=submit]').textContent.includes('Review order'));
  w.fetch=async(_,r)=>{const b=JSON.parse(r.body);calls.push(b);return {ok:true,json:async()=>({ok:true,order:b})};};
  await w.handleSubmit(event);
@@ -23,6 +24,7 @@ test('review only requests a quote; QR/number choices display one method and bol
  d.querySelector('[data-method=number]').click();assert.equal(d.getElementById('qrPayment').hidden,true);assert.equal(d.getElementById('numberPayment').hidden,false);
  assert.equal(d.querySelectorAll('input[type=file]').length,0);dom.window.close();
 });
+test('checkout Continue opens Google sign-in for guests and scrolls to details after sign-in',()=>{const {dom,w,d}=setup();let opens=0;const fake=d.createElement('button');fake.id='googleSignIn';fake.onclick=()=>opens++;d.body.append(fake);w.SG_AUTH.auth.currentUser=null;w.continueCheckout();assert.equal(opens,1);assert(w.sessionStorage.getItem('sgCheckoutIntent'));let scrolled=false;d.getElementById('orderForm').scrollIntoView=()=>{scrolled=true;};w.SG_AUTH.auth.currentUser={uid:'u'};w.continueCheckout();assert(scrolled);dom.window.close();});
 test('combined submit blocks double click and retries original reference after uncertain network failure',async()=>{
  const {dom,w,d,event}=setup(),calls=[];let reject;
  w.fetch=async(_,r)=>{const b=JSON.parse(r.body);calls.push(b);if(b.action==='quote')return {ok:true,json:async()=>({ok:true,order:b})};return new Promise((_,no)=>reject=no);};

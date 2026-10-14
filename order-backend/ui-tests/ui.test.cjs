@@ -9,11 +9,11 @@ test('submission success requires the saved current-account order; tracking stay
  w.eval(fs.readFileSync(root+'/order/account/account.js','utf8').replace(/^\s*import .*\n/,''));await onAuth(w.auth.currentUser);
  const o={customerUid:'a',status:'new',paymentStatus:'pending_verification',submittedPaymentReference:'ABC123',paymentMethod:'qr',orderId:'SG-order-a',orderType:'Take-out',subtotal:550,date:'2030-10-12',time:'12:30',items:[{qty:1,name:'<bad>',price:550}]};
  const send=(id,cache=false,data=o)=>snapshot({metadata:{fromCache:cache},size:1,docs:[{id,data:()=>data}]});
- send('other-order');assert(w.document.getElementById('submissionSuccess').hidden);
- send('order-a',true);assert(w.document.getElementById('submissionSuccess').hidden);
- send('order-a');assert.equal(w.document.getElementById('submissionSuccess').hidden,false);assert.equal(w.location.search,'');assert(w.document.querySelector('.order-status').textContent.includes('verification pending'));assert(w.document.querySelector('.order-amount').textContent.includes('550'));assert.equal(w.document.querySelector('bad'),null);
+ send('other-order');assert.equal(w.document.getElementById('submissionSuccess'),null);
+ send('order-a',true);assert.equal(w.document.getElementById('submissionSuccess'),null);
+ send('order-a');assert.equal(w.document.getElementById('submissionSuccess'),null);assert.equal(w.location.search,'');assert(w.document.querySelector('.order-status').textContent.includes('verification pending'));assert(w.document.querySelector('.order-amount').textContent.includes('550'));assert.equal(w.document.querySelector('bad'),null);
  send('order-a',false,{...o,status:'ready',paymentStatus:'verified'});assert(w.document.querySelector('.order-status').classList.contains('ready'));assert(w.document.querySelector('.order-status').textContent.includes('Ready for pickup'));
- w.auth.currentUser=null;await onAuth(null);assert(w.document.getElementById('submissionSuccess').hidden);dom.window.close();
+ w.auth.currentUser=null;await onAuth(null);assert.equal(w.document.getElementById('submissionSuccess'),null);dom.window.close();
 });
 
 

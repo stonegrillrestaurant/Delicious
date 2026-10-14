@@ -254,8 +254,24 @@ function checkoutPayload(){
  const form=$('#orderForm');
  return {name:$('#fullName').value,mobile:$('#mobileNumber').value,orderType:form.querySelector('input[name="orderType"]:checked')?.value,persons:$('#persons').value,date:$('#orderDate').value,time:$('#orderTime').value,requests:$('#specialRequests').value,items:cart.map(i=>({name:i.name,qty:i.qty,price:i.price})),subtotal:cartSubtotal()};
 }
+function saveCheckoutIntent(){
+ const form=$('#orderForm');if(!form)return;
+ const data={name:$('#fullName').value,mobile:$('#mobileNumber').value,orderType:form.querySelector('input[name="orderType"]:checked')?.value||'',persons:$('#persons').value,date:$('#orderDate').value,time:$('#orderTime').value,requests:$('#specialRequests').value};
+ try{sessionStorage.setItem('sgCheckoutIntent',JSON.stringify(data));}catch{}
+}
+function continueCheckout(){
+ if(!cart.length){showToast('Add at least one menu item first.');return;}
+ if(!window.SG_AUTH?.auth?.currentUser){
+  saveCheckoutIntent();const signIn=document.getElementById('googleSignIn');
+  if(signIn){signIn.click();return;}
+  showToast('Sign-in is still loading. Please try again.');return;
+ }
+ const form=$('#orderForm');if(form)form.scrollIntoView({behavior:'smooth',block:'start'});
+}
 async function handleSubmit(e){
- e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');
+ e.preventDefault();
+ if(!window.SG_AUTH?.auth?.currentUser){saveCheckoutIntent();const signIn=document.getElementById('googleSignIn');if(signIn){signIn.click();return;}showToast('Sign-in is still loading. Please try again.');return;}
+ const btn=e.currentTarget.querySelector('button[type="submit"]');
  if(!cart.length){showToast('Add at least one menu item.');return;}
  btn.disabled=true;btn.textContent='Checking order…';
  try{
@@ -324,7 +340,7 @@ document.addEventListener('DOMContentLoaded', async function(){
     if(m){ m.addEventListener('blur', ()=>normalizeMobile(m)); m.addEventListener('input', ()=>{ if(m.value.indexOf('+63')!==0) m.value = '+63 '; }); }
     var form = $('#orderForm'); if(form) form.addEventListener('submit', handleSubmit);
     initClearButton();
-    var checkout = $('#checkoutBtn'); if(checkout) checkout.addEventListener('click', ()=>{ var formEl = $('#orderForm'); if(formEl) formEl.scrollIntoView({ behavior:'smooth', block:'start' }); });
+    var checkout = $('#checkoutBtn'); if(checkout) checkout.addEventListener('click', continueCheckout);
     wireHowToPopup();
   } catch(e) {
     console.error('Init error:', e);

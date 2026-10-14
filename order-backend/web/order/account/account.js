@@ -2,10 +2,10 @@
 import {auth,a,f,db,esc,api,syncProfile,loginMarkup,wireLogin} from '../customer-auth.js';
 const $=id=>document.getElementById(id),money=n=>'₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
 const history=new URLSearchParams(location.search).has('history');
-let stop,stopProfile,stopRole,stopLatest,lastOrder=null,ordersLoaded=false,live=[],older=[],cursor=null,revision=0,previous=new Map(),initial=true;
+let stop,stopProfile,stopRole,stopLatest,lastOrder=null,ordersLoaded=false,live=[],older=[],cursor=null,revision=0,
 const notice=s=>{$('notice').textContent=s;$('notice').hidden=!s;};
 const submittedId=new URLSearchParams(location.search).get('submitted');
-function confirmSubmission(rows,fromCache){if(!fromCache&&submittedId&&rows.some(o=>o.id===submittedId&&o.customerUid===auth.currentUser?.uid)){$('submissionSuccess').hidden=false;const u=new URL(location.href);u.searchParams.delete('submitted');window.history.replaceState(null,'',u);}}
+function confirmSubmission(rows,fromCache){if(!fromCache&&submittedId&&rows.some(o=>o.id===submittedId&&o.customerUid===auth.currentUser?.uid)){const u=new URL(location.href);u.searchParams.delete('submitted');window.history.replaceState(null,'',u);}}
 const time=t=>t?.toDate?t.toDate().toLocaleString('en-PH',{timeZone:'Asia/Manila'}):'';
 function status(o){
  if(o.status==='cancelled')return 'Cancelled';
@@ -54,7 +54,7 @@ function query(uid,after){
 }
 a.onAuthStateChanged(auth,async user=>{
  const rev=++revision;stop?.();stopProfile?.();stopRole?.();stopLatest?.();lastOrder=null;ordersLoaded=false;live=[];older=[];cursor=null;previous=new Map();initial=true;
- $('submissionSuccess').hidden=true;$('latestOrder').hidden=true;$('latestOrder').innerHTML='';$('profileDetails').open=false;$('orders').innerHTML='';$('name').value='';$('mobile').value='';$('customerName').textContent='My profile';$('savedMobile').textContent='';$('email').textContent='';notice('');
+ $('latestOrder').hidden=true;$('latestOrder').innerHTML='';$('profileDetails').open=false;$('orders').innerHTML='';$('name').value='';$('mobile').value='';$('customerName').textContent='My profile';$('savedMobile').textContent='';$('email').textContent='';notice('');
  $('more').hidden=true;$('signedIn').hidden=!user;$('login').hidden=!!user;$('staffLink').hidden=true;
  if(!user){$('login').innerHTML=loginMarkup();wireLogin(notice);return;}
  $('email').textContent=user.email||'';
@@ -65,8 +65,7 @@ a.onAuthStateChanged(auth,async user=>{
  stop=f.onSnapshot(query(user.uid),{includeMetadataChanges:true},s=>{
   if(rev!==revision)return;$('connection').textContent=s.metadata.fromCache?'Reconnecting — cached status':'Updated live';
   const next=s.docs.map(x=>({id:x.id,...x.data()}));
-  if(!initial&&!s.metadata.fromCache){const changed=next.find(o=>previous.has(o.id)&&previous.get(o.id)!==status(o));if(changed)notice('Order update: '+status(changed));}
-  if(!s.metadata.fromCache){initial=false;previous=new Map(next.map(o=>[o.id,status(o)]));}
+  
   ordersLoaded=true;confirmSubmission(next,s.metadata.fromCache);live=next;if(!older.length)cursor=s.docs.at(-1);$('more').hidden=!history||s.size<30&&!older.length;render();
  },e=>notice('Could not update orders: '+e.message));
 
