@@ -26,7 +26,7 @@ function receipt(b){identity(b);check(typeof b.data==='string'&&b.data.length<=7
 const isStaff=p=>p?.active===true&&['owner','admin','cashier','staff'].includes(p.role);
 function transition(o,action,role,reason=''){
  if(!['owner','admin','cashier','staff'].includes(role))throw error(403,'Staff access required');
- if(['ready','completed','cancelled'].includes(o.status))throw error(409,'Order already closed');
+ if(['completed','cancelled'].includes(o.status))throw error(409,'Order already closed');
  if(action==='confirmReservation'){
   if(!['owner','admin','cashier'].includes(role))throw error(403,'Admin access required');
   if(!['Dine-in','Reservation'].includes(o.orderType)||o.reservationStatus==='confirmed')throw error(409,'Reservation already confirmed or not required');
@@ -35,7 +35,7 @@ function transition(o,action,role,reason=''){
  if(action==='seen'||action==='acknowledge')return {};
  if(action==='verifyPayment'||action==='cancel'){
   if(!['owner','admin','cashier'].includes(role))throw error(403,'Admin access required');check(typeof reason==='string'&&reason.trim()&&reason.length<=300,'Enter a payment reference or cancellation reason');
-  if(action==='cancel')return {status:'cancelled',cancelReason:reason.trim()};
+  if(action==='cancel'){if(o.status==='ready')throw error(409,'Order already closed');return {status:'cancelled',cancelReason:reason.trim()};}
   if(!canVerify(o,role))throw error(403,'GCash number payments require the owner; QR payments require the owner, admin or cashier');
   if(!o.submittedPaymentReference)throw error(409,'Payment reference required');
   if(o.paymentStatus==='verified')throw error(409,'Payment already verified');
