@@ -122,12 +122,12 @@
       box-shadow: 0 10px 20px rgba(0,0,0,.15);
     }
   </style>
-</head>
+<link rel="stylesheet" href="checkout.css?v=prepaid1"><link rel="stylesheet" href="company-nav.css?v=glass1"><link rel="stylesheet" href="ordering.css?v=glass1"></head>
 
 <body>
   <!-- Header -->
   <header class="app-header">
-    <a href="/" class="brand" aria-label="Stone Grill home">
+    <a href="https://stonegrillresto.net/" class="brand" aria-label="Stone Grill home">
       <img id="logoImg" src="assets/icons/icon-192.png" alt="Stone Grill" class="logo">
       <div class="brand-text">
         <h1>Stone Grill</h1>
@@ -135,26 +135,22 @@
       </div>
     </a>
 
-    <!-- Cart summary -->
-    <div class="cart-summary">
-      <div class="total-label">Total</div>
-      <div id="cartTotal" class="total-value">₱0</div>
-      <button id="checkoutBtn" class="btn primary">Checkout</button>
-    </div>
+    <section id="customerAccount" aria-label="Customer account">Loading sign-in…</section>
   </header>
-
+  <div class="order-page-intro"><nav data-company-nav data-order-root="" aria-label="Customer navigation"></nav><div class="ordering-welcome"><div><span class="intro-label">STONE GRILL · BATO, LEYTE</span><h2>Good food, made for you.</h2><p>Choose your favorites for pickup, dine-in, or a reservation.</p></div><span class="welcome-pill">Pay by QR or GCash</span></div><p class="order-policy">Choose your food, add your details, then pay and submit. Track every update in My orders.</p></div>
+  <div class="checkout-strip"><span><small>Your order total</small><strong id="cartTotal">₱0</strong></span><button id="checkoutBtn" class="btn primary">Continue →</button></div>
   <!-- Main -->
   <main class="app-main">
     <!-- Menu -->
     <section class="menu-col">
-      <div class="category-bar" id="categoryBar"></div>
+      <h2 class="menu-heading">Explore the menu</h2><div class="category-bar" id="categoryBar"></div>
       <div id="menuList" class="menu-list"></div>
     </section>
 
     <!-- Cart + Form -->
     <aside class="cart-col">
       <div class="card highlight breathe">
-        <h2 class="card-title">🦾 Your Order</h2>
+        <h2 class="card-title">Your order</h2>
         <div id="cartItems" class="cart-items"></div>
 
         <div class="cart-totals">
@@ -170,9 +166,9 @@
       </div>
 
       <div class="card">
-        <h2 class="card-title">👤 Customer Info</h2>
+        <h2 class="card-title">Order details</h2>
         <form id="orderForm" autocomplete="on">
-          <label>Full Name
+          <label>Your name
             <input type="text" id="fullName" required placeholder="Juan Dela Cruz">
           </label>
 
@@ -191,10 +187,11 @@
             </label>
             <label>
               <input type="radio" name="orderType" value="Take-out" required>
-              <span>Take-out</span>
+              <span>Takeout / Pickup</span>
             </label>
           </div>
 
+          <label><input type="radio" name="orderType" value="Reservation" required> Advance reservation (dine-in)</label>
           <div id="personsWrap" class="hidden">
             <label>Number of Persons
               <input type="number" id="persons" min="1" value="1">
@@ -210,16 +207,14 @@
             </label>
           </div>
 
-          <label>Special Requests
+          <label>Special requests (optional)
             <textarea id="specialRequests" rows="3" placeholder="Less spicy, extra rice, no peanuts…"></textarea>
           </label>
 
-          <button type="submit" class="btn primary wide">Submit Order</button>
+          <button type="submit" class="btn primary wide">Continue to payment</button>
 
-          <!-- Static Pay/Upload button (fixed location under Submit) -->
-          <button id="openPayPopupBtn" type="button" class="btn wide" style="margin-top:10px;">
-            Pay / Upload GCash
-          </button>
+          <!-- Combined checkout follows order review. -->
+          
         </form>
       </div>
 
@@ -227,339 +222,45 @@
     </aside>
   </main>
 
-  <!-- Popups -->
-  <div id="categoryPopup" class="popup-backdrop hidden">
-    <div class="popup">
-      <button class="popup-close" aria-label="Close">×</button>
-      <h3 class="popup-title">Browse Categories</h3>
-      <div id="popupCategories" class="popup-grid"></div>
-    </div>
-  </div>
-
-  <div id="itemPopup" class="popup-backdrop hidden">
-    <div class="popup">
-      <button class="popup-close" aria-label="Close">×</button>
-      <div id="itemDetail"></div>
-    </div>
-  </div>
-
-  <div id="howToOrderPopup" class="popup-backdrop hidden" aria-hidden="true">
-    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
-      <button class="popup-close" aria-label="Close">×</button>
-      <h3 id="howtoTitle" class="popup-title">How to Order</h3>
-      <ol style="padding-left:20px; margin:10px 0;">
-        <li>Select a category and tap <strong>Add</strong> beside each dish.</li>
-        <li>Review <strong>Your Order</strong>; adjust quantities or remove items.</li>
-        <li>Fill in your details (Full Name, Mobile, Order Type).</li>
-        <li>If Dine-in → enter <strong>Number of Persons</strong>.</li>
-        <li>Pick your <strong>Date & Time</strong>.</li>
-        <li>Click <strong>Submit Order</strong> — you’ll see a confirmation toast.</li>
-      </ol>
-      <p class="small" style="color:#666;">Tip: Keep your phone nearby in case we need to confirm details.</p>
-    </div>
-  </div>
-
   <!-- GCash Payment Popup -->
+
   <div id="paymentPopup" class="popup-backdrop hidden" aria-hidden="true">
-    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
-      <button class="popup-close" aria-label="Close">×</button>
-
-      <h3 id="payTitle" class="popup-title">Pay with GCash</h3>
-      <div class="meta" id="payMeta">Order: <span id="payOrderId">—</span> • Total: <span id="payTotal">₱0</span></div>
-
-      <!-- GCash QR Payment Code -->
-      <div class="gcash-qr-wrap">
-        <img id="gcashQrImage" src="/order/assets/gcash-qr.png" alt="GCash QR payment for Stone Grill Restaurant">
-        <div class="gcash-qr-label">Scan the QR code to pay</div>
-      </div>
-
-      <div class="gcash-backup-box">
-        <strong>If QR scan does not work:</strong>
-        <p>You may send payment manually to:</p>
-        <p><strong>Name:</strong> <span id="gcashAccountName">NI****** A.</span></p>
-        <p><strong>GCash Number:</strong> <span id="gcashMobileText">+63 917 836 6126</span></p>
-        <button type="button" id="btnCopyNumber" class="btn ghost" style="margin-top:8px;">Copy Number</button>
-        <p class="backup-note">Please upload your receipt after payment so our staff can verify it.</p>
-      </div>
-
-      <!-- Standalone uploader that posts to Telegram via hidden iframe (no CORS, no Apps Script) -->
-      <div class="receipt-upload-block">
-        <h3>Upload Gcash Receipt here</h3>
-
-        <!-- Hidden iframe prevents navigation -->
-        <iframe name="tgUploadFrame" id="tgUploadFrame" class="hidden" style="display:none"></iframe>
-
-        <!-- One form that always uses sendDocument (works for images & PDFs) -->
-        <form id="tgUploadForm" target="tgUploadFrame" method="post" enctype="multipart/form-data" style="display:grid;gap:8px;max-width:360px">
-          <input type="hidden" name="chat_id" id="tgChatId">
-          <input type="hidden" name="caption" id="tgCaption">
-          <!-- Action (endpoint) is set by JS from config: https://api.telegram.org/botTOKEN/sendDocument -->
-
-          <input id="gcashReceiptInput" class="input" type="file" name="document" accept="image/*,application/pdf">
-          <button type="button" id="btnSendReceipt" class="btn primary">Send Receipt to Stone Grill</button>
-          <div id="receiptStatus" class="receipt-status" aria-live="polite"></div>
-        </form>
-      </div>
-    </div>
+   <div class="popup" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <button type="button" class="popup-close" aria-label="Close payment">×</button>
+    <div class="pay-heading"><h2 id="payTitle">Pay as you order</h2><span>Amount to pay</span><strong id="payTotal">₱0</strong></div>
+    <p id="checkoutSummary"></p>
+    <p>Pay once, then submit your order and reference together. Your payment must be verified before cooking starts. Reservation availability is confirmed separately.</p>
+    <div class="payment-choices"><button type="button" data-method="qr">Pay by QR</button><button type="button" data-method="number">Pay by GCash number</button></div>
+    <section id="qrPayment" hidden><img src="assets/gcash-qr.png" alt="Stone Grill payment QR" style="width:100%;max-width:300px;display:block;margin:auto"><p>QR payments are checked by the cashier or an authorized reviewer.</p></section>
+    <section id="numberPayment" hidden><p>Recipient: NI****** A.</p><strong id="gcashMobileText">09178366126</strong><button type="button" id="copyPaymentNumber">Copy number</button><p>The owner verifies payments sent to this number.</p></section>
+    <form id="combinedCheckout" hidden><label>GCash transaction reference<input id="paymentReference" required minlength="3" maxlength="80" autocomplete="off"></label><p>Each reference can be used for only one order. No screenshot needed.</p><button id="submitCombined" type="submit">Submit order & payment</button></form>
+    <p id="receiptStatus" role="status" aria-live="polite"></p>
+    <p id="resumeNotice"></p><button id="discardCheckout" type="button">Edit order before paying</button>
+    <nav class="help-links" aria-label="Need help"><a class="messenger" href="https://m.me/stonecitygrill" target="_blank" rel="noopener"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle;margin-right:6px"><path fill="currentColor" d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.4 5.5 3.7 7.2V22l3.4-1.9c.9.2 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2Z"/><path fill="#0866ff" d="m6 14 5-5 3 2 4-2-5 5-3-2Z"/></svg>Messenger help</a><a href="tel:+63535680539">☎ 053 568 0539</a></nav>
+   </div>
   </div>
-
   <!-- How to Order link stays in current location -->
   <div class="cart-summary">
-    <a href="#" id="howToOrderLink" class="btn ghost">How to Order</a>
+    <details><summary>How to order</summary><p>Choose food, review your total, and pay by QR or GCash number. Submit the order and payment reference together. Check My Orders regularly; payment and table availability require confirmation.</p></details><nav class="help-links" aria-label="Need help"><a class="messenger" href="https://m.me/stonecitygrill" target="_blank" rel="noopener"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle;margin-right:6px"><path fill="currentColor" d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.4 5.5 3.7 7.2V22l3.4-1.9c.9.2 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2Z"/><path fill="#0866ff" d="m6 14 5-5 3 2 4-2-5 5-3-2Z"/></svg>Messenger help</a><a href="tel:+63535680539">☎ Call 053 568 0539</a></nav>
   </div>
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
   <!-- Scripts -->
-  <script src="config.js?v=16"></script>
-  <script src="main.js?v=16.5"></script>
+  <script src="firebase-config.js?v=prepaid1"></script>
+  <script src="config.js?v=prepaid1"></script>
+  <script type="module" src="customer-bar.js?v=front7"></script>
+  <script src="main.js?v=prepaid1"></script>
 
-  <!-- ===== Google Sheets Recording Bridge =====
-       UPDATED: Sends order data to Google Sheets through Google Apps Script.
-       IMPORTANT: Replace https://script.google.com/macros/s/AKfycby7b1t1POr1Vay82IOcKegtlsQXmr5nQ4ORg3zZjiB7fo-qYbdI0VMv9Xh4MrBsy5466w/exec with your /exec Web App URL.
-       This does not remove or replace your existing Telegram order sending.
-  -->
-  <script>
-  (function(){
-    // Put your deployed Google Apps Script Web App URL here.
-    // Example: https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxx/exec
-    window.SHEET_WEB_APP_URL = window.SHEET_WEB_APP_URL || "https://script.google.com/macros/s/AKfycby7b1t1POr1Vay82IOcKegtlsQXmr5nQ4ORg3zZjiB7fo-qYbdI0VMv9Xh4MrBsy5466w/exec";
-
-    function normalizeSheetItems(orderData){
-      try {
-        if (!orderData) return "";
-        if (typeof orderData.items === "string") return orderData.items;
-        if (Array.isArray(orderData.items)) {
-          return orderData.items.map(function(item){
-            var qty = item.qty || item.quantity || 1;
-            var name = item.name || item.title || "Item";
-            var price = item.price ? " - ₱" + item.price : "";
-            return qty + "x " + name + price;
-          }).join(", ");
-        }
-        if (Array.isArray(window.cart)) {
-          return window.cart.map(function(item){
-            var qty = item.qty || item.quantity || 1;
-            var name = item.name || item.title || "Item";
-            var price = item.price ? " - ₱" + item.price : "";
-            return qty + "x " + name + price;
-          }).join(", ");
-        }
-      } catch(e) {}
-      return "";
-    }
-
-    function buildSheetPayload(orderData){
-      orderData = orderData || window.pendingOrder || {};
-
-      var selectedType = document.querySelector('input[name="orderType"]:checked');
-
-      return {
-        orderId: orderData.orderId || orderData.id || window.currentOrderId || "",
-        name: orderData.name || orderData.customerName || document.getElementById("fullName")?.value || "",
-        mobile: (function(){
-      var m = String(orderData.mobile || orderData.phone || document.getElementById("mobileNumber")?.value || "").trim();
-        return m && m.charAt(0) !== "'" ? "'" + m : m;
-      })(),
-        orderType: orderData.orderType || (selectedType ? selectedType.value : ""),
-        table: orderData.table || orderData.tableNumber || orderData.persons || document.getElementById("persons")?.value || "",
-        items: normalizeSheetItems(orderData),
-        total: orderData.total || orderData.totalAmount || window.currentOrderTotal || document.getElementById("cartTotal")?.textContent || "",
-        specialRequest: orderData.specialRequest || orderData.specialRequests || document.getElementById("specialRequests")?.value || "",
-        status: "TELEGRAM_SENT"
-      };
-    }
-
-    window.sendToGoogleSheets = async function(orderData){
-      if (!window.SHEET_WEB_APP_URL || window.SHEET_WEB_APP_URL.indexOf("PASTE_YOUR") !== -1) {
-        console.warn("[Google Sheets] Missing Apps Script Web App URL.");
-        return false;
-      }
-
-      var payload = buildSheetPayload(orderData);
-
-      await fetch(window.SHEET_WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify(payload)
-      });
-
-      console.log("[Google Sheets] Order recording request sent", payload);
-      return true;
-    };
-
-    // Helper you can call from main.js AFTER Telegram succeeds:
-    // await window.recordOrderAfterTelegramSuccess(orderData);
-    window.recordOrderAfterTelegramSuccess = async function(orderData){
-      try {
-        await window.sendToGoogleSheets(orderData);
-        if (typeof window.showToast === "function") {
-          window.showToast("✅ Order sent to Telegram and recorded in Sheets", 3000);
-        }
-        return true;
-      } catch(err) {
-        console.error("[Google Sheets] Recording failed:", err);
-        if (typeof window.showToast === "function") {
-          window.showToast("⚠ Order sent to Telegram, but Sheets recording failed", 5000);
-        }
-        return false;
-      }
-    };
-
-    // Auto-wrap global sendToTelegram if your main.js exposes it on window.
-    // This records to Sheets only after Telegram returns success/ok.
-    setTimeout(function(){
-      if (typeof window.sendToTelegram !== "function" || window.sendToTelegram.__sheetsWrapped) return;
-
-      var originalSendToTelegram = window.sendToTelegram;
-
-      window.sendToTelegram = async function(orderData){
-        var result = await originalSendToTelegram.apply(this, arguments);
-        var success = result === true || (result && result.ok === true) || (result && result.success === true);
-
-        if (success) {
-          await window.recordOrderAfterTelegramSuccess(orderData);
-        }
-
-        return result;
-      };
-
-      window.sendToTelegram.__sheetsWrapped = true;
-      console.log("[Google Sheets] sendToTelegram wrapped successfully.");
-    }, 500);
-  })();
-  </script>
-
-
-  <!-- Popup controller + Telegram upload (manual only) -->
-  <script>
-  (function () {
-    function showBackdrop(el){ el.classList.add('show'); el.classList.remove('hidden'); el.setAttribute('aria-hidden','false'); }
-    function hideBackdrop(el){ el.classList.remove('show'); el.classList.add('hidden'); el.setAttribute('aria-hidden','true'); }
-
-    // Static Pay/Upload button
-    (function () {
-      var btn = document.getElementById('openPayPopupBtn');
-      if (!btn) return;
-      btn.addEventListener('click', function(){
-        var total = (typeof cartSubtotal === 'function') ? cartSubtotal() : (window.currentOrderTotal || null);
-        window.showGcashPopup(window.currentOrderId || 'N/A', total);
-      });
-    })();
-
-    // Close handlers
-    document.addEventListener('click', (e)=>{
-      if (e.target.closest('#paymentPopup .popup-close')) {
-        hideBackdrop(document.getElementById('paymentPopup'));
-      }
-    });
-    document.getElementById('paymentPopup').addEventListener('click', function(e){
-      if (e.target === this) hideBackdrop(this);
-    });
-
-    // Copy number
-    document.addEventListener('click', async (e)=>{
-      if (e.target && e.target.id === 'btnCopyNumber') {
-        const txt = (document.getElementById('gcashMobileText')?.textContent || '').trim();
-        try { await navigator.clipboard.writeText(txt); e.target.textContent='Copied'; setTimeout(()=>e.target.textContent='Copy',1200); }
-        catch { alert('Copy failed. Long-press to copy.'); }
-      }
-    });
-
-    // Expose popup
-    window.showGcashPopup = function(orderId, totalAmount) {
-      const pop = document.getElementById('paymentPopup');
-      if (!pop) return;
-
-      document.getElementById('payOrderId').textContent = orderId || '—';
-      document.getElementById('payTotal').textContent = (typeof totalAmount === 'number'
-        ? '₱' + totalAmount.toLocaleString()
-        : (totalAmount || '₱0'));
-
-      const mobileTxt = document.getElementById('gcashMobileText');
-      const acctName  = document.getElementById('gcashAccountName');
-      if (mobileTxt && window.APP?.GCASH_MOBILE) mobileTxt.textContent = window.APP.GCASH_MOBILE;
-      if (acctName && window.APP?.GCASH_ACCOUNT_NAME) acctName.textContent = window.APP.GCASH_ACCOUNT_NAME;
-
-      window.currentOrderId = orderId || '';
-      window.currentOrderTotal = totalAmount || '';
-
-      showBackdrop(pop);
-    };
-
-    /* Upload logic (manual only; hidden iframe avoids CORS) */
-    (function setupTelegramUpload(){
-      var form     = document.getElementById('tgUploadForm');
-      var iframe   = document.getElementById('tgUploadFrame');
-      var chatIn   = document.getElementById('tgChatId');
-      var capIn    = document.getElementById('tgCaption');
-      var fileIn   = document.getElementById('gcashReceiptInput');
-      var sendBtn  = document.getElementById('btnSendReceipt');
-      var statusEl = document.getElementById('receiptStatus');
-
-      if (!form || !iframe || !chatIn || !capIn || !fileIn || !sendBtn) return;
-
-      var token  = (window.APP && window.APP.TELEGRAM_BOT_TOKEN) || '';
-      var chatId = (window.APP && window.APP.TELEGRAM_CHAT_ID)   || '';
-      if (token) form.action = 'https://api.telegram.org/bot' + encodeURIComponent(token) + '/sendDocument';
-      if (chatId) chatIn.value = chatId;
-
-      // After Telegram responds (iframe load), THEN clear + refresh
-      iframe.addEventListener('load', function(){
-        if (statusEl) statusEl.textContent = '✅ Receipt sent to our team. We’ll verify and update you.';
-        if (typeof window.showToast === 'function') showToast('Receipt uploaded ✅', 1600);
-
-        // Clear file input
-        try { fileIn.value = ''; } catch(e){}
-
-        // Now that receipt is sent, clear cart & reset form, then refresh
-        try {
-          if (typeof clearCart === 'function') clearCart();
-          var orderForm = document.getElementById('orderForm') || (window.pendingOrder && window.pendingOrder.formEl);
-          if (orderForm && typeof orderForm.reset === 'function') {
-            orderForm.reset();
-            if (typeof updatePersonsVisibility === 'function') updatePersonsVisibility();
-          }
-        } catch(e){}
-
-        // Give the toast time to show, then refresh the page
-        setTimeout(function(){ location.reload(); }, 1200);
-      });
-
-      sendBtn.addEventListener('click', function(){
-        var f = fileIn.files && fileIn.files[0];
-        if (!f){ statusEl.textContent = 'Please select a receipt image or PDF first.'; return; }
-        if (!token || !chatId){ statusEl.textContent = 'Bot not configured (token/chat id).'; return; }
-
-        // Pull details; fall back to pendingOrder if fields were changed
-        var fullName = (document.getElementById('fullName')?.value || (window.pendingOrder && window.pendingOrder.name) || 'Unknown Customer').trim();
-        var mobile   = (document.getElementById('mobileNumber')?.value || (window.pendingOrder && window.pendingOrder.mobile) || 'N/A').trim();
-        var orderId  = window.currentOrderId || (window.pendingOrder && window.pendingOrder.orderId) || 'N/A';
-        var total    = (typeof window.currentOrderTotal === 'number' ? window.currentOrderTotal : (window.pendingOrder && window.pendingOrder.total)) || '';
-
-        var caption = [
-          '🧾 GCash Receipt Received',
-          '• Order ID: ' + orderId,
-          total ? ('• Total: ₱' + Number(total).toLocaleString()) : '',
-          '• Name: ' + fullName,
-          '• Mobile: ' + mobile
-        ].filter(Boolean).join('\n');
-
-        capIn.value = caption;
-        statusEl.textContent = 'Sending receipt…';
-        form.submit();
-      });
-    })();
-  })();
-  </script>
-
+  <script src="company-nav.js?v=front7"></script>
+  <script src="checkout.js?v=prepaid1"></script>
   <!-- Service worker (optional) -->
   <script>
     if ('serviceWorker' in navigator) {
       const onGithubIo = location.hostname.endsWith('github.io');
       if (!onGithubIo) {
-        navigator.serviceWorker.register('pwa/sw.js?v=14').catch(()=>{});
+        navigator.serviceWorker.register('sw.js?v=firebase1').catch(()=>{});
       }
     }
   </script>
@@ -623,7 +324,7 @@
         renderToast(msg);
         clearTimeout(hideTimer);
         var t = document.getElementById('toast');
-        t.style.display = 'block';
+        t.classList.remove('hidden'); t.style.display = 'block';
         requestAnimationFrame(function(){ t.classList.add('show'); });
         hideTimer = setTimeout(function(){ 
           var t = document.getElementById('toast'); 
@@ -638,9 +339,9 @@
   </script>
 
   <footer style="text-align:center; padding:16px; font-size:0.9em; color:#555; background:#f9f9f9; margin-top:24px;">
-    © 2025 Stone Grill Restaurant • 
-    <a href="/privacy-policy.html">Privacy Policy</a> • 
-    <a href="/data-deletion.html">Data Deletion</a>
+    © 2026 Stone Grill Restaurant • 
+    <a href="https://stonegrillresto.net/privacy-policy.html">Privacy Policy</a> • 
+    <a href="https://stonegrillresto.net/data-deletion.html">Data Deletion</a>
   </footer>
 
 </body>
