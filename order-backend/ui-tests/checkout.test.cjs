@@ -12,6 +12,7 @@ function setup(){
 }
 test('review only requests a quote; QR/number choices display one method and bold total without upload',async()=>{
  const {dom,w,d,event}=setup(),calls=[];
+ assert.equal(d.querySelector('.order-steps').children.length,3);assert(d.querySelector('.menu-heading').textContent.includes('Choose your food'));assert(d.querySelector('#payTitle').textContent.includes('Step 3'));assert(d.querySelector('#orderForm button[type=submit]').textContent.includes('Review order'));
  w.fetch=async(_,r)=>{const b=JSON.parse(r.body);calls.push(b);return {ok:true,json:async()=>({ok:true,order:b})};};
  await w.handleSubmit(event);
  assert.deepEqual(calls.map(c=>c.action),['quote']);
