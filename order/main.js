@@ -263,7 +263,7 @@ function continueToPayment(){
  const form=$('#orderForm');if(!form)return;
  if(!form.checkValidity()){
   const missing=form.querySelector(':invalid');
-  if(missing){missing.scrollIntoView({behavior:'smooth',block:'center'});missing.focus({preventScroll:true});}
+  if(missing){missing.scrollIntoView?.({behavior:'smooth',block:'center'});missing.focus({preventScroll:true});}
   showToast('Please complete the required details to continue to payment.');
   return;
  }
