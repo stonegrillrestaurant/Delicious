@@ -1,14 +1,21 @@
 import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js?v=localpersist1';
 const box=document.getElementById('customerAccount');let stopProfile,stopOrders,revision=0;
 function restoreCheckoutIntent(uid){
- let saved;try{saved=JSON.parse(sessionStorage.getItem('sgCheckoutIntent')||'null');}catch{}
- if(!saved)return;
- for(const [id,key] of [['fullName','name'],['mobileNumber','mobile'],['persons','persons'],['orderDate','date'],['orderTime','time'],['specialRequests','requests']]){
-  const el=document.getElementById(id);if(el&&saved[key])el.value=saved[key];
+ let saved,continueAfterLogin=false;
+ try{saved=JSON.parse(sessionStorage.getItem('sgCheckoutIntent')||'null');continueAfterLogin=sessionStorage.getItem('sgContinueAfterLogin')==='1';}catch{}
+ if(saved){
+  for(const [id,key] of [['fullName','name'],['mobileNumber','mobile'],['persons','persons'],['orderDate','date'],['orderTime','time'],['specialRequests','requests']]){
+   const el=document.getElementById(id);if(el&&saved[key])el.value=saved[key];
+  }
+  if(saved.orderType){const radio=[...document.querySelectorAll('input[name="orderType"]')].find(x=>x.value===saved.orderType);if(radio){radio.checked=true;radio.dispatchEvent(new Event('change',{bubbles:true}));}}
+  try{sessionStorage.removeItem('sgCheckoutIntent');}catch{}
  }
- if(saved.orderType){const radio=[...document.querySelectorAll('input[name="orderType"]')].find(x=>x.value===saved.orderType);if(radio){radio.checked=true;radio.dispatchEvent(new Event('change',{bubbles:true}));}}
- try{sessionStorage.removeItem('sgCheckoutIntent');}catch{}
- document.getElementById('orderForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+ if(continueAfterLogin){
+  try{sessionStorage.removeItem('sgContinueAfterLogin');}catch{}
+  window.resumeCheckoutAfterSignIn?.();
+ }else if(saved){
+  document.getElementById('orderForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+ }
 }
 function notice(text){document.getElementById('accountNotice').textContent=text;}
 function orderTime(o){return o.createdAt?.toMillis?.()||o.updatedAt?.toMillis?.()||0;}

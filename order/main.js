@@ -259,18 +259,35 @@ function saveCheckoutIntent(){
  const data={name:$('#fullName').value,mobile:$('#mobileNumber').value,orderType:form.querySelector('input[name="orderType"]:checked')?.value||'',persons:$('#persons').value,date:$('#orderDate').value,time:$('#orderTime').value,requests:$('#specialRequests').value};
  try{sessionStorage.setItem('sgCheckoutIntent',JSON.stringify(data));}catch{}
 }
+function continueToPayment(){
+ const form=$('#orderForm');if(!form)return;
+ if(!form.checkValidity()){
+  const missing=form.querySelector(':invalid');
+  if(missing){missing.scrollIntoView({behavior:'smooth',block:'center'});missing.focus({preventScroll:true});}
+  showToast('Please complete the required details to continue to payment.');
+  return;
+ }
+ form.requestSubmit();
+}
+function queueCheckoutAfterSignIn(){
+ saveCheckoutIntent();
+ try{sessionStorage.setItem('sgContinueAfterLogin','1');}catch{}
+ const signIn=document.getElementById('googleSignIn');
+ if(signIn){signIn.click();return;}
+ showToast('Sign-in is still loading. Tap Continue again in a moment.');
+}
+window.resumeCheckoutAfterSignIn=()=>{
+ if(!window.SG_AUTH?.auth?.currentUser){showToast('Please sign in to continue.');return;}
+ continueToPayment();
+};
 function continueCheckout(){
  if(!cart.length){showToast('Add at least one menu item first.');return;}
- if(!window.SG_AUTH?.auth?.currentUser){
-  saveCheckoutIntent();const signIn=document.getElementById('googleSignIn');
-  if(signIn){signIn.click();return;}
-  showToast('Sign-in is still loading. Please try again.');return;
- }
- const form=$('#orderForm');if(form)form.scrollIntoView({behavior:'smooth',block:'start'});
+ if(!window.SG_AUTH?.auth?.currentUser){queueCheckoutAfterSignIn();return;}
+ continueToPayment();
 }
 async function handleSubmit(e){
  e.preventDefault();
- if(!window.SG_AUTH?.auth?.currentUser){saveCheckoutIntent();const signIn=document.getElementById('googleSignIn');if(signIn){signIn.click();return;}showToast('Sign-in is still loading. Please try again.');return;}
+ if(!window.SG_AUTH?.auth?.currentUser){queueCheckoutAfterSignIn();return;}
  const btn=e.currentTarget.querySelector('button[type="submit"]');
  if(!cart.length){showToast('Add at least one menu item.');return;}
  btn.disabled=true;btn.textContent='Checking order…';
