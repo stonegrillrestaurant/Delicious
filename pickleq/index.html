@@ -13,17 +13,17 @@
 
     <!-- Open Graph / Facebook (For sharing on Messenger/FB) -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://stonegrillresto.net/pickleq"> <!-- Change this to your real website link when hosted -->
+    <meta property="og:url" content="https://stonegrillresto.net/pickleq/">
     <meta property="og:title" content="PickleQ Sessions - Courtside Gatherings">
     <meta property="og:description" content="Reserve your spot for the latest Pickleball sessions at Courtside Gatherings. Join the community and secure your playtime now!">
-    <meta property="og:image" content="IMG_5174.PNG"> <!-- Change to absolute URL when hosted (e.g. https://yoursite.com/IMG_5174.PNG) -->
+    <meta property="og:image" content="https://stonegrillresto.net/pickleq/IMG_5174.PNG"> 
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://stonegrillresto.net/pickleq"> <!-- Change this to your real website link when hosted -->
+    <meta property="twitter:url" content="https://stonegrillresto.net/pickleq/">
     <meta property="twitter:title" content="PickleQ Sessions - Courtside Gatherings">
     <meta property="twitter:description" content="Reserve your spot for the latest Pickleball sessions at Courtside Gatherings. Join the community and secure your playtime now!">
-    <meta property="twitter:image" content="IMG_5174.PNG"> <!-- Change to absolute URL when hosted -->
+    <meta property="twitter:image" content="https://stonegrillresto.net/pickleq/IMG_5174.PNG"> 
 
     <style>
         /* Modern, Energetic Variables */
@@ -250,7 +250,6 @@
         
         <!-- ENERGETIC HEADER WITH LOGO -->
         <div class="header">
-            <!-- Updated Logo reference based on SEO request -->
             <img src="IMG_5174.PNG" alt="Courtside Gatherings Logo" class="header-logo" onerror="this.style.display='none'">
             <br>
             <div class="badge-active" id="display-badge">ACTIVE EVENT</div>
@@ -385,17 +384,12 @@
         <div class="footer-help">
             <h3>Courtside Gatherings Contact Info</h3>
             <div class="help-grid">
-                <!-- Replace 'YOUR_PAGE' with your actual FB Page ID/Name -->
                 <a href="https://m.me/YOUR_PAGE" target="_blank" class="help-link">
                     💬 Messenger Support
                 </a>
-                
-                <!-- Replace '09XX XXX XXXX' with the actual contact person's number -->
                 <a href="tel:+639000000000" class="help-link">
                     📞 Admin: 09XX XXX XXXX
                 </a>
-
-                <!-- Add your Google Maps link or Facebook Page link here -->
                 <a href="https://facebook.com/YOUR_PAGE" target="_blank" class="help-link">
                     🌐 Facebook Page
                 </a>
@@ -404,7 +398,7 @@
 
     </div>
 
-    <!-- Firebase SDK Setup -->
+    <!-- Firebase SDK Setup & Application Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
@@ -429,7 +423,7 @@
         let activeEventIdGlob = null; 
 
         // --------------------------------------------------------
-        // 1. PUBLIC: Load Active Event and Populate UI Grid
+        // PUBLIC: Load Active Event and Populate UI Grid
         // --------------------------------------------------------
         onSnapshot(doc(db, "settings", "active_event"), (docSnap) => {
             if (docSnap.exists()) {
@@ -467,7 +461,7 @@
         });
 
         // --------------------------------------------------------
-        // 2. AUTHENTICATION & ADMIN CHECK
+        // AUTHENTICATION & ADMIN CHECK
         // --------------------------------------------------------
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -493,7 +487,7 @@
         });
 
         // --------------------------------------------------------
-        // 3. SUBMIT REGISTRATION
+        // SUBMIT REGISTRATION
         // --------------------------------------------------------
         const regForm = document.getElementById('registration-form');
         const regMsg = document.getElementById('reg-message');
@@ -531,7 +525,7 @@
         });
 
         // --------------------------------------------------------
-        // 4. ADMIN: Create New Event Profile
+        // ADMIN: Create New Event Profile
         // --------------------------------------------------------
         window.createNewEvent = async function() {
             if (!isAdmin) return;
@@ -560,7 +554,7 @@
         }
 
         // --------------------------------------------------------
-        // 5. ADMIN: Load Events
+        // ADMIN: Load Events
         // --------------------------------------------------------
         function loadAdminEvents() {
             onSnapshot(collection(db, "events"), (snapshot) => {
@@ -604,7 +598,7 @@
         }
 
         // --------------------------------------------------------
-        // 6. ADMIN: Set Event as Active
+        // ADMIN: Set Event as Active
         // --------------------------------------------------------
         window.setActiveEvent = async function(id) {
             if (!isAdmin) return;
@@ -621,7 +615,7 @@
         }
 
         // --------------------------------------------------------
-        // 7. ADMIN: Load Players specifically for chosen Event
+        // ADMIN: Load Players specifically for chosen Event
         // --------------------------------------------------------
         let playersUnsubscribe = null;
         window.loadDashboardPlayers = function(eventId) {
@@ -663,7 +657,7 @@
                         </div>
                         <div class="action-btns">
                             ${data.status === 'Pending' ? `
-                                <button class="btn-approve" onclick="window.updatePlayerStatus('${data.id}', 'Approved')">Approve</button>
+                                <button class="btn-approve" onclick="window.updatePlayerStatus('${data.id}', 'Approved', '${data.mobileNumber}', '${data.nickname}')">Approve</button>
                                 <button class="btn-reject" onclick="window.updatePlayerStatus('${data.id}', 'Rejected')">Reject</button>
                             ` : ''}
                         </div>
@@ -673,14 +667,58 @@
             });
         }
 
-        window.updatePlayerStatus = async function(docId, newStatus) {
+        // --------------------------------------------------------
+        // TEXTBEE SMS INTEGRATION & STATUS UPDATE
+        // --------------------------------------------------------
+        async function sendTextbeeSMS(mobileNumber, nickname) {
+            const deviceId = "6acfc50574e21da91a24983c"; 
+            const apiKey = "txb_75ETPg3nR9kJGzlnfwpC7qespaDbV6nJ"; 
+            
+            const message = `Hi ${nickname}! Your registration for PickleQ Sessions at Courtside Gatherings has been APPROVED. See you on the court!`;
+
+            try {
+                const response = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/sendSMS`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey
+                    },
+                    body: JSON.stringify({
+                        recipients: [mobileNumber],
+                        message: message
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error("Failed to send SMS:", await response.text());
+                    alert("Status updated, but SMS failed to send. Check console.");
+                } else {
+                    console.log("SMS sent successfully to " + mobileNumber);
+                }
+            } catch (error) {
+                console.error("Error calling Textbee API:", error);
+            }
+        }
+
+        window.updatePlayerStatus = async function(docId, newStatus, mobileNumber = null, nickname = null) {
             if (!isAdmin) return;
             try {
+                // Update Firebase First
                 await updateDoc(doc(db, "registrations", docId), { status: newStatus });
-            } catch (error) { alert("Error updating status: " + error.message); }
+                
+                // If Approved, trigger Textbee SMS
+                if (newStatus === 'Approved' && mobileNumber) {
+                    await sendTextbeeSMS(mobileNumber, nickname);
+                    alert(`Player approved and SMS triggered for ${mobileNumber}!`);
+                }
+            } catch (error) { 
+                alert("Error updating status: " + error.message); 
+            }
         };
+
     </script>
 
+    <!-- UI Tab Logic -->
     <script>
         function switchTab(tabId) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
