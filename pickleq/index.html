@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PickleQ Sessions | Courtside Gatherings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            navy: '#0f172a',    // Deep navy background
+                            teal: '#115e59',    // Accent teal
+                            lime: '#84cc16',    // Pickleball lime green
+                            light: '#f8fafc',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            background-image: linear-gradient(135deg, #0f172a 0%, #115e59 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(132, 204, 22, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-lime {
+            background-color: #84cc16;
+            color: #0f172a;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-lime:hover {
+            background-color: #a3e635;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(132, 204, 22, 0.3);
+        }
+
+        /* Custom Scrollbar for dashboard */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #115e59; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #84cc16; 
+        }
+
+        .hidden { display: none !important; }
+        
+        .hero-bg {
+            background-image: url('image_2.png');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="hero-bg"></div>
+
+    <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl p-8 max-w-md w-full text-center space-y-8 animate-fade-in">
+            <img src="image_3.png" alt="Courtside Gatherings Logo" class="w-40 h-40 mx-auto rounded-full shadow-2xl border-4 border-brand-lime object-cover" onerror="this.src='https://placehold.co/200x200/84cc16/0f172a?text=CG'">
+            
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">PickleQ Sessions</h1>
+                <p class="text-brand-lime font-medium">Player Registration Portal</p>
+            </div>
+
+            <div class="space-y-4">
+                <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-100 px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+                <p class="text-xs text-gray-400 mt-4">By signing in, you agree to our community rules.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden min-h-screen flex-col">
+        
+        <!-- Header -->
+        <header class="glass-panel border-b-0 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-20">
+                    <div class="flex items-center gap-4">
+                        <img src="image_3.png" alt="Logo" class="w-12 h-12 rounded-full border-2 border-brand-lime object-cover" onerror="this.src='https://placehold.co/100x100/84cc16/0f172a?text=CG'">
+                        <span class="font-bold text-xl tracking-wide hidden sm:block">Courtside Gatherings</span>
+                    </div>
+                    
+                    <nav class="flex space-x-2 md:space-x-4 bg-brand-navy/50 p-1 rounded-lg">
+                        <button id="tab-register" class="px-4 py-2 rounded-md font-medium text-sm md:text-base bg-brand-lime text-brand-navy shadow transition-colors" onclick="switchTab('register')">
+                            <i class="fa-solid fa-clipboard-user mr-2"></i> Register
+                        </button>
+                        <button id="tab-dashboard" class="hidden px-4 py-2 rounded-md font-medium text-sm md:text-base text-gray-300 hover:text-white hover:bg-white/10 transition-colors" onclick="switchTab('dashboard')">
+                            <i class="fa-solid fa-chart-line mr-2"></i> Dashboard
+                        </button>
+                    </nav>
+
+                    <div class="flex items-center gap-3">
+                        <div class="hidden md:flex flex-col text-right">
+                            <span id="user-display-name" class="text-sm font-semibold text-white">Player</span>
+                            <span class="text-xs text-brand-lime">Connected</span>
+                        </div>
+                        <button id="logout-btn" class="text-gray-400 hover:text-red-400 transition-colors" title="Sign Out">
+                            <i class="fa-solid fa-right-from-bracket text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- Registration Section -->
+            <section id="view-register" class="grid md:grid-cols-2 gap-8 items-start">
+                
+                <!-- Event Poster / Info Card -->
+                <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                    <div class="bg-brand-lime text-brand-navy p-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 text-white opacity-20">
+                            <i class="fa-solid fa-table-tennis-paddle-ball text-9xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold italic uppercase transform -skew-x-6">PickleQ Sessions</h2>
+                        <p class="text-xl font-bold mt-1">Intermediate Level</p>
+                    </div>
+                    
+                    <div class="p-6 space-y-4 text-gray-200">
+                        <div class="flex items-start gap-4">
+                            <div class="mt-1 bg-white/10 p-2 rounded-lg text-brand-lime"><i class="fa-regular fa-calendar fa-fw text-xl"></i></div>
+                            <div>
+                                <p class="text-sm text-gray-400 font-semibold uppercase">Date & Time</p>
+                                <p class="font-bold text-white text-lg">October 16, 2026 <span class="text-brand-lime">•</span> Friday</p>
+                                <p>7:00 PM to 11:00 PM</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="mt-1 bg-white/10 p-2 rounded-lg text-brand-lime"><i class="fa-solid fa-location-dot fa-fw text-xl"></i></div>
+                            <div>
+                                <p class="text-sm text-gray-400 font-semibold uppercase">Venue</p>
+                                <p class="font-bold text-white">Courtside Gatherings</p>
+                                <p class="text-sm">Lunang Hilongos Leyte</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="mt-1 bg-white/10 p-2 rounded-lg text-brand-lime"><i class="fa-solid fa-ticket fa-fw text-xl"></i></div>
+                            <div>
+                                <p class="text-sm text-gray-400 font-semibold uppercase">Details</p>
+                                <p><span class="font-bold text-white">Registration:</span> ₱150.00 / head</p>
+                                <p><span class="font-bold text-white">Prize:</span> FREE PLAY VOUCHER</p>
+                                <p class="text-xs text-brand-lime mt-1 italic">* Balls are organizer provided.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-brand-navy/80 p-4 border-t border-white/10 text-xs text-gray-400">
+                        <i class="fa-solid fa-circle-info text-brand-lime mr-1"></i> Reservations may be rejected if we exceed max capacity. Please wait for a confirmation text.
+                    </div>
+                </div>
+
+                <!-- Registration Form -->
+                <div class="glass-panel rounded-2xl p-8 shadow-2xl border border-white/10">
+                    <h3 class="text-2xl font-bold text-white mb-6 border-b border-white/10 pb-4">Reserve Your Spot</h3>
+                    
+                    <div id="form-success-msg" class="hidden bg-green-500/20 border border-green-500 text-green-200 p-4 rounded-xl mb-6 flex items-center gap-3">
+                        <i class="fa-solid fa-circle-check text-2xl"></i>
+                        <div>
+                            <p class="font-bold">Registration Submitted!</p>
+                            <p class="text-sm">Please check the dashboard for your approval status.</p>
+                        </div>
+                    </div>
+
+                    <form id="registration-form" class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-user text-gray-500"></i>
+                                </div>
+                                <input type="text" id="reg-fullname" required class="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-xl leading-5 bg-brand-navy/50 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-lime focus:border-brand-lime transition-all" placeholder="Juan Dela Cruz">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Nickname (For Brackets/Court)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-tag text-gray-500"></i>
+                                </div>
+                                <input type="text" id="reg-nickname" required class="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-xl leading-5 bg-brand-navy/50 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-lime focus:border-brand-lime transition-all" placeholder="Juan">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-phone text-gray-500"></i>
+                                </div>
+                                <input type="tel" id="reg-mobile" required class="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-xl leading-5 bg-brand-navy/50 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-lime focus:border-brand-lime transition-all" placeholder="0917 123 4567">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-btn" class="w-full btn-lime text-lg font-bold py-4 rounded-xl mt-6 shadow-lg flex justify-center items-center gap-2">
+                            <span>Submit Registration</span>
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                        <p class="text-center text-xs text-gray-500 mt-2">No payment is required to fill up this form.</p>
+                    </form>
+                </div>
+            </section>
+
+            <section id="view-dashboard" class="hidden">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white">Player Dashboard</h2>
+                        <p class="text-gray-400">Manage event registrations and approvals.</p>
+                    </div>
+                    <div class="bg-brand-navy/60 border border-brand-teal px-4 py-2 rounded-lg">
+                        <span class="text-sm text-gray-400">Total Players: </span>
+                        <span id="total-count" class="text-xl font-bold text-brand-lime">0</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-white/5 border-b border-white/10 text-gray-300 text-sm uppercase tracking-wider">
+                                    <th class="p-4 font-semibold">Player Info</th>
+                                    <th class="p-4 font-semibold">Nickname</th>
+                                    <th class="p-4 font-semibold text-center">Status</th>
+                                    <th class="p-4 font-semibold text-right">Actions (Admin)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="registrations-tbody" class="divide-y divide-white/5">
+                                <!-- Data injected via JS -->
+                                <tr>
+                                    <td colspan="4" class="p-8 text-center text-gray-500">
+                                        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-brand-lime"></i>
+                                        <p>Loading players...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom Modal for Errors/Messages -->
+    <div id="custom-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="glass-panel max-w-sm w-full rounded-2xl p-6 text-center transform scale-95 opacity-0 transition-all duration-200" id="modal-content">
+            <div id="modal-icon" class="text-4xl mb-4 text-brand-lime"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <h3 id="modal-title" class="text-xl font-bold text-white mb-2">Notice</h3>
+            <p id="modal-msg" class="text-gray-300 mb-6">Message goes here.</p>
+            <button onclick="closeModal()" class="btn-lime w-full py-2 rounded-lg font-semibold">Understood</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'pickleq-app-001';
+        const firebaseConfig = {
+            apiKey: "AIzaSyAF8wP1ICmt5nxl4yltsOuwGBTI4TAdjnI",
+            authDomain: "courtside-pickle.firebaseapp.com",
+            projectId: "courtside-pickle",
+            storageBucket: "courtside-pickle.firebasestorage.app",
+            messagingSenderId: "179366005104",
+            appId: "1:179366005104:web:4686480ca55735385067b5"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // State
+        let currentUser = null;
+        let unsubscribeSnapshot = null;
+        let isAdmin = false;
+
+        // DOM Elements
+        const loginView = document.getElementById('login-view');
+        const mainApp = document.getElementById('main-app');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userDisplayName = document.getElementById('user-display-name');
+        
+        const viewRegister = document.getElementById('view-register');
+        const viewDashboard = document.getElementById('view-dashboard');
+        const tabRegister = document.getElementById('tab-register');
+        const tabDashboard = document.getElementById('tab-dashboard');
+        
+        const regForm = document.getElementById('registration-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const formSuccessMsg = document.getElementById('form-success-msg');
+        const registrationsTbody = document.getElementById('registrations-tbody');
+        const totalCountEl = document.getElementById('total-count');
+
+        // Modal Functions (Replacing alerts)
+        window.showModal = (title, message, isError = false) => {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-msg').textContent = message;
+            
+            const icon = document.getElementById('modal-icon');
+            if(isError) {
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-brand-lime"></i>';
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Trigger reflow
+            void modal.offsetWidth;
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        };
+
+        window.closeModal = () => {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        };
+
+        // UI Tabs Logic
+        window.switchTab = (tabName) => {
+            if (tabName === 'register') {
+                viewRegister.classList.remove('hidden');
+                viewDashboard.classList.add('hidden');
+                
+                // Update button styles
+                tabRegister.classList.add('bg-brand-lime', 'text-brand-navy');
+                tabRegister.classList.remove('text-gray-300', 'hover:text-white', 'hover:bg-white/10', 'bg-transparent');
+                
+                tabDashboard.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-white/10', 'bg-transparent');
+                tabDashboard.classList.remove('bg-brand-lime', 'text-brand-navy');
+            } else {
+                viewRegister.classList.add('hidden');
+                viewDashboard.classList.remove('hidden');
+                
+                tabDashboard.classList.add('bg-brand-lime', 'text-brand-navy');
+                tabDashboard.classList.remove('text-gray-300', 'hover:text-white', 'hover:bg-white/10', 'bg-transparent');
+                
+                tabRegister.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-white/10', 'bg-transparent');
+                tabRegister.classList.remove('bg-brand-lime', 'text-brand-navy');
+            }
+        };
+
+        const handleLogin = async () => {
+            try {
+                // Simulate button loading state
+                const originalHtml = googleLoginBtn.innerHTML;
+                googleLoginBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...';
+                googleLoginBtn.disabled = true;
+
+                // Priority: custom token (for this sandbox) -> Google Sign-In (for your live site)
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    const provider = new GoogleAuthProvider();
+                    await signInWithPopup(auth, provider);
+                }
+            } catch (error) {
+                console.error("Auth error:", error);
+                window.showModal("Login Failed", "Could not sign in. Please try again.", true);
+                googleLoginBtn.innerHTML = '<svg class="w-6 h-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign in with Google';
+                googleLoginBtn.disabled = false;
+            }
+        };
+
+        googleLoginBtn.addEventListener('click', handleLogin);
+
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth).catch(err => console.error("Sign out error", err));
+        });
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                
+                // Check if user is admin
+                try {
+                    const adminDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'admins', user.uid));
+                    isAdmin = adminDoc.exists();
+                } catch(e) {
+                    isAdmin = false;
+                }
+
+                // UI adjustments for Admin vs Player
+                if (isAdmin) {
+                    tabDashboard.classList.remove('hidden');
+                    userDisplayName.textContent = 'Admin Mode';
+                    userDisplayName.classList.add('text-yellow-400');
+                    userDisplayName.classList.remove('text-white');
+                } else {
+                    tabDashboard.classList.add('hidden');
+                    userDisplayName.textContent = user.displayName || 'Player ' + user.uid.substring(0,4);
+                    userDisplayName.classList.remove('text-yellow-400');
+                    userDisplayName.classList.add('text-white');
+                    window.switchTab('register'); 
+                }
+
+                // Switch UI
+                loginView.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                mainApp.classList.add('flex');
+                
+                // Start fetching data only if admin
+                if (isAdmin) {
+                    loadDashboardData();
+                }
+            } else {
+                currentUser = null;
+                isAdmin = false;
+                // Switch UI back
+                loginView.classList.remove('hidden');
+                mainApp.classList.add('hidden');
+                mainApp.classList.remove('flex');
+                
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                }
+            }
+        });
+
+        // Path Rule 1: STRICT PATHS used here. 
+        const getRegistrationsRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'registrations');
+
+        const loadDashboardData = () => {
+            if (!currentUser || !isAdmin) return; // Rule 3: Auth guard + Admin guard
+
+            const regRef = getRegistrationsRef();
+            
+            // Rule 2: NO COMPLEX QUERIES. Fetch all, sort/filter in JS.
+            unsubscribeSnapshot = onSnapshot(regRef, (snapshot) => {
+                const regs = [];
+                snapshot.forEach(doc => {
+                    regs.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Sort by newest first in memory
+                regs.sort((a, b) => {
+                    const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+                    const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+                    return timeB - timeA;
+                });
+
+                renderDashboard(regs);
+            }, (error) => {
+                console.error("Snapshot error:", error);
+                registrationsTbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Failed to load data.</td></tr>`;
+            });
+        };
+
+        // Render Dashboard Table
+        const renderDashboard = (registrations) => {
+            totalCountEl.textContent = registrations.length;
+            
+            if (registrations.length === 0) {
+                registrationsTbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="p-12 text-center text-gray-500">
+                            <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
+                            <p>No players have registered yet.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            registrations.forEach(reg => {
+                
+                let statusBadge = '';
+                if (reg.status === 'Approved') {
+                    statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30"><i class="fa-solid fa-check mr-1"></i> Approved</span>`;
+                } else if (reg.status === 'Rejected') {
+                    statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30"><i class="fa-solid fa-xmark mr-1"></i> Rejected</span>`;
+                } else {
+                    statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"><i class="fa-regular fa-clock mr-1"></i> Pending</span>`;
+                }
+
+                // Note: For demonstration, all authenticated users see the action buttons. 
+                // In a production app, you'd check `if (isAdmin)` before rendering these.
+                const actionButtons = `
+                    <div class="flex justify-end gap-2">
+                        <button onclick="updateRegStatus('${reg.id}', 'Approved')" class="p-2 rounded-lg bg-white/5 hover:bg-green-500/20 text-gray-400 hover:text-green-400 transition-colors tooltip-btn" title="Approve">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                        <button onclick="updateRegStatus('${reg.id}', 'Rejected')" class="p-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors tooltip-btn" title="Reject">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Substring email for privacy slightly, or show full since it's a dashboard
+                html += `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-brand-teal flex items-center justify-center text-white font-bold border border-white/10">
+                                    ${reg.fullName ? reg.fullName.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-white">${reg.fullName}</div>
+                                    <div class="text-xs text-gray-400">${reg.mobile || 'N/A'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <span class="text-brand-lime font-semibold">"${reg.nickname}"</span>
+                        </td>
+                        <td class="p-4 text-center">
+                            ${statusBadge}
+                        </td>
+                        <td class="p-4">
+                            ${actionButtons}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            registrationsTbody.innerHTML = html;
+        };
+
+        // Form Submission
+        regForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const fullName = document.getElementById('reg-fullname').value;
+            const nickname = document.getElementById('reg-nickname').value;
+            const mobile = document.getElementById('reg-mobile').value;
+
+            // Simple validation
+            if (!fullName || !nickname || !mobile) {
+                window.showModal("Required Fields", "Please fill up all fields before submitting.", true);
+                return;
+            }
+
+            try {
+                // UI Loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+                
+                const newDocData = {
+                    uid: currentUser.uid,
+                    fullName,
+                    nickname,
+                    mobile,
+                    status: 'Pending',
+                    timestamp: serverTimestamp()
+                };
+
+                await addDoc(getRegistrationsRef(), newDocData);
+                
+                // Success UI
+                regForm.reset();
+                formSuccessMsg.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    formSuccessMsg.classList.add('hidden');
+                }, 5000);
+
+                // Auto-switch to dashboard to see entry
+                setTimeout(() => {
+                    window.switchTab('dashboard');
+                }, 1500);
+
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                window.showModal("Submission Error", "Could not submit your registration. Please try again.", true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Submit Registration</span><i class="fa-solid fa-paper-plane"></i>';
+            }
+        });
+
+        // Global function for dashboard action buttons
+        window.updateRegStatus = async (docId, newStatus) => {
+            if (!currentUser || !isAdmin) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'registrations', docId);
+                await updateDoc(docRef, {
+                    status: newStatus
+                });
+            } catch (error) {
+                console.error("Error updating status:", error);
+                window.showModal("Action Failed", "Could not update player status.", true);
+            }
+        };
+
+        // Initial setup - default to register tab
+        window.switchTab('register');
+
+    </script>
+</body>
+</html>
