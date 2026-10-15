@@ -13,17 +13,24 @@ function restoreCheckoutIntent(uid){
 function notice(text){document.getElementById('accountNotice').textContent=text;}
 function orderTime(o){return o.createdAt?.toMillis?.()||o.updatedAt?.toMillis?.()||0;}
 function activeStage(o){
- if(o.status==='ready')return 4;
+ if(['ready','completed'].includes(o.status))return 4;
  if(o.status==='preparing'||o.paymentStatus==='verified')return 3;
- if(o.submittedPaymentReference)return 2;
- return 1;
+ return 2;
 }
 function activeLabel(o){
  if(o.status==='ready')return o.orderType==='Take-out'?'Ready for pickup':'Ready to serve';
  if(o.status==='preparing')return 'Kitchen is preparing your order';
- if(o.paymentStatus==='verified')return 'Payment verified';
- if(o.submittedPaymentReference)return 'Payment verification pending';
- return 'Order received';
+ if(o.paymentStatus==='verified')return 'Payment confirmed · waiting for kitchen';
+ if(o.submittedPaymentReference)return 'Payment submitted · awaiting verification';
+ if(o.seenAt||o.acknowledgedAt||o.status==='acknowledged')return 'Order opened · payment details needed';
+ return 'Order received · payment details needed';
+}
+function openedLabel(o){
+ const seen=o.seenAt||o.acknowledgedAt;
+ if(!seen&&o.status!=='acknowledged')return 'New Order · Stone Grill has not opened it yet';
+ let date=null;try{date=seen?.toDate?.()||((typeof seen==='number'||typeof seen==='string')?new Date(seen):null);}catch{}
+ const when=date&&!Number.isNaN(date.getTime())?' · '+new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}).format(date):'';
+ return 'Seen by Stone Grill'+when;
 }
 function renderActiveOrder(o){
  let panel=document.getElementById('activeOrderSummary');
@@ -32,8 +39,8 @@ function renderActiveOrder(o){
   const intro=document.querySelector('.order-page-intro');intro?.insertAdjacentElement('afterend',panel);
  }
  if(!o){panel.hidden=true;panel.innerHTML='';return;}
- const stage=activeStage(o),labels=['Order received','Payment confirmed','Cooking','Ready'];
- panel.innerHTML='<div class="active-order-top"><div><small>CURRENT ORDER</small><strong>'+esc(activeLabel(o))+'</strong><span>'+esc(o.orderId||o.id||'')+'</span></div><a href="account/">Open full tracking →</a></div><ol class="active-order-steps" aria-label="Current order progress">'+labels.map((label,i)=>'<li class="'+(i+1<stage?'done':i+1===stage?'current':'pending')+'"'+(i+1===stage?' aria-current="step"':'')+'><span>'+(i+1<stage?'✓':i+1)+'</span><strong>'+esc(label)+'</strong></li>').join('')+'</ol>';
+ const stage=activeStage(o),labels=['Order received','Payment confirmed','Finished cooking',o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'];
+ panel.innerHTML='<div class="active-order-top"><div><small>CURRENT ORDER</small><strong>'+esc(activeLabel(o))+'</strong><span>'+esc(o.orderId||o.id||'')+'</span><span>'+esc(openedLabel(o))+'</span></div><a href="account/">Open full tracking →</a></div><ol class="active-order-steps" aria-label="Current order progress">'+labels.map((label,i)=>'<li class="'+(i+1<stage?'done':i+1===stage?'current':'pending')+'"'+(i+1===stage?' aria-current="step"':'')+'><span>'+(i+1<stage?'✓':i+1)+'</span><strong>'+esc(label)+'</strong></li>').join('')+'</ol>';
  panel.hidden=false;
 }
 a.onAuthStateChanged(auth,async user=>{
