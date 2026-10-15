@@ -1,5 +1,5 @@
 import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js?v=localpersist1';
-const box=document.getElementById('customerAccount');let stopProfile,stopOrders,revision=0;
+const box=document.getElementById('customerAccount');let stopProfile,revision=0;
 function restoreCheckoutIntent(uid){
  let saved,continueAfterLogin=false;
  try{saved=JSON.parse(sessionStorage.getItem('sgCheckoutIntent')||'null');continueAfterLogin=sessionStorage.getItem('sgContinueAfterLogin')==='1';}catch{}
@@ -18,40 +18,8 @@ function restoreCheckoutIntent(uid){
  }
 }
 function notice(text){document.getElementById('accountNotice').textContent=text;}
-function orderTime(o){return o.createdAt?.toMillis?.()||o.updatedAt?.toMillis?.()||0;}
-function activeStage(o){
- if(['ready','completed'].includes(o.status))return 4;
- if(o.status==='preparing'||o.paymentStatus==='verified')return 3;
- return 2;
-}
-function activeLabel(o){
- if(o.status==='ready')return o.orderType==='Take-out'?'Ready for pickup':'Ready to serve';
- if(o.status==='preparing')return 'Kitchen is preparing your order';
- if(o.paymentStatus==='verified')return 'Payment confirmed · waiting for kitchen';
- if(o.submittedPaymentReference)return 'Payment submitted · awaiting verification';
- if(o.seenAt||o.acknowledgedAt||o.status==='acknowledged')return 'Order opened · payment details needed';
- return 'Order received · payment details needed';
-}
-function openedLabel(o){
- const seen=o.seenAt||o.acknowledgedAt;
- if(!seen&&o.status!=='acknowledged')return 'New Order · Stone Grill has not opened it yet';
- let date=null;try{date=seen?.toDate?.()||((typeof seen==='number'||typeof seen==='string')?new Date(seen):null);}catch{}
- const when=date&&!Number.isNaN(date.getTime())?' · '+new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'}).format(date):'';
- return 'Seen by Stone Grill'+when;
-}
-function renderActiveOrder(o){
- let panel=document.getElementById('activeOrderSummary');
- if(!panel){
-  panel=document.createElement('section');panel.id='activeOrderSummary';panel.className='active-order-summary';panel.hidden=true;
-  const intro=document.querySelector('.order-page-intro');intro?.insertAdjacentElement('afterend',panel);
- }
- if(!o){panel.hidden=true;panel.innerHTML='';return;}
- const stage=activeStage(o),labels=['Order received','Payment confirmed','Finished cooking',o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'];
- panel.innerHTML='<div class="active-order-top"><div><small>CURRENT ORDER</small><strong>'+esc(activeLabel(o))+'</strong><span>'+esc(o.orderId||o.id||'')+'</span><span>'+esc(openedLabel(o))+'</span></div><a href="account/">Open full tracking →</a></div><ol class="active-order-steps" aria-label="Current order progress">'+labels.map((label,i)=>'<li class="'+(i+1<stage?'done':i+1===stage?'current':'pending')+'"'+(i+1===stage?' aria-current="step"':'')+'><span>'+(i+1<stage?'✓':i+1)+'</span><strong>'+esc(label)+'</strong></li>').join('')+'</ol>';
- panel.hidden=false;
-}
 a.onAuthStateChanged(auth,async user=>{
- const r=++revision;stopProfile?.();stopOrders?.();stopProfile=null;stopOrders=null;renderActiveOrder(null);
+ const r=++revision;stopProfile?.();stopProfile=null;
  // Do not expose the previous person's receipt reference on a shared device.
  const old=window.backendOrder;
  if(!user||old?.uid!==user.uid){for(const id of ['fullName','mobileNumber']){const el=document.getElementById(id);if(el)el.value='';}}
@@ -78,10 +46,6 @@ a.onAuthStateChanged(auth,async user=>{
    }else notice('Check My Orders for the latest payment status. Do not pay again.');
   }else if(savedDraft&&!savedDraft.confirmed){window.pendingCheckout=savedDraft;window.openCheckout(savedDraft);}
   stopProfile=f.onSnapshot(f.doc(db,'sgCustomers',user.uid),s=>{if(r!==revision)return;const p=s.data();if(!p)return;for(const [id,value] of [['fullName',p.name],['mobileNumber',p.mobile]]){const el=document.getElementById(id);if(el&&!el.value.trim())el.value=value||'';}restoreCheckoutIntent(user.uid);},e=>notice(e.message));
-  stopOrders=f.onSnapshot(f.query(f.collection(db,'sgOrders'),f.where('customerUid','==',user.uid)),s=>{
-   if(r!==revision)return;
-   const active=s.docs.map(d=>({id:d.id,...d.data()})).filter(o=>['new','acknowledged','preparing','ready'].includes(o.status)).sort((a,b)=>orderTime(b)-orderTime(a));
-   renderActiveOrder(active[0]||null);
-  },e=>{renderActiveOrder(null);notice('Current order could not be loaded: '+e.message);});
+
  }catch(e){if(r===revision)notice('Account setup failed: '+e.message);}
 });
