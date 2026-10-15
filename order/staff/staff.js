@@ -17,19 +17,19 @@ function alertStatus(){ $('alertStatus').textContent=[audioCtx?.state==='running
 function closeDetail(){if(busy)return;document.body.classList.remove('detail-open');$('orders').focus({preventScroll:true});const row=[...$('orders').querySelectorAll('[data-id]')].find(b=>b.dataset.id===selected);row?.focus({preventScroll:true});}
 function clearOwnerView(){stopSignIns?.();stopSignIns=null;users=[];userCursor=null;$('usersPanel').hidden=true;$('usersList').replaceChildren();$('signInHistory').replaceChildren();$('usersView').classList.remove('active');}
 function connection(s,live=false){connected=live;$('connection').textContent=s;$('connection').classList.toggle('live',live);}
-const closedOrder=o=>['completed','cancelled'].includes(o.status);
+const closedOrder=o=>['completed','cancelled'].includes(o.status),queueVisible=o=>!closedOrder(o)&&o.status!=='ready';
 const teamState=o=>o.paymentStatus==='verified'?'verified':(o.seenAt||o.acknowledgedAt||o.status==='acknowledged')?'acknowledged':'received';
 const stateName={received:'Received',acknowledged:'Acknowledged',verified:'Verified'};
 const phDate=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(date(t));
 $('historyDate').value=phDate(Date.now());
 function render(){
  orders=history?historyRows:liveOrders;
- const active=liveOrders.filter(o=>!closedOrder(o));$('navCount').textContent=active.length;
+ const active=liveOrders.filter(queueVisible);$('navCount').textContent=active.length;
  $('newCount').textContent=active.filter(o=>teamState(o)==='received').length;
  $('receiptCount').textContent=active.filter(o=>teamState(o)==='acknowledged').length;
  $('kitchenCount').textContent=active.filter(o=>teamState(o)==='verified').length;
  const q=$('search').value.trim().toLowerCase();
- const visible=orders.filter(o=>(history?closedOrder(o)&&phDate(o.createdAt)===$('historyDate').value:!closedOrder(o))&&[o.name,o.mobile,o.customerEmail,o.orderId,o.submittedPaymentReference].join(' ').toLowerCase().includes(q)).sort((a,b)=>date(a.createdAt)-date(b.createdAt)||a.id.localeCompare(b.id));
+ const visible=orders.filter(o=>(history?closedOrder(o)&&phDate(o.createdAt)===$('historyDate').value:queueVisible(o))&&[o.name,o.mobile,o.customerEmail,o.orderId,o.submittedPaymentReference].join(' ').toLowerCase().includes(q)).sort((a,b)=>date(a.createdAt)-date(b.createdAt)||a.id.localeCompare(b.id));
  $('historyCount').textContent=visible.length+' loaded orders';
  const card=o=>`<button class="order-card ${selected===o.id?'selected':''}" data-id="${esc(o.id)}" aria-pressed="${selected===o.id}" aria-controls="detail"><div class="row"><strong class="customer-name">${esc(o.name)}</strong><span class="badge queue-${teamState(o)}">${history?esc(o.status==='completed'?'Claimed / served':'Cancelled'):stateName[teamState(o)]}</span></div><div class="row meta"><span>${esc(o.orderType==='Take-out'?'Pickup':o.orderType)} · ${esc(when(o.createdAt))}</span><strong>${money(o.subtotal)}</strong></div><span class="row-ref">${esc(o.orderId)} <span aria-hidden="true">→</span></span></button>`;
  const focused=document.activeElement?.closest('[data-id]')?.dataset.id;
@@ -43,7 +43,7 @@ function render(){
 function renderDetail(){const cancelOpen=detailId===selected&&$('cancelForm')&&!$('cancelForm').hidden,cancelText=cancelOpen?$('cancelReason').value:'',cancelFocus=cancelOpen&&document.activeElement?.id==='cancelReason',cursor=cancelFocus?$('cancelReason').selectionStart:0;detailId=selected;const o=orders.find(o=>o.id===selected);if(!o){$('detail').innerHTML='<div class="empty"><b>▤</b><h2>A clear view of every order.</h2><p>Select an order to see its payment and next steps.</p></div>';return;}
  const closed=['completed','cancelled'].includes(o.status),button=(a,label,cls='primary')=>`<button data-action="${a}" class="${cls}" ${!connected||busy?'disabled':''}>${label}</button>`;
  const needsTable=['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed',tableReviewer=['owner','admin','cashier'].includes(profile?.role);
- let actions='';if(o.paymentStatus==='verified'&&['new','acknowledged'].includes(o.status)&&(!needsTable||tableReviewer))actions+=button('prepare',needsTable?'Accept table & start cooking':'Start cooking (optional)');if(o.paymentStatus==='verified'&&['new','acknowledged','preparing'].includes(o.status)&&(!needsTable||tableReviewer))actions+=button('ready',needsTable?'Accept table & mark ready':'Mark ready');if(o.status==='ready')actions+=button('complete','Finished · claimed / served');if(['owner','admin','cashier'].includes(profile?.role)&&!closed)actions+=button('cancel','Cancel order','danger');
+ let actions='';if(o.paymentStatus==='verified'&&['new','acknowledged'].includes(o.status)&&(!needsTable||tableReviewer))actions+=button('prepare',needsTable?'Accept table & start cooking':'Start cooking (optional)');if(o.paymentStatus==='verified'&&['new','acknowledged','preparing'].includes(o.status)&&(!needsTable||tableReviewer))actions+=button('ready',needsTable?'Accept table & mark ready':'Mark ready');if(['owner','admin','cashier'].includes(profile?.role)&&!closed)actions+=button('cancel','Cancel order','danger');
  const reference=o.submittedPaymentReference||'',verifyLabel=needsTable?'Verify payment & accept table':'Verify payment';
  const verifyButton=reference&&canVerify(o)&&!closed&&o.paymentStatus!=='verified'?button('verifyPayment',verifyLabel):'';
  const legacyButtons=profile?.role==='owner'&&!o.paymentMethod&&reference&&!closed&&o.paymentStatus!=='verified'?button('verifyQR',needsTable?'Verify QR payment & accept table':'Verify QR payment')+button('verifyNumber',needsTable?'Verify GCash number & accept table':'Verify GCash number payment'):'';
