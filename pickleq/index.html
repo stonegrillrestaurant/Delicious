@@ -239,9 +239,10 @@ body { padding: 10px; }
 </div>
 <!-- REGISTRATION FORM -->
 <div class="content active" id="content-register">
-<h2 id="reg-form-title" style="margin-bottom: 20px; color: var(--primary-teal); font-size: 20px; text-transform: uppercase;">Reserve Your Spot</h2>
 <!-- Client Realtime Status Notification -->
 <div id="client-status-banner" class="client-status-banner" style="display: none;"></div>
+<div id="registration-form-container">
+<h2 id="reg-form-title" style="margin-bottom: 20px; color: var(--primary-teal); font-size: 20px; text-transform: uppercase;">Reserve Your Spot</h2>
 <form id="registration-form">
 <div class="form-group">
 <label>Full Name</label>
@@ -260,6 +261,7 @@ body { padding: 10px; }
 <button type="submit" class="btn" id="reg-submit-btn">Submit Registration</button>
 </form>
 <div id="reg-message" style="margin-top: 15px; text-align: center; font-weight: bold; padding: 10px; border-radius: 8px;"></div>
+</div>
 </div>
 <!-- ADMIN DASHBOARD -->
 <div class="content" id="content-dashboard">
@@ -433,8 +435,7 @@ where("userId", "", currentUser.uid)
 );
 clientStatusUnsubscribe = onSnapshot(q, (snapshot) => {
 const banner = document.getElementById('client-status-banner');
-const form = document.getElementById('registration-form');
-const formTitle = document.getElementById('reg-form-title');
+const formContainer = document.getElementById('registration-form-container');
 if (!snapshot.empty) {
 const regData = snapshot.docs[0].data();
 let bgColor = "#e2e8f0"; let textColor = "#2d3748";
@@ -455,12 +456,10 @@ banner.style.display = "block";
 banner.style.backgroundColor = bgColor;
 banner.style.color = textColor;
 banner.innerHTML = ⁠<strong style="font-size:16px;">Status: ${regData.status.toUpperCase()}</strong><br><span style="font-size:13px; margin-top:5px; display:inline-block;">${msg}</span>⁠;
-form.style.display = "none";
-formTitle.style.display = "none";
+formContainer.style.display = "none";
 } else {
 banner.style.display = "none";
-form.style.display = "block";
-formTitle.style.display = "block";
+formContainer.style.display = "block";
 }
 });
 }
