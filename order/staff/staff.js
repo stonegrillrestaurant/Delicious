@@ -19,7 +19,7 @@ function clearOwnerView(){stopSignIns?.();stopSignIns=null;users=[];userCursor=n
 function connection(s,live=false){connected=live;$('connection').textContent=s;$('connection').classList.toggle('live',live);}
 const closedOrder=o=>['completed','cancelled'].includes(o.status),queueVisible=o=>!closedOrder(o)&&o.status!=='ready';
 const teamState=o=>o.paymentStatus==='verified'?'verified':(o.seenAt||o.acknowledgedAt||o.status==='acknowledged')?'acknowledged':'received';
-const stateName={received:'Received',acknowledged:'Acknowledged',verified:'Verified'};
+const stateName={received:'New Order',acknowledged:'Acknowledged',verified:'Verified'};
 const phDate=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(date(t));
 $('historyDate').value=phDate(Date.now());
 function render(){
