@@ -1,711 +1,835 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Primary Meta Tags -->
-<title>PickleQ Sessions - Courtside Gatherings</title>
-<meta name="title" content="PickleQ Sessions - Courtside Gatherings">
-<meta name="description" content="Reserve your spot for the latest Pickleball sessions at Courtside Gatherings.">
-<style>
-/* Modern, Sporty Variables matching the new reference image /
-:root {
---primary-teal: #0c4a60; / Deep sporty teal /
---primary-lime: #c7e12f; / Vibrant lime green /
---bg-cream: #f4f7f4; / Light off-white for contrast */
---text-dark: #1f2d3d;
---border-light: #d3dce6;
---muted-text: #5c6e82;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-body {
-background-color: var(--bg-cream);
-color: var(--text-dark);
-min-height: 100vh;
-display: flex; justify-content: center;
-align-items: flex-start; padding: 30px 15px;
-position: relative; overflow-x: hidden;
-}
-/* Diagonal Accents */
-.bg-accents {
-position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1;
-background:
-linear-gradient(135deg, var(--primary-teal) 0%, var(--primary-teal) 8%, transparent 8%, transparent 100%),
-linear-gradient(135deg, transparent 8%, var(--primary-lime) 8%, var(--primary-lime) 10%, transparent 10%, transparent 100%),
-linear-gradient(-45deg, var(--primary-teal) 0%, var(--primary-teal) 15%, transparent 15%, transparent 100%),
-linear-gradient(-45deg, transparent 15%, var(--primary-lime) 15%, var(--primary-lime) 17%, transparent 17%, transparent 100%);
-background-color: var(--bg-cream);
-}
-.container {
-background: #ffffff; width: 100%; max-width: 750px;
-border-radius: 12px; box-shadow: 0 15px 35px rgba(12, 74, 96, 0.15);
-overflow: hidden; border-top: 8px solid var(--primary-lime);
-display: flex; flex-direction: column;
-}
-/* Header Section */
-.header {
-background-color: #ffffff;
-color: var(--primary-teal);
-padding: 25px 20px;
-position: relative;
-text-align: center;
-border-bottom: 1px solid var(--border-light);
-}
-.header-logo {
-width: 90px; height: 90px;
-border-radius: 50%;
-border: 3px solid var(--primary-lime);
-margin-bottom: 12px;
-background-color: white;
-object-fit: cover;
-box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-.badge-active {
-display: inline-block; background: var(--primary-lime); color: var(--primary-teal);
-padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 900;
-letter-spacing: 1px; margin-bottom: 10px; text-transform: uppercase;
-}
-.header h1 { font-size: 26px; margin-bottom: 5px; color: var(--primary-teal); line-height: 1.2; font-weight: 800; text-transform: uppercase; }
-.header h2 { font-size: 15px; color: var(--muted-text); margin-bottom: 20px; font-weight: 600; }
-/* Event Details Grid - Symmetrical */
-.event-meta-grid {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-gap: 12px;
-background: var(--bg-cream);
-padding: 15px;
-border-radius: 10px;
-border: 1px solid var(--border-light);
-text-align: left;
-}
-.meta-item { display: flex; align-items: center; gap: 8px; }
-.meta-icon { font-size: 20px; line-height: 1; }
-.meta-text { display: flex; flex-direction: column; }
-.meta-label { font-size: 10px; text-transform: uppercase; color: var(--muted-text); letter-spacing: 0.5px; font-weight: bold; }
-.meta-value { font-size: 13px; color: var(--primary-teal); font-weight: 700; }
-.event-notes {
-margin-top: 15px; font-size: 13px; color: var(--primary-teal);
-background: rgba(199, 225, 47, 0.2); padding: 12px; border-radius: 8px;
-border-left: 4px solid var(--primary-lime);
-text-align: left; font-weight: 500;
-}
-/* Tabs */
-.tabs { display: flex; background: var(--bg-cream); border-bottom: 1px solid var(--border-light); }
-.tab {
-flex: 1; padding: 16px; text-align: center; cursor: pointer;
-font-weight: 700; color: var(--muted-text); transition: all 0.3s ease;
-text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;
-}
-.tab:hover { background-color: #e2e8e4; color: var(--primary-teal); }
-.tab.active { background-color: white; color: var(--primary-teal); border-bottom: 4px solid var(--primary-teal); }
-#tab-dashboard { display: none; }
-.content { padding: 25px 20px; display: none; flex-grow: 1; }
-.content.active { display: block; }
-/* Forms */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-.form-group { margin-bottom: 15px; }
-.form-group.full-width { grid-column: span 2; margin-bottom: 0; }
-label { display: block; margin-bottom: 6px; font-weight: 700; color: var(--primary-teal); font-size: 12px; text-transform: uppercase; }
-input, select, textarea {
-width: 100%; padding: 12px; border: 2px solid var(--border-light);
-border-radius: 8px; font-size: 15px; transition: all 0.3s;
-background-color: var(--bg-cream); color: var(--text-dark);
-}
-input:focus, select:focus, textarea:focus {
-outline: none; border-color: var(--primary-lime); background-color: white;
-}
-textarea { resize: vertical; min-height: 80px; }
-button.btn {
-width: 100%; padding: 14px; background-color: var(--primary-lime);
-color: var(--primary-teal); border: none; border-radius: 8px;
-font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
-cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 10px rgba(199, 225, 47, 0.4);
-}
-button.btn:hover { background-color: #b3cc29; transform: translateY(-2px); }
-button.btn-small { padding: 10px 15px; font-size: 12px; width: auto; box-shadow: none; }
-button.btn-outline { background-color: transparent; border: 2px solid var(--primary-teal); color: var(--primary-teal); }
-/* Auth Banner */
-.auth-section { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background-color: var(--bg-cream); border-bottom: 1px solid var(--border-light); }
-.auth-section p { margin: 0; font-size: 13px; font-weight: 500; }
-button.google-btn { background-color: #4285F4; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; }
-/* Client Status Banner */
-.client-status-banner {
-padding: 15px; border-radius: 8px; margin-bottom: 20px;
-text-align: center; font-size: 14px; border: 1px solid rgba(0,0,0,0.1);
-}
-/* Admin Cards */
-.admin-card {
-background: white; border: 1px solid var(--border-light); padding: 20px;
-border-radius: 12px; margin-bottom: 20px;
-}
-.admin-card h3 { margin-top: 0; margin-bottom: 15px; color: var(--primary-teal); font-size: 16px; text-transform: uppercase; border-bottom: 3px solid var(--primary-lime); display: inline-block; padding-bottom: 5px; }
-/* Aligned and Optimized List Items */
-.list-item {
-background: var(--bg-cream); border: 1px solid var(--border-light); padding: 14px;
-border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-.list-info { flex-grow: 1; min-width: 150px; }
-.list-info h4 { margin: 0 0 4px 0; color: var(--primary-teal); font-size: 15px; font-weight: 700; }
-.list-info p { margin: 0; color: var(--muted-text); font-size: 13px; }
-.status-badge { padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-block; margin-top: 6px; }
-.status-pending { background: #feebc8; color: #c05621; }
-.status-approved { background: #c6f6d5; color: #22543d; }
-.status-rejected { background: #fed7d7; color: #9b2c2c; }
-.status-active-event { background: var(--primary-lime); color: var(--primary-teal); margin-left: 8px; margin-top: 0; }
-.action-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.action-btns button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s; white-space: nowrap; }
-.btn-approve { background: #c6f6d5; color: #22543d; }
-.btn-reject { background: #fed7d7; color: #9b2c2c; }
-.btn-edit { background: #e2e8f0; color: #2d3748; }
-.btn-remove { background: #e53e3e; color: white; }
-/* Help & Contact Footer Section */
-.footer-help {
-background-color: var(--primary-teal);
-color: white;
-padding: 20px;
-text-align: center;
-border-top: 4px solid var(--primary-lime);
-margin-top: auto;
-}
-.footer-help h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: var(--primary-lime); }
-.help-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.help-link {
-display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); color: white;
-text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
-}
-/* Mobile Optimization for better space use */
-@media (max-width: 600px) {
-body { padding: 10px; }
-.container { border-radius: 12px; }
-.header { padding: 20px 15px; }
-.header h1 { font-size: 22px; }
-/* Symmetrical Grid for Mobile /
-.event-meta-grid { grid-template-columns: 1fr 1fr; padding: 12px; gap: 10px; }
-.meta-item:nth-child(5) { grid-column: 1 / -1; } / Make prize full width if odd number */
-.content { padding: 20px 15px; }
-.form-grid { grid-template-columns: 1fr; gap: 12px; }
-.form-group.full-width { grid-column: span 1; }
-.auth-section { flex-direction: column; gap: 10px; text-align: center; }
-/* Align Lists on Mobile to stop wrapping */
-.list-item { flex-direction: column; align-items: flex-start; gap: 12px; padding: 15px; }
-.action-btns { width: 100%; display: flex; flex-direction: row; }
-.action-btns button { flex: 1; text-align: center; padding: 10px 8px; margin: 0; }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>PickleQ Sessions - Courtside Gatherings</title>
+    <meta name="title" content="PickleQ Sessions - Courtside Gatherings">
+    <meta name="description" content="Reserve your spot for the latest Pickleball sessions at Courtside Gatherings.">
+    
+    <style>
+        :root {
+            --primary-teal: #0c4a60; /* Deep sporty teal matching reference */
+            --primary-lime: #c7e12f; /* Vibrant lime green matching reference */
+            --bg-cream: #f4f7f4; 
+            --text-dark: #1f2d3d;
+            --border-light: #d3dce6;
+            --muted-text: #5c6e82;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body {
+            background-color: var(--bg-cream); 
+            color: var(--text-dark);
+            min-height: 100vh; 
+            display: flex; justify-content: center;
+            align-items: flex-start; padding: 30px 15px; 
+            position: relative; overflow-x: hidden;
+        }
+
+        /* Diagonal Accents */
+        .bg-accents {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1;
+            background: 
+                linear-gradient(135deg, var(--primary-teal) 0%, var(--primary-teal) 8%, transparent 8%, transparent 100%),
+                linear-gradient(135deg, transparent 8%, var(--primary-lime) 8%, var(--primary-lime) 10%, transparent 10%, transparent 100%),
+                linear-gradient(-45deg, var(--primary-teal) 0%, var(--primary-teal) 15%, transparent 15%, transparent 100%),
+                linear-gradient(-45deg, transparent 15%, var(--primary-lime) 15%, var(--primary-lime) 17%, transparent 17%, transparent 100%);
+            background-color: var(--bg-cream);
+        }
+
+        .container {
+            background: #ffffff; width: 100%; max-width: 750px;
+            border-radius: 12px; box-shadow: 0 15px 35px rgba(12, 74, 96, 0.15);
+            overflow: hidden; border-top: 8px solid var(--primary-lime);
+            display: flex; flex-direction: column;
+        }
+
+        /* Header Section */
+        .header {
+            background-color: #ffffff; 
+            color: var(--primary-teal);
+            padding: 25px 20px; 
+            position: relative;
+            text-align: center;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .header-logo {
+            width: 90px; height: 90px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-lime);
+            margin-bottom: 12px;
+            background-color: white;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .badge-active { 
+            display: inline-block; background: var(--primary-lime); color: var(--primary-teal); 
+            padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; 
+            letter-spacing: 1px; margin-bottom: 10px; text-transform: uppercase;
+        }
+
+        .header h1 { font-size: 26px; margin-bottom: 5px; color: var(--primary-teal); line-height: 1.2; font-weight: 800; text-transform: uppercase; }
+        .header h2 { font-size: 15px; color: var(--muted-text); margin-bottom: 20px; font-weight: 600; }
+
+        /* Event Details Grid - Symmetrical */
+        .event-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            background: var(--bg-cream);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light);
+            text-align: left;
+        }
+
+        .meta-item { display: flex; align-items: center; gap: 8px; }
+        .meta-icon { font-size: 20px; line-height: 1; }
+        .meta-text { display: flex; flex-direction: column; }
+        .meta-label { font-size: 10px; text-transform: uppercase; color: var(--muted-text); letter-spacing: 0.5px; font-weight: bold; }
+        .meta-value { font-size: 13px; color: var(--primary-teal); font-weight: 700; }
+
+        .event-notes {
+            margin-top: 15px; font-size: 13px; color: var(--primary-teal); 
+            background: rgba(199, 225, 47, 0.2); padding: 12px; border-radius: 8px;
+            border-left: 4px solid var(--primary-lime);
+            text-align: left; font-weight: 500;
+        }
+
+        /* Tabs */
+        .tabs { display: flex; background: var(--bg-cream); border-bottom: 1px solid var(--border-light); }
+        .tab { 
+            flex: 1; padding: 16px; text-align: center; cursor: pointer; 
+            font-weight: 700; color: var(--muted-text); transition: all 0.3s ease; 
+            text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;
+        }
+        .tab:hover { background-color: #e2e8e4; color: var(--primary-teal); }
+        .tab.active { background-color: white; color: var(--primary-teal); border-bottom: 4px solid var(--primary-teal); }
+        #tab-dashboard { display: none; }
+
+        .content { padding: 25px 20px; display: none; flex-grow: 1; }
+        .content.active { display: block; }
+
+        /* Forms */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group.full-width { grid-column: span 2; margin-bottom: 0; }
+        
+        label { display: block; margin-bottom: 6px; font-weight: 700; color: var(--primary-teal); font-size: 12px; text-transform: uppercase; }
+        input, select, textarea {
+            width: 100%; padding: 12px; border: 2px solid var(--border-light);
+            border-radius: 8px; font-size: 15px; transition: all 0.3s;
+            background-color: var(--bg-cream); color: var(--text-dark);
+        }
+        input:focus, select:focus, textarea:focus { 
+            outline: none; border-color: var(--primary-lime); background-color: white; 
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        button.btn {
+            width: 100%; padding: 14px; background-color: var(--primary-lime);
+            color: var(--primary-teal); border: none; border-radius: 8px;
+            font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 10px rgba(199, 225, 47, 0.4);
+        }
+        button.btn:hover { background-color: #b3cc29; transform: translateY(-2px); }
+        
+        button.btn-small { padding: 10px 15px; font-size: 12px; width: auto; box-shadow: none; }
+        button.btn-outline { background-color: transparent; border: 2px solid var(--primary-teal); color: var(--primary-teal); }
+
+        /* Auth Banner */
+        .auth-section { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background-color: var(--bg-cream); border-bottom: 1px solid var(--border-light); }
+        .auth-section p { margin: 0; font-size: 13px; font-weight: 500; }
+        button.google-btn { background-color: #4285F4; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; }
+
+        /* Client Status Banner */
+        .client-status-banner {
+            padding: 15px; border-radius: 8px; margin-bottom: 20px;
+            text-align: center; font-size: 14px; border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        /* Admin Cards */
+        .admin-card {
+            background: white; border: 1px solid var(--border-light); padding: 20px;
+            border-radius: 12px; margin-bottom: 20px;
+        }
+        .admin-card h3 { margin-top: 0; margin-bottom: 15px; color: var(--primary-teal); font-size: 16px; text-transform: uppercase; border-bottom: 3px solid var(--primary-lime); display: inline-block; padding-bottom: 5px; }
+
+        /* Aligned and Optimized List Items */
+        .list-item {
+            background: var(--bg-cream); border: 1px solid var(--border-light); padding: 14px;
+            border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+        }
+        .list-info { flex-grow: 1; min-width: 150px; }
+        .list-info h4 { margin: 0 0 4px 0; color: var(--primary-teal); font-size: 15px; font-weight: 700; }
+        .list-info p { margin: 0; color: var(--muted-text); font-size: 13px; }
+
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-block; margin-top: 6px; }
+        .status-pending { background: #feebc8; color: #c05621; }
+        .status-approved { background: #c6f6d5; color: #22543d; }
+        .status-rejected { background: #fed7d7; color: #9b2c2c; }
+        .status-active-event { background: var(--primary-lime); color: var(--primary-teal); margin-left: 8px; margin-top: 0; }
+
+        .action-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+        .action-btns button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        .btn-approve { background: #c6f6d5; color: #22543d; }
+        .btn-reject { background: #fed7d7; color: #9b2c2c; }
+        .btn-edit { background: #e2e8f0; color: #2d3748; }
+        .btn-remove { background: #e53e3e; color: white; }
+
+        /* Help & Contact Footer Section */
+        .footer-help {
+            background-color: var(--primary-teal);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-top: 4px solid var(--primary-lime);
+            margin-top: auto;
+        }
+        .footer-help h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: var(--primary-lime); }
+        .help-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        .help-link {
+            display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); color: white;
+            text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+        }
+
+        /* Mobile Optimization for better space use and list alignment */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { border-radius: 12px; }
+            .header { padding: 20px 15px; }
+            .header h1 { font-size: 22px; }
+            
+            /* Symmetrical Grid for Mobile */
+            .event-meta-grid { grid-template-columns: 1fr 1fr; padding: 12px; gap: 10px; }
+            .meta-item:nth-child(5) { grid-column: 1 / -1; } 
+            
+            .content { padding: 20px 15px; }
+            .form-grid { grid-template-columns: 1fr; gap: 12px; }
+            .form-group.full-width { grid-column: span 1; }
+            .auth-section { flex-direction: column; gap: 10px; text-align: center; }
+            
+            /* Align Lists on Mobile to stop wrapping */
+            .list-item { flex-direction: column; align-items: stretch; gap: 12px; padding: 15px; text-align: center; }
+            .list-info p { word-wrap: break-word; }
+            .action-btns { width: 100%; display: flex; flex-direction: row; justify-content: center; gap: 8px; }
+            .action-btns button { flex: 1; text-align: center; padding: 10px 8px; margin: 0; }
+        }
+    </style>
 </head>
 <body>
-<div class="bg-accents"></div>
-<div class="container">
-<!-- ENERGETIC HEADER WITH LOGO -->
-<div class="header">
-<img src="IMG_5174.png" alt="Courtside Gatherings Logo" class="header-logo" onerror="this.style.display='none'">
 
+    <div class="bg-accents"></div>
 
-<div class="badge-active" id="display-badge">ACTIVE EVENT</div>
-<h1 id="display-event-name">Loading Event...</h1>
-<h2 id="display-event-level">Please wait</h2>
-<div class="event-meta-grid" id="display-meta-grid">
-<div class="meta-item">
-<div class="meta-icon">📅</div>
-<div class="meta-text"><span class="meta-label">Date</span><span class="meta-value" id="display-date">--</span></div>
-</div>
-<div class="meta-item">
-<div class="meta-icon">⏰</div>
-<div class="meta-text"><span class="meta-label">Time</span><span class="meta-value" id="display-time">--</span></div>
-</div>
-<div class="meta-item">
-<div class="meta-icon">📍</div>
-<div class="meta-text"><span class="meta-label">Venue</span><span class="meta-value" id="display-venue">--</span></div>
-</div>
-<div class="meta-item">
-<div class="meta-icon">🎟️</div>
-<div class="meta-text"><span class="meta-label">Reg Fee</span><span class="meta-value" id="display-fee">--</span></div>
-</div>
-<div class="meta-item">
-<div class="meta-icon">🏆</div>
-<div class="meta-text"><span class="meta-label">Prize</span><span class="meta-value" id="display-prize">--</span></div>
-</div>
-</div>
-<div id="display-notes" class="event-notes" style="display: none;"></div>
-</div>
-<div class="auth-section" id="auth-container">
-<p>Please sign in to register or manage events.</p>
-<button class="google-btn" id="login-btn">Sign in with Google</button>
-</div>
-<div id="app-container" style="display: none;">
-<div class="tabs">
-<div class="tab active" id="tab-register" onclick="switchTab('register')">Registration</div>
-<div class="tab" id="tab-dashboard" onclick="switchTab('dashboard')">Dashboard</div>
-</div>
-<!-- REGISTRATION FORM -->
-<div class="content active" id="content-register">
-<!-- Client Realtime Status Notification -->
-<div id="client-status-banner" class="client-status-banner" style="display: none;"></div>
-<div id="registration-form-container">
-<h2 id="reg-form-title" style="margin-bottom: 20px; color: var(--primary-teal); font-size: 20px; text-transform: uppercase;">Reserve Your Spot</h2>
-<form id="registration-form">
-<div class="form-group">
-<label>Full Name</label>
-<input type="text" id="fullName" required placeholder="e.g. Juan Dela Cruz">
-</div>
-<div class="form-grid">
-<div class="form-group">
-<label>Nickname</label>
-<input type="text" id="nickname" required placeholder="e.g. Juan">
-</div>
-<div class="form-group">
-<label>Mobile Number</label>
-<input type="tel" id="mobileNumber" required placeholder="e.g. 09XX XXX XXXX">
-</div>
-</div>
-<button type="submit" class="btn" id="reg-submit-btn">Submit Registration</button>
-</form>
-<div id="reg-message" style="margin-top: 15px; text-align: center; font-weight: bold; padding: 10px; border-radius: 8px;"></div>
-</div>
-</div>
-<!-- ADMIN DASHBOARD -->
-<div class="content" id="content-dashboard">
-<!-- 1. COMPREHENSIVE CREATE / EDIT EVENT FORM -->
-<div class="admin-card">
-<h3 id="form-title">1. Create New Event</h3>
-<div class="form-grid">
-<div class="form-group">
-<label>Event Name</label>
-<input type="text" id="new-evt-name" placeholder="e.g. PickleQ Sessions">
-</div>
-<div class="form-group">
-<label>Skill Level</label>
-<input type="text" id="new-evt-level" placeholder="e.g. Intermediate Level">
-</div>
-<div class="form-group">
-<label>Date</label>
-<input type="text" id="new-evt-date" placeholder="e.g. Oct 16, 2026">
-</div>
-<div class="form-group">
-<label>Time</label>
-<input type="text" id="new-evt-time" placeholder="e.g. 7pm - 11pm">
-</div>
-<div class="form-group">
-<label>Venue</label>
-<input type="text" id="new-evt-venue" placeholder="e.g. Courtside">
-</div>
-<div class="form-group">
-<label>Reg Fee</label>
-<input type="text" id="new-evt-fee" placeholder="e.g. P150.00/head">
-</div>
-<div class="form-group full-width">
-<label>Prize</label>
-<input type="text" id="new-evt-prize" placeholder="e.g. FREE PLAY VOUCHER">
-</div>
-<div class="form-group full-width">
-<label>Additional Notes</label>
-<textarea id="new-evt-notes" placeholder="e.g. Balls are provided."></textarea>
-</div>
-</div>
-<div style="display: flex; gap: 10px;">
-<button id="create-evt-btn" class="btn btn-small" onclick="window.createNewEvent()" style="flex: 1;">Save Event Profile</button>
-<button id="cancel-edit-btn" class="btn btn-small btn-outline" onclick="window.cancelEdit()" style="display: none; flex: 1;">Cancel Edit</button>
-</div>
-</div>
-<!-- 2. Manage Events -->
-<div class="admin-card">
-<h3>2. Event List</h3>
-<p style="font-size: 12px; color: var(--muted-text); margin-bottom: 15px;">Set an event as "Active" to show it on the frontpage.</p>
-<div id="events-list-container">
-<p>Loading events...</p>
-</div>
-</div>
-<!-- 3. Player Lists (Filtered) -->
-<div class="admin-card">
-<h3>3. Player Registrations</h3>
-<div class="form-group">
-<label>Select Event Roster:</label>
-<select id="event-filter-select" onchange="window.loadDashboardPlayers(this.value)">
-<option value="">Select an event...</option>
-</select>
-</div>
-<div id="player-list-container">
-<p style="color: var(--muted-text); font-style: italic; font-size: 13px;">Select an event above to view players.</p>
-</div>
-</div>
-</div>
-</div>
-<!-- HELP & CONTACT FOOTER -->
-<div class="footer-help">
-<h3>Courtside Contact Info</h3>
-<div class="help-grid">
-<a href="https://m.me/courtsidegatherings" target="_blank" class="help-link">💬 Messenger</a>
-<a href="tel:+639173065956" class="help-link">📞 Admin: 0917 306 5956</a>
-<a href="https://facebook.com/courtsidegatherings" target="_blank" class="help-link">🌐 Facebook</a>
-</div>
-</div>
-</div>
-<!-- Firebase SDK Setup & Application Logic -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDoc, setDoc, doc, onSnapshot, updateDoc, deleteDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
-const firebaseConfig = {
-apiKey: "AIzaSyAF8wP1ICmt5nxl4yltsOuwGBTI4TAdjnI",
-authDomain: "courtside-pickle.firebaseapp.com",
-projectId: "courtside-pickle",
-storageBucket: "courtside-pickle.firebasestorage.app",
-messagingSenderId: "179366005104",
-appId: "1:179366005104:web:4686480ca55735385067b5"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-let currentUser = null;
-let isAdmin = false;
-let activeEventIdGlob = null;
-let editingEventId = null;
-let clientStatusUnsubscribe = null;
-// --------------------------------------------------------
-// PUBLIC: Load Active Event and Populate UI Grid
-// --------------------------------------------------------
-onSnapshot(doc(db, "settings", "active_event"), (docSnap) => {
-if (docSnap.exists()) {
-const data = docSnap.data();
-activeEventIdGlob = data.eventId;
-document.getElementById('display-badge').innerText = "ACTIVE EVENT";
-document.getElementById('display-event-name').innerText = data.eventName || "Pickleball Event";
-document.getElementById('display-event-level').innerText = data.eventLevel || "All Levels";
-document.getElementById('display-date').innerText = data.eventDate || "TBA";
-document.getElementById('display-time').innerText = data.eventTime || "TBA";
-document.getElementById('display-venue').innerText = data.eventVenue || "TBA";
-document.getElementById('display-fee').innerText = data.eventFee || "TBA";
-document.getElementById('display-prize').innerText = data.eventPrize || "None";
-const notesEl = document.getElementById('display-notes');
-if (data.eventNotes) {
-notesEl.style.display = "block";
-notesEl.innerText = "NOTE: " + data.eventNotes;
-} else {
-notesEl.style.display = "none";
-}
-document.getElementById('reg-submit-btn').disabled = false;
-document.getElementById('reg-submit-btn').innerText = "Submit Registration";
-checkClientRegistrationStatus(); // Check status if user is logged in
-} else {
-document.getElementById('display-badge').innerText = "NO EVENT";
-document.getElementById('display-event-name').innerText = "Registrations Closed";
-document.getElementById('display-event-level').innerText = "Check back later.";
-document.getElementById('display-notes').style.display = "none";
-document.getElementById('reg-submit-btn').disabled = true;
-document.getElementById('reg-submit-btn').innerText = "Event Not Available";
-}
-});
-// --------------------------------------------------------
-// AUTHENTICATION & ADMIN CHECK
-// --------------------------------------------------------
-onAuthStateChanged(auth, async (user) => {
-if (user) {
-currentUser = user;
-document.getElementById('auth-container').innerHTML = ⁠<p>Signed in as <b>${user.displayName || user.email}</b></p>⁠;
-document.getElementById('app-container').style.display = 'block';
-checkClientRegistrationStatus();
-try {
-const adminDoc = await getDoc(doc(db, "admins", user.uid));
-if (adminDoc.exists()) {
-isAdmin = true;
-document.getElementById('tab-dashboard').style.display = 'block';
-loadAdminEvents();
-}
-} catch (error) { console.log("Standard user."); }
-} else {
-currentUser = null;
-document.getElementById('app-container').style.display = 'none';
-if(clientStatusUnsubscribe) clientStatusUnsubscribe();
-}
-});
-document.getElementById('login-btn').addEventListener('click', () => {
-signInWithPopup(auth, provider).catch(err => alert("Error: " + err.message));
-});
-// --------------------------------------------------------
-// CLIENT STATUS NOTIFICATION
-// --------------------------------------------------------
-function checkClientRegistrationStatus() {
-if (!currentUser || !activeEventIdGlob) return;
-if (clientStatusUnsubscribe) clientStatusUnsubscribe();
-const q = query(
-collection(db, "registrations"),
-where("eventId", "", activeEventIdGlob),
-where("userId", "", currentUser.uid)
-);
-clientStatusUnsubscribe = onSnapshot(q, (snapshot) => {
-const banner = document.getElementById('client-status-banner');
-const formContainer = document.getElementById('registration-form-container');
-if (!snapshot.empty) {
-const regData = snapshot.docs[0].data();
-let bgColor = "#e2e8f0"; let textColor = "#2d3748";
-let msg = "We have received your registration for this active event.";
-if(regData.status === 'Approved') {
-bgColor = "#c6f6d5"; textColor = "#22543d";
-msg = "You are confirmed for this event! See you on the court.";
-}
-else if(regData.status === 'Pending') {
-bgColor = "#feebc8"; textColor = "#c05621";
-msg = "Your registration is currently under review.";
-}
-else if(regData.status === 'Rejected') {
-bgColor = "#fed7d7"; textColor = "#9b2c2c";
-msg = "Unfortunately, we could not accommodate your registration at this time.";
-}
-banner.style.display = "block";
-banner.style.backgroundColor = bgColor;
-banner.style.color = textColor;
-banner.innerHTML = ⁠<strong style="font-size:16px;">Status: ${regData.status.toUpperCase()}</strong><br><span style="font-size:13px; margin-top:5px; display:inline-block;">${msg}</span>⁠;
-formContainer.style.display = "none";
-} else {
-banner.style.display = "none";
-formContainer.style.display = "block";
-}
-});
-}
-// --------------------------------------------------------
-// SUBMIT REGISTRATION
-// --------------------------------------------------------
-const regForm = document.getElementById('registration-form');
-const regMsg = document.getElementById('reg-message');
-regForm.addEventListener('submit', async (e) => {
-e.preventDefault();
-if (!currentUser || !activeEventIdGlob) return alert("No active event found.");
-const btn = document.getElementById('reg-submit-btn');
-btn.disabled = true; btn.innerText = "Submitting...";
-try {
-await addDoc(collection(db, "registrations"), {
-fullName: document.getElementById('fullName').value,
-nickname: document.getElementById('nickname').value,
-mobileNumber: document.getElementById('mobileNumber').value,
-userId: currentUser.uid,
-eventId: activeEventIdGlob,
-status: 'Pending',
-timestamp: serverTimestamp()
-});
-regForm.reset();
-regMsg.style.backgroundColor = "#c6f6d5";
-regMsg.style.color = "#22543d";
-regMsg.innerText = "Submitted successfully!";
-} catch (error) {
-regMsg.style.backgroundColor = "#fed7d7";
-regMsg.style.color = "#9b2c2c";
-regMsg.innerText = "Error saving. Please try again.";
-}
-btn.disabled = false; btn.innerText = "Submit Registration";
-});
-// --------------------------------------------------------
-// ADMIN: Create or Update Event Profile
-// --------------------------------------------------------
-window.createNewEvent = async function() {
-if (!isAdmin) return;
-const name = document.getElementById('new-evt-name').value;
-if(!name) return alert("Event Name is required!");
-const eventData = {
-eventName: name,
-eventLevel: document.getElementById('new-evt-level').value,
-eventDate: document.getElementById('new-evt-date').value,
-eventTime: document.getElementById('new-evt-time').value,
-eventVenue: document.getElementById('new-evt-venue').value,
-eventFee: document.getElementById('new-evt-fee').value,
-eventPrize: document.getElementById('new-evt-prize').value,
-eventNotes: document.getElementById('new-evt-notes').value,
-};
-try {
-if (editingEventId) {
-await updateDoc(doc(db, "events", editingEventId), eventData);
-if (editingEventId === activeEventIdGlob) {
-eventData.eventId = editingEventId;
-await setDoc(doc(db, "settings", "active_event"), eventData);
-}
-alert("Event Updated!");
-} else {
-eventData.timestamp = serverTimestamp();
-await addDoc(collection(db, "events"), eventData);
-alert("Event Created!");
-}
-window.cancelEdit();
-} catch (error) { alert("Error saving event: " + error.message); }
-}
-window.editEvent = async function(id) {
-if (!isAdmin) return;
-try {
-const docSnap = await getDoc(doc(db, "events", id));
-if (docSnap.exists()) {
-const data = docSnap.data();
-document.getElementById('new-evt-name').value = data.eventName || '';
-document.getElementById('new-evt-level').value = data.eventLevel || '';
-document.getElementById('new-evt-date').value = data.eventDate || '';
-document.getElementById('new-evt-time').value = data.eventTime || '';
-document.getElementById('new-evt-venue').value = data.eventVenue || '';
-document.getElementById('new-evt-fee').value = data.eventFee || '';
-document.getElementById('new-evt-prize').value = data.eventPrize || '';
-document.getElementById('new-evt-notes').value = data.eventNotes || '';
-editingEventId = id;
-document.getElementById('form-title').innerText = "1. Edit Event Profile";
-document.getElementById('create-evt-btn').innerText = "Update Event Profile";
-document.getElementById('cancel-edit-btn').style.display = "inline-block";
-window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-} catch (error) { alert("Error loading event details."); }
-}
-window.cancelEdit = function() {
-editingEventId = null;
-['name', 'level', 'date', 'time', 'venue', 'fee', 'prize', 'notes'].forEach(f => {
-document.getElementById(⁠new-evt-${f}⁠).value = '';
-});
-document.getElementById('form-title').innerText = "1. Create New Event";
-document.getElementById('create-evt-btn').innerText = "Save Event Profile";
-document.getElementById('cancel-edit-btn').style.display = "none";
-}
-// --------------------------------------------------------
-// ADMIN: Load Events
-// --------------------------------------------------------
-function loadAdminEvents() {
-onSnapshot(collection(db, "events"), (snapshot) => {
-const listContainer = document.getElementById('events-list-container');
-const selectContainer = document.getElementById('event-filter-select');
-listContainer.innerHTML = '';
-const currentSelectVal = selectContainer.value;
-selectContainer.innerHTML = '<option value="">Select an event to view players...</option>';
-if(snapshot.empty) {
-listContainer.innerHTML = '<p>No events created yet.</p>';
-return;
-}
-snapshot.forEach((docSnap) => {
-const data = docSnap.data();
-const id = docSnap.id;
-const isActive = (id === activeEventIdGlob);
-const item = document.createElement('div');
-item.className = 'list-item';
-item.innerHTML = ⁠<div class="list-info"> <h4>${data.eventName} ${isActive ? '<span class="status-badge status-active-event">ACTIVE EVENT</span>' : ''}</h4> <p>${data.eventDate || 'No date'} • ${data.eventVenue || 'No venue'}</p> </div> <div class="action-btns"> <button class="btn-edit" onclick="window.editEvent('${id}')">Edit</button> ${!isActive ?⁠<button class="btn-approve" onclick="window.setActiveEvent('${id}')">Set Active</button>⁠: ''} </div>⁠;
-listContainer.appendChild(item);
-const option = document.createElement('option');
-option.value = id;
-option.innerText = ⁠${data.eventName} (${data.eventDate || 'TBA'})⁠;
-selectContainer.appendChild(option);
-});
-selectContainer.value = currentSelectVal;
-});
-}
-window.setActiveEvent = async function(id) {
-if (!isAdmin) return;
-try {
-const docSnap = await getDoc(doc(db, "events", id));
-if (docSnap.exists()) {
-const eventData = docSnap.data();
-eventData.eventId = id;
-await setDoc(doc(db, "settings", "active_event"), eventData);
-alert("Event is now LIVE on the registration page!");
-}
-} catch (error) { alert("Error setting active event."); }
-}
-// --------------------------------------------------------
-// ADMIN: Load Players specifically for chosen Event
-// --------------------------------------------------------
-let playersUnsubscribe = null;
-window.loadDashboardPlayers = function(eventId) {
-const listContainer = document.getElementById('player-list-container');
-if (!eventId) {
-listContainer.innerHTML = '<p style="color: var(--muted-text); font-style: italic; font-size:13px;">Select an event above to view players.</p>';
-if(playersUnsubscribe) playersUnsubscribe();
-return;
-}
-listContainer.innerHTML = '<p>Loading players...</p>';
-if(playersUnsubscribe) playersUnsubscribe();
-const q = query(collection(db, "registrations"), where("eventId", "==", eventId));
-playersUnsubscribe = onSnapshot(q, (snapshot) => {
-listContainer.innerHTML = '';
-if(snapshot.empty) {
-listContainer.innerHTML = '<p>No registrations for this event yet.</p>';
-return;
-}
-let players = [];
-snapshot.forEach(docSnap => players.push({ id: docSnap.id, ...docSnap.data() }));
-players.sort((a, b) => {
-const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
-const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
-return timeB - timeA;
-});
-players.forEach((data) => {
-const item = document.createElement('div');
-item.className = 'list-item';
-item.innerHTML = ⁠<div class="list-info"> <h4>${data.fullName} ("${data.nickname}")</h4> <p>📱 ${data.mobileNumber}</p> <span class="status-badge status-${data.status.toLowerCase()}">${data.status}</span> </div> <div class="action-btns"> ${data.status === 'Pending' ?⁠
-<button class="btn-approve" onclick="window.updatePlayerStatus('${data.id}', 'Approved', '${data.mobileNumber}', '${data.nickname}')">Approve</button>
-<button class="btn-reject" onclick="window.updatePlayerStatus('${data.id}', 'Rejected', '${data.mobileNumber}', '${data.nickname}')">Reject</button>
-⁠: ''} ${data.status === 'Approved' ?⁠
-<button class="btn-remove" onclick="window.deletePlayer('${data.id}')">Remove</button>
-⁠: ''} </div>⁠;
-listContainer.appendChild(item);
-});
-});
-}
-// --------------------------------------------------------
-// ADMIN: Delete Approved Player Function
-// --------------------------------------------------------
-window.deletePlayer = async function(docId) {
-if (!isAdmin) return;
-if (confirm("Are you sure you want to permanently remove this player from the list?")) {
-try {
-await deleteDoc(doc(db, "registrations", docId));
-} catch (error) {
-alert("Error removing player: " + error.message);
-}
-}
-};
-// --------------------------------------------------------
-// TEXTBEE SMS INTEGRATION & STATUS UPDATE
-// --------------------------------------------------------
-window.updatePlayerStatus = async function(docId, newStatus, mobileNumber = null, nickname = null) {
-if (!isAdmin) return;
-try {
-// 1. Update Firebase
-await updateDoc(doc(db, "registrations", docId), { status: newStatus });
-// 2. Trigger SMS if contact info is available
-if (mobileNumber && nickname) {
-const apiKey = "txb_75ETPg3nR9kJGzlnfwpC7qespaDbV6nJ";
-let message = "";
-if (newStatus === 'Approved') {
-message = ⁠Hi ${nickname}! Your registration for PickleQ Sessions has been APPROVED. See you on the court!\n\n- Courtside Management⁠;
-} else if (newStatus === 'Rejected') {
-message = ⁠Courtside: Hi ${nickname}. We regret to inform you that your registration for PickleQ Sessions could not be accommodated at this time. We hope to see you next time!\n\n- Courtside Management⁠;
-}
-if (message !== "") {
-try {
-const response = await fetch('https://api.textbee.dev/api/v1/gateway/send-sms', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'x-api-key': apiKey
-},
-body: JSON.stringify({
-receivers: [mobileNumber],
-smsBody: message
-})
-});
-if (response.ok) {
-alert(⁠Player ${newStatus.toLowerCase()} and SMS sent successfully!⁠);
-} else {
-alert("Status updated, but SMS failed to send.");
-}
-} catch (error) {
-console.error("SMS API Error:", error);
-}
-}
-}
-} catch (error) {
-alert("Error updating status: " + error.message);
-}
-};
-</script>
-<!-- UI Tab Logic -->
-<script>
-function switchTab(tabId) {
-document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-document.getElementById('tab-' + tabId).classList.add('active');
-document.getElementById('content-' + tabId).classList.add('active');
-}
-</script>
+    <div class="container">
+        
+        <!-- ENERGETIC HEADER WITH LOGO -->
+        <div class="header">
+            <img src="IMG_5174.png" alt="Courtside Gatherings Logo" class="header-logo" onerror="this.style.display='none'">
+            <br>
+            <div class="badge-active" id="display-badge">ACTIVE EVENT</div>
+            <h1 id="display-event-name">Loading Event...</h1>
+            <h2 id="display-event-level">Please wait</h2>
+            
+            <div class="event-meta-grid" id="display-meta-grid">
+                <div class="meta-item">
+                    <div class="meta-icon">📅</div>
+                    <div class="meta-text"><span class="meta-label">Date</span><span class="meta-value" id="display-date">--</span></div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-icon">⏰</div>
+                    <div class="meta-text"><span class="meta-label">Time</span><span class="meta-value" id="display-time">--</span></div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-icon">📍</div>
+                    <div class="meta-text"><span class="meta-label">Venue</span><span class="meta-value" id="display-venue">--</span></div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-icon">🎟️</div>
+                    <div class="meta-text"><span class="meta-label">Reg Fee</span><span class="meta-value" id="display-fee">--</span></div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-icon">🏆</div>
+                    <div class="meta-text"><span class="meta-label">Prize</span><span class="meta-value" id="display-prize">--</span></div>
+                </div>
+            </div>
+            <div id="display-notes" class="event-notes" style="display: none;"></div>
+        </div>
+
+        <div class="auth-section" id="auth-container">
+            <p>Please sign in to register or manage events.</p>
+            <button class="google-btn" id="login-btn">Sign in with Google</button>
+        </div>
+
+        <div id="app-container" style="display: none;">
+            <div class="tabs">
+                <div class="tab active" id="tab-register" onclick="switchTab('register')">Registration</div>
+                <div class="tab" id="tab-dashboard" onclick="switchTab('dashboard')">Dashboard</div>
+            </div>
+
+            <!-- REGISTRATION FORM -->
+            <div class="content active" id="content-register">
+                <!-- Client Realtime Status Notification -->
+                <div id="client-status-banner" class="client-status-banner" style="display: none;"></div>
+
+                <div id="registration-form-container">
+                    <h2 id="reg-form-title" style="margin-bottom: 20px; color: var(--primary-teal); font-size: 20px; text-transform: uppercase;">Reserve Your Spot</h2>
+                    <form id="registration-form">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="fullName" required placeholder="e.g. Juan Dela Cruz">
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Nickname</label>
+                                <input type="text" id="nickname" required placeholder="e.g. Juan">
+                            </div>
+                            <div class="form-group">
+                                <label>Mobile Number</label>
+                                <input type="tel" id="mobileNumber" required placeholder="e.g. 09XX XXX XXXX">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn" id="reg-submit-btn">Submit Registration</button>
+                    </form>
+                    <div id="reg-message" style="margin-top: 15px; text-align: center; font-weight: bold; padding: 10px; border-radius: 8px;"></div>
+                </div>
+            </div>
+
+            <!-- ADMIN DASHBOARD -->
+            <div class="content" id="content-dashboard">
+                <!-- 1. COMPREHENSIVE CREATE / EDIT EVENT FORM -->
+                <div class="admin-card">
+                    <h3 id="form-title">1. Create New Event</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Event Name</label>
+                            <input type="text" id="new-evt-name" placeholder="e.g. PickleQ Sessions">
+                        </div>
+                        <div class="form-group">
+                            <label>Skill Level</label>
+                            <input type="text" id="new-evt-level" placeholder="e.g. Intermediate Level">
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="text" id="new-evt-date" placeholder="e.g. Oct 16, 2026">
+                        </div>
+                        <div class="form-group">
+                            <label>Time</label>
+                            <input type="text" id="new-evt-time" placeholder="e.g. 7pm - 11pm">
+                        </div>
+                        <div class="form-group">
+                            <label>Venue</label>
+                            <input type="text" id="new-evt-venue" placeholder="e.g. Courtside">
+                        </div>
+                        <div class="form-group">
+                            <label>Reg Fee</label>
+                            <input type="text" id="new-evt-fee" placeholder="e.g. P150.00/head">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Prize</label>
+                            <input type="text" id="new-evt-prize" placeholder="e.g. FREE PLAY VOUCHER">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Additional Notes</label>
+                            <textarea id="new-evt-notes" placeholder="e.g. Balls are provided."></textarea>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="create-evt-btn" class="btn btn-small" onclick="window.createNewEvent()" style="flex: 1;">Save Event Profile</button>
+                        <button id="cancel-edit-btn" class="btn btn-small btn-outline" onclick="window.cancelEdit()" style="display: none; flex: 1;">Cancel Edit</button>
+                    </div>
+                </div>
+
+                <!-- 2. Manage Events -->
+                <div class="admin-card">
+                    <h3>2. Event List</h3>
+                    <p style="font-size: 12px; color: var(--muted-text); margin-bottom: 15px;">Set an event as "Active" to show it on the frontpage.</p>
+                    <div id="events-list-container">
+                        <p>Loading events...</p>
+                    </div>
+                </div>
+
+                <!-- 3. Player Lists (Filtered) -->
+                <div class="admin-card">
+                    <h3>3. Player Registrations</h3>
+                    <div class="form-group">
+                        <label>Select Event Roster:</label>
+                        <select id="event-filter-select" onchange="window.loadDashboardPlayers(this.value)">
+                            <option value="">Select an event...</option>
+                        </select>
+                    </div>
+                    <div id="player-list-container">
+                        <p style="color: var(--muted-text); font-style: italic; font-size: 13px;">Select an event above to view players.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HELP & CONTACT FOOTER -->
+        <div class="footer-help">
+            <h3>Courtside Contact Info</h3>
+            <div class="help-grid">
+                <a href="https://m.me/courtsidegatherings" target="_blank" class="help-link">💬 Messenger</a>
+                <a href="tel:+639173065956" class="help-link">📞 Admin: 0917 306 5956</a>
+                <a href="https://facebook.com/courtsidegatherings" target="_blank" class="help-link">🌐 Facebook</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDK Setup & Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDoc, setDoc, doc, onSnapshot, updateDoc, deleteDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAF8wP1ICmt5nxl4yltsOuwGBTI4TAdjnI",
+            authDomain: "courtside-pickle.firebaseapp.com",
+            projectId: "courtside-pickle",
+            storageBucket: "courtside-pickle.firebasestorage.app",
+            messagingSenderId: "179366005104",
+            appId: "1:179366005104:web:4686480ca55735385067b5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+        let isAdmin = false;
+        let activeEventIdGlob = null; 
+        let editingEventId = null; 
+        let clientStatusUnsubscribe = null;
+
+        // --------------------------------------------------------
+        // PUBLIC: Load Active Event and Populate UI Grid
+        // --------------------------------------------------------
+        onSnapshot(doc(db, "settings", "active_event"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                activeEventIdGlob = data.eventId; 
+                
+                document.getElementById('display-badge').innerText = "ACTIVE EVENT";
+                document.getElementById('display-event-name').innerText = data.eventName || "Pickleball Event";
+                document.getElementById('display-event-level').innerText = data.eventLevel || "All Levels";
+                
+                document.getElementById('display-date').innerText = data.eventDate || "TBA";
+                document.getElementById('display-time').innerText = data.eventTime || "TBA";
+                document.getElementById('display-venue').innerText = data.eventVenue || "TBA";
+                document.getElementById('display-fee').innerText = data.eventFee || "TBA";
+                document.getElementById('display-prize').innerText = data.eventPrize || "None";
+                
+                const notesEl = document.getElementById('display-notes');
+                if (data.eventNotes) {
+                    notesEl.style.display = "block";
+                    notesEl.innerText = "NOTE: " + data.eventNotes;
+                } else {
+                    notesEl.style.display = "none";
+                }
+
+                document.getElementById('reg-submit-btn').disabled = false;
+                document.getElementById('reg-submit-btn').innerText = "Submit Registration";
+                
+                // Refresh client status safely
+                checkClientRegistrationStatus(); 
+            } else {
+                document.getElementById('display-badge').innerText = "NO EVENT";
+                document.getElementById('display-event-name').innerText = "Registrations Closed";
+                document.getElementById('display-event-level').innerText = "Check back later.";
+                document.getElementById('display-notes').style.display = "none";
+                document.getElementById('reg-submit-btn').disabled = true;
+                document.getElementById('reg-submit-btn').innerText = "Event Not Available";
+            }
+        });
+
+        // --------------------------------------------------------
+        // AUTHENTICATION & ADMIN CHECK
+        // --------------------------------------------------------
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-container').innerHTML = `<p>Signed in as <b>${user.displayName || user.email}</b></p>`;
+                document.getElementById('app-container').style.display = 'block';
+
+                checkClientRegistrationStatus();
+
+                try {
+                    const adminDoc = await getDoc(doc(db, "admins", user.uid));
+                    if (adminDoc.exists()) {
+                        isAdmin = true;
+                        document.getElementById('tab-dashboard').style.display = 'block'; 
+                        loadAdminEvents(); 
+                    }
+                } catch (error) { console.log("Standard user."); }
+            } else {
+                currentUser = null;
+                document.getElementById('app-container').style.display = 'none';
+                if(clientStatusUnsubscribe) clientStatusUnsubscribe();
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(err => alert("Error: " + err.message));
+        });
+
+        // --------------------------------------------------------
+        // CLIENT STATUS NOTIFICATION (CRASH BUG FIXED)
+        // --------------------------------------------------------
+        function checkClientRegistrationStatus() {
+            if (!currentUser || !activeEventIdGlob) return;
+            if (clientStatusUnsubscribe) clientStatusUnsubscribe();
+
+            // We removed the double-search here which caused the crash.
+            // Now we pull the event safely and filter locally.
+            const q = query(
+                collection(db, "registrations"), 
+                where("eventId", "==", activeEventIdGlob)
+            );
+
+            clientStatusUnsubscribe = onSnapshot(q, (snapshot) => {
+                const banner = document.getElementById('client-status-banner');
+                const formContainer = document.getElementById('registration-form-container');
+                
+                let userRegData = null;
+                
+                // Find if the current user is in this event's list
+                snapshot.forEach(docSnap => {
+                    if (docSnap.data().userId === currentUser.uid) {
+                        userRegData = docSnap.data();
+                    }
+                });
+                
+                if (userRegData) {
+                    let bgColor = "#e2e8f0"; let textColor = "#2d3748";
+                    let msg = "We have received your registration for this active event.";
+                    
+                    if(userRegData.status === 'Approved') { 
+                        bgColor = "#c6f6d5"; textColor = "#22543d"; 
+                        msg = "You are confirmed for this event! See you on the court.";
+                    }
+                    else if(userRegData.status === 'Pending') { 
+                        bgColor = "#feebc8"; textColor = "#c05621"; 
+                        msg = "Your registration is currently under review.";
+                    }
+                    else if(userRegData.status === 'Rejected') { 
+                        bgColor = "#fed7d7"; textColor = "#9b2c2c"; 
+                        msg = "Unfortunately, we could not accommodate your registration at this time.";
+                    }
+                    
+                    banner.style.display = "block";
+                    banner.style.backgroundColor = bgColor;
+                    banner.style.color = textColor;
+                    banner.innerHTML = `<strong style="font-size:16px;">Status: ${userRegData.status.toUpperCase()}</strong><br><span style="font-size:13px; margin-top:5px; display:inline-block;">${msg}</span>`;
+                    
+                    formContainer.style.display = "none"; 
+                } else {
+                    banner.style.display = "none";
+                    formContainer.style.display = "block";
+                }
+            }, (error) => {
+                console.error("Error fetching status:", error);
+            });
+        }
+
+        // --------------------------------------------------------
+        // SUBMIT REGISTRATION
+        // --------------------------------------------------------
+        const regForm = document.getElementById('registration-form');
+        const regMsg = document.getElementById('reg-message');
+        
+        regForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser || !activeEventIdGlob) return alert("No active event found.");
+
+            const btn = document.getElementById('reg-submit-btn');
+            btn.disabled = true; btn.innerText = "Submitting...";
+
+            try {
+                await addDoc(collection(db, "registrations"), {
+                    fullName: document.getElementById('fullName').value,
+                    nickname: document.getElementById('nickname').value,
+                    mobileNumber: document.getElementById('mobileNumber').value,
+                    userId: currentUser.uid,
+                    eventId: activeEventIdGlob, 
+                    status: 'Pending',
+                    timestamp: serverTimestamp()
+                });
+                regForm.reset();
+                regMsg.style.backgroundColor = "#c6f6d5";
+                regMsg.style.color = "#22543d";
+                regMsg.innerText = "Submitted successfully!";
+            } catch (error) {
+                regMsg.style.backgroundColor = "#fed7d7";
+                regMsg.style.color = "#9b2c2c";
+                regMsg.innerText = "Error saving. Please try again.";
+            }
+            btn.disabled = false; btn.innerText = "Submit Registration";
+        });
+
+        // --------------------------------------------------------
+        // ADMIN: Create or Update Event Profile
+        // --------------------------------------------------------
+        window.createNewEvent = async function() {
+            if (!isAdmin) return;
+            const name = document.getElementById('new-evt-name').value;
+            if(!name) return alert("Event Name is required!");
+
+            const eventData = {
+                eventName: name,
+                eventLevel: document.getElementById('new-evt-level').value,
+                eventDate: document.getElementById('new-evt-date').value,
+                eventTime: document.getElementById('new-evt-time').value,
+                eventVenue: document.getElementById('new-evt-venue').value,
+                eventFee: document.getElementById('new-evt-fee').value,
+                eventPrize: document.getElementById('new-evt-prize').value,
+                eventNotes: document.getElementById('new-evt-notes').value,
+            };
+
+            try {
+                if (editingEventId) {
+                    await updateDoc(doc(db, "events", editingEventId), eventData);
+                    if (editingEventId === activeEventIdGlob) {
+                        eventData.eventId = editingEventId;
+                        await setDoc(doc(db, "settings", "active_event"), eventData);
+                    }
+                    alert("Event Updated!");
+                } else {
+                    eventData.timestamp = serverTimestamp();
+                    await addDoc(collection(db, "events"), eventData);
+                    alert("Event Created!");
+                }
+                window.cancelEdit();
+            } catch (error) { alert("Error saving event: " + error.message); }
+        }
+
+        window.editEvent = async function(id) {
+            if (!isAdmin) return;
+            try {
+                const docSnap = await getDoc(doc(db, "events", id));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('new-evt-name').value = data.eventName || '';
+                    document.getElementById('new-evt-level').value = data.eventLevel || '';
+                    document.getElementById('new-evt-date').value = data.eventDate || '';
+                    document.getElementById('new-evt-time').value = data.eventTime || '';
+                    document.getElementById('new-evt-venue').value = data.eventVenue || '';
+                    document.getElementById('new-evt-fee').value = data.eventFee || '';
+                    document.getElementById('new-evt-prize').value = data.eventPrize || '';
+                    document.getElementById('new-evt-notes').value = data.eventNotes || '';
+                    
+                    editingEventId = id;
+                    document.getElementById('form-title').innerText = "1. Edit Event Profile";
+                    document.getElementById('create-evt-btn').innerText = "Update Event Profile";
+                    document.getElementById('cancel-edit-btn').style.display = "inline-block";
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) { alert("Error loading event details."); }
+        }
+
+        window.cancelEdit = function() {
+            editingEventId = null;
+            ['name', 'level', 'date', 'time', 'venue', 'fee', 'prize', 'notes'].forEach(f => {
+                document.getElementById(`new-evt-${f}`).value = '';
+            });
+            document.getElementById('form-title').innerText = "1. Create New Event";
+            document.getElementById('create-evt-btn').innerText = "Save Event Profile";
+            document.getElementById('cancel-edit-btn').style.display = "none";
+        }
+
+        // --------------------------------------------------------
+        // ADMIN: Load Events
+        // --------------------------------------------------------
+        function loadAdminEvents() {
+            onSnapshot(collection(db, "events"), (snapshot) => {
+                const listContainer = document.getElementById('events-list-container');
+                const selectContainer = document.getElementById('event-filter-select');
+                listContainer.innerHTML = ''; 
+                
+                const currentSelectVal = selectContainer.value;
+                selectContainer.innerHTML = '<option value="">Select an event to view players...</option>';
+
+                if(snapshot.empty) {
+                    listContainer.innerHTML = '<p>No events created yet.</p>';
+                    return;
+                }
+
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const id = docSnap.id;
+                    const isActive = (id === activeEventIdGlob);
+
+                    const item = document.createElement('div');
+                    item.className = 'list-item';
+                    item.innerHTML = `
+                        <div class="list-info">
+                            <h4>${data.eventName} ${isActive ? '<span class="status-badge status-active-event">ACTIVE EVENT</span>' : ''}</h4>
+                            <p>${data.eventDate || 'No date'} • ${data.eventVenue || 'No venue'}</p>
+                        </div>
+                        <div class="action-btns">
+                            <button class="btn-edit" onclick="window.editEvent('${id}')">Edit</button>
+                            ${!isActive ? `<button class="btn-approve" onclick="window.setActiveEvent('${id}')">Set Active</button>` : ''}
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.innerText = `${data.eventName} (${data.eventDate || 'TBA'})`;
+                    selectContainer.appendChild(option);
+                });
+                selectContainer.value = currentSelectVal; 
+            });
+        }
+
+        window.setActiveEvent = async function(id) {
+            if (!isAdmin) return;
+            try {
+                const docSnap = await getDoc(doc(db, "events", id));
+                if (docSnap.exists()) {
+                    const eventData = docSnap.data();
+                    eventData.eventId = id; 
+                    await setDoc(doc(db, "settings", "active_event"), eventData);
+                    alert("Event is now LIVE on the registration page!");
+                }
+            } catch (error) { alert("Error setting active event."); }
+        }
+
+        // --------------------------------------------------------
+        // ADMIN: Load Players specifically for chosen Event
+        // --------------------------------------------------------
+        let playersUnsubscribe = null;
+        window.loadDashboardPlayers = function(eventId) {
+            const listContainer = document.getElementById('player-list-container');
+            if (!eventId) {
+                listContainer.innerHTML = '<p style="color: var(--muted-text); font-style: italic; font-size:13px;">Select an event above to view players.</p>';
+                if(playersUnsubscribe) playersUnsubscribe();
+                return;
+            }
+
+            listContainer.innerHTML = '<p>Loading players...</p>';
+            if(playersUnsubscribe) playersUnsubscribe();
+
+            const q = query(collection(db, "registrations"), where("eventId", "==", eventId));
+            
+            playersUnsubscribe = onSnapshot(q, (snapshot) => {
+                listContainer.innerHTML = ''; 
+                if(snapshot.empty) {
+                    listContainer.innerHTML = '<p>No registrations for this event yet.</p>';
+                    return;
+                }
+
+                let players = [];
+                snapshot.forEach(docSnap => players.push({ id: docSnap.id, ...docSnap.data() }));
+                players.sort((a, b) => {
+                    const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+                    const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+                    return timeB - timeA; 
+                });
+
+                players.forEach((data) => {
+                    const item = document.createElement('div');
+                    item.className = 'list-item';
+                    item.innerHTML = `
+                        <div class="list-info">
+                            <h4>${data.fullName} ("${data.nickname}")</h4>
+                            <p>📱 ${data.mobileNumber}</p>
+                            <span class="status-badge status-${data.status.toLowerCase()}">${data.status}</span>
+                        </div>
+                        <div class="action-btns">
+                            ${data.status === 'Pending' ? `
+                                <button class="btn-approve" onclick="window.updatePlayerStatus('${data.id}', 'Approved', '${data.mobileNumber}', '${data.nickname}')">Approve</button>
+                                <button class="btn-reject" onclick="window.updatePlayerStatus('${data.id}', 'Rejected', '${data.mobileNumber}', '${data.nickname}')">Reject</button>
+                            ` : ''}
+                            ${data.status === 'Approved' ? `
+                                <button class="btn-remove" onclick="window.deletePlayer('${data.id}')">Remove</button>
+                            ` : ''}
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            });
+        }
+
+        // --------------------------------------------------------
+        // ADMIN: Delete Approved Player Function
+        // --------------------------------------------------------
+        window.deletePlayer = async function(docId) {
+            if (!isAdmin) return;
+            if (confirm("Are you sure you want to permanently remove this player from the list?")) {
+                try {
+                    await deleteDoc(doc(db, "registrations", docId));
+                } catch (error) {
+                    alert("Error removing player: " + error.message);
+                }
+            }
+        };
+
+        // --------------------------------------------------------
+        // TEXTBEE SMS INTEGRATION & STATUS UPDATE
+        // --------------------------------------------------------
+        window.updatePlayerStatus = async function(docId, newStatus, mobileNumber = null, nickname = null) {
+            if (!isAdmin) return;
+            try {
+                // 1. Update Firebase
+                await updateDoc(doc(db, "registrations", docId), { status: newStatus });
+                
+                // 2. Trigger SMS if contact info is available
+                if (mobileNumber && nickname) {
+                    const apiKey = "txb_75ETPg3nR9kJGzlnfwpC7qespaDbV6nJ"; 
+                    let message = "";
+                    
+                    if (newStatus === 'Approved') {
+                        message = `Courtside: Hi ${nickname}! Your registration for PickleQ Sessions has been APPROVED. See you on the court!\n\n- Courtside Management`;
+                    } else if (newStatus === 'Rejected') {
+                        message = `Courtside: Hi ${nickname}. We regret to inform you that your registration for PickleQ Sessions could not be accommodated at this time. We hope to see you next time!\n\n- Courtside Management`;
+                    }
+
+                    if (message !== "") {
+                        try {
+                            const response = await fetch('https://api.textbee.dev/api/v1/gateway/send-sms', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'x-api-key': apiKey
+                                },
+                                body: JSON.stringify({
+                                    receivers: [mobileNumber],
+                                    smsBody: message
+                                })
+                            });
+                            if (response.ok) {
+                                alert(`Player ${newStatus.toLowerCase()} and SMS sent successfully!`);
+                            } else {
+                                alert("Status updated, but SMS failed to send.");
+                            }
+                        } catch (error) {
+                            console.error("SMS API Error:", error);
+                        }
+                    }
+                }
+            } catch (error) { 
+                alert("Error updating status: " + error.message); 
+            }
+        };
+
+    </script>
+
+    <!-- UI Tab Logic -->
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.getElementById('content-' + tabId).classList.add('active');
+        }
+    </script>
 </body>
 </html>
