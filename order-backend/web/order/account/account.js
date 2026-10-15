@@ -10,7 +10,7 @@ const time=t=>t?.toDate?t.toDate().toLocaleString('en-PH',{timeZone:'Asia/Manila
 function status(o){
  if(o.status==='cancelled')return 'Cancelled';
  if(o.status==='completed')return 'Completed — claimed / served';
- if(o.status==='ready')return o.orderType==='Take-out'?'Ready for pickup — waiting to be claimed':'Ready to serve';
+ if(o.status==='ready')return o.orderType==='Take-out'?'Ready for pickup':'Ready to serve';
  if(o.status==='preparing')return 'Preparing — kitchen is cooking';
  if(o.paymentStatus==='verified')return ['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed'?'Paid — table confirmation pending':'Paid — waiting for preparation';
  return o.submittedPaymentReference?'Payment submitted — verification pending':'Waiting for payment';
@@ -29,8 +29,8 @@ function progress(o){
  const steps=[
   {title:'Order received',done:true,detail:'Your order is saved with Stone Grill.'},
   {title:'Payment confirmed',done:paid,detail:paid?(o.paymentMethod==='qr'?'QR payment confirmed':o.paymentMethod==='number'?'GCash number payment confirmed':'Payment confirmed'):o.submittedPaymentReference?'Awaiting verification of your payment':'Waiting for payment details'},
-  {title:'Cooking finished',done:cooked,detail:cooked?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='preparing'?'Kitchen is cooking your order':paid?(tablePending?'Waiting for table confirmation':'Waiting for the kitchen to prepare your food'):'Starts after payment confirmation'},
-  {title:o.orderType==='Take-out'?'Order claimed':'Order served',done:finished,detail:finished?'Transaction finished':o.status==='ready'?(o.orderType==='Take-out'?'Please collect your order at Stone Grill':'Your food is ready to serve'):'Waiting for pickup or serving'}
+  {title:'Finished cooking',done:cooked,detail:cooked?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='preparing'?'Kitchen is cooking your order':paid?(tablePending?'Waiting for table confirmation':'Waiting for the kitchen to prepare your food'):'Starts after payment confirmation'},
+  {title:o.orderType==='Take-out'?'Ready for pickup':'Ready to serve',done:finished,detail:finished?'Transaction finished':o.status==='ready'?(o.orderType==='Take-out'?'Please collect your order at Stone Grill':'Your food is ready to serve'):'Waiting for pickup or serving'}
  ];
  const current=cancelled||finished?-1:!paid?1:!cooked?2:3;
  return '<div class="order-progress"><h4>Order progress</h4><ol class="progress-list" aria-label="Order process">'+steps.map((step,i)=>{const state=step.done?'done':current===i?'current':'pending';return '<li class="progress-step '+state+'"'+(state==='current'?' aria-current="step"':'')+'><span class="progress-mark" aria-hidden="true">'+(step.done?'✓':i+1)+'</span><div><strong>'+esc(step.title)+'</strong><span class="progress-state">'+(step.done?(i===1?'PAID · verified':'Completed'):state==='current'?'Current step':cancelled?'Not completed':'Upcoming')+'</span><p class="sr-only">'+esc(step.detail)+'</p></div></li>';}).join('')+'</ol>'+(cancelled?'<p class="progress-stopped">Order cancelled · progress stopped. Contact us about any payment already sent.</p>':'<p class="progress-key">'+(current>=0?'Checks show completed steps. '+esc(steps[current].detail):'All steps completed. Thank you for choosing Stone Grill.')+'</p>')+'</div>';
@@ -45,7 +45,7 @@ function render(){
  $('latestOrder').hidden=!showLast;$('latestOrder').innerHTML=showLast?orderCard(lastOrder,true):'';
  if(ordersLoaded&&!history&&!rows.length&&!lastOrder)$('orders').querySelector('.empty-state p').textContent='Place an order to start tracking it here. Past orders are in Order history.';
 }
-$('ordersTitle').textContent=history?'Order history':'Your order';
+$('ordersTitle').textContent=history?'Order history':'Your current order';
 $('historyLink').textContent=history?'Back to current orders →':'View order history →';$('historyLink').href=history?'./':'?history=1';
 function query(uid,after){
  const parts=[f.collection(db,'sgOrders'),f.where('customerUid','==',uid),f.where('status','in',history?['completed','cancelled']:['new','acknowledged','preparing','ready'])];
