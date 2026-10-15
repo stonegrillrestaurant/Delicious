@@ -24,6 +24,7 @@ function receipt(b){identity(b);check(typeof b.data==='string'&&b.data.length<=7
  else throw error(400,'Use a JPG, PNG, WebP or PDF receipt');return {bytes,type,ext};
 }
 const isStaff=p=>p?.active===true&&['owner','admin','cashier','staff'].includes(p.role);
+function customerReceived(o){if(o.status==='completed')return {status:'completed',alreadyCompleted:true};if(o.status!=='ready')throw error(409,'Order is not ready to confirm as received');return {status:'completed'};}
 function transition(o,action,role,reason=''){
  if(!['owner','admin','cashier','staff'].includes(role))throw error(403,'Staff access required');
  if(['completed','cancelled'].includes(o.status))throw error(409,'Order already closed');
@@ -63,4 +64,4 @@ function payment(b){
  return {paymentMobile,submittedPaymentReference,paymentMethod:b.paymentMethod};
 }
 const canVerify=(o,role)=>(o.paymentMethod==='number'&&role==='owner')||(o.paymentMethod==='qr'&&['owner','admin','cashier'].includes(role));
-module.exports={canVerify,payment,roleChange,text,error,check,identity,order,receipt,isStaff,transition};
+module.exports={canVerify,payment,roleChange,text,error,check,identity,order,receipt,isStaff,transition,customerReceived};

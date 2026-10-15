@@ -67,6 +67,19 @@ async function operator(req){
 }
 exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
  const user=await signedUser(req),b=req.body,ref=db.collection('sgCustomers').doc(user.uid),staffRef=db.collection('sgStaff').doc(user.uid);
+ if(b.action==='confirmReceived'){
+  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
+  const orderRef=db.collection('sgOrders').doc(b.requestId);
+  await db.runTransaction(async t=>{
+   const snap=await t.get(orderRef);if(!snap.exists)throw d.error(404,'Order not found');
+   const order=snap.data();if(order.customerUid!==user.uid)throw d.error(403,'This order belongs to another customer');
+   const patch=d.customerReceived(order);if(patch.alreadyCompleted)return;
+   const now=Timestamp.now();
+   t.update(orderRef,{status:patch.status,customerReceivedAt:now,customerReceivedBy:user.uid,updatedAt:now});
+   t.create(orderRef.collection('audit').doc(randomUUID()),{action:'customer_received',actorUid:user.uid,at:now,fromStatus:order.status,toStatus:'completed'});
+  });
+  return res.json({ok:true});
+ }
  if(!['syncProfile','saveProfile'].includes(b.action))throw d.error(400,'Invalid action');
  let fields={};
  if(b.action==='saveProfile'){
