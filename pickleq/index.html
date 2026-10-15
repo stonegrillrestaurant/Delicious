@@ -5,39 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PickleQ Sessions - Registration</title>
     <style>
-        /* Modern CSS Variables based on your brand colors */
         :root {
-            --primary-navy: #10253f; /* Dark navy from logo */
-            --primary-green: #90c226; /* Lime green from logo */
+            --primary-navy: #10253f; 
+            --primary-green: #90c226; 
             --bg-white: #ffffff;
             --text-dark: #333333;
             --border-light: #e0e0e0;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
 
         body {
-            background-color: var(--bg-white);
-            color: var(--text-dark);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
+            background-color: var(--bg-white); color: var(--text-dark);
+            min-height: 100vh; display: flex; justify-content: center;
+            align-items: flex-start; padding: 40px 20px; position: relative; overflow-x: hidden;
         }
 
-        /* Dynamic Diagonal Background Accents based on your sample image */
         .bg-accents {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: -1;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1;
             background: 
                 linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-navy) 5%, transparent 5%, transparent 100%),
                 linear-gradient(135deg, transparent 5%, var(--primary-green) 5%, var(--primary-green) 7%, transparent 7%, transparent 100%),
@@ -47,197 +32,85 @@
         }
 
         .container {
-            background: #ffffff;
-            width: 100%;
-            max-width: 600px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            border-top: 5px solid var(--primary-green);
+            background: #ffffff; width: 100%; max-width: 700px;
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden; border-top: 5px solid var(--primary-green);
         }
 
         .header {
-            background-color: var(--primary-navy);
-            color: white;
-            padding: 30px 20px;
-            text-align: center;
-            position: relative;
+            background-color: var(--primary-navy); color: white;
+            padding: 30px 20px; text-align: center;
         }
 
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 5px;
-            color: var(--primary-green);
+        .header h1 { font-size: 28px; margin-bottom: 5px; color: var(--primary-green); }
+        .header p { font-size: 14px; opacity: 0.9; }
+        .header .badge { 
+            display: inline-block; background: var(--primary-green); color: var(--primary-navy); 
+            padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-bottom: 10px;
         }
 
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
+        .tabs { display: flex; background: #f8f9fa; border-bottom: 1px solid var(--border-light); }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; color: var(--primary-navy); transition: 0.3s; }
+        .tab:hover { background-color: #e9ecef; }
+        .tab.active { background-color: white; border-bottom: 3px solid var(--primary-green); }
+        #tab-dashboard { display: none; }
 
-        .tabs {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 1px solid var(--border-light);
-        }
+        .content { padding: 30px; display: none; }
+        .content.active { display: block; }
 
-        .tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            font-weight: bold;
-            color: var(--primary-navy);
-            transition: 0.3s;
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--primary-navy); font-size: 14px; }
+        input, select {
+            width: 100%; padding: 12px; border: 1px solid var(--border-light);
+            border-radius: 6px; font-size: 16px; transition: border-color 0.3s;
         }
-
-        .tab:hover {
-            background-color: #e9ecef;
-        }
-
-        .tab.active {
-            background-color: white;
-            border-bottom: 3px solid var(--primary-green);
-        }
-
-        /* Hide dashboard tab by default, shown only to admins */
-        #tab-dashboard {
-            display: none; 
-        }
-
-        .content {
-            padding: 30px;
-            display: none;
-        }
-
-        .content.active {
-            display: block;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--primary-navy);
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-light);
-            border-radius: 6px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--primary-green);
-        }
+        input:focus, select:focus { outline: none; border-color: var(--primary-green); }
 
         button.btn {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--primary-green);
-            color: var(--primary-navy);
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
+            width: 100%; padding: 14px; background-color: var(--primary-green);
+            color: var(--primary-navy); border: none; border-radius: 6px;
+            font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
+        button.btn:hover { background-color: #7da820; }
+        button.btn-small { padding: 8px 12px; font-size: 13px; width: auto; }
 
-        button.btn:hover {
-            background-color: #7da820;
-        }
+        .auth-section { text-align: center; padding: 20px; background-color: #f1f3f5; border-bottom: 1px solid var(--border-light); }
+        button.google-btn { background-color: #4285F4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-        .auth-section {
-            text-align: center;
-            padding: 20px;
-            background-color: #f1f3f5;
-            border-bottom: 1px solid var(--border-light);
+        .admin-card {
+            background: white; border: 1px solid var(--border-light); padding: 20px;
+            border-radius: 8px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
+        .admin-card h3 { margin-top: 0; margin-bottom: 15px; color: var(--primary-navy); border-bottom: 2px solid var(--primary-green); padding-bottom: 5px; display: inline-block; }
 
-        .auth-section p {
-            margin-bottom: 10px;
-            font-size: 14px;
+        .list-item {
+            background: #f8f9fa; border: 1px solid var(--border-light); padding: 15px;
+            border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
         }
+        .list-info h4 { margin: 0 0 5px 0; color: var(--primary-navy); font-size: 16px; }
+        .list-info p { margin: 0; color: #666; font-size: 14px; }
 
-        button.google-btn {
-            background-color: #4285F4;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* Dashboard Styles */
-        .player-card {
-            background: #f8f9fa;
-            border: 1px solid var(--border-light);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .player-info h3 {
-            margin: 0 0 5px 0;
-            color: var(--primary-navy);
-            font-size: 18px;
-        }
-
-        .player-info p {
-            margin: 0;
-            color: #666;
-            font-size: 14px;
-        }
-
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         .status-pending { background: #ffeeba; color: #856404; }
         .status-approved { background: #d4edda; color: #155724; }
         .status-rejected { background: #f8d7da; color: #721c24; }
+        .status-active-event { background: var(--primary-green); color: var(--primary-navy); font-size: 10px; margin-left: 10px; }
 
-        .action-btns button {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 5px;
-            font-size: 12px;
-            font-weight: bold;
-        }
+        .action-btns button { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; font-size: 12px; font-weight: bold; }
         .btn-approve { background: var(--primary-green); color: var(--primary-navy); }
         .btn-reject { background: #dc3545; color: white; }
-
+        .btn-set-active { background: var(--primary-navy); color: white; }
     </style>
 </head>
 <body>
 
-    <!-- Background Accents -->
     <div class="bg-accents"></div>
 
     <div class="container">
         <div class="header">
-            <h1>PickleQ Sessions</h1>
-            <p>Intermediate Level • October 16, 2026</p>
+            <div class="badge">ACTIVE EVENT</div>
+            <h1 id="display-event-name">Loading Event...</h1>
+            <p id="display-event-details">Please wait</p>
         </div>
 
         <div class="auth-section" id="auth-container">
@@ -251,7 +124,7 @@
                 <div class="tab" id="tab-dashboard" onclick="switchTab('dashboard')">Admin Dashboard</div>
             </div>
 
-            <!-- Registration Form -->
+            <!-- REGISTRATION FORM -->
             <div class="content active" id="content-register">
                 <h2 style="margin-bottom: 20px; color: var(--primary-navy);">Reserve Your Spot</h2>
                 <form id="registration-form">
@@ -267,29 +140,62 @@
                         <label>Mobile Number</label>
                         <input type="tel" id="mobileNumber" required placeholder="09XX XXX XXXX">
                     </div>
-                    <button type="submit" class="btn">Submit Registration</button>
+                    <button type="submit" class="btn" id="reg-submit-btn">Submit Registration</button>
                 </form>
                 <div id="reg-message" style="margin-top: 15px; text-align: center; font-weight: bold;"></div>
             </div>
 
-            <!-- Admin Dashboard -->
+            <!-- ADMIN DASHBOARD -->
             <div class="content" id="content-dashboard">
-                <h2 style="margin-bottom: 20px; color: var(--primary-navy);">Player Registrations</h2>
-                <div id="player-list">
-                    <!-- Players will be populated here by JavaScript -->
-                    <p>Loading players...</p>
+                
+                <!-- 1. Create Event -->
+                <div class="admin-card">
+                    <h3>1. Create New Event</h3>
+                    <div class="form-group">
+                        <input type="text" id="new-event-name" placeholder="Event Name (e.g. PickleQ Sessions)">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="new-event-level" placeholder="Level/Venue (e.g. Intermediate Level)">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="new-event-date" placeholder="Date & Time (e.g. October 16, 2026)">
+                    </div>
+                    <button class="btn btn-small" onclick="window.createNewEvent()">Create Event</button>
                 </div>
+
+                <!-- 2. Manage Events -->
+                <div class="admin-card">
+                    <h3>2. Event List</h3>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Set an event as "Active" to show it on the public registration page.</p>
+                    <div id="events-list-container">
+                        <p>Loading events...</p>
+                    </div>
+                </div>
+
+                <!-- 3. Player Lists (Filtered) -->
+                <div class="admin-card">
+                    <h3>3. Player Registrations</h3>
+                    <div class="form-group">
+                        <label>View Players For Event:</label>
+                        <select id="event-filter-select" onchange="window.loadDashboardPlayers(this.value)">
+                            <option value="">Select an event...</option>
+                        </select>
+                    </div>
+                    <div id="player-list-container">
+                        <p style="color: #666; font-style: italic;">Select an event above to view players.</p>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK Setup (Modular V9) -->
+    <!-- Firebase SDK Setup -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDoc, doc, onSnapshot, updateDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDoc, setDoc, doc, onSnapshot, updateDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-        // Your specific Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyAF8wP1ICmt5nxl4yltsOuwGBTI4TAdjnI",
             authDomain: "courtside-pickle.firebaseapp.com",
@@ -299,7 +205,6 @@
             appId: "1:179366005104:web:4686480ca55735385067b5"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -307,54 +212,66 @@
 
         let currentUser = null;
         let isAdmin = false;
+        let activeEventIdGlob = null; 
 
-        // UI Elements
-        const authContainer = document.getElementById('auth-container');
-        const appContainer = document.getElementById('app-container');
-        const loginBtn = document.getElementById('login-btn');
-        const tabDashboard = document.getElementById('tab-dashboard');
-        const regForm = document.getElementById('registration-form');
-        const regMessage = document.getElementById('reg-message');
-        const playerList = document.getElementById('player-list');
+        // --------------------------------------------------------
+        // 1. PUBLIC: Load the currently "Active" Event Details
+        // --------------------------------------------------------
+        onSnapshot(doc(db, "settings", "active_event"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                activeEventIdGlob = data.eventId; 
+                document.getElementById('display-event-name').innerText = data.eventName || "PickleQ Sessions";
+                document.getElementById('display-event-details').innerText = `${data.eventLevel || ""} • ${data.eventDate || ""}`;
+                document.getElementById('reg-submit-btn').disabled = false;
+                document.getElementById('reg-submit-btn').innerText = "Submit Registration";
+            } else {
+                document.getElementById('display-event-name').innerText = "No Active Event";
+                document.getElementById('display-event-details').innerText = "Registration is currently closed.";
+                document.getElementById('reg-submit-btn').disabled = true;
+                document.getElementById('reg-submit-btn').innerText = "Event Not Available";
+            }
+        });
 
-        // Authentication State Listener
+        // --------------------------------------------------------
+        // 2. AUTHENTICATION & ADMIN CHECK
+        // --------------------------------------------------------
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
-                authContainer.innerHTML = `<p>Signed in as <b>${user.displayName || user.email}</b></p>`;
-                appContainer.style.display = 'block';
+                document.getElementById('auth-container').innerHTML = `<p>Signed in as <b>${user.displayName || user.email}</b></p>`;
+                document.getElementById('app-container').style.display = 'block';
 
-                // Check if user is in the 'admins' collection
                 try {
                     const adminDoc = await getDoc(doc(db, "admins", user.uid));
                     if (adminDoc.exists()) {
                         isAdmin = true;
-                        tabDashboard.style.display = 'block'; // Show dashboard tab
-                        loadDashboard(); // Start listening to data
+                        document.getElementById('tab-dashboard').style.display = 'block'; 
+                        loadAdminEvents(); // Load event lists for dashboard
                     }
-                } catch (error) {
-                    console.log("Not an admin or permission denied.");
-                }
+                } catch (error) { console.log("Standard user."); }
             } else {
-                appContainer.style.display = 'none';
+                document.getElementById('app-container').style.display = 'none';
             }
         });
 
-        // Google Sign In
-        loginBtn.addEventListener('click', () => {
-            signInWithPopup(auth, provider).catch((error) => {
-                alert("Error signing in: " + error.message);
-            });
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(err => alert("Error: " + err.message));
         });
 
-        // Registration Submission
+        // --------------------------------------------------------
+        // 3. SUBMIT REGISTRATION (Tied to active event)
+        // --------------------------------------------------------
+        const regForm = document.getElementById('registration-form');
         regForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!currentUser) return;
+            if (!currentUser || !activeEventIdGlob) {
+                alert("Cannot register right now. No active event found.");
+                return;
+            }
 
-            const submitBtn = regForm.querySelector('button');
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Submitting...";
+            const btn = document.getElementById('reg-submit-btn');
+            btn.disabled = true; btn.innerText = "Submitting...";
 
             try {
                 await addDoc(collection(db, "registrations"), {
@@ -362,80 +279,170 @@
                     nickname: document.getElementById('nickname').value,
                     mobileNumber: document.getElementById('mobileNumber').value,
                     userId: currentUser.uid,
+                    eventId: activeEventIdGlob, // Link player to the active event!
                     status: 'Pending',
                     timestamp: serverTimestamp()
                 });
-
                 regForm.reset();
-                regMessage.style.color = "green";
-                regMessage.innerText = "Registration submitted! Please wait for a confirmation text.";
+                document.getElementById('reg-message').style.color = "green";
+                document.getElementById('reg-message').innerText = "Registration submitted successfully!";
             } catch (error) {
-                regMessage.style.color = "red";
-                regMessage.innerText = "Error submitting registration. Please try again.";
-                console.error(error);
+                document.getElementById('reg-message').style.color = "red";
+                document.getElementById('reg-message').innerText = "Error saving registration.";
             }
-
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Submit Registration";
+            btn.disabled = false; btn.innerText = "Submit Registration";
         });
 
-        // Real-time Dashboard Loading (Admins Only)
-        function loadDashboard() {
-            const q = query(collection(db, "registrations"), orderBy("timestamp", "desc"));
-            onSnapshot(q, (snapshot) => {
-                playerList.innerHTML = ''; // Clear current list
+        // --------------------------------------------------------
+        // 4. ADMIN: Create New Event
+        // --------------------------------------------------------
+        window.createNewEvent = async function() {
+            if (!isAdmin) return;
+            const name = document.getElementById('new-event-name').value;
+            const level = document.getElementById('new-event-level').value;
+            const date = document.getElementById('new-event-date').value;
+
+            if(!name) return alert("Event Name is required!");
+
+            try {
+                await addDoc(collection(db, "events"), {
+                    eventName: name, eventLevel: level, eventDate: date, timestamp: serverTimestamp()
+                });
+                document.getElementById('new-event-name').value = '';
+                document.getElementById('new-event-level').value = '';
+                document.getElementById('new-event-date').value = '';
+                alert("Event Created!");
+            } catch (error) { alert("Error creating event: " + error.message); }
+        }
+
+        // --------------------------------------------------------
+        // 5. ADMIN: Load & Display Events (With "Set Active" logic)
+        // --------------------------------------------------------
+        function loadAdminEvents() {
+            onSnapshot(collection(db, "events"), (snapshot) => {
+                const listContainer = document.getElementById('events-list-container');
+                const selectContainer = document.getElementById('event-filter-select');
+                listContainer.innerHTML = ''; 
                 
+                // Keep the current selection in the dropdown if possible
+                const currentSelectVal = selectContainer.value;
+                selectContainer.innerHTML = '<option value="">Select an event to view players...</option>';
+
                 if(snapshot.empty) {
-                    playerList.innerHTML = '<p>No registrations yet.</p>';
+                    listContainer.innerHTML = '<p>No events created yet.</p>';
                     return;
                 }
 
-                snapshot.forEach((documentSnapshot) => {
-                    const data = documentSnapshot.data();
-                    const id = documentSnapshot.id;
-                    
-                    const card = document.createElement('div');
-                    card.className = 'player-card';
-                    card.innerHTML = `
-                        <div class="player-info">
-                            <h3>${data.fullName} ("${data.nickname}")</h3>
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const id = docSnap.id;
+                    const isActive = (id === activeEventIdGlob);
+
+                    // Add to List
+                    const item = document.createElement('div');
+                    item.className = 'list-item';
+                    item.innerHTML = `
+                        <div class="list-info">
+                            <h4>${data.eventName} ${isActive ? '<span class="status-badge status-active-event">ACTIVE ON FRONTPAGE</span>' : ''}</h4>
+                            <p>${data.eventDate}</p>
+                        </div>
+                        <div class="action-btns">
+                            ${!isActive ? `<button class="btn-set-active" onclick="window.setActiveEvent('${id}', '${data.eventName.replace(/'/g, "\\'")}', '${data.eventLevel.replace(/'/g, "\\'")}', '${data.eventDate.replace(/'/g, "\\'")}')">Set as Active</button>` : ''}
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+
+                    // Add to Dropdown
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.innerText = data.eventName + " (" + data.eventDate + ")";
+                    selectContainer.appendChild(option);
+                });
+
+                selectContainer.value = currentSelectVal; // restore selection
+            });
+        }
+
+        // --------------------------------------------------------
+        // 6. ADMIN: Set Event as Active
+        // --------------------------------------------------------
+        window.setActiveEvent = async function(id, name, level, date) {
+            if (!isAdmin) return;
+            try {
+                await setDoc(doc(db, "settings", "active_event"), {
+                    eventId: id, eventName: name, eventLevel: level, eventDate: date
+                });
+                alert(name + " is now the active event on the registration page!");
+            } catch (error) { alert("Error setting active event."); }
+        }
+
+        // --------------------------------------------------------
+        // 7. ADMIN: Load Players specifically for chosen Event
+        // --------------------------------------------------------
+        let playersUnsubscribe = null;
+        window.loadDashboardPlayers = function(eventId) {
+            const listContainer = document.getElementById('player-list-container');
+            if (!eventId) {
+                listContainer.innerHTML = '<p style="color: #666; font-style: italic;">Select an event above to view players.</p>';
+                if(playersUnsubscribe) playersUnsubscribe();
+                return;
+            }
+
+            listContainer.innerHTML = '<p>Loading players...</p>';
+            if(playersUnsubscribe) playersUnsubscribe();
+
+            // Query registrations matching the selected eventId
+            const q = query(collection(db, "registrations"), where("eventId", "==", eventId));
+            
+            playersUnsubscribe = onSnapshot(q, (snapshot) => {
+                listContainer.innerHTML = ''; 
+                if(snapshot.empty) {
+                    listContainer.innerHTML = '<p>No registrations for this event yet.</p>';
+                    return;
+                }
+
+                // Collect and sort in JS to avoid Firebase Index Requirement errors
+                let players = [];
+                snapshot.forEach(docSnap => players.push({ id: docSnap.id, ...docSnap.data() }));
+                players.sort((a, b) => {
+                    const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+                    const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+                    return timeB - timeA; // Newest first
+                });
+
+                players.forEach((data) => {
+                    const item = document.createElement('div');
+                    item.className = 'list-item';
+                    item.innerHTML = `
+                        <div class="list-info">
+                            <h4>${data.fullName} ("${data.nickname}")</h4>
                             <p>📱 ${data.mobileNumber}</p>
                             <span class="status-badge status-${data.status.toLowerCase()}">${data.status}</span>
                         </div>
                         <div class="action-btns">
                             ${data.status === 'Pending' ? `
-                                <button class="btn-approve" onclick="window.updateStatus('${id}', 'Approved')">Approve</button>
-                                <button class="btn-reject" onclick="window.updateStatus('${id}', 'Rejected')">Reject</button>
+                                <button class="btn-approve" onclick="window.updatePlayerStatus('${data.id}', 'Approved')">Approve</button>
+                                <button class="btn-reject" onclick="window.updatePlayerStatus('${data.id}', 'Rejected')">Reject</button>
                             ` : ''}
                         </div>
                     `;
-                    playerList.appendChild(card);
+                    listContainer.appendChild(item);
                 });
-            }, (error) => {
-                playerList.innerHTML = '<p style="color:red;">Error loading dashboard. Ensure you have admin rights.</p>';
             });
         }
 
-        // Global function to handle status updates from inline HTML buttons
-        window.updateStatus = async function(docId, newStatus) {
+        window.updatePlayerStatus = async function(docId, newStatus) {
             if (!isAdmin) return;
             try {
-                const regRef = doc(db, "registrations", docId);
-                await updateDoc(regRef, {
-                    status: newStatus
-                });
-            } catch (error) {
-                alert("Error updating status: " + error.message);
-            }
+                await updateDoc(doc(db, "registrations", docId), { status: newStatus });
+            } catch (error) { alert("Error updating status: " + error.message); }
         };
     </script>
 
-    <!-- Tab Switching Logic -->
     <script>
         function switchTab(tabId) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-            
             document.getElementById('tab-' + tabId).classList.add('active');
             document.getElementById('content-' + tabId).classList.add('active');
         }
