@@ -16,6 +16,6 @@ export function wireLogin(notice){
  document.getElementById('registerAccount').onclick=run(()=>authSDK.createUserWithEmailAndPassword(auth,email(),password()));
  document.getElementById('resetPassword').onclick=run(async()=>{await authSDK.sendPasswordResetEmail(auth,email());notice('If the email has an account, check its password-reset email.');});
 }
-await authSDK.setPersistence(auth,authSDK.browserSessionPersistence);
+try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence);}catch(e){console.warn('Persistent sign-in unavailable; using this browser session.',e);await authSDK.setPersistence(auth,authSDK.browserSessionPersistence);}
 authSDK.onAuthStateChanged(auth,user=>{resolveReady(user);});
 globalThis.SG_AUTH={auth,ready,getToken:async()=>{await ready;if(!auth.currentUser)throw Error('Sign in above before submitting your order.');return auth.currentUser.getIdToken();}};

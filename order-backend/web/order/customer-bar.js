@@ -1,4 +1,4 @@
-import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js';
+import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js?v=localpersist1';
 const box=document.getElementById('customerAccount');let stopProfile,stopOrders,revision=0;
 function restoreCheckoutIntent(uid){
  let saved;try{saved=JSON.parse(sessionStorage.getItem('sgCheckoutIntent')||'null');}catch{}
