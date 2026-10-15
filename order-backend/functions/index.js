@@ -1,7 +1,7 @@
 'use strict';
 const {onRequest}=require('firebase-functions/v2/https');
-const {onDocumentCreated}=require('firebase-functions/v2/firestore');
-const {defineString}=require('firebase-functions/params');
+const {onDocumentCreated,onDocumentUpdated}=require('firebase-functions/v2/firestore');
+const {defineSecret,defineString}=require('firebase-functions/params');
 const {initializeApp}=require('firebase-admin/app');
 const {getFirestore,Timestamp}=require('firebase-admin/firestore');
 const {getAuth}=require('firebase-admin/auth');
@@ -12,6 +12,8 @@ const d=require('./domain'),menu=require('./menu.json');
 const OWNER_UID='qhf2nu7zlOXcj6t5mU7e9gjWyRz2';
 const INITIAL_ADMIN_UID='dYqA7rVgDNRP7nRY9ghoUtVfcHj1';
 initializeApp();const db=getFirestore(),bucketName=defineString('ORDER_STORAGE_BUCKET');
+const textBeeApiKey=defineSecret('TEXTBEE_API_KEY');
+const textBeeDeviceId=defineSecret('TEXTBEE_DEVICE_ID');
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const origins=['https://stone-grill-orders-test.web.app','https://stonegrillresto.net'];
 const options={region:'asia-southeast1',cors:origins,maxInstances:3,timeoutSeconds:60,memory:'256MiB',invoker:'public'};
@@ -145,3 +147,4 @@ if(b.action==='seen'||b.action==='acknowledge'){
  });res.json({ok:true,...(req.printResult?{order:req.printResult}:{})});
 },20000));
 exports.notifyStaff=onDocumentCreated({document:'sgStaffAlerts/{alertId}',region:'asia-southeast1',retry:true,maxInstances:3},require('./notifications').createNotifier({db,getMessaging,Timestamp,isStaff:d.isStaff}));
+exports.notifyCustomerPaymentVerified=onDocumentUpdated({document:'sgOrders/{requestId}',region:'asia-southeast1',secrets:[textBeeApiKey,textBeeDeviceId],retry:true,maxInstances:3},require('./payment-sms').createPaymentSmsNotifier({db,apiKey:()=>textBeeApiKey.value(),deviceId:()=>textBeeDeviceId.value(),Timestamp}));
