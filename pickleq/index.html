@@ -158,7 +158,10 @@
         }
         button.btn:hover { background-color: #a4d82f; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(144, 194, 38, 0.4); }
         button.btn:active { transform: translateY(0); }
+        
         button.btn-small { padding: 10px 15px; font-size: 12px; width: auto; box-shadow: none; }
+        button.btn-outline { background-color: transparent; border: 2px solid var(--primary-navy); color: var(--primary-navy); }
+        button.btn-outline:hover { background-color: #edf2f7; box-shadow: none; transform: none; }
 
         /* Auth Banner */
         .auth-section { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background-color: #edf2f7; border-bottom: 1px solid var(--border-light); }
@@ -190,6 +193,8 @@
         .btn-approve:hover { background: #9ae6b4; }
         .btn-reject { background: #fed7d7; color: #9b2c2c; }
         .btn-reject:hover { background: #feb2b2; }
+        .btn-edit { background: #e2e8f0; color: #2d3748; }
+        .btn-edit:hover { background: #cbd5e0; }
 
         /* Help & Contact Footer Section */
         .footer-help {
@@ -239,6 +244,7 @@
             .auth-section { flex-direction: column; gap: 10px; text-align: center; }
             .event-meta-grid { grid-template-columns: 1fr 1fr; }
             .help-grid { flex-direction: column; }
+            .action-btns button { margin-bottom: 5px; }
         }
     </style>
 </head>
@@ -315,9 +321,9 @@
 
             <!-- ADMIN DASHBOARD -->
             <div class="content" id="content-dashboard">
-                <!-- 1. COMPREHENSIVE CREATE EVENT FORM -->
+                <!-- 1. COMPREHENSIVE CREATE / EDIT EVENT FORM -->
                 <div class="admin-card">
-                    <h3>1. Create New Event</h3>
+                    <h3 id="form-title">1. Create New Event</h3>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Event Name</label>
@@ -352,13 +358,16 @@
                             <textarea id="new-evt-notes" placeholder="e.g. Balls are organizer provided. Wait for confirmation text."></textarea>
                         </div>
                     </div>
-                    <button class="btn btn-small" onclick="window.createNewEvent()" style="width: 100%;">Create Event Profile</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="create-evt-btn" class="btn btn-small" onclick="window.createNewEvent()" style="flex: 1;">Create Event Profile</button>
+                        <button id="cancel-edit-btn" class="btn btn-small btn-outline" onclick="window.cancelEdit()" style="display: none; flex: 1;">Cancel Edit</button>
+                    </div>
                 </div>
 
                 <!-- 2. Manage Events -->
                 <div class="admin-card">
                     <h3>2. Event List</h3>
-                    <p style="font-size: 13px; color: var(--muted-text); margin-bottom: 15px;">Set an event as "Active" to display its full profile on the registration page.</p>
+                    <p style="font-size: 13px; color: var(--muted-text); margin-bottom: 15px;">Set an event as "Active" to display its full profile on the registration page, or Edit its details.</p>
                     <div id="events-list-container">
                         <p>Loading events...</p>
                     </div>
@@ -384,13 +393,13 @@
         <div class="footer-help">
             <h3>Courtside Gatherings Contact Info</h3>
             <div class="help-grid">
-                <a href="https://m.me/YOUR_PAGE" target="_blank" class="help-link">
+                <a href="https://m.me/courtsidegatherings" target="_blank" class="help-link">
                     💬 Messenger Support
                 </a>
-                <a href="tel:+639000000000" class="help-link">
-                    📞 Admin: 09XX XXX XXXX
+                <a href="tel:+639173065956" class="help-link">
+                    📞 Admin: 0917 306 5956
                 </a>
-                <a href="https://facebook.com/YOUR_PAGE" target="_blank" class="help-link">
+                <a href="https://facebook.com/courtsidegatherings" target="_blank" class="help-link">
                     🌐 Facebook Page
                 </a>
             </div>
@@ -421,6 +430,7 @@
         let currentUser = null;
         let isAdmin = false;
         let activeEventIdGlob = null; 
+        let editingEventId = null; // Track if we are editing an event
 
         // --------------------------------------------------------
         // PUBLIC: Load Active Event and Populate UI Grid
@@ -525,7 +535,7 @@
         });
 
         // --------------------------------------------------------
-        // ADMIN: Create New Event Profile
+        // ADMIN: Create or Update Event Profile
         // --------------------------------------------------------
         window.createNewEvent = async function() {
             if (!isAdmin) return;
@@ -541,16 +551,67 @@
                 eventFee: document.getElementById('new-evt-fee').value,
                 eventPrize: document.getElementById('new-evt-prize').value,
                 eventNotes: document.getElementById('new-evt-notes').value,
-                timestamp: serverTimestamp()
             };
 
             try {
-                await addDoc(collection(db, "events"), eventData);
-                ['name', 'level', 'date', 'time', 'venue', 'fee', 'prize', 'notes'].forEach(f => {
-                    document.getElementById(`new-evt-${f}`).value = '';
-                });
-                alert("Event Created Successfully!");
-            } catch (error) { alert("Error creating event: " + error.message); }
+                if (editingEventId) {
+                    // Update existing event
+                    await updateDoc(doc(db, "events", editingEventId), eventData);
+                    
+                    // If we just edited the currently active event, update the active settings document too
+                    if (editingEventId === activeEventIdGlob) {
+                        eventData.eventId = editingEventId;
+                        await setDoc(doc(db, "settings", "active_event"), eventData);
+                    }
+                    alert("Event Updated Successfully!");
+                } else {
+                    // Create new event
+                    eventData.timestamp = serverTimestamp();
+                    await addDoc(collection(db, "events"), eventData);
+                    alert("Event Created Successfully!");
+                }
+                
+                window.cancelEdit(); // Clears form and resets state
+            } catch (error) { alert("Error saving event: " + error.message); }
+        }
+
+        // --------------------------------------------------------
+        // ADMIN: Edit Event Logic (Populates form)
+        // --------------------------------------------------------
+        window.editEvent = async function(id) {
+            if (!isAdmin) return;
+            try {
+                const docSnap = await getDoc(doc(db, "events", id));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('new-evt-name').value = data.eventName || '';
+                    document.getElementById('new-evt-level').value = data.eventLevel || '';
+                    document.getElementById('new-evt-date').value = data.eventDate || '';
+                    document.getElementById('new-evt-time').value = data.eventTime || '';
+                    document.getElementById('new-evt-venue').value = data.eventVenue || '';
+                    document.getElementById('new-evt-fee').value = data.eventFee || '';
+                    document.getElementById('new-evt-prize').value = data.eventPrize || '';
+                    document.getElementById('new-evt-notes').value = data.eventNotes || '';
+                    
+                    editingEventId = id;
+                    document.getElementById('form-title').innerText = "1. Edit Event Profile";
+                    document.getElementById('create-evt-btn').innerText = "Update Event Profile";
+                    document.getElementById('cancel-edit-btn').style.display = "inline-block";
+                    
+                    // Scroll to top of the page so they see the form
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) { alert("Error loading event details for edit."); }
+        }
+
+        window.cancelEdit = function() {
+            editingEventId = null;
+            ['name', 'level', 'date', 'time', 'venue', 'fee', 'prize', 'notes'].forEach(f => {
+                document.getElementById(`new-evt-${f}`).value = '';
+            });
+            document.getElementById('form-title').innerText = "1. Create New Event";
+            document.getElementById('create-evt-btn').innerText = "Create Event Profile";
+            document.getElementById('cancel-edit-btn').style.display = "none";
         }
 
         // --------------------------------------------------------
@@ -583,7 +644,8 @@
                             <p>${data.eventDate || 'No date'} • ${data.eventVenue || 'No venue'}</p>
                         </div>
                         <div class="action-btns">
-                            ${!isActive ? `<button class="btn-set-active" onclick="window.setActiveEvent('${id}')">Set as Active</button>` : ''}
+                            <button class="btn-edit" onclick="window.editEvent('${id}')">Edit</button>
+                            ${!isActive ? `<button class="btn-set-active" onclick="window.setActiveEvent('${id}')">Set Active</button>` : ''}
                         </div>
                     `;
                     listContainer.appendChild(item);
