@@ -52,7 +52,7 @@ function query(uid){
 a.onAuthStateChanged(auth,async user=>{
  const rev=++revision;stop?.();stopProfile?.();stopRole?.();ordersLoaded=false;live=[];previous=new Map();initial=true;
  $('activeOrderBanner').hidden=true;$('activeOrderBanner').innerHTML='';$('profileDetails').open=false;$('orders').innerHTML='';$('name').value='';$('mobile').value='';$('customerName').textContent='My profile';$('savedMobile').textContent='';$('email').textContent='';notice('');
- $('more').hidden=true;$('signedIn').hidden=!user;$('login').hidden=!!user;$('staffLink').hidden=true;
+ $('signedIn').hidden=!user;$('login').hidden=!!user;$('staffLink').hidden=true;
  if(!user){$('login').innerHTML=loginMarkup();wireLogin(notice);return;}
  $('email').textContent=user.email||'';
  try{await syncProfile();if(rev!==revision)return;
