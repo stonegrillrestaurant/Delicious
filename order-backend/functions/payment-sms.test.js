@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {phoneIsValid,paymentWasJustVerified,confirmationMessage,createPaymentSmsNotifier}=require('./payment-sms');
+const {phoneIsValid,paymentWasJustVerified,confirmationMessage,safeProviderMessage,createPaymentSmsNotifier}=require('./payment-sms');
 
 function fakeDb(){
  const data=new Map();
@@ -39,6 +39,10 @@ test('message waits for table confirmation before promising cooking',()=>{
  const message=confirmationMessage({orderId:'SG-124',status:'acknowledged',orderType:'Reservation'},'x');
  assert.match(message,/confirming your table before we start cooking/i);
 });
+test('provider diagnostics are bounded and remove control characters',()=>{
+ assert.equal(safeProviderMessage({error:'Gateway is offline\nretry later'}),'Gateway is offline retry later');
+ assert.equal(safeProviderMessage({message:'x'.repeat(300)}).length,220);
+});
 test('queues one SMS to the saved customer mobile and records TextBee batch ID',async()=>{
  const db=fakeDb(),before={paymentStatus:'pending_verification'},after={paymentStatus:'verified',mobile:'+639178366126',orderId:'SG-TEST'};
  const e=event(db,before,after),calls=[];
@@ -58,4 +62,5 @@ test('records a failed send without changing the already verified payment',async
  assert.equal(db.data.get(`sgPaymentSms/${e.params.requestId}`).status,'failed');
  assert.equal(db.data.get(`sgOrders/${e.params.requestId}`).paymentStatus,'verified');
  assert.equal(db.data.get(`sgOrders/${e.params.requestId}`).smsConfirmationStatus,'failed');
+ assert.equal(db.data.get(`sgOrders/${e.params.requestId}`).smsConfirmationError,'TextBee rejected the send request.');
 });

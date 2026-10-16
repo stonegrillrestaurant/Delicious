@@ -18,6 +18,7 @@ const hash=s=>createHash('sha256').update(s).digest('hex');
 const origins=['https://stone-grill-orders-test.web.app','https://stonegrillresto.net'];
 const options={region:'asia-southeast1',cors:origins,maxInstances:3,timeoutSeconds:60,memory:'256MiB',invoker:'public'};
 const bucket=()=>getStorage().bucket(bucketName.value());
+async function activeMenu(){const saved=await db.collection('sgSystem').doc('menu-v1').get();return saved.exists?d.validateMenu(saved.data().menu):menu;}
 function endpoint(fn,max=7100000){return async(req,res)=>{
  res.set('Cache-Control','no-store');if(req.method!=='POST')return res.status(405).json({ok:false,error:'POST required'});
  if(!origins.includes(req.get('origin')))return res.status(403).json({ok:false,error:'Origin not allowed'});
@@ -28,10 +29,10 @@ async function throttle(ip,kind){const r=db.collection('sgOrderRateLimits').doc(
 exports.orderApi=onRequest(options,endpoint(async(req,res)=>{
  const user=await signedUser(req),b=req.body;d.identity(b);
  const setup=await db.collection('sgSystem').doc('prepaid-v1').get();if(!setup.exists||setup.data().ready!==true)throw d.error(503,'Checkout update in progress. Please return shortly; do not send payment yet.');d.check(['quote','order','payment','receipt'].includes(b.action),'Invalid action');await throttle(req.ip||'unknown',b.action);
- if(b.action==='quote'){const order=d.order(b,menu);if(new Date(order.date+'T'+order.time+':00+08:00').getTime()<Date.now()-5*60000)throw d.error(400,'Choose a future date and time');return res.json({ok:true,order});}
+ if(b.action==='quote'){const order=d.order(b,await activeMenu());if(new Date(order.date+'T'+order.time+':00+08:00').getTime()<Date.now()-5*60000)throw d.error(400,'Choose a future date and time');return res.json({ok:true,order});}
  const ref=db.collection('sgOrders').doc(b.requestId),cap=db.collection('sgOrderCapabilities').doc(b.requestId),keyHash=hash(b.receiptKey);
  if(b.action==='order'){
-  const order={...d.order(b,menu),...d.payment({...b,paymentMobile:b.paymentMobile||b.mobile})},fingerprint=hash(JSON.stringify(order)),orderId='SG-'+b.requestId;
+  const order={...d.order(b,await activeMenu()),...d.payment({...b,paymentMobile:b.paymentMobile||b.mobile})},fingerprint=hash(JSON.stringify(order)),orderId='SG-'+b.requestId;
   const claim=db.collection('sgPaymentReferences').doc(hash(order.submittedPaymentReference));
   await db.runTransaction(async t=>{const [s,c]=await Promise.all([t.get(ref),t.get(cap)]);if(s.exists){if(s.data().customerUid!==user.uid||!c.exists||c.data().keyHash!==keyHash||c.data().fingerprint!==fingerprint)throw d.error(409,'Reference already used. Contact Stone Grill.');return;}
    const used=await t.get(claim);if(used.exists)throw d.error(409,'This payment reference has already been submitted. Check My Orders or contact Stone Grill; do not pay again.');
@@ -54,6 +55,14 @@ exports.orderApi=onRequest(options,endpoint(async(req,res)=>{
   t.create(db.collection('sgStaffAlerts').doc('payment-'+b.requestId),{kind:'payment',requestId:b.requestId,createdAt:now,notificationStatus:'pending'});
  });res.json({ok:true});
 }));
+
+exports.menuApi=onRequest(options,async(req,res)=>{
+ res.set('Cache-Control','no-store');
+ if(req.method!=='GET')return res.status(405).json({ok:false,error:'GET required'});
+ if(!origins.includes(req.get('origin')))return res.status(403).json({ok:false,error:'Origin not allowed'});
+ try{return res.json({ok:true,menu:await activeMenu()});}
+ catch{return res.status(503).json({ok:false,error:'Menu temporarily unavailable'});}
+});
 
 async function signedUser(req){
  const bearer=req.get('authorization')||'';
@@ -101,8 +110,17 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
   if(changed)t.set(ref.collection('signIns').doc(String(authTime)),{at:now,provider:user.firebase?.sign_in_provider||'unknown'});
  });res.json({ok:true});
 },20000));
-exports.staffApi=onRequest(options,endpoint(async(req,res)=>{
+exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId]},endpoint(async(req,res)=>{
  const user=await operator(req),b=req.body;
+ if(['getMenu','saveMenu'].includes(b.action)){
+  if(!['owner','admin'].includes(user.role))throw d.error(403,'Owner or admin access required');
+  const ref=db.collection('sgSystem').doc('menu-v1');
+  if(b.action==='getMenu')return res.json({ok:true,menu:await activeMenu()});
+  const next=d.validateMenu(b.menu),now=Timestamp.now();
+  await db.runTransaction(async t=>{const old=await t.get(ref);t.set(ref,{menu:next,updatedAt:now,updatedBy:user.uid},{merge:true});t.create(db.collection('sgMenuAudit').doc(randomUUID()),{actorUid:user.uid,actorEmail:user.email,at:now,previous:old.exists?old.data().menu:menu,next});});
+  return res.json({ok:true,menu:next,message:'Menu prices saved. New prices are live for new orders.'});
+ }
+
  if(b.action==='setRole'){
   const patch=d.roleChange(user.uid,b.uid,b.role,OWNER_UID);
   const target=db.collection('sgCustomers').doc(b.uid);
@@ -117,6 +135,58 @@ exports.staffApi=onRequest(options,endpoint(async(req,res)=>{
   d.check(typeof b.token==='string'&&b.token.length>=20&&b.token.length<=4096,'Invalid device');const ref=db.collection('sgPushDevices').doc(hash(b.token));
   if(b.action==='registerDevice')await ref.set({uid:user.uid,token:b.token,updatedAt:Timestamp.now()});
   else await db.runTransaction(async t=>{const s=await t.get(ref);if(s.exists&&s.data().uid===user.uid)t.delete(ref);});return res.json({ok:true});
+ }
+ if(b.action==='retrySmsConfirmation'){
+  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
+  if(!['owner','admin','cashier'].includes(user.role))throw d.error(403,'Payment reviewers only');
+  const orderRef=db.collection('sgOrders').doc(b.requestId);
+  const order=await db.runTransaction(async t=>{
+   const current=await t.get(orderRef);
+   if(!current.exists)throw d.error(404,'Order not found');
+   const saved=current.data();
+   if(saved.paymentStatus!=='verified')throw d.error(409,'Verify payment before resending its confirmation SMS');
+   if(saved.smsConfirmationStatus==='retrying')throw d.error(409,'An SMS retry is already in progress');
+   if(saved.smsConfirmationStatus!=='failed'&&saved.smsDeliveryStatus!=='failed')throw d.error(409,'Only a failed confirmation SMS can be resent');
+   if(!require('./payment-sms').phoneIsValid(saved.mobile))throw d.error(400,'Customer mobile must be in +639xxxxxxxxx format');
+   t.update(orderRef,{smsConfirmationStatus:'retrying',smsConfirmationUpdatedAt:Timestamp.now()});
+   return saved;
+  });
+  let key,deviceId;try{key=textBeeApiKey.value();deviceId=textBeeDeviceId.value();}catch{await orderRef.update({smsConfirmationStatus:'failed',smsConfirmationError:'TextBee credentials are not set in Firebase Secret Manager.',smsConfirmationUpdatedAt:Timestamp.now()});throw d.error(503,'TextBee credentials are not set in Firebase Secret Manager.');}
+  try{
+   const response=await fetch('https://api.textbee.dev/api/v1/gateway/send-sms',{method:'POST',headers:{'content-type':'application/json','x-api-key':key},body:JSON.stringify({deviceId,recipients:[order.mobile],message:require('./payment-sms').confirmationMessage(order,b.requestId)})});
+   let body={};try{body=await response.json();}catch{}
+   if(!response.ok||body?.data?.success!==true){
+    const reason=require('./payment-sms').safeProviderMessage(body);
+    const failureCode='textbee_'+(response.status||'error');
+    await orderRef.update({smsConfirmationStatus:'failed',smsDeliveryStatus:'failed',smsConfirmationFailureCode:failureCode,smsConfirmationError:reason,smsDeliveryError:reason,smsConfirmationUpdatedAt:Timestamp.now()});
+    throw d.error(502,'TextBee could not queue the retry: '+reason);
+   }
+   const sms={smsConfirmationStatus:'queued',smsConfirmationBatchId:String(body.data.smsBatchId||'').slice(0,100),smsDeliveryStatus:'pending',smsConfirmationError:'',smsConfirmationFailureCode:'',smsDeliveryError:'',smsDeliveryErrorCode:'',smsConfirmationUpdatedAt:Timestamp.now()};
+   await orderRef.update(sms);
+   return res.json({ok:true,sms,message:'TextBee accepted the SMS retry. Check delivery status shortly.'});
+  }catch(error){
+   if(error.status)throw error;
+   await orderRef.update({smsConfirmationStatus:'failed',smsDeliveryStatus:'failed',smsConfirmationFailureCode:'gateway_unavailable',smsConfirmationError:'TextBee could not be reached. Check the gateway phone signal and internet connection.',smsDeliveryError:'TextBee could not be reached. Check the gateway phone signal and internet connection.',smsConfirmationUpdatedAt:Timestamp.now()});
+   throw d.error(502,'TextBee could not be reached. Check the gateway phone signal and internet connection.');
+  }
+ }
+ if(b.action==='checkSmsDelivery'){
+  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
+  if(!['owner','admin','cashier'].includes(user.role))throw d.error(403,'Payment reviewers only');
+  const orderRef=db.collection('sgOrders').doc(b.requestId),orderSnap=await orderRef.get();
+  if(!orderSnap.exists)throw d.error(404,'Order not found');
+  const order=orderSnap.data();if(order.paymentStatus!=='verified')throw d.error(409,'Verify payment before checking its confirmation SMS');
+  if(!order.smsConfirmationBatchId)return res.json({ok:true,sms:{smsConfirmationStatus:order.smsConfirmationStatus||'not_sent',smsConfirmationError:order.smsConfirmationError||''},message:'TextBee did not return a message batch. Check the SMS error shown in this order.'});
+  let deviceId,key;try{deviceId=textBeeDeviceId.value();key=textBeeApiKey.value();}catch{throw d.error(503,'TextBee credentials are not set in Firebase Secret Manager.');}
+  const batchId=order.smsConfirmationBatchId,statusResponse=await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${encodeURIComponent(deviceId)}/sms-batch/${encodeURIComponent(batchId)}`,{headers:{'x-api-key':key}});
+  let statusBody={};try{statusBody=await statusResponse.json();}catch{}
+  if(!statusResponse.ok){const reason=String(statusBody?.message||statusBody?.error||statusBody?.data?.message||`TextBee returned HTTP ${statusResponse.status}`).replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').slice(0,220);throw d.error(502,`Could not check TextBee delivery: ${reason}`);}
+  const payload=statusBody.data||{},batch=payload.batch||payload,messages=Array.isArray(payload.messages)?payload.messages:Array.isArray(batch.messages)?batch.messages:[];
+  const message=messages.find(item=>item.recipient===order.mobile)||messages[0]||{},raw=String(message.status||batch.status||'pending').toLowerCase();
+  const delivery=raw==='delivered'||Number(batch.deliveredCount)>0?'delivered':raw==='sent'||Number(batch.sentCount)>0?'sent':raw==='failed'||raw==='partial_success'||Number(batch.failureCount)>0?'failed':'pending';
+  const sms={smsDeliveryStatus:delivery,smsDeliveryCheckedAt:Timestamp.now(),...(message.errorCode||message.failureCode?{smsDeliveryErrorCode:String(message.errorCode||message.failureCode).slice(0,60)}:{}),...(message.errorMessage||message.failureMessage?{smsDeliveryError:String(message.errorMessage||message.failureMessage).replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').slice(0,220)}:{})};
+  await orderRef.update(sms);
+  return res.json({ok:true,sms,message:delivery==='delivered'?'TextBee reports delivery to the customer phone.':delivery==='sent'?'TextBee reports sent to the carrier; delivery confirmation is not available.':delivery==='failed'?'TextBee reports a delivery failure. Check the reason shown in the transaction details.':'TextBee still has this SMS pending.'});
  }
  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');const ref=db.collection('sgOrders').doc(b.requestId);
  if(b.action==='receiptFile'){

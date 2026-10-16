@@ -53,6 +53,11 @@ var MENU_FALLBACK = {
 /* ---- Load menu ---- */
 async function loadMenuData(fallbackMENU) {
   try {
+    var liveUrl = window.SG_MENU_API;
+    if (liveUrl) { var live = await fetch(liveUrl, {cache:'no-store'}); if (live.ok) { var liveData = await live.json(); if (liveData.ok && liveData.menu && liveData.menu.categories && liveData.menu.data) return liveData.menu; } }
+  } catch(e) {}
+
+  try {
     var ls = localStorage.getItem('stonegrill_menu_v1');
     if (ls) {
       var j = JSON.parse(ls);
