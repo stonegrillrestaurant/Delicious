@@ -118,7 +118,7 @@ async function push(){if(demo){notice('Phone alerts require the connected Fireba
 $('push').onclick=async()=>{if($('push').disabled)return;$('push').disabled=true;try{await push();}catch(e){notice(e.message);}finally{$('push').disabled=false;}};
 async function disablePush(){if(pushToken)await api({action:'removeDevice',token:pushToken});if(messaging)await fm.deleteToken(messaging);pushToken=null;try{localStorage.removeItem('sgStaffPushToken');}catch{}$('disablePush').hidden=true;alertStatus();$('push').textContent='Enable phone alerts';}
 $('disablePush').onclick=()=>disablePush().catch(e=>notice(e.message));$('signOut').onclick=async()=>{if(demo){location.href='./';return;}try{await disablePush();}catch(e){notice('Device alerts could not be disconnected. Sign-out will continue.');}finally{await fa.signOut(auth);}};
-$('googleLogin').onclick=async()=>{if(!auth)return;try{await fa.signInWithPopup(auth,new fa.GoogleAuthProvider());}catch(e){notice(e.code==='auth/popup-blocked'?'Allow the sign-in popup and try again.':e.message);}};
+$('googleLogin').onclick=async()=>{if(!auth)return;try{const provider=new fa.GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});await fa.signInWithPopup(auth,provider);}catch(e){notice(e.code==='auth/popup-blocked'?'Allow the sign-in popup and try again.':e.message);}};
 $('emailLogin').onsubmit=async e=>{e.preventDefault();if(!auth)return;try{await fa.signInWithEmailAndPassword(auth,$('email').value,$('password').value);$('password').value='';}catch{notice('Check your assigned email and password.');}};
 addEventListener('offline',()=>{connection('Offline · actions paused');render();});
 addEventListener('online',()=>{if(profile&&!demo){connection('Reconnecting · actions paused');listen();}});
