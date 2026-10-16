@@ -17,6 +17,12 @@ If `~/stone-grill-complete` already exists, update that branch in its existing c
 
 The command installs the locked server/UI dependencies, builds the full site, runs the backend and UI tests, deploys the orders functions plus Firestore rules/indexes and Storage rules, verifies/imports existing payment references, then publishes test Hosting. It initializes the ignored environment file with the already-known public Storage bucket setting if that file is absent. There are no Telegram credentials.
 
+## Payment verification SMS
+
+When an authorized cashier or admin changes an order's payment status to `verified`, the backend queues one confirmation SMS to the customer's saved Philippine mobile number using the registered TextBee Android device. The SMS reports that payment was received and verified and points the customer to My Orders. TextBee accepting a message means it is queued; delivery is not guaranteed. An SMS failure is recorded separately and never changes the payment verification.
+
+Before deploying the function, create a fresh TextBee API key and revoke any key that has been shared in chat. Keep the API key and device ID in Firebase Secret Manager; do not put either in GitHub, the website, or a shell command. In Cloud Shell, run `firebase functions:secrets:set TEXTBEE_API_KEY --project stone-grill-app` and then `firebase functions:secrets:set TEXTBEE_DEVICE_ID --project stone-grill-app`, entering each value only at its hidden prompt. After that, the existing GitHub Actions deployment can deploy the function from `main`.
+
 If dependency installation, tests, backend deployment or reference migration fails, it stops before the Hosting publication step. Firebase services deploy separately; this is not an atomic release and already-successful backend/rule changes are not rolled back automatically. Fix the reported error and rerun the same command.
 
 Only the `stone-grill-orders` functions codebase and `stone-grill-orders-test` Hosting site are targeted in project `stone-grill-app`. Firestore and Storage rules are project-wide: the tracked Firestore rules preserve comments and the owner/Genarlyn daily-sales collection access. Reconcile any later console rule edits before running deployment; the CLI releases the tracked rules. No accounts, sales records, roles or orders are deleted by this command.
