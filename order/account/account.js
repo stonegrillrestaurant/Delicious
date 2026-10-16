@@ -50,7 +50,8 @@ function render(){
  banner.innerHTML=current?'<div class="active-order-top"><div><small>CURRENT ORDER</small><strong>'+esc(status(current))+'</strong><span>Order '+esc(current.orderId)+'</span></div><span class="active-order-seen">'+(current.seenAt||current.acknowledgedAt?'Seen by Stone Grill':'Live order updates')+'</span></div>'+progress(current):'';
  const confirmed=submissionConfirmed?rows.find(o=>o.id===submittedId&&o.customerUid===auth.currentUser?.uid):null;
  const success=confirmed?'<section class="success-banner" aria-live="polite"><span class="success-icon" aria-hidden="true">✓</span><div><h2>Order submitted successfully</h2><p>Order '+esc(confirmed.orderId)+' is saved in My Orders with its items and progress.</p><p>'+(confirmed.paymentStatus==='verified'?'Payment confirmed.':confirmed.submittedPaymentReference?'Payment reference saved · awaiting verification.':'Order received · check the payment status below.')+'</p></div></section>':'';
- $('orders').innerHTML=success+rows.map(o=>orderCard(o,history)).join('')||(history?'<div class="empty-state"><h3>No past orders yet</h3><p>Finished orders will be saved here.</p></div>':'<div class="empty-state"><h3>No active orders</h3><p>Place an order to start tracking it here. Finished orders are in Order history.</p><a class="button" href="../?new=1">Browse menu & order</a></div>');
+ const empty=history?'<div class="empty-state"><h3>No past orders yet</h3><p>Finished orders will be saved here.</p></div>':'<div class="empty-state"><h3>No active orders</h3><p>Place an order to start tracking it here. Finished orders are in Order history.</p><a class="button" href="../?new=1">Browse menu & order</a></div>';
+ $('orders').innerHTML=success+(rows.length?rows.map(o=>orderCard(o,history)).join(''):empty);
  if(!ordersLoaded)$('orders').innerHTML='<p class="empty-note" role="status">Loading your orders…</p>';
 }
 $('ordersTitle').textContent=history?'Order history':'Your order';
