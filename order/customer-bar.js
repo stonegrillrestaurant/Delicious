@@ -1,4 +1,4 @@
-import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js?v=localpersist1';
+import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js?v=accountchooser1';
 const box=document.getElementById('customerAccount');let stopProfile,revision=0;
 function restoreCheckoutIntent(uid){
  let saved,continueAfterLogin=false;

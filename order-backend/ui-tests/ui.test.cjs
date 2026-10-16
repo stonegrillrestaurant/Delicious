@@ -1,5 +1,10 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{JSDOM}=require('jsdom');
 const root=path.resolve(__dirname,'../public');
+test('Google sign-in asks which account to use in customer and staff flows',()=>{
+ const cases=[['order/customer-auth.js',"setCustomParameters({prompt:'select_account'})"],['order/staff/staff.js',"setCustomParameters({prompt:'select_account'})"]];
+ for(const [file,expected] of cases){const source=fs.readFileSync(path.resolve(__dirname,'../../',file),'utf8');assert(source.includes(expected),file+' must request the Google account chooser');}
+ for(const file of ['order/customer-bar.js','order/account/account.js']){const source=fs.readFileSync(path.resolve(__dirname,'../../',file),'utf8');assert(source.includes('customer-auth.js?v=accountchooser1'),file+' must load the chooser-enabled auth module');}
+});
 test('quarter-hour order time suggestions remain manually editable and the ordering page keeps its Stone Grill mark',()=>{
  const html=fs.readFileSync(root+'/order/index.html','utf8'),source=fs.readFileSync(root+'/order/main.js','utf8');
  assert(html.includes('id="orderTime" list="orderTimeOptions"'));
