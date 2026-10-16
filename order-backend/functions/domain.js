@@ -16,6 +16,14 @@ function order(b,menu){
  const subtotal=items.reduce((s,i)=>s+Math.round(i.price*100)*i.qty,0)/100;check(Number.isFinite(Number(b.subtotal))&&Math.abs(Number(b.subtotal)-subtotal)<.001,'Order total changed. Refresh before ordering');
  return {name,mobile,orderType:b.orderType,persons,date,time,requests:text(b.requests||'',500,true),items,subtotal};
 }
+function validateMenu(menu){
+ check(menu&&typeof menu==='object'&&Array.isArray(menu.categories)&&menu.categories.length>0&&menu.categories.length<=40&&menu.data&&typeof menu.data==='object'&&!Array.isArray(menu.data),'Invalid menu');
+ const ids=new Set(),names=new Set();
+ for(const c of menu.categories){check(c&&typeof c.id==='string'&&/^[a-z0-9_-]{1,40}$/.test(c.id)&&!ids.has(c.id),'Invalid or duplicate category');check(typeof c.label==='string'&&c.label.trim().length<=80&&typeof (c.emoji||'')==='string','Invalid category details');ids.add(c.id);}
+ check(Object.keys(menu.data).every(id=>ids.has(id)),'Menu data has an unknown category');let count=0;
+ for(const id of ids){const items=menu.data[id]||[];check(Array.isArray(items),'Invalid category items');for(const item of items){count++;check(count<=500&&item&&typeof item.name==='string'&&item.name.trim().length>0&&item.name.trim().length<=120&&!names.has(item.name.trim().toLowerCase()),'Invalid or duplicate menu item');check(Number.isSafeInteger(Number(item.price))&&Number(item.price)>=0&&Number(item.price)<=1000000,'Price must be a whole number from 0 to 1,000,000');names.add(item.name.trim().toLowerCase());}}
+ return {categories:menu.categories.map(c=>({id:c.id,label:c.label.trim(),emoji:(c.emoji||'').trim()})),data:Object.fromEntries([...ids].map(id=>[id,(menu.data[id]||[]).map(i=>({name:i.name.trim(),price:Number(i.price)}))]))};
+}
 function receipt(b){identity(b);check(typeof b.data==='string'&&b.data.length<=7000000&&/^[A-Za-z0-9+/]+={0,2}$/.test(b.data),'Invalid receipt');const bytes=Buffer.from(b.data,'base64');check(bytes.length>0&&bytes.length<=5*1024*1024,'Receipt must be under 5 MB');let type,ext;
  if(bytes.subarray(0,5).toString()==='%PDF-'){type='application/pdf';ext='pdf';}
  else if(bytes.subarray(0,3).equals(Buffer.from([255,216,255]))){type='image/jpeg';ext='jpg';}
@@ -64,4 +72,4 @@ function payment(b){
  return {paymentMobile,submittedPaymentReference,paymentMethod:b.paymentMethod};
 }
 const canVerify=(o,role)=>(o.paymentMethod==='number'&&role==='owner')||(o.paymentMethod==='qr'&&['owner','admin','cashier'].includes(role));
-module.exports={canVerify,payment,roleChange,text,error,check,identity,order,receipt,isStaff,transition,customerReceived};
+module.exports={canVerify,payment,roleChange,text,error,check,identity,order,receipt,isStaff,transition,customerReceived,validateMenu};
