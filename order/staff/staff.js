@@ -21,8 +21,8 @@ const closedOrder=o=>['ready','completed','cancelled'].includes(o.status);
 const teamState=o=>o.status==='new'&&!o.seenAt&&!o.acknowledgedAt?'received':o.status==='preparing'?'preparing':o.paymentStatus==='verified'?'verified':(o.seenAt||o.acknowledgedAt||o.status==='acknowledged')?'acknowledged':'received';
 const stateName={received:'New Order',acknowledged:'Acknowledged',verified:'Verified',preparing:'Cooking'};
 const phDate=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(date(t));
-const pastServiceDate=o=>/^\\d{4}-\\d{2}-\\d{2}$/.test(o.date||'')&&o.date<phDate(Date.now());
-const historyLabel=o=>pastServiceDate(o)&&!closedOrder(o)?'Past date · still open':o.status==='ready'?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='completed'?'Claimed / served':'Cancelled;
+const pastServiceDate=o=>typeof o.date==='string'&&o.date.length===10&&o.date[4]==='-'&&o.date[7]==='-'&&o.date<phDate(Date.now());
+const historyLabel=o=>pastServiceDate(o)&&!closedOrder(o)?'Past date · still open':o.status==='ready'?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='completed'?'Claimed / served':'Cancelled';
 $('historyDate').value=phDate(Date.now());
 function render(){
  orders=history?historyRows:liveOrders;
