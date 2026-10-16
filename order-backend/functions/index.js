@@ -18,6 +18,7 @@ const hash=s=>createHash('sha256').update(s).digest('hex');
 const origins=['https://stone-grill-orders-test.web.app','https://stonegrillresto.net'];
 const options={region:'asia-southeast1',cors:origins,maxInstances:3,timeoutSeconds:60,memory:'256MiB',invoker:'public'};
 const bucket=()=>getStorage().bucket(bucketName.value());
+async function activeMenu(){const saved=await db.collection('sgSystem').doc('menu-v1').get();return saved.exists?d.validateMenu(saved.data().menu):menu;}
 function endpoint(fn,max=7100000){return async(req,res)=>{
  res.set('Cache-Control','no-store');if(req.method!=='POST')return res.status(405).json({ok:false,error:'POST required'});
  if(!origins.includes(req.get('origin')))return res.status(403).json({ok:false,error:'Origin not allowed'});
@@ -28,10 +29,10 @@ async function throttle(ip,kind){const r=db.collection('sgOrderRateLimits').doc(
 exports.orderApi=onRequest(options,endpoint(async(req,res)=>{
  const user=await signedUser(req),b=req.body;d.identity(b);
  const setup=await db.collection('sgSystem').doc('prepaid-v1').get();if(!setup.exists||setup.data().ready!==true)throw d.error(503,'Checkout update in progress. Please return shortly; do not send payment yet.');d.check(['quote','order','payment','receipt'].includes(b.action),'Invalid action');await throttle(req.ip||'unknown',b.action);
- if(b.action==='quote'){const order=d.order(b,menu);if(new Date(order.date+'T'+order.time+':00+08:00').getTime()<Date.now()-5*60000)throw d.error(400,'Choose a future date and time');return res.json({ok:true,order});}
+ if(b.action==='quote'){const order=d.order(b,await activeMenu());if(new Date(order.date+'T'+order.time+':00+08:00').getTime()<Date.now()-5*60000)throw d.error(400,'Choose a future date and time');return res.json({ok:true,order});}
  const ref=db.collection('sgOrders').doc(b.requestId),cap=db.collection('sgOrderCapabilities').doc(b.requestId),keyHash=hash(b.receiptKey);
  if(b.action==='order'){
-  const order={...d.order(b,menu),...d.payment({...b,paymentMobile:b.paymentMobile||b.mobile})},fingerprint=hash(JSON.stringify(order)),orderId='SG-'+b.requestId;
+  const order={...d.order(b,await activeMenu()),...d.payment({...b,paymentMobile:b.paymentMobile||b.mobile})},fingerprint=hash(JSON.stringify(order)),orderId='SG-'+b.requestId;
   const claim=db.collection('sgPaymentReferences').doc(hash(order.submittedPaymentReference));
   await db.runTransaction(async t=>{const [s,c]=await Promise.all([t.get(ref),t.get(cap)]);if(s.exists){if(s.data().customerUid!==user.uid||!c.exists||c.data().keyHash!==keyHash||c.data().fingerprint!==fingerprint)throw d.error(409,'Reference already used. Contact Stone Grill.');return;}
    const used=await t.get(claim);if(used.exists)throw d.error(409,'This payment reference has already been submitted. Check My Orders or contact Stone Grill; do not pay again.');
@@ -54,6 +55,14 @@ exports.orderApi=onRequest(options,endpoint(async(req,res)=>{
   t.create(db.collection('sgStaffAlerts').doc('payment-'+b.requestId),{kind:'payment',requestId:b.requestId,createdAt:now,notificationStatus:'pending'});
  });res.json({ok:true});
 }));
+
+exports.menuApi=onRequest(options,async(req,res)=>{
+ res.set('Cache-Control','no-store');
+ if(req.method!=='GET')return res.status(405).json({ok:false,error:'GET required'});
+ if(!origins.includes(req.get('origin')))return res.status(403).json({ok:false,error:'Origin not allowed'});
+ try{return res.json({ok:true,menu:await activeMenu()});}
+ catch{return res.status(503).json({ok:false,error:'Menu temporarily unavailable'});}
+});
 
 async function signedUser(req){
  const bearer=req.get('authorization')||'';
@@ -103,6 +112,15 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
 },20000));
 exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId]},endpoint(async(req,res)=>{
  const user=await operator(req),b=req.body;
+ if(['getMenu','saveMenu'].includes(b.action)){
+  if(!['owner','admin'].includes(user.role))throw d.error(403,'Owner or admin access required');
+  const ref=db.collection('sgSystem').doc('menu-v1');
+  if(b.action==='getMenu')return res.json({ok:true,menu:await activeMenu()});
+  const next=d.validateMenu(b.menu),now=Timestamp.now();
+  await db.runTransaction(async t=>{const old=await t.get(ref);t.set(ref,{menu:next,updatedAt:now,updatedBy:user.uid},{merge:true});t.create(db.collection('sgMenuAudit').doc(randomUUID()),{actorUid:user.uid,actorEmail:user.email,at:now,previous:old.exists?old.data().menu:menu,next});});
+  return res.json({ok:true,menu:next,message:'Menu prices saved. New prices are live for new orders.'});
+ }
+
  if(b.action==='setRole'){
   const patch=d.roleChange(user.uid,b.uid,b.role,OWNER_UID);
   const target=db.collection('sgCustomers').doc(b.uid);
