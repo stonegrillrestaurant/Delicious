@@ -15,3 +15,5 @@ globalThis.SG_STAFF_CONFIG = {
 };
 
 globalThis.SG_CUSTOMER_API = "https://asia-southeast1-stone-grill-app.cloudfunctions.net/customerApi";
+
+globalThis.SG_MENU_API = "https://asia-southeast1-stone-grill-app.cloudfunctions.net/menuApi";
