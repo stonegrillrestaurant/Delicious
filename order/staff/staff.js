@@ -93,7 +93,8 @@ function historyQuery(after){
 }
 function listenHistory(){
  stopHistory?.();stopHistory=null;const rev=++listRevision;historyOlder=[];historyRows=[];historyCursor=null;loadingOrders=true;$('moreHistory').hidden=true;render();
- if(!history||!/^\d{4}-\d{2}-\d{2}$/.test($('historyDate').value))return;
+ const selectedDate=$('historyDate').value;
+ if(!history||(selectedDate&&!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)))return;
  stopHistory=f.onSnapshot(historyQuery(),s=>{if(rev!==listRevision||!history)return;loadingOrders=false;const next=s.docs.map(d=>({id:d.id,...d.data()}));if(!historyOlder.length){historyCursor=s.docs.at(-1);$('moreHistory').hidden=s.size<100;}historyRows=[...new Map([...historyOlder,...next].map(o=>[o.id,o])).values()];render();if(selected&&!stopAudit&&historyRows.some(o=>o.id===selected))select(selected);},()=>{loadingOrders=false;notice('Could not load orders history for this date. Check your connection and staff access.');render();});
 }
 function listen(){stopOrders?.();let known=new Set(),first=true;
