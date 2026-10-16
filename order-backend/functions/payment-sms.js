@@ -5,7 +5,8 @@ const phoneIsValid=phone=>/^\+639\d{9}$/.test(String(phone||''));
 const paymentWasJustVerified=(before,after)=>before?.paymentStatus!=='verified'&&after?.paymentStatus==='verified';
 function confirmationMessage(order,requestId){
  const id=String(order.orderId||`SG-${requestId}`).slice(0,48);
- return `Stone Grill: Payment received and successfully verified for order ${id}. Check My Orders for updates. Thank you!`;
+ if(order.status==='preparing')return `Stone Grill: Payment received and verified for order ${id}. We are starting to prepare your order now. Follow its progress in My Orders.`;
+ return `Stone Grill: Payment received and verified for order ${id}. We are confirming your table before we start cooking. Follow its progress in My Orders.`;
 }
 
 function createPaymentSmsNotifier({db,apiKey,deviceId,Timestamp,fetchImpl=global.fetch}){
