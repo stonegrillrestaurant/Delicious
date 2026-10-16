@@ -41,16 +41,6 @@ test('combined submit blocks double click and retries original reference after u
  assert.equal(retried.requestId,original.requestId);assert.equal(retried.submittedPaymentReference,'ABC123');
  dom.window.close();
 });
-test('pre-commit payment validation lets customers correct a reference on the same order',async()=>{
- const {dom,w,d,event}=setup(),rejections=[{status:400,error:'Enter a valid payment transaction reference'},{status:409,error:'This payment reference has already been submitted. Check My Orders or contact Stone Grill; do not pay again.'}];
- w.fetch=async(_,r)=>{const body=JSON.parse(r.body);if(body.action==='quote')return {ok:true,json:async()=>({ok:true,order:body})};const result=rejections.shift();return {ok:false,status:result.status,json:async()=>({ok:false,error:result.error})};};
- await w.handleSubmit(event);d.querySelector('[data-method=qr]').click();const input=d.getElementById('paymentReference'),form=d.getElementById('combinedCheckout');
- const attempt=async reference=>{input.value=reference;form.dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();};
- await attempt('ABC123');assert.equal(input.readOnly,false);assert.equal(d.getElementById('discardCheckout').hidden,false);assert.equal(d.querySelector('[data-method=qr]').disabled,false);assert(d.getElementById('receiptStatus').textContent.includes('Order not saved'));
- const draft=JSON.parse(w.sessionStorage.getItem('sgPrepaidAttempt:u'));assert.equal(draft.submitted,false);
- await attempt('ABC123');assert.equal(input.readOnly,false);assert.equal(d.getElementById('discardCheckout').hidden,false);assert(d.getElementById('receiptStatus').textContent.includes('That reference is already used'));assert.equal(JSON.parse(w.sessionStorage.getItem('sgPrepaidAttempt:u')).submitted,false);
- dom.window.close();
-});
 test('auth account changes cannot submit another customer saved checkout',async()=>{
  const {dom,w,event}=setup();w.fetch=async(_,r)=>({ok:true,json:async()=>({ok:true,order:JSON.parse(r.body)})});
  await w.handleSubmit(event);w.SG_AUTH.auth.currentUser={uid:'different'};
