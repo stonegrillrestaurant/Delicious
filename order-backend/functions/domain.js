@@ -19,7 +19,7 @@ function order(b,menu){
 function validateMenu(menu){
  check(menu&&typeof menu==='object'&&Array.isArray(menu.categories)&&menu.categories.length>0&&menu.categories.length<=40&&menu.data&&typeof menu.data==='object'&&!Array.isArray(menu.data),'Invalid menu');
  const ids=new Set(),names=new Set();
- for(const c of menu.categories){check(c&&typeof c.id==='string'&&/^[a-z0-9_-]{1,40}$/.test(c.id)&&!ids.has(c.id),'Invalid or duplicate category');check(typeof c.label==='string'&&c.label.trim().length<=80&&typeof (c.emoji||'')==='string','Invalid category details');ids.add(c.id);}
+ for(const c of menu.categories){check(c&&typeof c.id==='string'&&/^[A-Za-z0-9_-]{1,40}$/.test(c.id)&&!ids.has(c.id),'Invalid or duplicate category');check(typeof c.label==='string'&&c.label.trim().length<=80&&typeof (c.emoji||'')==='string','Invalid category details');ids.add(c.id);}
  check(Object.keys(menu.data).every(id=>ids.has(id)),'Menu data has an unknown category');let count=0;
  for(const id of ids){const items=menu.data[id]||[];check(Array.isArray(items),'Invalid category items');for(const item of items){count++;check(count<=500&&item&&typeof item.name==='string'&&item.name.trim().length>0&&item.name.trim().length<=120&&!names.has(item.name.trim().toLowerCase()),'Invalid or duplicate menu item');check(Number.isSafeInteger(Number(item.price))&&Number(item.price)>=0&&Number(item.price)<=1000000,'Price must be a whole number from 0 to 1,000,000');names.add(item.name.trim().toLowerCase());}}
  return {categories:menu.categories.map(c=>({id:c.id,label:c.label.trim(),emoji:(c.emoji||'').trim()})),data:Object.fromEntries([...ids].map(id=>[id,(menu.data[id]||[]).map(i=>({name:i.name.trim(),price:Number(i.price)}))]))};
