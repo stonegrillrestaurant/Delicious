@@ -36,7 +36,7 @@ function progress(o){
  const steps=[
   {title:'Order received',done:true,detail:'Your order is saved with Stone Grill.'},
   {title:'Payment confirmed',done:paid,detail:paid?(o.paymentMethod==='qr'?'QR payment confirmed':o.paymentMethod==='number'?'GCash number payment confirmed':'Payment confirmed'):o.submittedPaymentReference?'Awaiting verification of your payment':'Waiting for payment details'},
-  {title:'Finished cooking',done:cooked,detail:cooked?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='preparing'?'Kitchen is cooking your order':paid?(tablePending?'Waiting for table confirmation':'Waiting for the kitchen to prepare your food'):'Starts after payment confirmation'},
+  {title:cooked?'Finished cooking':'Processing order',done:cooked,detail:cooked?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='preparing'?'Kitchen is cooking your order':paid?(tablePending?'Waiting for table confirmation':'Waiting for the kitchen to prepare your food'):'Starts after payment confirmation'},
   {title:o.orderType==='Take-out'?'Ready for pickup':'Ready to serve',done:finished,detail:finished?'Transaction finished':o.status==='ready'?(o.orderType==='Take-out'?'Please collect your order at Stone Grill':'Your food is ready to serve'):'Waiting for pickup or serving'}
  ];
  const current=cancelled||finished?-1:!paid?1:!cooked?2:3;

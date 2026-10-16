@@ -4,12 +4,14 @@ The Firebase staff dashboard and backend are tracked in GitHub. The complete Fir
 
 ## Behavior
 
-- One shared active queue, oldest received first, with a total badge and Received / Acknowledged / Verified row indicators. Opening details marks an order seen; this is not payment verification.
-- Phones show either the queue or the selected order, with Back to orders. Desktop keeps the queue beside details. Payment reference, amount, customer contact and service are visible in details.
+- One shared active queue, latest orders first. Once paid, the queue emphasizes the customer, menu items, service type, requested ready time and guest count. Opening details marks an order seen; this is not payment verification.
+- Phones show either the queue or the selected order, with Back to orders. Desktop keeps the queue beside details. Payment method, reference, total and SMS status stay in an expandable transaction section.
 - Verify payment directly against the actual funds received. QR can be verified by owner, admin or cashier; GCash number is owner-only. Table acceptance is combined with verification for reservations. Cooking is optional; Mark ready and Finished (claimed / served) are separate actual milestones.
 - Completion or cancellation removes the order from the active queue and preserves history by Philippine received date. Authorized cancellation requires a reason. Cancellation does not issue a refund.
 - Owner-only Users & roles supports temporary admin assignments. Demotion clears the loaded roster and sign-in history. Server-side permissions remain authoritative on every action.
-- Device alert settings and team activity are expandable. Offline/cached state pauses mutations. A timed-out request asks staff to check the live result before retrying. Cancellation drafts survive live refreshes; backup print requests are guarded while running.
+- History shows past orders across dates by default, with name search, received-date filtering and newest/oldest sorting. Each row shows only the customer's name; opening it reveals the details.
+- Alert controls live in the header and are enabled on each staff device by its user. Offline/cached state pauses mutations. A timed-out request asks staff to check the live result before retrying. Cancellation drafts survive live refreshes; backup print requests are guarded while running.
+- Payment-confirmation SMS stays isolated in its own Firestore trigger. The transaction section distinguishes queued, sent, delivered and failed; reviewers can refresh TextBee delivery status without changing the order.
 - Notification order links survive initial loading and open the matching details. Alert sounds repeat for unseen orders until opened by the team.
 
 ## Checks
@@ -32,7 +34,7 @@ npm ci
 npm test
 ```
 
-The automated tests cover payment permissions and preparation gates, reference uniqueness, role revocation, oldest-first shared queue, history boundaries, cancellation drafts, notification links and mobile navigation. Browser checks exercised queue, details, verify → ready → finish and owner roster at 320, 390, 768 and 1440 pixels with synthetic demo data. Real sign-in, GCash funds and device push still require the connected test site and actual devices; demo tests do not certify those services.
+The automated tests cover payment permissions and preparation gates, reference uniqueness, role revocation, latest-first queue, history date filtering and sorting, cancellation drafts, notification links and mobile navigation. Browser checks exercised queue, details, verify → ready → finish and owner roster at 320, 390, 768 and 1440 pixels with synthetic demo data. Real sign-in, GCash funds, TextBee delivery and device push still require the connected test site and actual devices; demo tests do not certify those services.
 
 ## Apply only these staff files to the existing test deployment
 

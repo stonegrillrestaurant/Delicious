@@ -118,6 +118,24 @@ exports.staffApi=onRequest(options,endpoint(async(req,res)=>{
   if(b.action==='registerDevice')await ref.set({uid:user.uid,token:b.token,updatedAt:Timestamp.now()});
   else await db.runTransaction(async t=>{const s=await t.get(ref);if(s.exists&&s.data().uid===user.uid)t.delete(ref);});return res.json({ok:true});
  }
+ if(b.action==='checkSmsDelivery'){
+  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
+  if(!['owner','admin','cashier'].includes(user.role))throw d.error(403,'Payment reviewers only');
+  const orderRef=db.collection('sgOrders').doc(b.requestId),orderSnap=await orderRef.get();
+  if(!orderSnap.exists)throw d.error(404,'Order not found');
+  const order=orderSnap.data();if(order.paymentStatus!=='verified')throw d.error(409,'Verify payment before checking its confirmation SMS');
+  if(!order.smsConfirmationBatchId)return res.json({ok:true,sms:{smsConfirmationStatus:order.smsConfirmationStatus||'not_sent',smsConfirmationError:order.smsConfirmationError||''},message:'TextBee did not return a message batch. Check the SMS error shown in this order.'});
+  let deviceId,key;try{deviceId=textBeeDeviceId.value();key=textBeeApiKey.value();}catch{throw d.error(503,'TextBee credentials are not set in Firebase Secret Manager.');}
+  const batchId=order.smsConfirmationBatchId,statusResponse=await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${encodeURIComponent(deviceId)}/sms-batch/${encodeURIComponent(batchId)}`,{headers:{'x-api-key':key}});
+  let statusBody={};try{statusBody=await statusResponse.json();}catch{}
+  if(!statusResponse.ok){const reason=String(statusBody?.message||statusBody?.error||statusBody?.data?.message||`TextBee returned HTTP ${statusResponse.status}`).replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').slice(0,220);throw d.error(502,`Could not check TextBee delivery: ${reason}`);}
+  const payload=statusBody.data||{},batch=payload.batch||payload,messages=Array.isArray(payload.messages)?payload.messages:Array.isArray(batch.messages)?batch.messages:[];
+  const message=messages.find(item=>item.recipient===order.mobile)||messages[0]||{},raw=String(message.status||batch.status||'pending').toLowerCase();
+  const delivery=raw==='delivered'||Number(batch.deliveredCount)>0?'delivered':raw==='sent'||Number(batch.sentCount)>0?'sent':raw==='failed'||raw==='partial_success'||Number(batch.failureCount)>0?'failed':'pending';
+  const sms={smsDeliveryStatus:delivery,smsDeliveryCheckedAt:Timestamp.now(),...(message.errorCode||message.failureCode?{smsDeliveryErrorCode:String(message.errorCode||message.failureCode).slice(0,60)}:{}),...(message.errorMessage||message.failureMessage?{smsDeliveryError:String(message.errorMessage||message.failureMessage).replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').slice(0,220)}:{})};
+  await orderRef.update(sms);
+  return res.json({ok:true,sms,message:delivery==='delivered'?'TextBee reports delivery to the customer phone.':delivery==='sent'?'TextBee reports sent to the carrier; delivery confirmation is not available.':delivery==='failed'?'TextBee reports a delivery failure. Check the reason shown in the transaction details.':'TextBee still has this SMS pending.'});
+ }
  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');const ref=db.collection('sgOrders').doc(b.requestId);
  if(b.action==='receiptFile'){
   d.check(/^[a-f0-9]{64}$/.test(b.receiptId||''),'Invalid receipt');if(!['owner','cashier'].includes(user.role))throw d.error(403,'Payment reviewers only');const s=await ref.collection('receipts').doc(b.receiptId).get();if(!s.exists)throw d.error(404,'Receipt not found');
