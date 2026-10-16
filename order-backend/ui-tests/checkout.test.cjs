@@ -46,7 +46,7 @@ test('pre-commit payment validation lets customers correct a reference on the sa
  w.fetch=async(_,r)=>{const body=JSON.parse(r.body);if(body.action==='quote')return {ok:true,json:async()=>({ok:true,order:body})};const result=rejections.shift();return {ok:false,status:result.status,json:async()=>({ok:false,error:result.error})};};
  await w.handleSubmit(event);d.querySelector('[data-method=qr]').click();const input=d.getElementById('paymentReference'),form=d.getElementById('combinedCheckout');
  const attempt=async reference=>{input.value=reference;form.dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();};
- await attempt('AB');assert.equal(input.readOnly,false);assert.equal(d.getElementById('discardCheckout').hidden,false);assert.equal(d.querySelector('[data-method=qr]').disabled,false);assert(d.getElementById('receiptStatus').textContent.includes('Order not saved'));
+ await attempt('ABC123');assert.equal(input.readOnly,false);assert.equal(d.getElementById('discardCheckout').hidden,false);assert.equal(d.querySelector('[data-method=qr]').disabled,false);assert(d.getElementById('receiptStatus').textContent.includes('Order not saved'));
  const draft=JSON.parse(w.sessionStorage.getItem('sgPrepaidAttempt:u'));assert.equal(draft.submitted,false);
  await attempt('ABC123');assert.equal(input.readOnly,false);assert.equal(d.getElementById('discardCheckout').hidden,false);assert(d.getElementById('receiptStatus').textContent.includes('That reference is already used'));assert.equal(JSON.parse(w.sessionStorage.getItem('sgPrepaidAttempt:u')).submitted,false);
  dom.window.close();
