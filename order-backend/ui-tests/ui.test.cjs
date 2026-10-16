@@ -3,6 +3,7 @@ const root=path.resolve(__dirname,'../public');
 test('Google sign-in asks which account to use in customer and staff flows',()=>{
  const cases=[['order/customer-auth.js',"setCustomParameters({prompt:'select_account'})"],['order/staff/staff.js',"setCustomParameters({prompt:'select_account'})"]];
  for(const [file,expected] of cases){const source=fs.readFileSync(path.resolve(__dirname,'../../',file),'utf8');assert(source.includes(expected),file+' must request the Google account chooser');}
+ const staff=fs.readFileSync(path.resolve(__dirname,'../../','order/staff/staff.js'),'utf8');assert(staff.includes("$('googleLogin').hidden=!!u"),'hide Google sign-in while a staff account is signed in');assert(staff.includes('if(!auth||auth.currentUser||button.disabled)return;'),'ignore repeated sign-in clicks');assert(staff.includes("button.disabled=true;button.textContent='Signing in…'"),'disable Google sign-in while authentication is pending');
  for(const file of ['order/customer-bar.js','order/account/account.js']){const source=fs.readFileSync(path.resolve(__dirname,'../../',file),'utf8');assert(source.includes('customer-auth.js?v=accountchooser1'),file+' must load the chooser-enabled auth module');}
 });
 test('quarter-hour order time suggestions remain manually editable and the ordering page keeps its Stone Grill mark',()=>{
