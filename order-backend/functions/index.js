@@ -101,7 +101,7 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
   if(changed)t.set(ref.collection('signIns').doc(String(authTime)),{at:now,provider:user.firebase?.sign_in_provider||'unknown'});
  });res.json({ok:true});
 },20000));
-exports.staffApi=onRequest(options,endpoint(async(req,res)=>{
+exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId]},endpoint(async(req,res)=>{
  const user=await operator(req),b=req.body;
  if(b.action==='setRole'){
   const patch=d.roleChange(user.uid,b.uid,b.role,OWNER_UID);
@@ -117,6 +117,40 @@ exports.staffApi=onRequest(options,endpoint(async(req,res)=>{
   d.check(typeof b.token==='string'&&b.token.length>=20&&b.token.length<=4096,'Invalid device');const ref=db.collection('sgPushDevices').doc(hash(b.token));
   if(b.action==='registerDevice')await ref.set({uid:user.uid,token:b.token,updatedAt:Timestamp.now()});
   else await db.runTransaction(async t=>{const s=await t.get(ref);if(s.exists&&s.data().uid===user.uid)t.delete(ref);});return res.json({ok:true});
+ }
+ if(b.action==='retrySmsConfirmation'){
+  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
+  if(!['owner','admin','cashier'].includes(user.role))throw d.error(403,'Payment reviewers only');
+  const orderRef=db.collection('sgOrders').doc(b.requestId);
+  const order=await db.runTransaction(async t=>{
+   const current=await t.get(orderRef);
+   if(!current.exists)throw d.error(404,'Order not found');
+   const saved=current.data();
+   if(saved.paymentStatus!=='verified')throw d.error(409,'Verify payment before resending its confirmation SMS');
+   if(saved.smsConfirmationStatus==='retrying')throw d.error(409,'An SMS retry is already in progress');
+   if(saved.smsConfirmationStatus!=='failed'&&saved.smsDeliveryStatus!=='failed')throw d.error(409,'Only a failed confirmation SMS can be resent');
+   if(!require('./payment-sms').phoneIsValid(saved.mobile))throw d.error(400,'Customer mobile must be in +639xxxxxxxxx format');
+   t.update(orderRef,{smsConfirmationStatus:'retrying',smsConfirmationUpdatedAt:Timestamp.now()});
+   return saved;
+  });
+  let key,deviceId;try{key=textBeeApiKey.value();deviceId=textBeeDeviceId.value();}catch{await orderRef.update({smsConfirmationStatus:'failed',smsConfirmationError:'TextBee credentials are not set in Firebase Secret Manager.',smsConfirmationUpdatedAt:Timestamp.now()});throw d.error(503,'TextBee credentials are not set in Firebase Secret Manager.');}
+  try{
+   const response=await fetch('https://api.textbee.dev/api/v1/gateway/send-sms',{method:'POST',headers:{'content-type':'application/json','x-api-key':key},body:JSON.stringify({deviceId,recipients:[order.mobile],message:require('./payment-sms').confirmationMessage(order,b.requestId)})});
+   let body={};try{body=await response.json();}catch{}
+   if(!response.ok||body?.data?.success!==true){
+    const reason=require('./payment-sms').safeProviderMessage(body);
+    const failureCode='textbee_'+(response.status||'error');
+    await orderRef.update({smsConfirmationStatus:'failed',smsDeliveryStatus:'failed',smsConfirmationFailureCode:failureCode,smsConfirmationError:reason,smsDeliveryError:reason,smsConfirmationUpdatedAt:Timestamp.now()});
+    throw d.error(502,'TextBee could not queue the retry: '+reason);
+   }
+   const sms={smsConfirmationStatus:'queued',smsConfirmationBatchId:String(body.data.smsBatchId||'').slice(0,100),smsDeliveryStatus:'pending',smsConfirmationError:'',smsConfirmationFailureCode:'',smsDeliveryError:'',smsDeliveryErrorCode:'',smsConfirmationUpdatedAt:Timestamp.now()};
+   await orderRef.update(sms);
+   return res.json({ok:true,sms,message:'TextBee accepted the SMS retry. Check delivery status shortly.'});
+  }catch(error){
+   if(error.status)throw error;
+   await orderRef.update({smsConfirmationStatus:'failed',smsDeliveryStatus:'failed',smsConfirmationFailureCode:'gateway_unavailable',smsConfirmationError:'TextBee could not be reached. Check the gateway phone signal and internet connection.',smsDeliveryError:'TextBee could not be reached. Check the gateway phone signal and internet connection.',smsConfirmationUpdatedAt:Timestamp.now()});
+   throw d.error(502,'TextBee could not be reached. Check the gateway phone signal and internet connection.');
+  }
  }
  if(b.action==='checkSmsDelivery'){
   d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
