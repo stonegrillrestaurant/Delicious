@@ -57,9 +57,9 @@ function orderCard(o,archived=false){
   <header class="order-head"><div class="order-identity"><small>ORDER ${esc(o.orderId||'')}</small><h3>${esc(type)} order</h3><span class="order-date">${esc(o.date)} · ${esc(o.time)}</span></div><div class="order-total"><span class="amount-label">TOTAL</span><strong class="order-amount">${money(o.subtotal)}</strong></div></header>
   <section class="order-menu" aria-label="Menu in this order"><h4>Items in this order</h4><ul>${items||'<li><span>Items unavailable</span></li>'}</ul></section>
   <section class="order-status ${['ready','preparing'].includes(o.status)?o.status:['completed','cancelled'].includes(o.status)?'closed':''}" aria-label="Order status and progress">
-   <div class="status-heading"><div><small>${archived?'FINAL STATUS':'CURRENT STATUS'}</small><strong>${esc(status(o))}</strong><p>${esc(statusHelp(o))}</p></div>${needsPayment?'<a class="button pay-order-button" href="../?pay='+esc(o.id)+'">Continue payment</a>':''}</div>
+   <div class="status-heading"><div><small>${archived?'FINAL STATUS':'CURRENT STATUS'}</small><strong>${esc(status(o))}</strong><p>${esc(statusHelp(o))}</p></div>${needsPayment?'<a class="button pay-order-button" href="../?pay='+esc(o.id)+'">Continue payment</a>':''}${o.status==='ready'&&!archived?'<button type="button" class="received-button" data-confirm-received="'+esc(o.id)+'">I received my order</button>':''}</div>
    ${progress(o)}
-   
+   ${o.status==='ready'&&!archived?'<small class="received-hint">Tap after your food is handed to you.</small>':''}
   </section>
   <div class="order-footer">${details}</div>
  </article>`;
@@ -100,3 +100,13 @@ a.onAuthStateChanged(auth,async user=>{
 });
 $('profile').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{await api(globalThis.SG_CUSTOMER_API,{action:'saveProfile',name:$('name').value,mobile:$('mobile').value});notice('Profile saved.');}catch(e){notice(e.message);}finally{b.disabled=false;}};
 $('signOut').onclick=()=>a.signOut(auth);
+
+$('orders').addEventListener('click',async e=>{
+ const button=e.target.closest('[data-confirm-received]');if(!button||button.disabled)return;
+ const order=live.find(o=>o.id===button.dataset.confirmReceived);
+ if(!order||order.status!=='ready'){notice('Your order must be marked ready before you can confirm receipt.');return;}
+ button.disabled=true;
+ try{await api(globalThis.SG_CUSTOMER_API,{action:'confirmReceived',requestId:order.id});notice('Thank you. Your order is now in Order history.');}
+ catch(error){notice(error.message||'Could not update this order. Please try again.');}
+ finally{button.disabled=false;}
+});

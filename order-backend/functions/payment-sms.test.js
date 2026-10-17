@@ -29,27 +29,33 @@ test('only a transition into verified payment triggers the confirmation',()=>{
  assert.equal(paymentWasJustVerified({paymentStatus:'verified'},{paymentStatus:'verified'}),false);
  assert.equal(paymentWasJustVerified({paymentStatus:'pending_verification'},{paymentStatus:'pending_verification'}),false);
 });
-test('message confirms payment and says cooking is starting for a preparing order',()=>{
- const message=confirmationMessage({orderId:'SG-123',status:'preparing'},'x');
- assert.match(message,/payment received and verified/i);
- assert.match(message,/starting to prepare your order now/i);
- assert.match(confirmationMessage({},'x'),/SG-x/);
+test('message greets the customer by name and omits internal order references',()=>{
+ const message=confirmationMessage({name:'Jamie Santos',orderId:'SG-123',status:'preparing'},'private-request-123');
+ assert.match(message,/^Hi Jamie,/);
+ assert.match(message,/payment/i);
+ assert.match(message,/getting your order ready now/i);
+ assert.match(message,/My Orders/);
+ assert.doesNotMatch(message,/SG-123|private-request-123/);
+ assert.match(confirmationMessage({status:'preparing'},'private-request-456'),/^Hi there,/);
 });
 test('message waits for table confirmation before promising cooking',()=>{
- const message=confirmationMessage({orderId:'SG-124',status:'acknowledged',orderType:'Reservation'},'x');
+ const message=confirmationMessage({name:'Jamie Santos',orderId:'SG-124',status:'acknowledged',orderType:'Reservation'},'private-request-124');
+ assert.match(message,/^Hi Jamie,/);
  assert.match(message,/confirming your table before we start cooking/i);
+ assert.doesNotMatch(message,/SG-124|private-request-124/);
 });
 test('provider diagnostics are bounded and remove control characters',()=>{
  assert.equal(safeProviderMessage({error:'Gateway is offline\nretry later'}),'Gateway is offline retry later');
  assert.equal(safeProviderMessage({message:'x'.repeat(300)}).length,220);
 });
 test('queues one SMS to the saved customer mobile and records TextBee batch ID',async()=>{
- const db=fakeDb(),before={paymentStatus:'pending_verification'},after={paymentStatus:'verified',mobile:'+639178366126',orderId:'SG-TEST'};
+ const db=fakeDb(),before={paymentStatus:'pending_verification'},after={paymentStatus:'verified',name:'Sam Cruz',mobile:'+639178366126',orderId:'SG-TEST'};
  const e=event(db,before,after),calls=[];
  const notify=createPaymentSmsNotifier({db,apiKey:()=> 'server-secret',deviceId:'device-id',Timestamp:{now:()=>new Date(0)},fetchImpl:async(url,options)=>{calls.push({url,options});return {ok:true,status:200,json:async()=>({data:{success:true,smsBatchId:'batch-1'}})};}});
  await notify(e);await notify(e);
  assert.equal(calls.length,1);
  assert.deepEqual(JSON.parse(calls[0].options.body).recipients,['+639178366126']);
+ const message=JSON.parse(calls[0].options.body).message;assert.match(message,/^Hi Sam,/);assert.doesNotMatch(message,/SG-TEST|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/);
  assert.equal(calls[0].options.headers['x-api-key'],'server-secret');
  assert.equal(db.data.get(`sgPaymentSms/${e.params.requestId}`).status,'queued');
  assert.equal(db.data.get(`sgOrders/${e.params.requestId}`).smsConfirmationStatus,'queued');

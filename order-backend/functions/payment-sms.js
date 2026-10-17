@@ -4,10 +4,10 @@ const API_URL='https://api.textbee.dev/api/v1/gateway/send-sms';
 const phoneIsValid=phone=>/^\+639\d{9}$/.test(String(phone||''));
 const paymentWasJustVerified=(before,after)=>before?.paymentStatus!=='verified'&&after?.paymentStatus==='verified';
 const safeProviderMessage=body=>String(body?.message||body?.error||body?.data?.message||'TextBee rejected the send request.').replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').slice(0,220);
-function confirmationMessage(order,requestId){
- const id=String(order.orderId||`SG-${requestId}`).slice(0,48);
- if(order.status==='preparing')return `Stone Grill: Payment received and verified for order ${id}. We are starting to prepare your order now. Follow its progress in My Orders.`;
- return `Stone Grill: Payment received and verified for order ${id}. We are confirming your table before we start cooking. Follow its progress in My Orders.`;
+function confirmationMessage(order){
+ const firstName=String(order?.name||'').trim().split(/\s+/)[0]||'there';
+ if(order?.status==='preparing')return `Hi ${firstName}, Stone Grill has confirmed your payment. We’re getting your order ready now. Follow its progress in My Orders. Thank you!`;
+ return `Hi ${firstName}, Stone Grill has confirmed your payment. We’re confirming your table before we start cooking. Follow its progress in My Orders. Thank you!`;
 }
 
 function createPaymentSmsNotifier({db,apiKey,deviceId,Timestamp,fetchImpl=global.fetch}){
@@ -35,7 +35,7 @@ function createPaymentSmsNotifier({db,apiKey,deviceId,Timestamp,fetchImpl=global
    await finish('failed',{failureCode:'invalid_mobile',failureMessage:'Customer mobile must be stored in +639xxxxxxxxx format.'});return;
   }
   try{
-   const response=await fetchImpl(API_URL,{method:'POST',headers:{'content-type':'application/json','x-api-key':apiKey()},body:JSON.stringify({deviceId:typeof deviceId==='function'?deviceId():deviceId,recipients:[order.mobile],message:confirmationMessage(order,requestId)})});
+   const response=await fetchImpl(API_URL,{method:'POST',headers:{'content-type':'application/json','x-api-key':apiKey()},body:JSON.stringify({deviceId:typeof deviceId==='function'?deviceId():deviceId,recipients:[order.mobile],message:confirmationMessage(order)})});
    let body={};try{body=await response.json();}catch{}
    if(!response.ok||body?.data?.success!==true){
     await finish('failed',{failureCode:`textbee_${response.status||'error'}`,failureMessage:safeProviderMessage(body)});
