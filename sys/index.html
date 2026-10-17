@@ -123,6 +123,19 @@
             return s;
         };
 
+        // Count each employee/date once. Duplicate punches or repeated imports must not
+        // turn one calendar day into multiple paid days.
+        const summarizeAttendanceDays = (rows) => {
+            const byDate = new Map();
+            rows.forEach(row => {
+                const date = cleanDate(row.date);
+                if (!date) return;
+                const dayEquivalent = Math.min(Math.max(Number(row.dayEquivalent) || 0, 0), 1);
+                byDate.set(date, Math.max(byDate.get(date) || 0, dayEquivalent));
+            });
+            return Array.from(byDate, ([date, dayEquivalent]) => ({ date, dayEquivalent }));
+        };
+
         const getMonthKey = (date) => {
             if (!date) return '';
             const parsed = new Date(date);
@@ -752,33 +765,37 @@
             const payrollSummary = useMemo(() => {
                 return employees.map(emp => {
                     const empAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(cleanDate(a.date)) === selectedMonth);
-                    let days = 0; 
-                    const uniqueDates = new Set(empAtt.map(a => cleanDate(a.date)));
-                    uniqueDates.forEach(date => days += Math.min(Math.max(...empAtt.filter(a => cleanDate(a.date) === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
+                    const days = summarizeAttendanceDays(empAtt).reduce((sum, day) => sum + day.dayEquivalent, 0);
                     
                     const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === selectedMonth);
                     const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
                     
                     const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id));
-                    let lifetimeDays = 0; 
-                    const uniqueLifetimeDates = new Set(lifetimeAtt.map(a => cleanDate(a.date)));
-                    uniqueLifetimeDates.forEach(date => lifetimeDays += Math.min(Math.max(...lifetimeAtt.filter(a => cleanDate(a.date) === date).map(r => parseFloat(r.dayEquivalent) || 0)), 1));
+                    const lifetimeDaysByDate = summarizeAttendanceDays(lifetimeAtt);
+                    const lifetimeDays = lifetimeDaysByDate.reduce((sum, day) => sum + day.dayEquivalent, 0);
+                    const lifetimeGross = lifetimeDaysByDate.reduce((sum, day) => sum + day.dayEquivalent * salaryRateForDate(emp, day.date), 0);
 
-                    const lifetimeBonuses = interactivePayrolls
-                        .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
-                        .reduce((sum, p) => sum + (parseFloat(p.data?.bonus) || 0), 0);
+                    const employeePayrolls = interactivePayrolls.filter(p => normalizeId(p.empId) === normalizeId(emp.id));
+                    const lifetimePayrollAdjustments = employeePayrolls.reduce((totals, p) => {
+                        const data = p.data || {};
+                        const ledger = Array.isArray(data.ledger) ? data.ledger : [];
+                        const ledgerCredits = ledger.reduce((sum, entry) => sum + Math.max(0, Number(entry.amount) || 0), 0);
+                        const ledgerDebits = ledger.reduce((sum, entry) => sum + Math.max(0, -(Number(entry.amount) || 0)), 0);
+                        totals.credits += (Number(data.bonus) || 0) + ledgerCredits;
+                        totals.deductions += (Number(data.deduction) || 0) + (Number(data.sss) || 0) + (Number(data.misc_deductions) || 0) + ledgerDebits;
+                        totals.disbursed += Number(data.salary_pay) || 0;
+                        return totals;
+                    }, { credits: 0, deductions: 0, disbursed: 0 });
 
-                    const lifetimeGross = lifetimeAtt.reduce((sum, a) => sum + Math.min(Math.max(Number(a.dayEquivalent)||0,0),1)*salaryRateForDate(emp,cleanDate(a.date)),0) + lifetimeBonuses;
-
-                    const totalCashReceived = cashAdvances
+                    // Cash advances are signed: advances reduce the balance; repayments increase it.
+                    const netCashAdvances = cashAdvances
                         .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
-                        .reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
-                        
-                    const totalSalaryDisbursed = interactivePayrolls
-                        .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
-                        .reduce((sum, p) => sum + (parseFloat(p.data?.salary_pay) || 0), 0);
+                        .reduce((sum, ca) => sum + (Number(ca.amount) || 0), 0);
 
-                    const lifetimeCaBalance = lifetimeGross - totalCashReceived - totalSalaryDisbursed;
+                    // This is cumulative across every month. Carryover is not added again because
+                    // it represents a prior month's balance, not new earnings.
+                    const lifetimeCaBalance = lifetimeGross + lifetimePayrollAdjustments.credits
+                        - lifetimePayrollAdjustments.deductions - netCashAdvances - lifetimePayrollAdjustments.disbursed;
 
                     const savedPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === selectedMonth || getMonthKey(p.startDate) === selectedMonth));
                     const bonusAmount = savedPayroll ? (parseFloat(savedPayroll.data?.bonus) || 0) : 0;
