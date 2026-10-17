@@ -2,6 +2,7 @@ import {showPrint} from './print.js';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',maximumFractionDigits:0}).format(n||0),date=t=>t?.toDate?t.toDate():new Date(t||Date.now()),when=t=>date(t).toLocaleString('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const canVerify=o=>(o.paymentMethod==='number'&&profile?.role==='owner')||(o.paymentMethod==='qr'&&['owner','admin','cashier'].includes(profile?.role));
+const canReviewPayment=o=>canVerify(o)||(profile?.role==='owner'&&!o.paymentMethod);
 const statusLabel=o=>o.status==='completed'?'Claimed / served':o.status==='ready'?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='preparing'?'Cooking':o.status==='cancelled'?'Cancelled':o.paymentStatus==='verified'?'Paid · waiting to cook':o.submittedPaymentReference?'Payment to verify':'Waiting for payment';
 const demo=new URLSearchParams(location.search).has('demo'),config=globalThis.SG_STAFF_CONFIG;
 let liveOrders=[],historyRows=[],stopHistory,listRevision=0;
@@ -40,6 +41,21 @@ function render(){
  const q=$('search').value.trim().toLowerCase(),sort=$('historySort').value;
  const visible=orders.filter(o=>(history?(closedOrder(o)||pastServiceDate(o)):!closedOrder(o)&&!pastServiceDate(o))&&(!history||historyDateMatches(o))).filter(o=>[o.name,o.mobile,o.customerEmail,o.orderId,o.submittedPaymentReference,...(o.items||[]).map(i=>i.name)].join(' ').toLowerCase().includes(q)).sort((a,b)=>(history&&sort==='asc'?1:-1)*(date(a.createdAt)-date(b.createdAt))||a.id.localeCompare(b.id));
  $('historyCount').textContent=visible.length+' shown · '+historyRows.length+' loaded';
+
+ const paymentReviews=history?[]:visible.filter(o=>!!o.submittedPaymentReference&&o.paymentStatus!=='verified'&&!closedOrder(o)&&canReviewPayment(o));
+ $('paymentReviewPanel').hidden=paymentReviews.length===0;
+ $('paymentReviewCount').textContent=String(paymentReviews.length);
+ const reviewCard=o=>{
+  const legacy=profile?.role==='owner'&&!o.paymentMethod;
+  const needsTable=['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed';
+  const method=o.paymentMethod==='qr'?'QR payment':o.paymentMethod==='number'?'GCash number':'Payment method not recorded';
+  const type=o.orderType==='Take-out'?'TAKEOUT':o.orderType==='Reservation'?'RESERVATION':'DINE IN';
+  const verifyLabel=needsTable?'Verify payment & accept table':'Verify payment';
+  const makeButton=(methodKey,label,primary)=>'<button class="'+(primary?'primary':'quiet')+'" data-review-action="verifyPayment" '+(methodKey?'data-review-method="'+methodKey+'" ':'')+'data-request-id="'+esc(o.id)+'" '+(!connected||busy?'disabled':'')+'>'+label+'</button>';
+  const actions=legacy?makeButton('qr','Verify QR',true)+makeButton('number','Verify GCash number',false):makeButton('',verifyLabel,true);
+  return '<article class="payment-review-card" data-payment-card-id="'+esc(o.id)+'"><div class="payment-review-header"><div><p class="eyebrow">PAYMENT NEEDS REVIEW</p><h3>'+esc(o.name)+'</h3></div><span class="payment-review-badge">VERIFY</span></div><div class="payment-review-facts"><div><span>Reference number</span><strong class="review-reference">'+esc(o.submittedPaymentReference)+'</strong></div><div><span>Payment method</span><strong>'+method+'</strong></div><div><span>Amount</span><strong>'+money(o.subtotal)+'</strong></div></div><div class="payment-review-footer"><span>'+type+' · '+esc(o.date===phDate(Date.now())?'today':o.date||'')+' at '+esc(o.time||'time not set')+'</span><div class="payment-review-actions"><button class="quiet" data-review-open="'+esc(o.id)+'" '+(busy?'disabled':'')+'>Open order</button>'+actions+'</div></div></article>';
+ };
+ $('paymentReview').innerHTML=paymentReviews.map(reviewCard).join('');
  const card=o=>history
   ?`<button class="order-card history-card ${selected===o.id?'selected':''}" data-id="${esc(o.id)}" aria-pressed="${selected===o.id}" aria-controls="detail"><span class="row"><strong class="customer-name">${esc(o.name)}</strong><span aria-hidden="true">›</span></span></button>`
   :`<button class="order-card queue-${o.paymentStatus==='verified'?(o.status==='preparing'?'preparing':o.status==='ready'?'ready':'verified'):teamState(o)} ${selected===o.id?'selected':''}" data-id="${esc(o.id)}" aria-pressed="${selected===o.id}" aria-controls="detail"><div class="row"><strong class="customer-name">${esc(o.name)}</strong><span class="badge ${o.paymentStatus==='verified'?esc(o.status==='preparing'?'preparing':o.status==='ready'?'ready':'queue-verified'):'queue-'+teamState(o)}">${o.paymentStatus==='verified'?esc(statusLabel(o)):stateName[teamState(o)]}</span></div><div class="queue-meta"><span class="queue-service">${esc(o.orderType==='Take-out'?'TAKEOUT':o.orderType==='Reservation'?'RESERVATION':'DINE IN')}</span><span>Ready ${esc(o.date===phDate(Date.now())?'today':o.date||'')} · ${esc(o.time||'time not set')}</span>${o.persons?`<span>${esc(o.persons)} people</span>`:''}</div><div class="queue-items">${(o.items||[]).map(i=>`<span>${esc(i.qty)}× ${esc(i.name)}</span>`).join(' · ')}</div></button>`;
