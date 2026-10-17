@@ -55,7 +55,7 @@ test('active orders keep the live tracker in the header and customer receipt mov
  assert(w.document.getElementById('activeOrderBanner').textContent.includes('CURRENT ORDER'));
  assert(w.document.getElementById('activeOrderBanner').textContent.includes('Order progress'));
  assert.equal(w.document.querySelectorAll('#orders .order').length,2);assert(w.document.querySelector('#orders .order-menu').textContent.includes('Rice'));
- assert.equal(w.document.querySelector('#orders .order-details').open,true);
+ assert.equal(w.document.querySelector('#orders .order-details').open,false);assert(w.document.querySelector('#orders .order-menu').textContent.includes('Rice'));
  assert.equal(w.document.querySelectorAll('[data-confirm-received]').length,1);
  const button=w.document.querySelector('[data-confirm-received]');button.click();await new Promise(r=>setTimeout(r,0));
  assert.equal(calls[0].action,'confirmReceived');assert.equal(calls[0].requestId,'ready-order');
