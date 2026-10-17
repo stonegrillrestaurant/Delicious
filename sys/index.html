@@ -136,6 +136,25 @@
             return Array.from(byDate, ([date, dayEquivalent]) => ({ date, dayEquivalent }));
         };
 
+        // Keep one authoritative payroll close per employee/month so legacy duplicate
+        // archive documents cannot double-count earnings, deductions, or disbursements.
+        const uniquePayrollPeriods = (rows) => {
+            const byMonth = new Map();
+            rows.forEach((row, index) => {
+                const month = row.month || getMonthKey(row.startDate) || getMonthKey(row.endDate);
+                if (!month) return;
+                const stampValue = row.updatedAt || row.savedAt || row.createdAt;
+                const stamp = Number(stampValue?.seconds) || Date.parse(stampValue || '') || 0;
+                const canonicalKey = row.recordKey || row.id;
+                const canonical = canonicalKey === `${normalizeId(row.empId)}_${month}` ? 1 : 0;
+                const prior = byMonth.get(month);
+                if (!prior || stamp > prior.stamp || (stamp === prior.stamp && canonical > prior.canonical) || (stamp === prior.stamp && canonical === prior.canonical && index > prior.index)) {
+                    byMonth.set(month, { row, stamp, canonical, index });
+                }
+            });
+            return Array.from(byMonth.values(), item => item.row);
+        };
+
         const getMonthKey = (date) => {
             if (!date) return '';
             const parsed = new Date(date);
@@ -775,7 +794,7 @@
                     const lifetimeDays = lifetimeDaysByDate.reduce((sum, day) => sum + day.dayEquivalent, 0);
                     const lifetimeGross = lifetimeDaysByDate.reduce((sum, day) => sum + day.dayEquivalent * salaryRateForDate(emp, day.date), 0);
 
-                    const employeePayrolls = interactivePayrolls.filter(p => normalizeId(p.empId) === normalizeId(emp.id));
+                    const employeePayrolls = uniquePayrollPeriods(interactivePayrolls.filter(p => normalizeId(p.empId) === normalizeId(emp.id)));
                     const lifetimePayrollAdjustments = employeePayrolls.reduce((totals, p) => {
                         const data = p.data || {};
                         const ledger = Array.isArray(data.ledger) ? data.ledger : [];
