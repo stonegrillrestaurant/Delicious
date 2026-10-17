@@ -2,7 +2,7 @@
 import {auth,a,f,db,esc,api,syncProfile,loginMarkup,wireLogin} from '../customer-auth.js?v=accountchooser1';
 const $=id=>document.getElementById(id),money=n=>'₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
 const history=new URLSearchParams(location.search).has('history');
-let stop,stopProfile,stopRole,ordersLoaded=false,live=[],revision=0;
+let stop,stopProfile,ordersLoaded=false,live=[],revision=0;
 const notice=s=>{$('notice').textContent=s;$('notice').hidden=!s;};
 const submittedId=new URLSearchParams(location.search).get('submitted');
 let submissionConfirmed=false;
@@ -44,43 +44,50 @@ function progress(o){
 }
 function orderCard(o,archived=false){
  const type=o.orderType==='Take-out'?'Take-out':o.orderType==='Reservation'?'Reservation':'Dine-in';
- const items=(o.items||[]).map(i=>'<li><span>'+esc(i.qty)+' × '+esc(i.name)+'</span><strong>'+money(Number(i.price||0)*Number(i.qty||0))+'</strong></li>').join('');
+ const items=(o.items||[]).map(i=>'<li><span><b>'+esc(i.qty)+' ×</b> '+esc(i.name)+'</span><strong>'+money(Number(i.price||0)*Number(i.qty||0))+'</strong></li>').join('');
  const table=['Dine-in','Reservation'].includes(o.orderType);
- const payment=o.paymentMethod==='qr'?'QR payment':o.paymentMethod==='number'?'GCash number':'Not recorded';
  const needsPayment=!['completed','cancelled'].includes(o.status)&&o.paymentStatus!=='verified'&&!o.submittedPaymentReference;
+ const detailRows=[];
+ if(table)detailRows.push('<p>Table: <strong>'+(o.reservationStatus==='confirmed'?'Confirmed':'Awaiting confirmation')+'</strong> · '+esc(o.persons)+' guests</p>');
+ if(o.submittedPaymentReference)detailRows.push('<p>Payment reference: <strong class="wrap">'+esc(o.submittedPaymentReference)+'</strong></p>');
+ if(o.requests)detailRows.push('<p>Special request: '+esc(o.requests)+'</p>');
+ if(o.cancelReason)detailRows.push('<p>Cancellation: '+esc(o.cancelReason)+'. Contact Stone Grill about any funds already sent.</p>');
+ const details=detailRows.length?'<details class="order-details"><summary>More order details</summary><div class="order-details-content">'+detailRows.join('')+'</div></details>':'';
  return `<article class="order ${archived?'archived-order':''}">
-  <div class="order-head"><div><small>${esc(type.toUpperCase())} · ${esc(o.orderId||'ORDER')}</small><h3>${archived?'Past order':'Your order'}</h3></div><div><span class="amount-label">TOTAL</span><strong class="order-amount">${money(o.subtotal)}</strong></div></div>
-  <section class="order-menu" aria-label="Selected menu items"><h4>Your selected items</h4><ul>${items||'<li>Items unavailable</li>'}</ul></section>
-  <div class="order-status ${['ready','preparing'].includes(o.status)?o.status:['completed','cancelled'].includes(o.status)?'closed':''}"><small>${archived?'ORDER STATUS':'CURRENT STATUS'}</small><strong>${esc(status(o))}</strong><p>${esc(statusHelp(o))}</p>${needsPayment?'<a class="button pay-order-button" href="../?pay='+esc(o.id)+'">Continue payment</a>':''}${o.status==='ready'&&!archived?'<button type="button" class="received-button" data-confirm-received="'+esc(o.id)+'">I received my order</button><small class="received-hint">Tap after your food is handed to you.</small>':''}</div>
-  <div class="order-body"><div class="order-timing"><span>Requested ${o.orderType==='Take-out'?'pickup':'visit'}</span><strong>${esc(o.date)} · ${esc(o.time)}</strong></div>
-  <details class="order-details"><summary>Additional order details</summary><div class="order-details-content">${table?'<p>Table: <strong>'+(o.reservationStatus==='confirmed'?'Confirmed':'Awaiting availability confirmation')+'</strong> · '+esc(o.persons)+' guests</p>':''}<p>Payment: <strong>${payment}</strong>${o.submittedPaymentReference?' · Reference: <strong class="wrap">'+esc(o.submittedPaymentReference)+'</strong>':''}</p>${o.requests?'<p>Special requests: '+esc(o.requests)+'</p>':''}${o.cancelReason?'<p>Cancellation reason: '+esc(o.cancelReason)+'. Contact Stone Grill about any funds already sent.</p>':''}</div></details></div>
+  <header class="order-head"><div class="order-identity"><small>ORDER ${esc(o.orderId||'')}</small><h3>${esc(type)} order</h3><span class="order-date">${esc(o.date)} · ${esc(o.time)}</span></div><div class="order-total"><span class="amount-label">TOTAL</span><strong class="order-amount">${money(o.subtotal)}</strong></div></header>
+  <section class="order-menu" aria-label="Menu in this order"><h4>Items in this order</h4><ul>${items||'<li><span>Items unavailable</span></li>'}</ul></section>
+  <section class="order-status ${['ready','preparing'].includes(o.status)?o.status:['completed','cancelled'].includes(o.status)?'closed':''}" aria-label="Order status and progress">
+   <div class="status-heading"><div><small>${archived?'FINAL STATUS':'CURRENT STATUS'}</small><strong>${esc(status(o))}</strong><p>${esc(statusHelp(o))}</p></div>${needsPayment?'<a class="button pay-order-button" href="../?pay='+esc(o.id)+'">Continue payment</a>':''}${o.status==='ready'&&!archived?'<button type="button" class="received-button" data-confirm-received="'+esc(o.id)+'">I received my order</button>':''}</div>
+   ${progress(o)}
+   ${o.status==='ready'&&!archived?'<small class="received-hint">Tap after your food is handed to you.</small>':''}
+  </section>
+  <div class="order-footer">${details}</div>
  </article>`;
 }
 function render(){
  const rows=live.slice().sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
- const banner=$('activeOrderBanner'),current=!history?rows.find(o=>!['completed','cancelled'].includes(o.status)):null;
- banner.hidden=!current;
- banner.innerHTML=current?'<div class="active-order-top"><div><small>CURRENT ORDER</small><strong>'+esc(status(current))+'</strong><span>Order '+esc(current.orderId)+'</span></div><span class="active-order-seen">'+(current.seenAt||current.acknowledgedAt?'Seen by Stone Grill':'Live order updates')+'</span></div>'+progress(current):'';
  const confirmed=submissionConfirmed?rows.find(o=>o.id===submittedId&&o.customerUid===auth.currentUser?.uid):null;
- const success=confirmed?'<section class="success-banner" aria-live="polite"><span class="success-icon" aria-hidden="true">✓</span><div><h2>Order submitted successfully</h2><p>Order '+esc(confirmed.orderId)+' is saved in My Orders with its items and progress.</p><p>'+(confirmed.paymentStatus==='verified'?'Payment confirmed.':confirmed.submittedPaymentReference?'Payment reference saved · awaiting verification.':'Order received · check the payment status below.')+'</p></div></section>':'';
- const empty=history?'<div class="empty-state"><h3>No past orders yet</h3><p>Finished orders will be saved here.</p></div>':'<div class="empty-state"><h3>No active orders</h3><p>Place an order to start tracking it here. Finished orders are in Order history.</p><a class="button" href="../?new=1">Browse menu & order</a></div>';
+ const success=confirmed?'<section class="success-banner" aria-live="polite"><span class="success-icon" aria-hidden="true">✓</span><div><h2>Order submitted successfully</h2><p>Order '+esc(confirmed.orderId)+' is saved in My Orders below.</p><p>'+(confirmed.paymentStatus==='verified'?'Payment confirmed.':confirmed.submittedPaymentReference?'Payment reference saved · awaiting verification.':'Order received · check the status in this order.')+'</p></div></section>':'';
+ const empty=history?'<div class="empty-state"><h3>No past orders yet</h3><p>Finished orders will appear here.</p></div>':'<div class="empty-state"><h3>No active orders</h3><p>Your current orders and their selected items will appear here.</p><a class="button" href="../?new=1">Browse menu & order</a></div>';
  $('orders').innerHTML=success+(rows.length?rows.map(o=>orderCard(o,history)).join(''):empty);
  if(!ordersLoaded)$('orders').innerHTML='<p class="empty-note" role="status">Loading your orders…</p>';
 }
-$('ordersTitle').textContent=history?'Order history':'Your order';
-$('historyLink').textContent=history?'Back to current orders →':'View order history →';$('historyLink').href=history?'./':'?history=1';
+document.title=history?'Order history · Stone Grill':'My Orders · Stone Grill';
+$('pageTitle').textContent=history?'Order history':'My Orders';
+$('pageDescription').textContent=history?'Past orders, their items, and final status.':'Each order shows its selected items and its own live progress.';
+$('ordersTitle').textContent=history?'Past orders':'Current orders';
+$('historyLink').textContent=history?'Back to My Orders →':'Order history →';$('historyLink').href=history?'./':'?history=1';
 function query(uid){
  return f.query(f.collection(db,'sgOrders'),f.where('customerUid','==',uid));
 }
 a.onAuthStateChanged(auth,async user=>{
- const rev=++revision;stop?.();stopProfile?.();stopRole?.();ordersLoaded=false;live=[];
- $('activeOrderBanner').hidden=true;$('activeOrderBanner').innerHTML='';$('profileDetails').open=false;$('orders').innerHTML='';$('name').value='';$('mobile').value='';$('customerName').textContent='My profile';$('savedMobile').textContent='';$('email').textContent='';notice('');
- $('signedIn').hidden=!user;$('login').hidden=!!user;$('staffLink').hidden=true;
+ const rev=++revision;stop?.();stopProfile?.();ordersLoaded=false;live=[];
+ $('profileDetails').open=false;$('orders').innerHTML='';$('name').value='';$('mobile').value='';$('customerName').textContent='My profile';$('savedMobile').textContent='';$('email').textContent='';notice('');
+ $('signedIn').hidden=!user;$('login').hidden=!!user;
  if(!user){$('login').innerHTML=loginMarkup();wireLogin(notice);return;}
  $('email').textContent=user.email||'';
  try{await syncProfile();if(rev!==revision)return;
  stopProfile=f.onSnapshot(f.doc(db,'sgCustomers',user.uid),s=>{if(rev!==revision)return;const p=s.data();if(p){$('name').value=p.name||'';$('mobile').value=p.mobile||'';$('customerName').textContent=p.name||'My profile';$('savedMobile').textContent=p.mobile||'';}},e=>notice(e.message));
- stopRole=f.onSnapshot(f.doc(db,'sgStaff',user.uid),s=>{if(rev!==revision)return;$('staffLink').hidden=!(s.data()?.active&&['owner','admin','cashier','staff'].includes(s.data()?.role));});
  stop=f.onSnapshot(query(user.uid),{includeMetadataChanges:true},s=>{
   if(rev!==revision)return;$('connection').textContent=s.metadata.fromCache?'Reconnecting — cached status':'Updated live';
   const all=s.docs.map(x=>({id:x.id,...x.data()}));
