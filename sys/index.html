@@ -145,8 +145,8 @@
                 if (!month) return;
                 const stampValue = row.updatedAt || row.savedAt || row.createdAt;
                 const stamp = Number(stampValue?.seconds) || Date.parse(stampValue || '') || 0;
-                const canonicalKey = row.recordKey || row.id;
-                const canonical = canonicalKey === `${normalizeId(row.empId)}_${month}` ? 1 : 0;
+                const expectedKey = `${normalizeId(row.empId)}_${month}`;
+                const canonical = row.recordKey === expectedKey || row.id === expectedKey ? 1 : 0;
                 const prior = byMonth.get(month);
                 if (!prior || stamp > prior.stamp || (stamp === prior.stamp && canonical > prior.canonical) || (stamp === prior.stamp && canonical === prior.canonical && index > prior.index)) {
                     byMonth.set(month, { row, stamp, canonical, index });
@@ -865,7 +865,7 @@
                         const prevSaved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === prevMonth || getMonthKey(p.startDate) === prevMonth));
                         const bonus = saved ? (parseFloat(saved.data?.bonus) || 0) : 0;
                         const carryover = saved ? (parseFloat(saved.data?.carryover) || 0) : (prevSaved ? (parseFloat(prevSaved.data?.carryover) || 0) : 0);
-                        const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: saved.data?.days_worked ?? calcDays, cash_advance: saved.data?.cash_advance ?? rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
+                        const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: calcDays, cash_advance: saved.data?.cash_advance ?? rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
                         setIcForm(baseForm); setIcLedgerEntries(saved ? (saved.data?.ledger || []) : []);
                     }
                 }
