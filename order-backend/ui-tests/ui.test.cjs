@@ -29,7 +29,7 @@ test('submission success requires the saved current-account order; tracking stay
  const send=(id,cache=false,data=o)=>snapshot({metadata:{fromCache:cache},size:1,docs:[{id,data:()=>data}]});
  send('other-order');assert.equal(w.document.getElementById('submissionSuccess'),null);
  send('order-a',true);assert.equal(w.document.getElementById('submissionSuccess'),null);
- send('order-a');assert.equal(w.document.getElementById('submissionSuccess'),null);assert.equal(w.location.search,'');assert(w.document.querySelector('.order-status').textContent.includes('verification pending'));assert(w.document.querySelector('.order-amount').textContent.includes('550'));assert.equal(w.document.querySelector('.order-details').open,false);assert.equal(w.document.querySelector('bad'),null);
+ send('order-a');assert.equal(w.document.getElementById('submissionSuccess'),null);assert.equal(w.location.search,'');assert(w.document.querySelector('.order-status').textContent.includes('awaiting staff review'));assert(w.document.querySelector('.order-amount').textContent.includes('550'));assert.equal(w.document.querySelector('.order-details').open,false);assert.equal(w.document.querySelector('bad'),null);
  send('order-a',false,{...o,status:'ready',paymentStatus:'verified'});assert(w.document.querySelector('.order-status').classList.contains('ready'));assert(w.document.querySelector('.order-status').textContent.includes('Ready for pickup'));
  w.auth.currentUser=null;await onAuth(null);assert.equal(w.document.getElementById('submissionSuccess'),null);dom.window.close();
 });
