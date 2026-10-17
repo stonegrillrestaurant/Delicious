@@ -416,7 +416,8 @@
 
             const earnings = [
                 { id: 1, label: `Basic Pay (${emp.days} Days)`, amount: basicPay },
-                { id: 2, label: "Bonus / Incentives", amount: bonusAmount }
+                { id: 2, label: "Bonus / Incentives", amount: bonusAmount },
+                ...(emp.monthlyCA < 0 ? [{ id: 3, label: "C.A. Repayment", amount: Math.abs(emp.monthlyCA) }] : [])
             ];
 
             const deductions = [
@@ -787,7 +788,7 @@
                     const days = summarizeAttendanceDays(empAtt).reduce((sum, day) => sum + day.dayEquivalent, 0);
                     
                     const empCAsThisMonth = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === selectedMonth);
-                    const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + Math.abs(parseFloat(ca.amount) || 0), 0);
+                    const monthlyCA = empCAsThisMonth.reduce((sum, ca) => sum + (Number(ca.amount) || 0), 0);
                     
                     const lifetimeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id));
                     const lifetimeDaysByDate = summarizeAttendanceDays(lifetimeAtt);
@@ -842,8 +843,8 @@
                 const emp = payrollSummary.find(e => normalizeId(e.id) === normalizeId(dashSearchEmpId));
                 if (emp && dashSearchMonth) {
                     const rangeAtt = attendance.filter(a => normalizeId(a.empId) === normalizeId(emp.id) && getMonthKey(cleanDate(a.date)) === dashSearchMonth);
-                    let rDays = 0; new Set(rangeAtt.map(a=>cleanDate(a.date))).forEach(d => rDays += Math.min(Math.max(...rangeAtt.filter(a=>cleanDate(a.date)===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
-                    const rCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === dashSearchMonth).reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
+                    const rDays = summarizeAttendanceDays(rangeAtt).reduce((sum, day) => sum + day.dayEquivalent, 0);
+                    const rCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(emp.id) && getMonthKey(ca.date) === dashSearchMonth).reduce((s,c)=>s+(Number(c.amount)||0), 0);
                     const rPayroll = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(emp.id) && (p.month === dashSearchMonth || getMonthKey(p.startDate) === dashSearchMonth));
                     const rBonus = rPayroll ? (parseFloat(rPayroll.data?.bonus) || 0) : 0;
                     const rLedger = Array.isArray(rPayroll?.data?.ledger) ? rPayroll.data.ledger : [];
@@ -858,14 +859,14 @@
                     const emp = employees.find(e => normalizeId(e.id) === normalizeId(icEmpId));
                     if (emp) {
                         const att = attendance.filter(a => normalizeId(a.empId) === normalizeId(icEmpId) && getMonthKey(cleanDate(a.date)) === icMonth);
-                        let calcDays = 0; new Set(att.map(a=>cleanDate(a.date))).forEach(d => calcDays += Math.min(Math.max(...att.filter(a=>cleanDate(a.date)===d).map(r=>parseFloat(r.dayEquivalent)||0)),1));
-                        const rangeCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && getMonthKey(ca.date) === icMonth).reduce((s,c)=>s+Math.abs(parseFloat(c.amount)||0), 0);
+                        const calcDays = summarizeAttendanceDays(att).reduce((sum, day) => sum + day.dayEquivalent, 0);
+                        const rangeCA = cashAdvances.filter(ca => normalizeId(ca.empId) === normalizeId(icEmpId) && getMonthKey(ca.date) === icMonth).reduce((s,c)=>s+(Number(c.amount)||0), 0);
                         const saved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === icMonth || getMonthKey(p.startDate) === icMonth));
                         const prevMonth = (() => { const [y,m] = icMonth.split('-').map(Number); const d = new Date(y, m - 1, 1); d.setMonth(d.getMonth() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })();
                         const prevSaved = interactivePayrolls.find(p => normalizeId(p.empId) === normalizeId(icEmpId) && (p.month === prevMonth || getMonthKey(p.startDate) === prevMonth));
                         const bonus = saved ? (parseFloat(saved.data?.bonus) || 0) : 0;
                         const carryover = saved ? (parseFloat(saved.data?.carryover) || 0) : (prevSaved ? (parseFloat(prevSaved.data?.carryover) || 0) : 0);
-                        const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: calcDays, cash_advance: saved.data?.cash_advance ?? rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
+                        const baseForm = saved ? ({ ...saved.data, salary_pay: parseFloat(saved.data?.salary_pay) || 0, carryover, days_worked: calcDays, cash_advance: rangeCA }) : { days_worked: calcDays, bonus: bonus, deduction: 0, deduction_description: '', salary_pay: 0, sss: parseFloat(emp.sssRate) || 0, misc_deductions: parseFloat(emp.miscRate) || 0, cash_advance: rangeCA, carryover };
                         setIcForm(baseForm); setIcLedgerEntries(saved ? (saved.data?.ledger || []) : []);
                     }
                 }
