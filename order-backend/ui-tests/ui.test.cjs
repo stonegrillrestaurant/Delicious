@@ -107,7 +107,7 @@ test('each order keeps its selected menu and its own progress together',async()=
  assert.equal(cards.length,2);
  assert.equal(w.document.querySelectorAll('#orders .order-progress').length,2);
  for(const card of cards){assert(card.querySelector('.order-menu').textContent.includes('Rice'));assert(card.querySelector('.order-progress'));assert(card.querySelector('.order-menu').compareDocumentPosition(card.querySelector('.order-progress'))&w.Node.DOCUMENT_POSITION_FOLLOWING);}
- assert(cards[0].textContent.includes('SG-paid-order'));assert(cards[0].textContent.includes('Payment submitted'));
+ assert(cards[0].textContent.includes('SG-paid-order'));assert(cards[0].textContent.includes('Payment verification pending'));
  assert(cards[1].textContent.includes('SG-ready-order'));assert(cards[1].textContent.includes('Ready for pickup'));
  assert.equal(w.document.querySelectorAll('[data-confirm-received]').length,1);
  const receiptButton=w.document.querySelector('[data-confirm-received]');assert.equal(receiptButton.textContent,'I received my order');assert(w.document.querySelector('.received-hint').textContent.includes('after your food is handed to you'));
