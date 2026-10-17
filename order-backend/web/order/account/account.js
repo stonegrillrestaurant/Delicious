@@ -15,32 +15,41 @@ function confirmSubmission(rows,fromCache){
 }
 const time=t=>t?.toDate?t.toDate().toLocaleString('en-PH',{timeZone:'Asia/Manila'}):'';
 function status(o){
+ const paid=o.paymentStatus==='verified',tablePending=['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed';
  if(o.status==='cancelled')return 'Cancelled';
+ if(!paid)return o.submittedPaymentReference?'Payment verification pending':'Awaiting payment';
  if(o.status==='completed')return 'Completed — claimed / served';
  if(o.status==='ready')return o.orderType==='Take-out'?'Ready for pickup':'Ready to serve';
- if(o.status==='preparing')return 'Preparing — kitchen is cooking';
- if(o.paymentStatus==='verified')return ['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed'?'Paid — table confirmation pending':'Paid — waiting for preparation';
- return o.submittedPaymentReference?'Payment submitted — verification pending':'Waiting for payment';
+ if(o.status==='preparing')return 'Cooking in progress';
+ if(tablePending)return 'Payment verified — awaiting table confirmation';
+ return 'Payment verified — waiting for preparation';
 }
 function statusHelp(o){
+ const paid=o.paymentStatus==='verified',tablePending=['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed';
  if(o.status==='cancelled')return 'This order will not be prepared. Contact us about any payment already sent.';
+ if(!paid){
+  if(o.submittedPaymentReference)return o.seenAt?'Staff has opened your order and is checking your payment reference. Kitchen preparation has not started.':'Your payment reference is awaiting staff verification. Kitchen preparation has not started.';
+  return o.seenAt?'Staff has opened your order. Payment details are still needed, and kitchen preparation has not started.':'Payment details are still needed. Kitchen preparation starts only after payment is verified.';
+ }
  if(o.status==='completed')return 'Your order has been claimed or served. Thank you for choosing Stone Grill.';
  if(o.status==='ready')return o.orderType==='Take-out'?'Your food is ready. Please collect it at Stone Grill.':'Your food is ready to be served at Stone Grill.';
- if(o.status==='preparing')return 'Payment is verified and the kitchen is preparing your food. Please wait for the ready status.';
- if(o.paymentStatus==='verified')return ['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed'?'Your payment is verified. We still need to confirm table availability.':'Your payment is verified. Cooking has not started yet.';
- return o.submittedPaymentReference?'We will check that your payment was received. Please do not pay again. Cooking has not started yet.':'Payment details are needed before the order can proceed.';
+ if(o.status==='preparing')return 'The kitchen is preparing your food now.';
+ if(tablePending)return 'Your payment is verified. We are confirming your table before the kitchen starts preparing your food.';
+ return 'Your payment is verified. The kitchen has not started preparing your food yet.';
 }
 function progress(o){
- const cancelled=o.status==='cancelled',paid=o.paymentStatus==='verified',cooked=['ready','completed'].includes(o.status),finished=o.status==='completed';
+ const cancelled=o.status==='cancelled',paid=o.paymentStatus==='verified',paymentSubmitted=!!o.submittedPaymentReference;
  const tablePending=['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed';
+ const cooking=paid&&o.status==='preparing',ready=paid&&o.status==='ready',completed=paid&&o.status==='completed';
+ const cooked=paid&&['ready','completed'].includes(o.status);
  const steps=[
   {title:'Order received',done:true,detail:'Your order is saved with Stone Grill.'},
-  {title:'Payment confirmed',done:paid,detail:paid?(o.paymentMethod==='qr'?'QR payment confirmed':o.paymentMethod==='number'?'GCash number payment confirmed':'Payment confirmed'):o.submittedPaymentReference?'Awaiting verification of your payment':'Waiting for payment details'},
-  {title:cooked?'Finished cooking':'Processing order',done:cooked,detail:cooked?(o.orderType==='Take-out'?'Ready for pickup':'Ready to serve'):o.status==='preparing'?'Kitchen is cooking your order':paid?(tablePending?'Waiting for table confirmation':'Waiting for the kitchen to prepare your food'):'Starts after payment confirmation'},
-  {title:o.orderType==='Take-out'?'Ready for pickup':'Ready to serve',done:finished,detail:finished?'Transaction finished':o.status==='ready'?(o.orderType==='Take-out'?'Please collect your order at Stone Grill':'Your food is ready to serve'):'Waiting for pickup or serving'}
+  {title:paid?'Payment confirmed':paymentSubmitted?'Payment verification':'Payment',done:paid,detail:paid?'Stone Grill has verified your payment.':paymentSubmitted?'Your payment reference was received and is awaiting staff verification.':'Payment details are needed to continue.'},
+  {title:cooked?'Finished cooking':cooking?'Cooking in progress':'Kitchen preparation',done:cooked,detail:cooked?'Cooking is finished. Your order is ready for pickup or serving.':cooking?'The kitchen is preparing your food now.':!paid?'Not started. Kitchen preparation begins only after payment is verified.':tablePending?'Not started. Waiting for table confirmation before cooking.':'Not started. Payment is verified; waiting for the kitchen to begin.'},
+  {title:o.orderType==='Take-out'?'Ready for pickup':'Ready to serve',done:completed,detail:completed?'Your order has been claimed or served. Thank you.':ready?(o.orderType==='Take-out'?'Your food is ready. Please collect it at Stone Grill.':'Your food is ready to be served at Stone Grill.'):'Available after cooking is finished.'}
  ];
- const current=cancelled||finished?-1:!paid?1:!cooked?2:3;
- return '<div class="order-progress"><h4>Order progress</h4><ol class="progress-list" aria-label="Order process">'+steps.map((step,i)=>{const state=step.done?'done':current===i?'current':'pending';return '<li class="progress-step '+state+'"'+(state==='current'?' aria-current="step"':'')+'><span class="progress-mark" aria-hidden="true">'+(step.done?'✓':i+1)+'</span><div><strong>'+esc(step.title)+'</strong><span class="progress-state">'+(step.done?(i===1?'PAID · verified':'Completed'):state==='current'?'Current step':cancelled?'Not completed':'Upcoming')+'</span><p class="sr-only">'+esc(step.detail)+'</p></div></li>';}).join('')+'</ol>'+(cancelled?'<p class="progress-stopped">Order cancelled · progress stopped. Contact us about any payment already sent.</p>':'<p class="progress-key">'+(current>=0?'Checks show completed steps. '+esc(steps[current].detail):'All steps completed. Thank you for choosing Stone Grill.')+'</p>')+'</div>';
+ const current=cancelled||completed?-1:!paid?1:ready?3:2;
+ return '<div class="order-progress"><h4>Order progress</h4><ol class="progress-list" aria-label="Order process">'+steps.map((step,i)=>{const state=step.done?'done':current===i?'current':'pending';let label=step.done?'Completed':state==='current'?(i===1?paymentSubmitted?(o.seenAt?'Under review':'Awaiting verification'):'Payment needed':i===2?cooking?'In progress':tablePending?'Waiting for table':'Waiting to start':'Ready now'):i===2?'Not started':i===3?'Not ready':'Upcoming';if(i===1&&step.done)label='Verified';return '<li class="progress-step '+state+'"'+(state==='current'?' aria-current="step"':'')+'><span class="progress-mark" aria-hidden="true">'+(step.done?'✓':i+1)+'</span><div><strong>'+esc(step.title)+'</strong><span class="progress-state">'+esc(label)+'</span><p class="sr-only">'+esc(step.detail)+'</p></div></li>';}).join('')+'</ol>'+(cancelled?'<p class="progress-stopped">Order cancelled · progress stopped. Contact us about any payment already sent.</p>':completed?'<p class="progress-key">Order completed. It has been claimed or served.</p>':!paid?'<p class="progress-key">'+(paymentSubmitted?(o.seenAt?'Staff has opened your order and is checking your payment. Kitchen preparation has not started.':'Payment reference received. Awaiting staff verification; kitchen preparation has not started.'):'Payment details are needed before the kitchen can begin.')+'</p>':ready?'<p class="progress-key">'+esc(steps[3].detail)+'</p>':cooking?'<p class="progress-key">The kitchen is cooking your order now.</p>':tablePending?'<p class="progress-key">Payment is verified. We are confirming your table before kitchen preparation starts.</p>':'<p class="progress-key">Payment is verified. The kitchen has not started preparing your order yet.</p>')+'</div>';
 }
 function orderCard(o,archived=false){
  const type=o.orderType==='Take-out'?'Take-out':o.orderType==='Reservation'?'Reservation':'Dine-in';
@@ -56,10 +65,10 @@ function orderCard(o,archived=false){
  return `<article class="order ${archived?'archived-order':''}">
   <header class="order-head"><div class="order-identity"><small>ORDER ${esc(o.orderId||'')}</small><h3>${esc(type)} order</h3><span class="order-date">${esc(o.date)} · ${esc(o.time)}</span></div><div class="order-total"><span class="amount-label">TOTAL</span><strong class="order-amount">${money(o.subtotal)}</strong></div></header>
   <section class="order-menu" aria-label="Menu in this order"><h4>Items in this order</h4><ul>${items||'<li><span>Items unavailable</span></li>'}</ul></section>
-  <section class="order-status ${['ready','preparing'].includes(o.status)?o.status:['completed','cancelled'].includes(o.status)?'closed':''}" aria-label="Order status and progress">
-   <div class="status-heading"><div><small>${archived?'FINAL STATUS':'CURRENT STATUS'}</small><strong>${esc(status(o))}</strong><p>${esc(statusHelp(o))}</p></div>${needsPayment?'<a class="button pay-order-button" href="../?pay='+esc(o.id)+'">Continue payment</a>':''}${o.status==='ready'&&!archived?'<button type="button" class="received-button" data-confirm-received="'+esc(o.id)+'">I received my order</button>':''}</div>
+  <section class="order-status ${o.status==='cancelled'?'closed':o.paymentStatus==='verified'&&['ready','preparing'].includes(o.status)?o.status:o.paymentStatus==='verified'&&o.status==='completed'?'closed':''}" aria-label="Order status and progress">
+   <div class="status-heading"><div><small>${archived?'FINAL STATUS':'CURRENT STATUS'}</small><strong>${esc(status(o))}</strong><p>${esc(statusHelp(o))}</p></div>${needsPayment?'<a class="button pay-order-button" href="../?pay='+esc(o.id)+'">Continue payment</a>':''}${o.status==='ready'&&o.paymentStatus==='verified'&&!archived?'<button type="button" class="received-button" data-confirm-received="'+esc(o.id)+'">I received my order</button>':''}</div>
    ${progress(o)}
-   ${o.status==='ready'&&!archived?'<small class="received-hint">Tap after your food is handed to you.</small>':''}
+   ${o.status==='ready'&&o.paymentStatus==='verified'&&!archived?'<small class="received-hint">Tap after your food is handed to you.</small>':''}
   </section>
   <div class="order-footer">${details}</div>
  </article>`;
