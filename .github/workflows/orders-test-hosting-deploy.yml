@@ -1,0 +1,58 @@
+name: Deploy Stone Grill order test Hosting
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: stone-grill-orders-test-hosting
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            order-backend/functions/package-lock.json
+            order-backend/ui-tests/package-lock.json
+
+      - name: Install locked dependencies
+        run: |
+          npm ci --prefix order-backend/functions
+          npm ci --prefix order-backend/ui-tests
+
+      - name: Build and run backend and browser tests
+        run: npm test --prefix order-backend
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: stone-grill-app
+          workload_identity_provider: projects/724825019953/locations/global/workloadIdentityPools/github-actions/providers/github-actions
+          service_account: id-github-orders-deploy@stone-grill-app.iam.gserviceaccount.com
+          create_credentials_file: true
+
+      - name: Build test Hosting site
+        run: npm run build --prefix order-backend
+
+      - name: Publish only test Hosting
+        working-directory: order-backend
+        run: firebase deploy --only hosting --project stone-grill-app --non-interactive
