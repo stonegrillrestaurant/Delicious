@@ -36,7 +36,41 @@ test('submission success requires the saved current-account order; tracking stay
 
 
 
-test('customer checklist checks actual completed milestones and leaves submitted references unverified',()=>{const dom=new JSDOM(fs.readFileSync(root+'/order/account/index.html','utf8'),{url:'https://example.test/order/account/',runScripts:'outside-only'}),w=dom.window;w.a={onAuthStateChanged(){}};w.auth={};w.esc=s=>String(s??'');w.eval(fs.readFileSync(root+'/order/account/account.js','utf8').slice(fs.readFileSync(root+'/order/account/account.js','utf8').indexOf('const $=')));assert(box.querySelector('[aria-current="step"]').textContent.includes('Payment confirmed'));assert(!box.querySelectorAll('.done')[0].textContent.includes('Payment'));box=states({...base,paymentStatus:'verified',status:'preparing'});assert.equal(box.querySelectorAll('.done').length,2);assert(box.querySelector('[aria-current="step"]').textContent.includes('Processing order'));assert(box.querySelector('.progress-step.current').textContent.includes('Kitchen is cooking'));box=states({...base,paymentStatus:'verified',status:'ready'});assert.equal(box.querySelectorAll('.done').length,3);assert(box.querySelectorAll('.progress-step.done')[2].textContent.includes('Finished cooking'));assert(box.querySelectorAll('.progress-step.done')[2].querySelector('.progress-mark').textContent.includes('✓'));assert(box.querySelector('[aria-current="step"]').textContent.includes('Please collect'));assert(box.querySelector('[aria-current="step"]').textContent.includes('Ready for pickup'));box=states({...base,paymentStatus:'verified',status:'completed'});assert.equal(box.querySelectorAll('.done').length,4);assert.equal(box.querySelector('[aria-current="step"]'),null);box=states({...base,status:'cancelled'});assert.equal(box.querySelectorAll('.done').length,1);assert.equal(box.querySelector('[aria-current="step"]'),null);assert(box.textContent.includes('progress stopped'));box=states({...base,orderType:'Dine-in',paymentStatus:'verified',reservationStatus:'pending'});assert(box.textContent.includes('Waiting for table confirmation'));box=states({...base,orderType:'Dine-in',paymentStatus:'verified',status:'ready',reservationStatus:'confirmed'});assert(box.querySelector('[aria-current="step"]').textContent.includes('Ready to serve'));dom.window.close();});
+test('customer checklist checks actual completed milestones and leaves submitted references unverified',()=>{
+ const dom=new JSDOM(fs.readFileSync(root+'/order/account/index.html','utf8'),{url:'https://example.test/order/account/',runScripts:'outside-only'}),w=dom.window;
+ w.a={onAuthStateChanged(){}};w.auth={};w.esc=s=>String(s??'');
+ const source=fs.readFileSync(root+'/order/account/account.js','utf8');
+ w.eval(source.slice(source.indexOf('const $='))+';window.testProgress=o=>progress(o);');
+ const base={status:'new',paymentStatus:'pending_verification',submittedPaymentReference:'REF123',orderType:'Take-out'};
+ const states=o=>{const box=w.document.createElement('div');box.innerHTML=w.testProgress(o);return box;};
+ let box=states(base);
+ assert.equal(box.querySelectorAll('.done').length,1);
+ assert(box.querySelector('.progress-step.done').textContent.includes('Order received'));
+ assert(box.querySelector('[aria-current="step"]').textContent.includes('Payment confirmed'));
+ assert(!box.querySelectorAll('.done')[0].textContent.includes('Payment'));
+ box=states({...base,paymentStatus:'verified',status:'preparing'});
+ assert.equal(box.querySelectorAll('.done').length,2);
+ assert(box.querySelector('[aria-current="step"]').textContent.includes('Processing order'));
+ assert(box.querySelector('.progress-step.current').textContent.includes('Kitchen is cooking'));
+ box=states({...base,paymentStatus:'verified',status:'ready'});
+ assert.equal(box.querySelectorAll('.done').length,3);
+ assert(box.querySelectorAll('.progress-step.done')[2].textContent.includes('Finished cooking'));
+ assert(box.querySelectorAll('.progress-step.done')[2].querySelector('.progress-mark').textContent.includes('✓'));
+ assert(box.querySelector('[aria-current="step"]').textContent.includes('Please collect'));
+ assert(box.querySelector('[aria-current="step"]').textContent.includes('Ready for pickup'));
+ box=states({...base,paymentStatus:'verified',status:'completed'});
+ assert.equal(box.querySelectorAll('.done').length,4);
+ assert.equal(box.querySelector('[aria-current="step"]'),null);
+ box=states({...base,status:'cancelled'});
+ assert.equal(box.querySelectorAll('.done').length,1);
+ assert.equal(box.querySelector('[aria-current="step"]'),null);
+ assert(box.textContent.includes('progress stopped'));
+ box=states({...base,orderType:'Dine-in',paymentStatus:'verified',reservationStatus:'pending'});
+ assert(box.textContent.includes('Waiting for table confirmation'));
+ box=states({...base,orderType:'Dine-in',paymentStatus:'verified',status:'ready',reservationStatus:'confirmed'});
+ assert(box.querySelector('[aria-current="step"]').textContent.includes('Ready to serve'));
+ dom.window.close();
+});
 test('each order keeps its selected menu and its own progress together',async()=>{
  const dom=new JSDOM(fs.readFileSync(root+'/order/account/index.html','utf8'),{url:'https://example.test/order/account/?submitted=paid-order',runScripts:'outside-only'}),w=dom.window;
  let onAuth,orderSub;const calls=[];
