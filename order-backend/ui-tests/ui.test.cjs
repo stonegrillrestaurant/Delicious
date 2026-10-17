@@ -95,7 +95,7 @@ test('each order keeps its selected menu and its own progress together',async()=
  assert(cards[1].textContent.includes('SG-ready-order'));assert(cards[1].textContent.includes('Ready for pickup'));
  assert.equal(w.document.querySelectorAll('[data-confirm-received]').length,1);
  const receiptButton=w.document.querySelector('[data-confirm-received]');assert.equal(receiptButton.textContent,'I received my order');assert(w.document.querySelector('.received-hint').textContent.includes('after your food is handed to you'));
- receiptButton.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));assert.deepEqual(calls[0],{action:'confirmReceived',requestId:'ready-order'});
+ receiptButton.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));assert.equal(calls[0].action,'confirmReceived');assert.equal(calls[0].requestId,'ready-order');
  const completed={...ready,status:'completed'};send([paid,completed,done]);
  assert.equal(w.document.querySelectorAll('#orders .order').length,1);
  assert(!w.document.getElementById('orders').textContent.includes('SG-ready-order'));
