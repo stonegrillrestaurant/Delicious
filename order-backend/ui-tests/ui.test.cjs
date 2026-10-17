@@ -29,7 +29,7 @@ test('submission success requires the saved current-account order; tracking stay
  const send=(id,cache=false,data=o)=>snapshot({metadata:{fromCache:cache},size:1,docs:[{id,data:()=>data}]});
  send('other-order');assert.equal(w.document.getElementById('submissionSuccess'),null);
  send('order-a',true);assert.equal(w.document.getElementById('submissionSuccess'),null);
- send('order-a');assert.equal(w.document.getElementById('submissionSuccess'),null);assert.equal(w.location.search,'');assert(w.document.querySelector('.order-status').textContent.includes('verification pending'));assert(w.document.querySelector('.order-amount').textContent.includes('550'));assert.equal(w.document.querySelector('.order-details').open,true);assert.equal(w.document.querySelector('bad'),null);
+ send('order-a');assert.equal(w.document.getElementById('submissionSuccess'),null);assert.equal(w.location.search,'');assert(w.document.querySelector('.order-status').textContent.includes('verification pending'));assert(w.document.querySelector('.order-amount').textContent.includes('550'));assert.equal(w.document.querySelector('.order-details').open,false);assert.equal(w.document.querySelector('bad'),null);
  send('order-a',false,{...o,status:'ready',paymentStatus:'verified'});assert(w.document.querySelector('.order-status').classList.contains('ready'));assert(w.document.querySelector('.order-status').textContent.includes('Ready for pickup'));
  w.auth.currentUser=null;await onAuth(null);assert.equal(w.document.getElementById('submissionSuccess'),null);dom.window.close();
 });
@@ -55,7 +55,7 @@ test('active orders keep the live tracker in the header and customer receipt mov
  assert(w.document.getElementById('activeOrderBanner').textContent.includes('CURRENT ORDER'));
  assert(w.document.getElementById('activeOrderBanner').textContent.includes('Order progress'));
  assert.equal(w.document.querySelectorAll('#orders .order').length,2);
- assert.equal(w.document.querySelector('#orders .order-details').open,true);
+ assert.equal(w.document.querySelector('#orders .order-details').open,false);assert(w.document.querySelector('#orders .order-menu').textContent.includes('Rice'));
  assert.equal(w.document.querySelectorAll('[data-confirm-received]').length,1);
  const button=w.document.querySelector('[data-confirm-received]');button.click();await new Promise(r=>setTimeout(r,0));
  assert.equal(calls[0].action,'confirmReceived');assert.equal(calls[0].requestId,'ready-order');
