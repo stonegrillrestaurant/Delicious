@@ -11,7 +11,6 @@ const {createHash,randomUUID}=require('node:crypto');
 const d=require('./domain'),menu=require('./menu.json');
 const OWNER_UID='qhf2nu7zlOXcj6t5mU7e9gjWyRz2';
 const INITIAL_ADMIN_UID='dYqA7rVgDNRP7nRY9ghoUtVfcHj1';
-const BACKUP_ADMIN_EMAILS=new Set(['ninoxx@gmail.com','ninox7475@gmail.com','stonegrill2014@gmail.com']);
 initializeApp();const db=getFirestore(),bucketName=defineString('ORDER_STORAGE_BUCKET');
 const textBeeApiKey=defineSecret('TEXTBEE_API_KEY');
 const textBeeDeviceId=defineSecret('TEXTBEE_DEVICE_ID');
@@ -74,10 +73,7 @@ async function signedUser(req){
 async function operator(req){
  const user=await signedUser(req);
  const s=await db.collection('sgStaff').doc(user.uid).get();
- if(!s.exists||!d.isStaff(s.data())){
-  if(BACKUP_ADMIN_EMAILS.has(String(user.email||'').toLowerCase())&&user.email_verified===true)return {uid:user.uid,email:user.email||'',role:'admin'};
-  throw d.error(403,'Staff access not assigned');
- }
+ if(!s.exists||!d.isStaff(s.data()))throw d.error(403,'Staff access not assigned');
  return {uid:user.uid,email:user.email||'',role:s.data().role};
 }
 exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
@@ -111,8 +107,8 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
  await db.runTransaction(async t=>{
   const [s,staff]=await Promise.all([t.get(ref),t.get(staffRef)]),now=Timestamp.now();
   const seededRole=user.uid===OWNER_UID?'owner':user.uid===INITIAL_ADMIN_UID?'cashier':'customer';
-  const role=user.uid===OWNER_UID?'owner':BACKUP_ADMIN_EMAILS.has(String(user.email||'').toLowerCase())&&user.email_verified===true?'admin':staff.exists?(staff.data().active?staff.data().role:'customer'):seededRole;
-  if(!staff.exists||user.uid===OWNER_UID||role==='admin'&&BACKUP_ADMIN_EMAILS.has(String(user.email||'').toLowerCase())&&user.email_verified===true)t.set(staffRef,{role,active:role!=='customer',updatedAt:now},{merge:true});
+  const role=user.uid===OWNER_UID?'owner':staff.exists?(staff.data().active?staff.data().role:'customer'):seededRole;
+  if(!staff.exists||user.uid===OWNER_UID)t.set(staffRef,{role,active:role!=='customer',updatedAt:now});
   const authTime=Number(user.auth_time)||0,changed=!s.exists||s.data().lastAuthTime!==authTime;
   const updates={...fields,email:user.email||'',role,updatedAt:now};
   if(!s.exists)Object.assign(updates,{name:(user.name||user.email||'Customer').slice(0,100),mobile:'',createdAt:now,...fields});
