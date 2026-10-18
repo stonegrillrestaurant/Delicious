@@ -91,6 +91,13 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
   });
   return res.json({ok:true});
  }
+ if(['registerCustomerDevice','removeCustomerDevice'].includes(b.action)){
+  d.check(typeof b.token==='string'&&b.token.length>=20&&b.token.length<=4096,'Invalid device');
+  const ref=db.collection('sgCustomerPushDevices').doc(hash(b.token));
+  if(b.action==='registerCustomerDevice')await ref.set({uid:user.uid,token:b.token,updatedAt:Timestamp.now()});
+  else await db.runTransaction(async t=>{const saved=await t.get(ref);if(saved.exists&&saved.data().uid===user.uid)t.delete(ref);});
+  return res.json({ok:true});
+ }
  if(!['syncProfile','saveProfile'].includes(b.action))throw d.error(400,'Invalid action');
  let fields={};
  if(b.action==='saveProfile'){
@@ -231,3 +238,5 @@ if(b.action==='seen'||b.action==='acknowledge'){
 },20000));
 exports.notifyStaff=onDocumentCreated({document:'sgStaffAlerts/{alertId}',region:'asia-southeast1',retry:true,maxInstances:3},require('./notifications').createNotifier({db,getMessaging,Timestamp,isStaff:d.isStaff}));
 exports.notifyCustomerPaymentVerified=onDocumentUpdated({document:'sgOrders/{requestId}',region:'asia-southeast1',secrets:[textBeeApiKey,textBeeDeviceId],retry:true,maxInstances:3},require('./payment-sms').createPaymentSmsNotifier({db,apiKey:()=>textBeeApiKey.value(),deviceId:()=>textBeeDeviceId.value(),Timestamp}));
+
+exports.notifyCustomerPush=onDocumentUpdated({document:'sgOrders/{requestId}',region:'asia-southeast1',retry:true,maxInstances:3},require('./customer-push').createCustomerPushNotifier({db,getMessaging,Timestamp}));
