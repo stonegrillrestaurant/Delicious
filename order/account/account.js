@@ -2,7 +2,7 @@
 import {auth,a,f,db,esc,api,syncProfile,loginMarkup,wireLogin} from '../customer-auth.js?v=accountchooser1';
 const $=id=>document.getElementById(id),money=n=>'₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
 const history=new URLSearchParams(location.search).has('history');
-let stop,stopProfile,ordersLoaded=false,live=[],revision=0;
+let stop,stopProfile,ordersLoaded=false,live=[],revision=0,customerPushToken=null;
 const notice=s=>{$('notice').textContent=s;$('notice').hidden=!s;};
 const submittedId=new URLSearchParams(location.search).get('submitted');
 let submissionConfirmed=false;
@@ -95,7 +95,7 @@ function query(uid){
 a.onAuthStateChanged(auth,async user=>{
  const rev=++revision;stop?.();stopProfile?.();ordersLoaded=false;live=[];
  $('profileDetails').open=false;$('orders').innerHTML='';$('name').value='';$('mobile').value='';$('customerName').textContent='My profile';$('savedMobile').textContent='';$('email').textContent='';notice('');
- $('signedIn').hidden=!user;$('login').hidden=!!user;
+ $('signedIn').hidden=!user;$('login').hidden=!!user;customerPushToken=null;pushButton.textContent='Enable payment alerts';
  if(!user){$('login').innerHTML=loginMarkup();wireLogin(notice);return;}
  $('email').textContent=user.email||'';
  try{await syncProfile();if(rev!==revision)return;
@@ -122,3 +122,27 @@ $('orders').addEventListener('click',async e=>{
  catch(error){notice(error.message||'Could not update this order. Please try again.');}
  finally{button.disabled=false;}
 });
+
+const pushButton=$('customerPush'),pushHint=$('pushHint');
+async function enableCustomerPush(){
+ if(!auth.currentUser)throw Error('Sign in to enable payment alerts.');
+ if(!('Notification'in window)||!('serviceWorker'in navigator))throw Error('Phone alerts are not supported in this browser.');
+ if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!(navigator.standalone||matchMedia('(display-mode: standalone)').matches))throw Error('On iPhone, add Stone Grill to the Home Screen and open it from there to enable alerts.');
+ const permission=await Notification.requestPermission();
+ if(permission!=='granted')throw Error('Allow notifications in your phone settings to receive payment alerts.');
+ const {getMessaging,getToken,isSupported}=await import('https://www.gstatic.com/firebasejs/13.0.0/firebase-messaging.js');
+ if(!await isSupported())throw Error('Firebase notifications are unavailable on this device.');
+ const reg=await navigator.serviceWorker.register('../customer-messaging-sw.js',{scope:'../'});
+ await navigator.serviceWorker.ready;
+ const messaging=getMessaging(auth.app);
+ const token=await getToken(messaging,{vapidKey:globalThis.SG_STAFF_CONFIG.vapidKey,serviceWorkerRegistration:reg});
+ if(!token)throw Error('This device could not be registered for alerts.');
+ await api(globalThis.SG_CUSTOMER_API,{action:'registerCustomerDevice',token});
+ customerPushToken=token;
+ pushButton.textContent='Payment alerts enabled';
+ pushHint.textContent='You will receive a phone alert when Stone Grill verifies your payment.';
+}
+pushButton.onclick=async()=>{
+ pushButton.disabled=true;
+ try{await enableCustomerPush();}catch(e){pushHint.textContent=e.message;}finally{pushButton.disabled=false;}
+};
