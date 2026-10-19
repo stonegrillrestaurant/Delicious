@@ -19,37 +19,62 @@
     <script>
     // Safe diagnostics: never record account identifiers, tokens or raw error messages.
     (() => {
-        const rows = [];
-        let panel, list, open = false;
+        const diagnosticKey = 'payroll-auth-diagnostics-v2';
+        let saved = null, storageAvailable = true;
+        try { saved = JSON.parse(localStorage.getItem(diagnosticKey) || 'null'); }
+        catch (_) { storageAvailable = false; }
+        const recent = saved && Date.now() - saved.at < 30 * 60 * 1000;
+        const rows = recent && Array.isArray(saved.rows) ? saved.rows.filter(x => typeof x === 'string').slice(-35) : [];
+        let panel, list, open = rows.length > 0;
+        let pending = !!(recent && saved.pending);
+        const persist = () => {
+            try { localStorage.setItem(diagnosticKey, JSON.stringify({at: Date.now(), rows, pending})); }
+            catch (_) { storageAvailable = false; }
+        };
+        window.payrollAuthPending = value => { pending = value; persist(); };
         const mode = navigator.standalone || matchMedia('(display-mode: standalone)').matches ? 'Home Screen' : 'Browser';
         const draw = () => {
             if (!panel) return;
             panel.open = open;
             list.textContent = rows.join('\n');
+            list.scrollTop = list.scrollHeight;
         };
         window.payrollAuthStep = (step, code, expand = false) => {
             const safeCode = code ? String(code).replace(/[^a-zA-Z0-9_/-]/g, '').slice(0, 90) : '';
             rows.push(new Date().toLocaleTimeString() + ' — ' + step + (safeCode ? ' [' + safeCode + ']' : ''));
             if (rows.length > 35) rows.shift();
             if (expand || code) open = true;
+            persist();
             draw();
         };
         document.addEventListener('DOMContentLoaded', () => {
             panel = document.createElement('details');
             panel.style.cssText = 'position:fixed;bottom: max(12px,env(safe-area-inset-bottom));left:12px;right:12px;max-width:520px;margin:auto;z-index:99999;background:white;color:#172554;border:2px solid #64748b;border-radius:14px;padding:12px;box-shadow:0 6px 24px #0003;font:13px system-ui;text-align:left';
             const title = document.createElement('summary');
-            title.textContent = 'Sign-in diagnostics · ' + mode + ' · v1';
+            title.textContent = 'Sign-in diagnostics · ' + mode + ' · v2';
             title.style.cursor = 'pointer';
             list = document.createElement('pre');
             list.setAttribute('role', 'status');
             list.setAttribute('aria-live', 'polite');
             list.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;max-height:35vh;overflow:auto;font:12px/1.6 system-ui;margin:10px 0 0';
-            panel.append(title, list);
+            const clear = document.createElement('button');
+            clear.textContent = 'Clear diagnostic history';
+            clear.style.cssText = 'margin-top:10px;padding:8px;border:1px solid #64748b;border-radius:8px;background:white;color:#172554';
+            clear.onclick = () => { rows.length = 0; persist(); draw(); };
+            panel.append(title, list, clear);
             panel.addEventListener('toggle', () => { open = panel.open; });
             document.body.append(panel);
             draw();
         });
+        if (pending) window.payrollAuthStep('Page restarted while Google sign-in was pending. No popup result was recorded before restart.', 'diagnostic/restarted-during-sign-in', true);
         window.payrollAuthStep('Page opened in ' + mode + '. Waiting for Firebase.');
+        if (!storageAvailable) window.payrollAuthStep('Diagnostic history storage is unavailable; messages may not survive reopening.', 'diagnostic/storage-unavailable', true);
+        window.addEventListener('pagehide', () => {
+            if (pending) window.payrollAuthStep('Payroll page hidden or left while Google sign-in was pending.');
+        });
+        window.addEventListener('pageshow', event => {
+            if (event.persisted) window.payrollAuthStep('Payroll page restored from browser history.', null, pending);
+        });
         setTimeout(() => {
             if (!window.fb) window.payrollAuthStep('Firebase did not initialize within 20 seconds. Check connection or blocked scripts.', 'diagnostic/firebase-startup-timeout');
         }, 20000);
@@ -662,13 +687,16 @@
             const handleProviderLogin = async (provider) => {
                 if (loading) return;
                 setLoading(true); setLoginError('');
+                window.payrollAuthPending(true);
                 window.payrollAuthStep('Opening Google sign-in. Select your account in the popup.', null, true);
                 const diagnosticTimer = setTimeout(() => window.payrollAuthStep('Still waiting for Google popup result. This does not prove a rules failure.', 'diagnostic/popup-result-pending'), 45000);
                 try {
                     const result = await window.fb.signInWithPopup(window.fb.auth, provider);
+                    window.payrollAuthPending(false);
                     window.payrollAuthStep(result.user ? 'Google sign-in returned a user.' : 'Google sign-in returned no user.', result.user ? null : 'diagnostic/no-user');
                     window.payrollAuthStep(window.fb.auth.currentUser ? 'Firebase currently holds a signed-in session.' : 'Firebase has no current session after popup.', window.fb.auth.currentUser ? null : 'diagnostic/session-missing');
                 } catch (err) {
+                    window.payrollAuthPending(false);
                     window.payrollAuthStep('Google sign-in failed. Screenshot this code.', err.code || 'diagnostic/unknown-auth-error');
                     const message = err.code === 'auth/popup-blocked'
                         ? 'The sign-in window was blocked. Open this page directly in Safari or Chrome, allow pop-ups for this site, and tap sign-in again.'
@@ -779,6 +807,7 @@
 
             useEffect(() => {
                 return window.fb.onAuthStateChanged(window.fb.auth, (u) => {
+                    if (u) window.payrollAuthPending(false);
                     window.payrollAuthStep(u ? 'Auth observer confirmed signed-in session. Checking payroll access.' : 'Auth observer reports no signed-in session.');
                     setUser(u); setIsReady(true); setUserRole(''); setCurrentBiometricId('');
                     setEmployees([]); setAttendance([]); setCashAdvances([]); setCaRequests([]);
