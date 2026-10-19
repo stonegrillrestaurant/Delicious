@@ -1,0 +1,46 @@
+name: Deploy payroll SMS alert
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/payroll-functions-deploy.yml"
+      - "payroll-backend/functions/**"
+      - "payroll-backend/firebase.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stone-grill-payroll-alert-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install and check function
+        run: |
+          npm install --prefix payroll-backend/functions
+          npm run check --prefix payroll-backend/functions
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: stone-grill-payroll
+          workload_identity_provider: projects/724825019953/locations/global/workloadIdentityPools/github-actions/providers/github-actions
+          service_account: id-github-orders-deploy@stone-grill-app.iam.gserviceaccount.com
+          create_credentials_file: true
+      - name: Deploy isolated payroll alert
+        working-directory: payroll-backend
+        run: firebase deploy --only functions:stone-grill-payroll-alerts --project stone-grill-payroll --non-interactive --force
