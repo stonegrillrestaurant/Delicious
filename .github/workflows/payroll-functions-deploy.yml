@@ -44,3 +44,11 @@ jobs:
       - name: Deploy isolated payroll alert
         working-directory: payroll-backend
         run: firebase deploy --only functions:stone-grill-payroll-alerts --project stone-grill-payroll --non-interactive --force
+      - name: Reduce deploy identity access
+        if: success()
+        run: |
+          member="serviceAccount:id-github-orders-deploy@stone-grill-app.iam.gserviceaccount.com"
+          for role in roles/firebase.admin roles/cloudfunctions.admin roles/iam.serviceAccountUser roles/serviceusage.serviceUsageAdmin; do
+            gcloud projects add-iam-policy-binding stone-grill-payroll --member="$member" --role="$role" --quiet
+          done
+          gcloud projects remove-iam-policy-binding stone-grill-payroll --member="$member" --role="roles/owner" --quiet
