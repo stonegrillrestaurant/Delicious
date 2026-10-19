@@ -133,7 +133,7 @@ async function enableCustomerPush(){
  if(permission!=='granted')throw Error('Allow notifications in your phone settings to receive payment alerts.');
  const {getMessaging,getToken,isSupported}=await import('https://www.gstatic.com/firebasejs/13.0.0/firebase-messaging.js');
  if(!await isSupported())throw Error('Firebase notifications are unavailable on this device.');
- const reg=await navigator.serviceWorker.register('../customer-messaging-sw.js',{scope:'../'});
+ const reg=await navigator.serviceWorker.register('../customer-messaging-sw.js',{scope:'./'});
  await navigator.serviceWorker.ready;
  const messaging=getMessaging(auth.app);
  const token=await getToken(messaging,{vapidKey:globalThis.SG_STAFF_CONFIG.vapidKey,serviceWorkerRegistration:reg});
