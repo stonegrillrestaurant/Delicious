@@ -1,5 +1,7 @@
 import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js?v=accountchooser1';
-const box=document.getElementById('customerAccount');let stopProfile,revision=0;
+const box=document.getElementById('customerAccount');let stopProfile,stopPending,revision=0;
+function pendingBadge(count){const link=document.querySelector('.company-navigation a[href="account/"]');if(!link)return;let badge=link.querySelector('[data-pending-count]');if(!badge){badge=document.createElement('span');badge.dataset.pendingCount='';badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:5px;padding:0 5px;border-radius:99px;background:#b42318;color:#fff;font-size:11px;font-weight:800';link.appendChild(badge);}badge.hidden=count===0;badge.textContent=count>99?'99+':String(count);}
+
 function restoreCheckoutIntent(uid){
  let saved,continueAfterLogin=false;
  try{saved=JSON.parse(sessionStorage.getItem('sgCheckoutIntent')||'null');continueAfterLogin=sessionStorage.getItem('sgContinueAfterLogin')==='1';}catch{}
@@ -19,7 +21,7 @@ function restoreCheckoutIntent(uid){
 }
 function notice(text){document.getElementById('accountNotice').textContent=text;}
 a.onAuthStateChanged(auth,async user=>{
- const r=++revision;stopProfile?.();stopProfile=null;
+ const r=++revision;stopProfile?.();stopProfile=null;stopPending?.();stopPending=null;pendingBadge(0);
  // Do not expose the previous person's receipt reference on a shared device.
  const old=window.backendOrder;
  if(!user||old?.uid!==user.uid){for(const id of ['fullName','mobileNumber']){const el=document.getElementById(id);if(el)el.value='';}}
@@ -27,6 +29,7 @@ a.onAuthStateChanged(auth,async user=>{
  box.innerHTML=user?`<div class="signed-account"><span class="account-avatar" aria-hidden="true">${esc((user.displayName||user.email||"S").slice(0,1).toUpperCase())}</span><a href="account/">${esc(user.displayName||user.email)}<small>My profile & orders →</small></a><button id="customerSignOut" class="account-signout" type="button">Sign out</button></div><p id="accountNotice" role="status" aria-live="polite"></p>`:`<div class="header-login"><span class="signin-hint">Sign in with Google to continue checkout.</span>${loginMarkup()}</div><p id="accountNotice" role="status" aria-live="polite"></p>`;
  if(!user){wireLogin(notice);return;}
  document.getElementById('customerSignOut').onclick=()=>a.signOut(auth);
+ stopPending=f.onSnapshot(f.query(f.collection(db,'sgOrders'),f.where('customerUid','==',user.uid)),snap=>{if(r!==revision)return;pendingBadge(snap.docs.filter(doc=>!['completed','cancelled'].includes(doc.data().status)).length);},()=>pendingBadge(0));
  try{await syncProfile();if(r!==revision)return;
   try{const saved=JSON.parse(sessionStorage.getItem('sgConfirmedOrder:'+user.uid)||'null');if(saved?.uid===user.uid)window.backendOrder=saved;}catch{}
   if(new URLSearchParams(location.search).get('new')==='1'){

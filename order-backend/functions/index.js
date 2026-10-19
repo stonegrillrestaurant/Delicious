@@ -11,6 +11,7 @@ const {createHash,randomUUID}=require('node:crypto');
 const d=require('./domain'),menu=require('./menu.json');
 const OWNER_UID='qhf2nu7zlOXcj6t5mU7e9gjWyRz2';
 const INITIAL_ADMIN_UID='dYqA7rVgDNRP7nRY9ghoUtVfcHj1';
+const PRICE_EDITOR_EMAILS=new Set(['ninoxx@gmail.com','ninox7475@gmail.com','stonegrill2014@gmail.com']);
 initializeApp();const db=getFirestore(),bucketName=defineString('ORDER_STORAGE_BUCKET');
 const textBeeApiKey=defineSecret('TEXTBEE_API_KEY');
 const textBeeDeviceId=defineSecret('TEXTBEE_DEVICE_ID');
@@ -91,6 +92,13 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
   });
   return res.json({ok:true});
  }
+ if(['registerCustomerDevice','removeCustomerDevice'].includes(b.action)){
+  d.check(typeof b.token==='string'&&b.token.length>=20&&b.token.length<=4096,'Invalid device');
+  const ref=db.collection('sgCustomerPushDevices').doc(hash(b.token));
+  if(b.action==='registerCustomerDevice')await ref.set({uid:user.uid,token:b.token,updatedAt:Timestamp.now()});
+  else await db.runTransaction(async t=>{const saved=await t.get(ref);if(saved.exists&&saved.data().uid===user.uid)t.delete(ref);});
+  return res.json({ok:true});
+ }
  if(!['syncProfile','saveProfile'].includes(b.action))throw d.error(400,'Invalid action');
  let fields={};
  if(b.action==='saveProfile'){
@@ -111,9 +119,14 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
  });res.json({ok:true});
 },20000));
 exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId]},endpoint(async(req,res)=>{
- const user=await operator(req),b=req.body;
+ const b=req.body;
  if(['getMenu','saveMenu'].includes(b.action)){
-  if(!['owner','admin'].includes(user.role))throw d.error(403,'Owner or admin access required');
+  const user=await signedUser(req);
+  const emailAllowed=PRICE_EDITOR_EMAILS.has(String(user.email||'').toLowerCase())&&user.email_verified===true;
+  if(!emailAllowed){
+   const staff=await db.collection('sgStaff').doc(user.uid).get();
+   if(!staff.exists||!staff.data().active||!['owner','admin'].includes(staff.data().role))throw d.error(403,'Price editor access required');
+  }
   const ref=db.collection('sgSystem').doc('menu-v1');
   if(b.action==='getMenu')return res.json({ok:true,menu:await activeMenu()});
   const next=d.validateMenu(b.menu),now=Timestamp.now();
@@ -121,6 +134,7 @@ exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId]},
   return res.json({ok:true,menu:next,message:'Menu prices saved. New prices are live for new orders.'});
  }
 
+ const user=await operator(req);
  if(b.action==='setRole'){
   const patch=d.roleChange(user.uid,b.uid,b.role,OWNER_UID);
   const target=db.collection('sgCustomers').doc(b.uid);
@@ -231,3 +245,5 @@ if(b.action==='seen'||b.action==='acknowledge'){
 },20000));
 exports.notifyStaff=onDocumentCreated({document:'sgStaffAlerts/{alertId}',region:'asia-southeast1',retry:true,maxInstances:3},require('./notifications').createNotifier({db,getMessaging,Timestamp,isStaff:d.isStaff}));
 exports.notifyCustomerPaymentVerified=onDocumentUpdated({document:'sgOrders/{requestId}',region:'asia-southeast1',secrets:[textBeeApiKey,textBeeDeviceId],retry:true,maxInstances:3},require('./payment-sms').createPaymentSmsNotifier({db,apiKey:()=>textBeeApiKey.value(),deviceId:()=>textBeeDeviceId.value(),Timestamp}));
+
+exports.notifyCustomerPush=onDocumentUpdated({document:'sgOrders/{requestId}',region:'asia-southeast1',retry:true,maxInstances:3},require('./customer-push').createCustomerPushNotifier({db,getMessaging,Timestamp}));

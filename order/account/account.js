@@ -2,7 +2,7 @@
 import {auth,a,f,db,esc,api,syncProfile,loginMarkup,wireLogin} from '../customer-auth.js?v=accountchooser1';
 const $=id=>document.getElementById(id),money=n=>'₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
 const history=new URLSearchParams(location.search).has('history');
-let stop,stopProfile,ordersLoaded=false,live=[],revision=0;
+let stop,stopProfile,ordersLoaded=false,live=[],revision=0,customerPushToken=null;
 const notice=s=>{$('notice').textContent=s;$('notice').hidden=!s;};
 const submittedId=new URLSearchParams(location.search).get('submitted');
 let submissionConfirmed=false;
@@ -17,6 +17,7 @@ const time=t=>t?.toDate?t.toDate().toLocaleString('en-PH',{timeZone:'Asia/Manila
 function staffHasOpened(o){
  return !!o.seenAt||o.paymentStatus==='verified'||['acknowledged','preparing','ready','completed','cancelled'].includes(o.status);
 }
+function updatePendingBadge(rows){const n=rows.filter(o=>!['completed','cancelled'].includes(o.status)).length;document.querySelectorAll('[data-pending-count]').forEach(el=>{el.hidden=n===0;el.textContent=n>99?'99+':String(n);});}
 function status(o){
  const paid=o.paymentStatus==='verified',staffOpened=staffHasOpened(o),tablePending=['Dine-in','Reservation'].includes(o.orderType)&&o.reservationStatus!=='confirmed';
  if(o.status==='cancelled')return 'Cancelled';
@@ -93,16 +94,16 @@ function query(uid){
  return f.query(f.collection(db,'sgOrders'),f.where('customerUid','==',uid));
 }
 a.onAuthStateChanged(auth,async user=>{
- const rev=++revision;stop?.();stopProfile?.();ordersLoaded=false;live=[];
+ const rev=++revision;stop?.();stopProfile?.();ordersLoaded=false;live=[];updatePendingBadge([]);
  $('profileDetails').open=false;$('orders').innerHTML='';$('name').value='';$('mobile').value='';$('customerName').textContent='My profile';$('savedMobile').textContent='';$('email').textContent='';notice('');
- $('signedIn').hidden=!user;$('login').hidden=!!user;
+ $('signedIn').hidden=!user;$('login').hidden=!!user;customerPushToken=null;pushButton.textContent='Enable payment alerts';
  if(!user){$('login').innerHTML=loginMarkup();wireLogin(notice);return;}
  $('email').textContent=user.email||'';
  try{await syncProfile();if(rev!==revision)return;
  stopProfile=f.onSnapshot(f.doc(db,'sgCustomers',user.uid),s=>{if(rev!==revision)return;const p=s.data();if(p){$('name').value=p.name||'';$('mobile').value=p.mobile||'';$('customerName').textContent=p.name||'My profile';$('savedMobile').textContent=p.mobile||'';}},e=>notice(e.message));
  stop=f.onSnapshot(query(user.uid),{includeMetadataChanges:true},s=>{
   if(rev!==revision)return;$('connection').textContent=s.metadata.fromCache?'Reconnecting — cached status':'Updated live';
-  const all=s.docs.map(x=>({id:x.id,...x.data()}));
+  const all=s.docs.map(x=>({id:x.id,...x.data()}));updatePendingBadge(all);
   const active=all.filter(o=>['new','acknowledged','preparing','ready'].includes(o.status));
   const closed=all.filter(o=>['completed','cancelled'].includes(o.status)).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
   ordersLoaded=true;confirmSubmission(all,s.metadata.fromCache);live=(history?closed:active).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));render();
@@ -122,3 +123,27 @@ $('orders').addEventListener('click',async e=>{
  catch(error){notice(error.message||'Could not update this order. Please try again.');}
  finally{button.disabled=false;}
 });
+
+const pushButton=$('customerPush'),pushHint=$('pushHint');
+async function enableCustomerPush(){
+ if(!auth.currentUser)throw Error('Sign in to enable payment alerts.');
+ if(!('Notification'in window)||!('serviceWorker'in navigator))throw Error('Phone alerts are not supported in this browser.');
+ if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!(navigator.standalone||matchMedia('(display-mode: standalone)').matches))throw Error('On iPhone, add Stone Grill to the Home Screen and open it from there to enable alerts.');
+ const permission=await Notification.requestPermission();
+ if(permission!=='granted')throw Error('Allow notifications in your phone settings to receive payment alerts.');
+ const {getMessaging,getToken,isSupported}=await import('https://www.gstatic.com/firebasejs/13.0.0/firebase-messaging.js');
+ if(!await isSupported())throw Error('Firebase notifications are unavailable on this device.');
+ const reg=await navigator.serviceWorker.register('../customer-messaging-sw.js',{scope:'./'});
+ await navigator.serviceWorker.ready;
+ const messaging=getMessaging(auth.app);
+ const token=await getToken(messaging,{vapidKey:globalThis.SG_STAFF_CONFIG.vapidKey,serviceWorkerRegistration:reg});
+ if(!token)throw Error('This device could not be registered for alerts.');
+ await api(globalThis.SG_CUSTOMER_API,{action:'registerCustomerDevice',token});
+ customerPushToken=token;
+ pushButton.textContent='Payment alerts enabled';
+ pushHint.textContent='You will receive a phone alert when Stone Grill verifies your payment.';
+}
+pushButton.onclick=async()=>{
+ pushButton.disabled=true;
+ try{await enableCustomerPush();}catch(e){pushHint.textContent=e.message;}finally{pushButton.disabled=false;}
+};
