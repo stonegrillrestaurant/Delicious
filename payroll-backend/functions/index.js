@@ -1,19 +1,16 @@
 'use strict';
 
 const {onDocumentCreated} = require('firebase-functions/v2/firestore');
-const {defineSecret} = require('firebase-functions/params');
 const {initializeApp} = require('firebase-admin/app');
 const {getFirestore, Timestamp} = require('firebase-admin/firestore');
 
 initializeApp();
 
 const db = getFirestore();
-const textBeeApiKey = defineSecret('TEXTBEE_API_KEY');
-const textBeeDeviceId = defineSecret('TEXTBEE_DEVICE_ID');
-const payrollAlertRecipient = defineSecret('PAYROLL_ALERT_RECIPIENT');
 
 const MASTER_UID = 'TY8qdAMRtsZf48ibeNqdTNdO0aE2';
 const REQUEST_PATH = `artifacts/stone-grill-v1/users/${MASTER_UID}/ca_requests/{requestId}`;
+const PRIVATE_CONFIG_PATH = 'payrollPrivateConfig/textbee';
 
 function money(value) {
   return Number(value).toLocaleString('en-PH', {
@@ -39,13 +36,27 @@ async function writeAlertLog(requestId, data) {
   }
 }
 
+async function getTextBeeConfig() {
+  const snapshot = await db.doc(PRIVATE_CONFIG_PATH).get();
+  if (!snapshot.exists) throw new Error('TextBee private configuration is missing');
+
+  const config = snapshot.data() || {};
+  const apiKey = String(config.apiKey || '').trim();
+  const deviceId = String(config.deviceId || '').trim();
+  const recipient = String(config.recipient || '').trim();
+  if (!apiKey || !deviceId) throw new Error('TextBee private configuration is incomplete');
+  if (!/^\+[1-9]\d{7,14}$/.test(recipient)) {
+    throw new Error('TextBee recipient must use international E.164 format');
+  }
+  return {apiKey, deviceId, recipient};
+}
+
 exports.notifyAdminOfCashAdvance = onDocumentCreated({
   document: REQUEST_PATH,
   region: 'asia-southeast1',
   maxInstances: 2,
   timeoutSeconds: 30,
   memory: '256MiB',
-  secrets: [textBeeApiKey, textBeeDeviceId, payrollAlertRecipient],
   retry: false,
 }, async event => {
   const requestId = event.params.requestId;
@@ -80,19 +91,16 @@ exports.notifyAdminOfCashAdvance = onDocumentCreated({
       console.warn('Employee name lookup failed; sending alert with employee ID', requestId, safeReason(error));
     }
 
-    const recipient = payrollAlertRecipient.value().trim();
-    if (!/^\+[1-9]\d{7,14}$/.test(recipient)) {
-      throw new Error('PAYROLL_ALERT_RECIPIENT must use international E.164 format');
-    }
+    const {apiKey, deviceId, recipient} = await getTextBeeConfig();
 
     const response = await fetch('https://api.textbee.dev/api/v1/gateway/send-sms', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-api-key': textBeeApiKey.value(),
+        'x-api-key': apiKey,
       },
       body: JSON.stringify({
-        deviceId: textBeeDeviceId.value(),
+        deviceId,
         recipients: [recipient],
         message: `Stone Grill Payroll: New cash advance request from ${employeeName} - PHP ${money(amount)}. Open payroll to approve or reject.`,
       }),
