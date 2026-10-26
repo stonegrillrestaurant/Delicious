@@ -312,6 +312,15 @@ async function handleSubmit(e){
 window.submitPrepaidOrder=async function(method,reference){
  const draft=window.pendingCheckout;
  if(!draft||draft.uid!==window.SG_AUTH.auth.currentUser?.uid)throw Error('Sign in with the account that started this order.');
+ if(draft.submitted&&draft.paymentMethod&&draft.paymentMethod!==method)throw Error('This order already started with another payment method. Check My Orders before paying again.');
+ if(method==='hitpay'){
+  if(draft.legacy)throw Error('HitPay is available for new orders. Contact Stone Grill about this existing order.');
+  if(!draft.submitted){draft.paymentMethod='hitpay';draft.submitted=true;sessionStorage.setItem('sgPrepaidAttempt:'+draft.uid,JSON.stringify(draft));}
+  const result=await orderApi({...draft.payload,action:'hitpayOrder',requestId:draft.requestId,receiptKey:draft.receiptKey,returnUrl:location.origin+'/order/account/?hitpay=returned'});
+  if(window.SG_AUTH.auth.currentUser?.uid!==draft.uid)throw Error('Account changed. Sign back in to see the saved order.');
+  draft.confirmed=true;draft.orderId=result.orderId;sessionStorage.setItem('sgPrepaidAttempt:'+draft.uid,JSON.stringify(draft));
+  location.assign(result.checkoutUrl);return result;
+ }
  if(!draft.submitted){draft.paymentMethod=method;draft.submittedPaymentReference=reference;draft.submitted=true;
   sessionStorage.setItem('sgPrepaidAttempt:'+draft.uid,JSON.stringify(draft));}
  const result=await orderApi({...draft.payload,action:draft.legacy?'payment':'order',paymentMethod:draft.paymentMethod,submittedPaymentReference:draft.submittedPaymentReference,paymentMobile:draft.payload.mobile,requestId:draft.requestId,receiptKey:draft.receiptKey});
