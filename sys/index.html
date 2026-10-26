@@ -363,6 +363,97 @@
             return {file: new File(chunks, filename, {type: 'application/pdf'}), image, pageHeight: pageHeight / 72 * 25.4};
         };
 
+        const buildThermalReportDocument = (title, rows, filename) => {
+            const width = 576, margin = 36, fontSize = 23, lineHeight = 32, bottomFeed = 80;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('This browser cannot create the ledger PDF.');
+            const maxWidth = width - margin * 2, rendered = [];
+            rows.forEach(row => {
+                ctx.font = (row.bold ? 'bold ' : '') + fontSize + 'px monospace';
+                const words = String(row.text ?? '').split(/\s+/);
+                let line = '';
+                words.forEach(word => {
+                    if (line && ctx.measureText(line + ' ' + word).width > maxWidth) {
+                        rendered.push({...row,text:line}); line = '';
+                    }
+                    while (ctx.measureText(word).width > maxWidth) {
+                        let part = '';
+                        for (const char of word) {
+                            if (part && ctx.measureText(part + char).width > maxWidth) break;
+                            part += char;
+                        }
+                        rendered.push({...row,text:part}); word = word.slice(part.length);
+                    }
+                    if (word) line += (line ? ' ' : '') + word;
+                });
+                if (line || !String(row.text ?? '').trim()) rendered.push({...row,text:line});
+            });
+            canvas.width = width;
+            canvas.height = margin * 2 + (rendered.length + 2) * lineHeight + bottomFeed;
+            ctx.fillStyle = '#fff'; ctx.fillRect(0,0,width,canvas.height);
+            ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
+            let y = margin;
+            const drawLine = (text, bold, align) => {
+                ctx.font = (bold ? 'bold ' : '') + fontSize + 'px monospace';
+                ctx.textAlign = align || 'left';
+                ctx.fillText(text, align === 'center' ? width/2 : align === 'right' ? width-margin : margin, y);
+                y += lineHeight;
+            };
+            drawLine('STONE GRILL',true,'center');
+            drawLine(title.toUpperCase(),true,'center');
+            rendered.forEach(row => drawLine(row.text,Boolean(row.bold),row.align || 'left'));
+            const image = canvas.toDataURL('image/png');
+            const jpeg = Uint8Array.from(atob(canvas.toDataURL('image/jpeg',0.98).split(',')[1]), ch=>ch.charCodeAt(0));
+            const pageWidth = 58 * 72 / 25.4, pageHeight = canvas.height / width * pageWidth;
+            const encoder = new TextEncoder(), chunks = [], offsets = [0]; let length = 0;
+            const push = value => { const bytes = typeof value === 'string' ? encoder.encode(value) : value; chunks.push(bytes); length += bytes.length; };
+            const object = (id,body) => { offsets[id]=length; push(`${id} 0 obj\n${body}\nendobj\n`); };
+            push('%PDF-1.4\n');
+            object(1,'<< /Type /Catalog /Pages 2 0 R >>');
+            object(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+            object(3,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(3)} ${pageHeight.toFixed(3)}] /Resources << /XObject << /Report 4 0 R >> >> /Contents 5 0 R >>`);
+            offsets[4]=length;
+            push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`);
+            push(jpeg); push('\nendstream\nendobj\n');
+            const commands=`q\n${pageWidth.toFixed(3)} 0 0 ${pageHeight.toFixed(3)} 0 0 cm\n/Report Do\nQ\n`;
+            object(5,`<< /Length ${encoder.encode(commands).length} >>\nstream\n${commands}endstream`);
+            const xref=length; push('xref\n0 6\n0000000000 65535 f \n');
+            for(let id=1;id<=5;id++) push(`${String(offsets[id]).padStart(10,'0')} 00000 n \n`);
+            push(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+            return {file:new File(chunks,filename,{type:'application/pdf'}),image};
+        };
+
+        function ThermalReportDialog({title,documentData,onClose}) {
+            const [message,setMessage]=useState('');
+            const prepared=useMemo(()=>{
+                try { const result=buildThermalReportDocument(title,documentData.lines,documentData.filename); return {...result,url:URL.createObjectURL(result.file)}; }
+                catch(error) { return {error:error.message}; }
+            },[title,documentData]);
+            useEffect(()=>()=>{if(prepared.url)URL.revokeObjectURL(prepared.url);},[prepared]);
+            const share=async()=>{
+                const files=[prepared.file];
+                if(!navigator.canShare||!navigator.canShare({files})){setMessage('Use Save PDF or Open PDF, then share it from your device.');return;}
+                try{await navigator.share({files,title:'Stone Grill '+title});setMessage('');}
+                catch(error){if(error.name!=='AbortError')setMessage('Sharing could not open. Use Save PDF or Open PDF.');}
+            };
+            return <div className="fixed inset-0 z-[85] bg-slate-950/60 flex items-center justify-center p-3" role="dialog" aria-modal="true" aria-label={title}>
+                <div className="bg-white rounded-2xl w-full max-w-lg max-h-[94vh] overflow-y-auto p-4">
+                    <div className="flex justify-between items-center gap-3 mb-3"><div><h2 className="font-bold text-lg">{title}</h2><p className="text-xs text-slate-500">Review the 58mm receipt PDF before printing or saving.</p></div><button onClick={onClose} className="border rounded-lg px-3 py-2">Close</button></div>
+                    {prepared.error?<p role="alert">Unable to prepare the file: {prepared.error}</p>:<>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            <a href={prepared.url} target="_blank" rel="noopener" className="col-span-2 bg-blue-700 text-white rounded-lg px-4 py-3 font-bold flex items-center justify-center gap-2"><Printer className="w-4 h-4"/>Open PDF to Print</a>
+                            <a href={prepared.url} download={prepared.file.name} className="border rounded-lg px-4 py-3 text-center font-bold" onClick={()=>setMessage('If your phone opens the PDF, use its Share menu to Save to Files or Downloads.')}>Save PDF</a>
+                            <button onClick={share} className="border rounded-lg px-4 py-3">Share PDF</button>
+                        </div>
+                        <p className="text-xs text-slate-600 mb-3">Open the PDF, then use Share → Print. Only the white thermal receipt will print.</p>
+                        {message&&<p role="status" className="text-sm bg-blue-50 p-3 mb-3 rounded-lg">{message}</p>}
+                        <img src={prepared.image} alt={title+' receipt preview'} className="w-full max-w-[290px] mx-auto border"/>
+                    </>}
+                </div>
+            </div>;
+        }
+
         function VoucherDialog({req, onClose, onThermer}) {
             const [message, setMessage] = useState('');
             const documentFile = useMemo(() => {
@@ -404,6 +495,7 @@
 
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, isAdmin = false, onIssueCA, caBusy = false, onAddAdjustment }) {
             const [activeTab, setActiveTab] = useState('payslip');
+            const [ledgerPrintData, setLedgerPrintData] = useState(null);
             const [profileCA, setProfileCA] = useState({ amount: '', reason: '', date: new Date().toISOString().slice(0, 10), type: 'advance' });
             const [adjustment,setAdjustment] = useState({type:'Bonus',amount:'',note:''});
             const [adjustmentBusy,setAdjustmentBusy] = useState(false);
@@ -503,6 +595,29 @@
                 else totals.deductions += amount;
                 return totals;
             }, { credits: 0, deductions: 0 });
+            const receiptPrintLines = [
+                {text: emp.name, bold: true, align: 'center'},
+                {text: 'ID: ' + emp.id + ' • ' + (emp.position || 'Employee')},
+                {text: 'All ledger activity grouped by month'},
+                {text: 'Printed: ' + new Date().toLocaleDateString('en-PH')},
+                {text: '--------------------------------'}
+            ];
+            receiptMonths.forEach(([monthKey, entries]) => {
+                const label = monthKey === 'undated' ? 'UNDATED ENTRIES' : new Date(Number(monthKey.slice(0,4)),Number(monthKey.slice(5,7))-1,1).toLocaleDateString('en-PH',{month:'long',year:'numeric'}).toUpperCase();
+                receiptPrintLines.push({text:label,bold:true},{text:'--------------------------------'});
+                entries.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).forEach(tx=>{
+                    const credit=Number(tx.amount)<0||tx.isBonus;
+                    receiptPrintLines.push({text:(formatDisplayDate(tx.date)||'No date')+' '+(credit?'+':'-')+' PHP '+formatMoney(Math.abs(Number(tx.amount)||0)),bold:true});
+                    receiptPrintLines.push({text:tx.type+(tx.note?' - '+tx.note:'')});
+                });
+                const net=entries.reduce((sum,tx)=>sum+((Number(tx.amount)<0||tx.isBonus)?Math.abs(Number(tx.amount)||0):-Math.abs(Number(tx.amount)||0)),0);
+                receiptPrintLines.push({text:'MONTH NET: '+(net<0?'-':'+')+' PHP '+formatMoney(Math.abs(net)),bold:true});
+            });
+            receiptPrintLines.push({text:'--------------------------------'},
+                {text:'TOTAL CREDITS: PHP '+formatMoney(receiptTotals.credits),bold:true},
+                {text:'TOTAL DEDUCTIONS: PHP '+formatMoney(receiptTotals.deductions),bold:true},
+                {text:'NET LEDGER: '+(receiptTotals.credits-receiptTotals.deductions<0?'-':'+')+' PHP '+formatMoney(Math.abs(receiptTotals.credits-receiptTotals.deductions)),bold:true},
+                {text:'END OF LEDGER',align:'center'});
 
             return (
                 <div className="w-full max-w-lg mx-auto bg-gray-50 flex flex-col relative shadow-2xl overflow-hidden rounded-[2.5rem] border border-gray-200 animate-slide-up">
@@ -607,27 +722,8 @@
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                <div className="flex justify-between items-center gap-2 mb-4 px-2"><div><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold inline-flex items-center bg-blue-100 px-3 py-1 rounded-full mt-2">{receiptLedger.length} Records • {receiptMonths.length} Months</span></div><button type="button" onClick={() => { document.body.classList.add('payroll-ledger-active'); window.print(); document.body.classList.remove('payroll-ledger-active'); }} className="print-hidden shrink-0 px-4 py-2.5 bg-[#1b3382] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2"><Printer className="w-4 h-4"/> Print Ledger</button></div>
-                                <div id="payroll-ledger-thermal">
-                                    <div className="thermal-title">STONE GRILL</div>
-                                    <div style={{textAlign:'center',fontWeight:'bold'}}>EMPLOYEE LEDGER</div>
-                                    <div className="ledger-receipt-rule"></div>
-                                    <div><b>{emp.name}</b></div>
-                                    <div>ID: {emp.id} • {emp.position || 'Employee'}</div>
-                                    <div>Printed: {new Date().toLocaleDateString('en-PH')}</div>
-                                    {receiptMonths.map(([monthKey, entries]) => {
-                                        const monthTitle = monthKey === 'undated' ? 'Undated entries' : new Date(Number(monthKey.slice(0,4)), Number(monthKey.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'long',year:'numeric'});
-                                        const monthTotal = entries.reduce((sum,tx) => sum + ((Number(tx.amount) < 0 || tx.isBonus) ? Math.abs(Number(tx.amount)||0) : -Math.abs(Number(tx.amount)||0)), 0);
-                                        return <div className="ledger-receipt-month" key={monthKey}>
-                                            <div className="ledger-receipt-rule"></div>
-                                            <b>{monthTitle.toUpperCase()}</b>
-                                            {entries.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).map((tx,idx) => {
-                                                const credit = Number(tx.amount) < 0 || tx.isBonus;
-                                                const amount = Math.abs(Number(tx.amount)||0);
-                                                return <div key={tx.id || idx} style={{marginTop:'1.5mm'}}>
-                                                    <div className="ledger-receipt-row"><span>{formatDisplayDate(tx.date) || 'No date'}</span><b>{credit?'+':'-'}₱{formatMoney(amount)}</b></div>
-                                                    <div>{tx.type}{tx.note ? ' — ' + tx.note : ''}</div>
-                                                </div>;
+                                <div className="flex justify-between items-center gap-2 mb-4 px-2"><div><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold inline-flex items-center bg-blue-100 px-3 py-1 rounded-full mt-2">{receiptLedger.length} Records • {receiptMonths.length} Months</span></div><button type="button" onClick={() => setLedgerPrintData({lines:receiptPrintLines,filename:'Stone-Grill-Ledger-'+String(emp.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf'})} className="shrink-0 px-4 py-2.5 bg-[#1b3382] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2"><Printer className="w-4 h-4"/> Print Ledger</button></div>
+                                {ledgerPrintData && <ThermalReportDialog title="Employee Ledger" documentData={ledgerPrintData} onClose={() => setLedgerPrintData(null)} />};
                                             })}
                                             <div className="ledger-receipt-row" style={{marginTop:'1.5mm',fontWeight:'bold'}}><span>MONTH NET</span><span>{monthTotal < 0 ? '-' : '+'}₱{formatMoney(Math.abs(monthTotal))}</span></div>
                                         </div>;
