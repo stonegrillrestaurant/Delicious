@@ -15,6 +15,9 @@ const PRICE_EDITOR_EMAILS=new Set(['ninoxx@gmail.com','ninox7475@gmail.com','sto
 initializeApp();const db=getFirestore(),bucketName=defineString('ORDER_STORAGE_BUCKET');
 const textBeeApiKey=defineSecret('TEXTBEE_API_KEY');
 const textBeeDeviceId=defineSecret('TEXTBEE_DEVICE_ID');
+const hitpayApiKey=defineSecret('HITPAY_API_KEY');
+const hitpayWebhookSalt=defineSecret('HITPAY_WEBHOOK_SALT');
+const hitpayApiBase=defineString('HITPAY_API_BASE_URL',{default:'https://api.sandbox.hit-pay.com/v1'});
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const origins=['https://stone-grill-orders-test.web.app','https://stonegrillresto.net'];
 const options={region:'asia-southeast1',cors:origins,maxInstances:3,timeoutSeconds:60,memory:'256MiB',invoker:'public'};
@@ -27,11 +30,67 @@ function endpoint(fn,max=7100000){return async(req,res)=>{
  catch(e){res.status(e.status||500).json({ok:false,error:e.status?e.message:'Service unavailable. Retry using the same order reference.'});}
 };}
 async function throttle(ip,kind){const r=db.collection('sgOrderRateLimits').doc(hash(ip+':'+kind+':'+Math.floor(Date.now()/600000)));await db.runTransaction(async t=>{const s=await t.get(r),count=s.exists?s.data().count:0;if(count>=(kind==='order'?15:20))throw d.error(429,'Too many attempts. Contact Stone Grill or try later.');t.set(r,{count:count+1,expiresAt:Timestamp.fromMillis(Date.now()+86400000)});});}
-exports.orderApi=onRequest(options,endpoint(async(req,res)=>{
+exports.orderApi=onRequest({...options,secrets:[hitpayApiKey]},endpoint(async(req,res)=>{
  const user=await signedUser(req),b=req.body;d.identity(b);
- const setup=await db.collection('sgSystem').doc('prepaid-v1').get();if(!setup.exists||setup.data().ready!==true)throw d.error(503,'Checkout update in progress. Please return shortly; do not send payment yet.');d.check(['quote','order','payment','receipt'].includes(b.action),'Invalid action');await throttle(req.ip||'unknown',b.action);
+ const setup=await db.collection('sgSystem').doc('prepaid-v1').get();if(!setup.exists||setup.data().ready!==true)throw d.error(503,'Checkout update in progress. Please return shortly; do not send payment yet.');d.check(['quote','order','payment','receipt','hitpayOrder'].includes(b.action),'Invalid action');await throttle(req.ip||'unknown',b.action);
  if(b.action==='quote'){const order=d.order(b,await activeMenu());if(new Date(order.date+'T'+order.time+':00+08:00').getTime()<Date.now()-5*60000)throw d.error(400,'Choose a future date and time');return res.json({ok:true,order});}
  const ref=db.collection('sgOrders').doc(b.requestId),cap=db.collection('sgOrderCapabilities').doc(b.requestId),keyHash=hash(b.receiptKey);
+
+ if(b.action==='hitpayOrder'){
+  const order=d.order(b,await activeMenu());
+  const orderId='SG-'+b.requestId,keyHash=hash(b.receiptKey),fingerprint=hash(JSON.stringify(order));
+  const [existing,capability]=await Promise.all([ref.get(),cap.get()]);
+  if(existing.exists){
+   const saved=existing.data();
+   if(saved.customerUid!==user.uid||!capability.exists||capability.data().keyHash!==keyHash||capability.data().fingerprint!==fingerprint||saved.paymentMethod!=='hitpay')throw d.error(409,'This order reference is already in use. Check My Orders before paying again.');
+   if(!saved.hitpayCheckoutUrl)throw d.error(409,'This HitPay checkout could not be resumed. Contact Stone Grill before paying again.');
+   return res.json({ok:true,orderId:saved.orderId,total:saved.subtotal,checkoutUrl:saved.hitpayCheckoutUrl});
+  }
+  if(new Date(order.date+'T'+order.time+':00+08:00').getTime()<Date.now()-5*60000)throw d.error(400,'Choose a future date and time');
+  let apiKey;try{apiKey=hitpayApiKey.value();}catch{throw d.error(503,'HitPay is not configured yet. Use the current QR or GCash number option.');}
+  const base=hitpayApiBase.value().replace(/\/$/,'');
+  d.check(['https://api.sandbox.hit-pay.com/v1','https://api.hit-pay.com/v1'].includes(base),'HitPay API base URL must use the official HitPay endpoint');
+  d.check(origins.some(origin=>b.returnUrl===origin+'/order/account/?hitpay=returned'),'Invalid HitPay return URL');
+  const params=new URLSearchParams({
+   amount:Number(order.subtotal).toFixed(2),
+   currency:'PHP',
+   name:order.name,
+   email:user.email||'',
+   purpose:'Stone Grill online order '+orderId,
+   reference_number:b.requestId,
+   redirect_url:b.returnUrl,
+   allow_repeated_payments:'false'
+  });
+  let response,paymentRequest;
+  try{
+   response=await fetch(base+'/payment-requests',{method:'POST',headers:{'X-BUSINESS-API-KEY':apiKey,'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},body:params});
+   paymentRequest=await response.json();
+  }catch{throw d.error(502,'HitPay could not be reached. Retry the same checkout before paying again.');}
+  let checkoutUrl;
+  try{checkoutUrl=new URL(paymentRequest?.url||'');}catch{}
+  if(!response.ok||!paymentRequest?.id||!checkoutUrl||checkoutUrl.protocol!=='https:'||!['securecheckout.hit-pay.com','securecheckout.sandbox.hit-pay.com'].includes(checkoutUrl.hostname)||paymentRequest.currency?.toUpperCase()!=='PHP'||Math.round(Number(paymentRequest.amount)*100)!==Math.round(Number(order.subtotal)*100)){
+   throw d.error(502,'HitPay could not create a matching PHP payment request. Use QR or GCash number, or contact Stone Grill.');
+  }
+  let result;
+  await db.runTransaction(async t=>{
+   const [s,c]=await Promise.all([t.get(ref),t.get(cap)]);
+   if(s.exists){
+    const saved=s.data();
+    if(saved.customerUid!==user.uid||!c.exists||c.data().keyHash!==keyHash||c.data().fingerprint!==fingerprint)throw d.error(409,'This order reference is already in use. Check My Orders before paying again.');
+    result={orderId:saved.orderId,total:saved.subtotal,checkoutUrl:saved.hitpayCheckoutUrl};
+    return;
+   }
+   const now=Timestamp.now();
+   t.set(db.collection('sgCustomers').doc(user.uid),{name:order.name,mobile:order.mobile},{merge:true});
+   t.create(ref,{...order,customerUid:user.uid,customerEmail:user.email||'',reservationStatus:['Dine-in','Reservation'].includes(order.orderType)?'pending':'not_required',orderId,status:'new',paymentMethod:'hitpay',submittedPaymentReference:'',paymentStatus:'pending_verification',paymentDetailsAt:now,hitpayPaymentRequestId:String(paymentRequest.id),hitpayCheckoutUrl:checkoutUrl.href,hitpayRequestCreatedAt:now,receiptCount:0,createdAt:now,updatedAt:now});
+   t.create(cap,{keyHash,fingerprint});
+   t.create(db.collection('sgStaffAlerts').doc('order-'+b.requestId),{kind:'order',requestId:b.requestId,createdAt:now,notificationStatus:'pending'});
+   result={orderId,total:order.subtotal,checkoutUrl:checkoutUrl.href};
+  });
+  if(!result?.checkoutUrl)throw d.error(502,'HitPay checkout is not available. Contact Stone Grill before paying again.');
+  return res.json({ok:true,...result});
+ }
+
  if(b.action==='order'){
   const order={...d.order(b,await activeMenu()),...d.payment({...b,paymentMobile:b.paymentMobile||b.mobile})},fingerprint=hash(JSON.stringify(order)),orderId='SG-'+b.requestId;
   const claim=db.collection('sgPaymentReferences').doc(hash(order.submittedPaymentReference));
@@ -56,6 +115,37 @@ exports.orderApi=onRequest(options,endpoint(async(req,res)=>{
   t.create(db.collection('sgStaffAlerts').doc('payment-'+b.requestId),{kind:'payment',requestId:b.requestId,createdAt:now,notificationStatus:'pending'});
  });res.json({ok:true});
 }));
+
+
+exports.hitpayWebhook=onRequest({region:'asia-southeast1',secrets:[hitpayWebhookSalt],maxInstances:3,timeoutSeconds:60,memory:'256MiB',invoker:'public'},async(req,res)=>{
+ res.set('Cache-Control','no-store');
+ if(req.method!=='POST')return res.status(405).send('POST required');
+ const raw=req.rawBody,signature=req.get('hitpay-signature')||'';
+ if(!raw||!signature)return res.status(401).send('Missing HitPay signature');
+ let salt;try{salt=hitpayWebhookSalt.value();}catch{return res.status(503).send('Webhook not configured');}
+ const expected=require('node:crypto').createHmac('sha256',salt).update(raw).digest();
+ let supplied;try{supplied=Buffer.from(signature,'hex');}catch{return res.status(401).send('Invalid signature');}
+ if(supplied.length!==expected.length||!require('node:crypto').timingSafeEqual(expected,supplied))return res.status(401).send('Invalid signature');
+ let payload;try{payload=JSON.parse(raw.toString('utf8'));}catch{return res.status(400).send('Invalid JSON');}
+ const eventType=String(req.get('hitpay-event-type')||'').toLowerCase(),eventObject=String(req.get('hitpay-event-object')||'').toLowerCase();
+ if(!['completed','payment_request.completed'].includes(eventType)||eventObject&&eventObject!=='payment_request')return res.status(200).send('Event ignored');
+ if(payload.status!=='completed'||!/^([a-f0-9]{32})$/.test(String(payload.reference_number||'')))return res.status(200).send('Payment not applicable');
+ const orderRef=db.collection('sgOrders').doc(payload.reference_number);
+ await db.runTransaction(async t=>{
+  const snapshot=await t.get(orderRef);if(!snapshot.exists)return;
+  const order=snapshot.data();
+  if(order.paymentMethod!=='hitpay'||order.hitpayPaymentRequestId!==String(payload.id||''))return;
+  if(String(payload.currency||'').toUpperCase()!=='PHP'||Math.round(Number(payload.amount)*100)!==Math.round(Number(order.subtotal)*100))return;
+  if(order.paymentStatus==='verified')return;
+  const now=Timestamp.now();
+  const isReservation=['Dine-in','Reservation'].includes(order.orderType);
+  const patch={paymentStatus:'verified',paymentReference:'HitPay '+String(payload.payments?.[0]?.id||payload.id).slice(0,100),verifiedBy:'hitpay-webhook',verifiedAt:now,hitpayTransactionId:String(payload.payments?.[0]?.id||'').slice(0,120),updatedAt:now};
+  if(!isReservation&&!['completed','cancelled'].includes(order.status))patch.status='preparing';
+  t.update(orderRef,patch);
+  t.create(db.collection('sgStaffAlerts').doc('hitpay-payment-'+payload.reference_number),{kind:'payment',requestId:payload.reference_number,createdAt:now,notificationStatus:'pending'});
+ });
+ return res.status(200).send('OK');
+});
 
 exports.menuApi=onRequest(options,async(req,res)=>{
  res.set('Cache-Control','no-store');
