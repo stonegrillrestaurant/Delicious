@@ -98,7 +98,17 @@
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
         }
-        #pos-receipt-print, #payroll-list-thermal, #payroll-a4-compact { display: none; }
+        #pos-receipt-print, #payroll-list-thermal, #payroll-a4-compact, #payroll-ledger-thermal { display: none; }
+        @media print {
+            #payroll-ledger-thermal { box-sizing: border-box; width: 58mm !important; max-width: 58mm !important; padding: 2mm !important; margin: 0 !important; font: 9px/1.25 monospace !important; color: #000 !important; background: #fff !important; }
+            #payroll-ledger-thermal * { box-sizing: border-box; max-width: 100% !important; overflow-wrap: anywhere !important; box-shadow: none !important; }
+            .payroll-ledger-active #payroll-ledger-thermal { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; }
+            .payroll-ledger-active #payroll-ledger-thermal, .payroll-ledger-active #payroll-ledger-thermal * { visibility: visible !important; }
+            .payroll-ledger-active #print-section, .payroll-ledger-active #interactive-print-section, .payroll-ledger-active #pos-receipt-print, .payroll-ledger-active #payroll-list-thermal { display: none !important; }
+            .ledger-receipt-month { break-inside: avoid; margin-top: 3mm; }
+            .ledger-receipt-row { display: flex; justify-content: space-between; gap: 2mm; }
+            .ledger-receipt-rule { border-top: 1px dashed #000; margin: 2mm 0; }
+        }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
@@ -464,6 +474,36 @@
                 ledger.sort((a,b) => b.date.localeCompare(a.date));
             }
 
+            const receiptLedger = [
+                ...cashAdvances
+                    .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
+                    .map((ca, idx) => ({ id: ca.id || 'ca-' + idx, date: ca.date || '', type: Number(ca.amount) < 0 ? 'C.A. Repayment' : 'Cash Advance', amount: Number(ca.amount) || 0, note: ca.reason || '', isBonus: false })),
+                ...interactivePayrolls
+                    .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
+                    .flatMap(p => (Array.isArray(p.data?.ledger) ? p.data.ledger : []).map((entry, idx) => ({
+                        ...entry,
+                        id: entry.id || p.recordKey + '-ledger-' + idx,
+                        date: entry.date || p.endDate || (p.month ? p.month + '-01' : ''),
+                        type: entry.type || 'Ledger Entry',
+                        amount: Number(entry.amount) || 0,
+                        note: entry.note || '',
+                        isBonus: Boolean(entry.isBonus)
+                    })))
+            ];
+            const receiptMonthMap = new Map();
+            receiptLedger.forEach(tx => {
+                const monthKey = /^\\d{4}-\\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated';
+                if (!receiptMonthMap.has(monthKey)) receiptMonthMap.set(monthKey, []);
+                receiptMonthMap.get(monthKey).push(tx);
+            });
+            const receiptMonths = Array.from(receiptMonthMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+            const receiptTotals = receiptLedger.reduce((totals, tx) => {
+                const amount = Math.abs(Number(tx.amount) || 0);
+                if (Number(tx.amount) < 0 || tx.isBonus) totals.credits += amount;
+                else totals.deductions += amount;
+                return totals;
+            }, { credits: 0, deductions: 0 });
+
             return (
                 <div className="w-full max-w-lg mx-auto bg-gray-50 flex flex-col relative shadow-2xl overflow-hidden rounded-[2.5rem] border border-gray-200 animate-slide-up">
                     <div className="bg-[#1b3382] text-white px-6 pt-10 pb-6 rounded-b-[2rem] shadow-md z-10 relative shrink-0">
@@ -567,7 +607,39 @@
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                <div className="flex justify-between items-center mb-4 px-2"><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold flex items-center bg-blue-100 px-3 py-1 rounded-full">{ledger.length} Records</span></div>
+                                <div className="flex justify-between items-center gap-2 mb-4 px-2"><div><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold inline-flex items-center bg-blue-100 px-3 py-1 rounded-full mt-2">{receiptLedger.length} Records • {receiptMonths.length} Months</span></div><button type="button" onClick={() => { document.body.classList.add('payroll-ledger-active'); window.print(); document.body.classList.remove('payroll-ledger-active'); }} className="print-hidden shrink-0 px-4 py-2.5 bg-[#1b3382] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2"><Printer className="w-4 h-4"/> Print Ledger</button></div>
+                                <div id="payroll-ledger-thermal">
+                                    <div className="thermal-title">STONE GRILL</div>
+                                    <div style={{textAlign:'center',fontWeight:'bold'}}>EMPLOYEE LEDGER</div>
+                                    <div className="ledger-receipt-rule"></div>
+                                    <div><b>{emp.name}</b></div>
+                                    <div>ID: {emp.id} • {emp.position || 'Employee'}</div>
+                                    <div>Printed: {new Date().toLocaleDateString('en-PH')}</div>
+                                    {receiptMonths.map(([monthKey, entries]) => {
+                                        const monthTitle = monthKey === 'undated' ? 'Undated entries' : new Date(Number(monthKey.slice(0,4)), Number(monthKey.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'long',year:'numeric'});
+                                        const monthTotal = entries.reduce((sum,tx) => sum + ((Number(tx.amount) < 0 || tx.isBonus) ? Math.abs(Number(tx.amount)||0) : -Math.abs(Number(tx.amount)||0)), 0);
+                                        return <div className="ledger-receipt-month" key={monthKey}>
+                                            <div className="ledger-receipt-rule"></div>
+                                            <b>{monthTitle.toUpperCase()}</b>
+                                            {entries.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).map((tx,idx) => {
+                                                const credit = Number(tx.amount) < 0 || tx.isBonus;
+                                                const amount = Math.abs(Number(tx.amount)||0);
+                                                return <div key={tx.id || idx} style={{marginTop:'1.5mm'}}>
+                                                    <div className="ledger-receipt-row"><span>{formatDisplayDate(tx.date) || 'No date'}</span><b>{credit?'+':'-'}₱{formatMoney(amount)}</b></div>
+                                                    <div>{tx.type}{tx.note ? ' — ' + tx.note : ''}</div>
+                                                </div>;
+                                            })}
+                                            <div className="ledger-receipt-row" style={{marginTop:'1.5mm',fontWeight:'bold'}}><span>MONTH NET</span><span>{monthTotal < 0 ? '-' : '+'}₱{formatMoney(Math.abs(monthTotal))}</span></div>
+                                        </div>;
+                                    })}
+                                    {receiptLedger.length === 0 && <div style={{textAlign:'center',margin:'4mm 0'}}>No ledger entries</div>}
+                                    <div className="ledger-receipt-rule"></div>
+                                    <div className="ledger-receipt-row"><b>TOTAL CREDITS</b><b>+₱{formatMoney(receiptTotals.credits)}</b></div>
+                                    <div className="ledger-receipt-row"><b>TOTAL DEDUCTIONS</b><b>-₱{formatMoney(receiptTotals.deductions)}</b></div>
+                                    <div className="ledger-receipt-row"><b>NET LEDGER</b><b>{receiptTotals.credits-receiptTotals.deductions < 0 ? '-' : '+'}₱{formatMoney(Math.abs(receiptTotals.credits-receiptTotals.deductions))}</b></div>
+                                    <div className="ledger-receipt-rule"></div>
+                                    <div style={{textAlign:'center'}}>END OF LEDGER</div>
+                                </div>
                                 {isAdmin && onIssueCA && (
                                     <form onSubmit={handleProfileCASubmit} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-blue-100 space-y-3 print-hidden">
                                         <div><h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">Record Cash Advance</h4><p className="text-[10px] text-slate-500 mt-1">This entry will be added directly to {emp.name}’s ledger.</p></div>
