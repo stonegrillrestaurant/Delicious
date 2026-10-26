@@ -496,6 +496,25 @@
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, isAdmin = false, onIssueCA, caBusy = false, onAddAdjustment }) {
             const [activeTab, setActiveTab] = useState('payslip');
             const [ledgerPrintData, setLedgerPrintData] = useState(null);
+            useEffect(() => {
+                const recoverAfterThermer = () => {
+                    if (document.visibilityState !== 'visible') return;
+                    let handoffAt = 0;
+                    try { handoffAt = Number(sessionStorage.getItem('payroll-thermer-handoff-at') || 0); } catch (_) {}
+                    if (!handoffAt) return;
+                    try { sessionStorage.removeItem('payroll-thermer-handoff-at'); } catch (_) {}
+                    if (Date.now() - handoffAt <= 120000) {
+                        document.body.classList.remove('payroll-ledger-active');
+                        window.location.reload();
+                    }
+                };
+                document.addEventListener('visibilitychange', recoverAfterThermer);
+                window.addEventListener('pageshow', recoverAfterThermer);
+                return () => {
+                    document.removeEventListener('visibilitychange', recoverAfterThermer);
+                    window.removeEventListener('pageshow', recoverAfterThermer);
+                };
+            }, []);
             const [profileCA, setProfileCA] = useState({ amount: '', reason: '', date: new Date().toISOString().slice(0, 10), type: 'advance' });
             const [adjustment,setAdjustment] = useState({type:'Bonus',amount:'',note:''});
             const [adjustmentBusy,setAdjustmentBusy] = useState(false);
@@ -635,6 +654,7 @@
                         if(current || !text.trim()) entries.push({type:0,content:current,bold:row.bold?1:0,align:row.align==='center'?1:row.align==='right'?2:0,format:0});
                     });
                     entries.push({type:0,content:'\\n\\n\\n\\n',bold:0,align:0,format:0});
+                    try { sessionStorage.setItem('payroll-thermer-handoff-at', String(Date.now())); } catch (_) {}
                     window.location.href = 'thermer://' + encodeURIComponent(JSON.stringify(entries));
                     return;
                 }
