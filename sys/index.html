@@ -497,6 +497,7 @@
         function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, isAdmin = false, onIssueCA, caBusy = false, onAddAdjustment }) {
             const [activeTab, setActiveTab] = useState('payslip');
             const [ledgerPrintData, setLedgerPrintData] = useState(null);
+            const [ledgerMonth, setLedgerMonth] = useState('');
             useEffect(() => {
                 const recoverAfterThermer = () => {
                     if (document.visibilityState !== 'visible') return;
@@ -602,14 +603,16 @@
                         isBonus: Boolean(entry.isBonus)
                     })))
             ];
+            const ledgerMonthOptions = Array.from(new Set(receiptLedger.map(tx => /^\d{4}-\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated'))).sort();
+            const visibleLedger = ledgerMonth ? receiptLedger.filter(tx => ( /^\d{4}-\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated') === ledgerMonth) : receiptLedger;
             const receiptMonthMap = new Map();
-            receiptLedger.forEach(tx => {
+            visibleLedger.forEach(tx => {
                 const monthKey = /^\d{4}-\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated';
                 if (!receiptMonthMap.has(monthKey)) receiptMonthMap.set(monthKey, []);
                 receiptMonthMap.get(monthKey).push(tx);
             });
             const receiptMonths = Array.from(receiptMonthMap.entries()).sort(([a], [b]) => a.localeCompare(b));
-            const receiptTotals = receiptLedger.reduce((totals, tx) => {
+            const receiptTotals = visibleLedger.reduce((totals, tx) => {
                 const amount = Math.abs(Number(tx.amount) || 0);
                 if (Number(tx.amount) < 0 || tx.isBonus) totals.credits += amount;
                 else totals.deductions += amount;
@@ -618,7 +621,7 @@
             const receiptPrintLines = [
                 {text: emp.name, bold: true, align: 'center'},
                 {text: 'ID: ' + emp.id + ' • ' + (emp.position || 'Employee')},
-                {text: 'All ledger activity grouped by month'},
+                {text: ledgerMonth ? 'Selected month: ' + (ledgerMonth === 'undated' ? 'Undated entries' : new Date(Number(ledgerMonth.slice(0,4)),Number(ledgerMonth.slice(5,7))-1,1).toLocaleDateString('en-PH',{month:'long',year:'numeric'})) : 'All ledger activity grouped by month'},
                 {text: 'Printed: ' + new Date().toLocaleDateString('en-PH')},
                 {text: '--------------------------------'}
             ];
@@ -639,7 +642,7 @@
                 {text:'NET LEDGER: '+(receiptTotals.credits-receiptTotals.deductions<0?'-':'+')+' PHP '+formatMoney(Math.abs(receiptTotals.credits-receiptTotals.deductions)),bold:true},
                 {text:'END OF LEDGER',align:'center'});
             const handlePrintLedger = () => {
-                setLedgerPrintData({lines:receiptPrintLines,filename:'Stone-Grill-Ledger-'+String(emp.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf'});
+                setLedgerPrintData({lines:receiptPrintLines,filename:'Stone-Grill-Ledger-'+String(emp.id).replace(/[^a-zA-Z0-9_-]/g,'_')+(ledgerMonth?'-'+ledgerMonth:'-All')+'.pdf'});
             };
 
             return (
@@ -745,7 +748,7 @@
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
-                                <div className="flex justify-between items-center gap-2 mb-4 px-2"><div><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold inline-flex items-center bg-blue-100 px-3 py-1 rounded-full mt-2">{receiptLedger.length} Records • {receiptMonths.length} Months</span></div><div className="flex gap-2 shrink-0"><button type="button" onClick={handlePrintLedger} className="px-4 py-2.5 bg-[#1b3382] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2"><Printer className="w-4 h-4"/> Print Ledger</button><button type="button" onClick={() => setLedgerPrintData({lines:receiptPrintLines,filename:'Stone-Grill-Ledger-'+String(emp.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf'})} className="px-3 py-2.5 border border-blue-200 text-[#1b3382] rounded-xl text-[10px] font-black uppercase tracking-wider">PDF / Share</button></div></div>
+                                <div className="flex justify-between items-center gap-2 mb-4 px-2"><div><h3 className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase">Cloud Ledger</h3><span className="text-[#1b3382] text-[10px] font-bold inline-flex items-center bg-blue-100 px-3 py-1 rounded-full mt-2">{visibleLedger.length} Records • {ledgerMonth ? 'Filtered month' : receiptMonths.length + ' Months'}</span><select value={ledgerMonth} onChange={e=>setLedgerMonth(e.target.value)} className="mt-2 w-full p-2 rounded-lg border text-xs font-bold text-slate-700"><option value="">All Months</option>{ledgerMonthOptions.map(m=><option key={m} value={m}>{m==='undated'?'Undated entries':new Date(Number(m.slice(0,4)),Number(m.slice(5,7))-1,1).toLocaleDateString('en-PH',{month:'long',year:'numeric'})}</option>)}</select></div><div className="flex gap-2 shrink-0"><button type="button" onClick={handlePrintLedger} className="px-4 py-2.5 bg-[#1b3382] text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2"><Printer className="w-4 h-4"/> Print Ledger</button><button type="button" onClick={() => setLedgerPrintData({lines:receiptPrintLines,filename:'Stone-Grill-Ledger-'+String(emp.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf'})} className="px-3 py-2.5 border border-blue-200 text-[#1b3382] rounded-xl text-[10px] font-black uppercase tracking-wider">PDF / Share</button></div></div>
                                 <div id="payroll-ledger-thermal">
                                     <div className="thermal-title">STONE GRILL</div>
                                     {receiptPrintLines.map((row,index)=><div key={index} style={{fontWeight:row.bold?'bold':'normal',textAlign:row.align||'left',whiteSpace:'pre-wrap'}}>{row.text||' '}</div>)}
@@ -766,7 +769,7 @@
                                         <button type="submit" disabled={caBusy || !profileCA.amount || !profileCA.reason.trim()} className="w-full py-3 bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50">{caBusy ? 'Saving…' : profileCA.type === 'payment' ? 'Record Repayment' : 'Record Cash Advance'}</button>
                                     </form>
                                 )}
-                                {ledger.map(tx => (
+                                {visibleLedger.map(tx => (
                                     <div key={tx.id} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex items-center gap-4">
                                         <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><DollarSign className="w-5 h-5" /></div>
                                         <div className="flex-1 min-w-0">
@@ -779,7 +782,7 @@
                                         </div>
                                     </div>
                                 ))}
-                                {ledger.length === 0 && <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200"><HistoryIcon className="w-10 h-10 mx-auto text-gray-300 mb-2" /><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No Transactions Found</p></div>}
+                                {visibleLedger.length === 0 && <div className="text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200"><HistoryIcon className="w-10 h-10 mx-auto text-gray-300 mb-2" /><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No Transactions Found</p></div>}
                             </div>
                         )}
                     </div>
