@@ -508,6 +508,7 @@
                     if (Date.now() - handoffAt <= 120000) {
                         document.body.classList.remove('payroll-ledger-active');
                         setLedgerPrintData(null);
+                        try { sessionStorage.removeItem('payroll-thermer-handoff-at'); } catch (_) {}
                     }
                 };
                 document.addEventListener('visibilitychange', recoverAfterThermer);
@@ -618,64 +619,27 @@
                 else totals.deductions += amount;
                 return totals;
             }, { credits: 0, deductions: 0 });
-            const moneyValue = value => formatMoney(Math.abs(Number(value) || 0));
-            const printPeriod = ledgerMonth
-                ? (ledgerMonth === 'undated'
-                    ? 'Undated entries'
-                    : new Date(Number(ledgerMonth.slice(0,4)), Number(ledgerMonth.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'long', year:'numeric'}))
-                : 'All months';
             const receiptPrintLines = [
-                {text:'EMPLOYEE: ' + emp.name, bold:true},
-                {text:'EMPLOYEE ID: ' + emp.id},
-                {text:'POSITION: ' + (emp.position || 'Employee')},
-                {text:'PERIOD: ' + printPeriod},
-                {text:'PRINTED: ' + new Date().toLocaleDateString('en-PH')},
+                {text:emp.name, bold:true},
+                {text:ledgerMonth ? (ledgerMonth === 'undated' ? 'Undated entries' : new Date(Number(ledgerMonth.slice(0,4)), Number(ledgerMonth.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'long', year:'numeric'})) : 'All months'},
+                {text:'DATE       TYPE        AMOUNT',bold:true},
                 {text:'--------------------------------'}
             ];
-            let overallChange = 0;
             receiptMonths.forEach(([monthKey, entries]) => {
-                const label = monthKey === 'undated'
-                    ? 'UNDATED ENTRIES'
-                    : new Date(Number(monthKey.slice(0,4)), Number(monthKey.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'long', year:'numeric'}).toUpperCase();
-                let addedToBalance = 0;
-                let receivedOrDeducted = 0;
-                receiptPrintLines.push({text:label, bold:true},{text:'--------------------------------'});
+                const monthLabel = monthKey === 'undated'
+                    ? 'UNDATED'
+                    : new Date(Number(monthKey.slice(0,4)), Number(monthKey.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'short', year:'numeric'}).toUpperCase();
+                receiptPrintLines.push({text:monthLabel,bold:true});
                 entries.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).forEach(tx=>{
-                    const amount = Math.abs(Number(tx.amount) || 0);
-                    const addsToBalance = Number(tx.amount) < 0 || tx.isBonus;
-                    const type = String(tx.type || 'Ledger entry');
-                    const lowerType = type.toLowerCase();
-                    if (addsToBalance) addedToBalance += amount;
-                    else receivedOrDeducted += amount;
-                    const dateLabel = formatDisplayDate(tx.date) || 'Date not recorded';
-                    receiptPrintLines.push({text:dateLabel, bold:true});
-                    receiptPrintLines.push({text:'Type: ' + type});
-                    if (tx.note) receiptPrintLines.push({text:'Details: ' + String(tx.note)});
-                    receiptPrintLines.push({text:addsToBalance ? 'Added to balance:' : (lowerType.includes('cash advance') ? 'Cash received:' : 'Deducted from balance:'), bold:true});
-                    receiptPrintLines.push({text:'PHP ' + moneyValue(amount), bold:true});
-                    receiptPrintLines.push({text:' '});
+                    const date = formatDisplayDate(tx.date) || 'No date';
+                    const type = String(tx.type || 'Entry');
+                    const sign = Number(tx.amount) < 0 || tx.isBonus ? '+' : '-';
+                    const amount = 'PHP ' + formatMoney(Math.abs(Number(tx.amount) || 0));
+                    receiptPrintLines.push({text:date + '  ' + sign + amount,bold:true});
+                    receiptPrintLines.push({text:type});
                 });
-                const monthChange = addedToBalance - receivedOrDeducted;
-                overallChange += monthChange;
-                receiptPrintLines.push(
-                    {text:'MONTH SUMMARY', bold:true},
-                    {text:'Added to balance: PHP ' + moneyValue(addedToBalance)},
-                    {text:'Cash received / deductions:'},
-                    {text:'PHP ' + moneyValue(receivedOrDeducted)},
-                    {text:'MONTH CHANGE', bold:true},
-                    {text:(monthChange < 0 ? '- ' : '+ ') + 'PHP ' + moneyValue(monthChange), bold:true},
-                    {text:'--------------------------------'}
-                );
+                receiptPrintLines.push({text:'--------------------------------'});
             });
-            receiptPrintLines.push(
-                {text:'LEDGER TOTALS', bold:true},
-                {text:'Added to balance: PHP ' + moneyValue(receiptTotals.credits)},
-                {text:'Cash received / deductions:'},
-                {text:'PHP ' + moneyValue(receiptTotals.deductions)},
-                {text:ledgerMonth ? 'SELECTED PERIOD CHANGE' : 'OVERALL BALANCE CHANGE', bold:true},
-                {text:(overallChange < 0 ? '- ' : '+ ') + 'PHP ' + moneyValue(overallChange), bold:true},
-                {text:'END OF LEDGER', align:'center'}
-            );
             const handlePrintLedger = () => {
                 setLedgerPrintData({lines:receiptPrintLines,filename:'Stone-Grill-Ledger-'+String(emp.id).replace(/[^a-zA-Z0-9_-]/g,'_')+(ledgerMonth?'-'+ledgerMonth:'-All')+'.pdf'});
             };
@@ -788,7 +752,7 @@
                                     <div className="thermal-title">STONE GRILL</div>
                                     {receiptPrintLines.map((row,index)=><div key={index} style={{fontWeight:row.bold?'bold':'normal',textAlign:row.align||'left',whiteSpace:'pre-wrap'}}>{row.text||' '}</div>)}
                                 </div>
-                                {ledgerPrintData && <ThermalReportDialog title="Employee Ledger" documentData={ledgerPrintData} onClose={() => setLedgerPrintData(null)} onThermer={(rows) => { const entries=rows.map(row=>({type:0,content:String(row.text||''),bold:row.bold?1:0,align:row.align==='center'?1:row.align==='right'?2:0,format:0})); entries.push({type:0,content:'\\n\\n\\n\\n',bold:0,align:0,format:0}); try { sessionStorage.setItem('payroll-thermer-handoff-at',String(Date.now())); } catch (_) {} setLedgerPrintData(null); window.location.href='thermer://'+encodeURIComponent(JSON.stringify(entries)); }} />}
+                                {ledgerPrintData && <ThermalReportDialog title="Employee Ledger" documentData={ledgerPrintData} onClose={() => setLedgerPrintData(null)} onThermer={(rows) => { const entries=rows.map(row=>({type:0,content:String(row.text||''),bold:row.bold?1:0,align:row.align==='center'?1:row.align==='right'?2:0,format:0})); entries.push({type:0,content:'\\n\\n\\n\\n',bold:0,align:0,format:0}); try { sessionStorage.setItem('payroll-thermer-handoff-at',String(Date.now())); } catch (_) {} setLedgerPrintData(null); window.setTimeout(() => { window.location.assign('thermer://'+encodeURIComponent(JSON.stringify(entries))); }, 180); }} />}
                                 {isAdmin && onIssueCA && (
                                     <form onSubmit={handleProfileCASubmit} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-blue-100 space-y-3 print-hidden">
                                         <div><h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">Record Cash Advance</h4><p className="text-[10px] text-slate-500 mt-1">This entry will be added directly to {emp.name}’s ledger.</p></div>
