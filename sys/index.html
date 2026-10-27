@@ -618,29 +618,62 @@
                 else totals.deductions += amount;
                 return totals;
             }, { credits: 0, deductions: 0 });
+            const moneyValue = value => formatMoney(Math.abs(Number(value) || 0));
+            const printPeriod = ledgerMonth
+                ? (ledgerMonth === 'undated'
+                    ? 'Undated entries'
+                    : new Date(Number(ledgerMonth.slice(0,4)), Number(ledgerMonth.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'long', year:'numeric'}))
+                : 'All months';
             const receiptPrintLines = [
-                {text: emp.name, bold: true, align: 'center'},
-                {text: 'ID: ' + emp.id + ' • ' + (emp.position || 'Employee')},
-                {text: ledgerMonth ? 'Selected month: ' + (ledgerMonth === 'undated' ? 'Undated entries' : new Date(Number(ledgerMonth.slice(0,4)),Number(ledgerMonth.slice(5,7))-1,1).toLocaleDateString('en-PH',{month:'long',year:'numeric'})) : 'All ledger activity grouped by month'},
-                {text: 'Printed: ' + new Date().toLocaleDateString('en-PH')},
-                {text: '--------------------------------'}
+                {text:'EMPLOYEE: ' + emp.name, bold:true},
+                {text:'EMPLOYEE ID: ' + emp.id},
+                {text:'POSITION: ' + (emp.position || 'Employee')},
+                {text:'PERIOD: ' + printPeriod},
+                {text:'PRINTED: ' + new Date().toLocaleDateString('en-PH')},
+                {text:'--------------------------------'}
             ];
+            let overallChange = 0;
             receiptMonths.forEach(([monthKey, entries]) => {
-                const label = monthKey === 'undated' ? 'UNDATED ENTRIES' : new Date(Number(monthKey.slice(0,4)),Number(monthKey.slice(5,7))-1,1).toLocaleDateString('en-PH',{month:'long',year:'numeric'}).toUpperCase();
-                receiptPrintLines.push({text:label,bold:true},{text:'--------------------------------'});
+                const label = monthKey === 'undated'
+                    ? 'UNDATED ENTRIES'
+                    : new Date(Number(monthKey.slice(0,4)), Number(monthKey.slice(5,7))-1, 1).toLocaleDateString('en-PH', {month:'long', year:'numeric'}).toUpperCase();
+                let addedToBalance = 0;
+                let receivedOrDeducted = 0;
+                receiptPrintLines.push({text:label, bold:true},{text:'--------------------------------'});
                 entries.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).forEach(tx=>{
-                    const credit=Number(tx.amount)<0||tx.isBonus;
-                    receiptPrintLines.push({text:(formatDisplayDate(tx.date)||'No date')+' '+(credit?'+':'-')+' PHP '+formatMoney(Math.abs(Number(tx.amount)||0)),bold:true});
-                    receiptPrintLines.push({text:tx.type+(tx.note?' - '+tx.note:'')});
+                    const amount = Math.abs(Number(tx.amount) || 0);
+                    const addsToBalance = Number(tx.amount) < 0 || tx.isBonus;
+                    const type = String(tx.type || 'Ledger entry');
+                    const lowerType = type.toLowerCase();
+                    if (addsToBalance) addedToBalance += amount;
+                    else receivedOrDeducted += amount;
+                    const dateLabel = formatDisplayDate(tx.date) || 'Date not recorded';
+                    receiptPrintLines.push({text:dateLabel, bold:true});
+                    receiptPrintLines.push({text:'Type: ' + type});
+                    if (tx.note) receiptPrintLines.push({text:'Details: ' + String(tx.note)});
+                    receiptPrintLines.push({text:addsToBalance ? 'Added to balance:' : (lowerType.includes('cash advance') ? 'Cash received:' : 'Deducted from balance:'), bold:true});
+                    receiptPrintLines.push({text:'PHP ' + moneyValue(amount), bold:true});
+                    receiptPrintLines.push({text:' '});
                 });
-                const net=entries.reduce((sum,tx)=>sum+((Number(tx.amount)<0||tx.isBonus)?Math.abs(Number(tx.amount)||0):-Math.abs(Number(tx.amount)||0)),0);
-                receiptPrintLines.push({text:'MONTH NET: '+(net<0?'-':'+')+' PHP '+formatMoney(Math.abs(net)),bold:true});
+                const monthChange = addedToBalance - receivedOrDeducted;
+                overallChange += monthChange;
+                receiptPrintLines.push(
+                    {text:'MONTH SUMMARY', bold:true},
+                    {text:'Added to balance: PHP ' + moneyValue(addedToBalance)},
+                    {text:'Cash received / deductions:'},
+                    {text:'PHP ' + moneyValue(receivedOrDeducted)},
+                    {text:'MONTH CHANGE: ' + (monthChange < 0 ? '- ' : '+ ') + 'PHP ' + moneyValue(monthChange), bold:true},
+                    {text:'--------------------------------'}
+                );
             });
-            receiptPrintLines.push({text:'--------------------------------'},
-                {text:'TOTAL CREDITS: PHP '+formatMoney(receiptTotals.credits),bold:true},
-                {text:'TOTAL DEDUCTIONS: PHP '+formatMoney(receiptTotals.deductions),bold:true},
-                {text:'NET LEDGER: '+(receiptTotals.credits-receiptTotals.deductions<0?'-':'+')+' PHP '+formatMoney(Math.abs(receiptTotals.credits-receiptTotals.deductions)),bold:true},
-                {text:'END OF LEDGER',align:'center'});
+            receiptPrintLines.push(
+                {text:'LEDGER TOTALS', bold:true},
+                {text:'Added to balance: PHP ' + moneyValue(receiptTotals.credits)},
+                {text:'Cash received / deductions:'},
+                {text:'PHP ' + moneyValue(receiptTotals.deductions)},
+                {text:(ledgerMonth ? 'SELECTED MONTH CHANGE: ' : 'OVERALL BALANCE CHANGE: ') + (overallChange < 0 ? '- ' : '+ ') + 'PHP ' + moneyValue(overallChange), bold:true},
+                {text:'END OF LEDGER', align:'center'}
+            );
             const handlePrintLedger = () => {
                 setLedgerPrintData({lines:receiptPrintLines,filename:'Stone-Grill-Ledger-'+String(emp.id).replace(/[^a-zA-Z0-9_-]/g,'_')+(ledgerMonth?'-'+ledgerMonth:'-All')+'.pdf'});
             };
