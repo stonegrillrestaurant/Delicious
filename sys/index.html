@@ -437,7 +437,7 @@
                 try{await navigator.share({files,title:'Stone Grill '+title});setMessage('');}
                 catch(error){if(error.name!=='AbortError')setMessage('Sharing could not open. Use Save PDF or Open PDF.');}
             };
-            return <div className="fixed inset-0 z-[85] bg-slate-950/60 flex items-center justify-center p-3" role="dialog" aria-modal="true" aria-label={title}>
+            return ReactDOM.createPortal(<div className="fixed inset-0 z-[85] bg-slate-950/60 flex items-center justify-center p-3 print-hidden" role="dialog" aria-modal="true" aria-label={title}>
                 <div className="bg-white rounded-2xl w-full max-w-lg max-h-[94vh] overflow-y-auto p-4">
                     <div className="flex justify-between items-center gap-3 mb-3"><div><h2 className="font-bold text-lg">{title}</h2><p className="text-xs text-slate-500">Review the 58mm receipt PDF before printing or saving.</p></div><button onClick={onClose} className="border rounded-lg px-3 py-2">Close</button></div>
                     {prepared.error?<p role="alert">Unable to prepare the file: {prepared.error}</p>:<>
@@ -452,7 +452,7 @@
                         <img src={prepared.image} alt={title+' receipt preview'} className="w-full max-w-[290px] mx-auto border"/>
                     </>}
                 </div>
-            </div>;
+            </div>, document.body);
         }
 
         function VoucherDialog({req, onClose, onThermer}) {
