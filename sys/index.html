@@ -507,7 +507,7 @@
                     try { sessionStorage.removeItem('payroll-thermer-handoff-at'); } catch (_) {}
                     if (Date.now() - handoffAt <= 120000) {
                         document.body.classList.remove('payroll-ledger-active');
-                        window.location.reload();
+                        setLedgerPrintData(null);
                     }
                 };
                 document.addEventListener('visibilitychange', recoverAfterThermer);
@@ -788,7 +788,7 @@
                                     <div className="thermal-title">STONE GRILL</div>
                                     {receiptPrintLines.map((row,index)=><div key={index} style={{fontWeight:row.bold?'bold':'normal',textAlign:row.align||'left',whiteSpace:'pre-wrap'}}>{row.text||' '}</div>)}
                                 </div>
-                                {ledgerPrintData && <ThermalReportDialog title="Employee Ledger" documentData={ledgerPrintData} onClose={() => setLedgerPrintData(null)} onThermer={(rows) => { const entries=rows.map(row=>({type:0,content:String(row.text||''),bold:row.bold?1:0,align:row.align==='center'?1:row.align==='right'?2:0,format:0})); entries.push({type:0,content:'\\n\\n\\n\\n',bold:0,align:0,format:0}); window.location.href='thermer://'+encodeURIComponent(JSON.stringify(entries)); }} />}
+                                {ledgerPrintData && <ThermalReportDialog title="Employee Ledger" documentData={ledgerPrintData} onClose={() => setLedgerPrintData(null)} onThermer={(rows) => { const entries=rows.map(row=>({type:0,content:String(row.text||''),bold:row.bold?1:0,align:row.align==='center'?1:row.align==='right'?2:0,format:0})); entries.push({type:0,content:'\\n\\n\\n\\n',bold:0,align:0,format:0}); try { sessionStorage.setItem('payroll-thermer-handoff-at',String(Date.now())); } catch (_) {} setLedgerPrintData(null); window.location.href='thermer://'+encodeURIComponent(JSON.stringify(entries)); }} />}
                                 {isAdmin && onIssueCA && (
                                     <form onSubmit={handleProfileCASubmit} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-blue-100 space-y-3 print-hidden">
                                         <div><h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">Record Cash Advance</h4><p className="text-[10px] text-slate-500 mt-1">This entry will be added directly to {emp.name}’s ledger.</p></div>
