@@ -85,7 +85,9 @@ async function createPaidReceipt(token,order) {
     allPages(token,'/payment_types','payment_types')
   ]);
   if(stores.length!==1)throw new Error('Select one Loyverse store before receipt sync');
-  const payment=matchByName(paymentTypes,order.paymentMethod==='number'?'GCash':'GCash');
+  const candidates=paymentTypes.filter(p=>{const n=String(p.name||'').toLowerCase();return order.paymentMethod==='qr'?/(gcash|qr)/.test(n):/gcash/.test(n)&&!n.includes('qr');});
+  if(candidates.length!==1)throw new Error(candidates.length?'Choose the Loyverse GCash payment type':'Create a GCash payment type in Loyverse');
+  const payment=candidates[0];
   const line_items=order.items.map(line=>{
     const item=matchByName(items,line.name);
     if(!Array.isArray(item.variants)||item.variants.length!==1)throw new Error('Choose a Loyverse variant for '+line.name);
