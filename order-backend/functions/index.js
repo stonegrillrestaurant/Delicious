@@ -89,8 +89,26 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
   if(changed)t.set(ref.collection('signIns').doc(String(authTime)),{at:now,provider:user.firebase?.sign_in_provider||'unknown'});
  });res.json({ok:true});
 },20000));
-exports.staffApi=onRequest(options,endpoint(async(req,res)=>{
+exports.staffApi=onRequest({...options,secrets:[loyverseClientSecret]},endpoint(async(req,res)=>{
  const user=await operator(req),b=req.body;
+ if(b.action==='retryLoyverseSync'){
+  if(user.role!=='owner')throw d.error(403,'Only the owner can retry Loyverse sync');
+  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
+  const orderRef=db.collection('sgOrders').doc(b.requestId);let order=null,claimed=false;
+  await db.runTransaction(async t=>{
+   const snap=await t.get(orderRef);if(!snap.exists)throw d.error(404,'Order not found');
+   const row=snap.data(),sync=row.loyverseSync||{};
+   if(row.paymentStatus!=='verified')throw d.error(409,'Verify payment before syncing to Loyverse');
+   if(sync.status==='sent'||sync.status==='processing')throw d.error(409,'Loyverse receipt is already synced or processing');
+   order={...row,orderId:row.orderId||'SG-'+b.requestId};
+   t.update(orderRef,{loyverseSync:{status:'processing',startedAt:Timestamp.now(),retriedBy:user.uid}});
+   claimed=true;
+  });
+  if(claimed){
+   try{const {token}=await loyverseToken();const receipt=await loyverse.createPaidReceipt(token,order);await orderRef.update({loyverseSync:{status:'sent',receiptNumber:receipt.receipt_number||'',sentAt:Timestamp.now()}});return res.json({ok:true,receiptNumber:receipt.receipt_number||''});}
+   catch(e){await orderRef.update({loyverseSync:{status:'failed',error:String(e.message||'Loyverse sync failed').slice(0,250),failedAt:Timestamp.now()}});throw d.error(502,'Loyverse sync failed: '+String(e.message||'check Loyverse setup').slice(0,180));}
+  }
+ }
  if(b.action==='loyverseAuthorize'){
   if(user.role!=='owner')throw d.error(403,'Only the owner can connect Loyverse');
   const state=randomUUID().replace(/-/g,''),now=Timestamp.now();
