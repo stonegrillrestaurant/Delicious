@@ -84,6 +84,14 @@ async function api(body,binary=false){
  if(!r.ok){let j;try{j=await r.json();}catch{}throw Error(j?.error||'Request failed. Try again.');}return binary?await r.blob():await r.json();
  }catch(e){if(e.name==='AbortError')throw Error('No response received. Check the live order status before retrying; the update may have succeeded.');throw e;}finally{clearTimeout(timer);}
 }
+$('connectLoyverse').onclick=async()=>{
+ if(busy||profile?.role!=='owner')return;
+ busy=true;$('connectLoyverse').disabled=true;
+ try{const result=await api({action:'loyverseAuthorize'});if(!result?.url)throw Error('Could not start Loyverse connection');location.href=result.url;}
+ catch(e){notice(e.message);}
+ finally{busy=false;$('connectLoyverse').disabled=false;}
+};
+if(new URLSearchParams(location.search).get('loyverse')==='connected')notice('Loyverse connected. New verified payments will sync to receipts.');
 $('orders').onclick=e=>{const b=e.target.closest('[data-id]');if(b&&!busy){select(b.dataset.id);document.body.classList.add('detail-open');$('detail').scrollTop=0;$('detail').focus({preventScroll:true});if(innerWidth<=850)window.scrollTo({top:0,behavior:'instant'});}};
 addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail();});$('search').oninput=render;
 $('liveView').onclick=()=>view(false);$('historyView').onclick=()=>view(true);
@@ -128,7 +136,7 @@ async function boot(){
  try{const base='https://www.gstatic.com/firebasejs/13.0.0/';const [app,a,fs,m]=await Promise.all(['firebase-app.js','firebase-auth.js','firebase-firestore.js','firebase-messaging.js'].map(n=>import(base+n)));fa=a;f=fs;fm=m;const instance=app.initializeApp(globalThis.SG_FIREBASE_CONFIG);auth=fa.getAuth(instance);db=f.getFirestore(instance);await fa.setPersistence(auth,fa.browserSessionPersistence);$('googleLogin').disabled=false;
  fa.onAuthStateChanged(auth,async u=>{const rev=++authRevision;stopProfile?.();stopData();user=u;profile=null;$('workspace').hidden=true;$('login').hidden=false;$('signOut').hidden=!u;if(!u){connection('Signed out');return;}$('loginMessage').textContent='Checking staff access…';
  try{const r=await fetch(globalThis.SG_CUSTOMER_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify({action:'syncProfile'})});if(!r.ok)throw Error('Profile setup failed');}catch(e){notice(e.message);return;}if(auth.currentUser?.uid!==u.uid||rev!==authRevision)return;
- stopProfile=f.onSnapshot(f.doc(db,'sgStaff',u.uid),s=>{if(auth.currentUser?.uid!==u.uid||rev!==authRevision)return;const p=s.data();if(!p?.active||!['owner','admin','cashier','staff'].includes(p.role)){stopData();profile=null;$('workspace').hidden=true;$('login').hidden=false;$('loginMessage').textContent='Ask the owner to assign access. Your UID: '+u.uid;return;}const changed=profile?.role!==p.role;if(changed){stopReceipts?.();stopAudit?.();stopReceipts=stopAudit=null;receipts=[];audit=[];}if(p.role!=='owner')clearOwnerView();profile=p;$('login').hidden=true;$('workspace').hidden=false;$('staffName').textContent=u.displayName||u.email||'Staff';$('role').textContent=p.role.toUpperCase();$('usersView').hidden=p.role!=='owner';$('disablePush').hidden=!pushToken;alertStatus();if(pendingDeepLink&&!selected)selected=pendingDeepLink;if(!stopOrders||changed)listen();else renderDetail();},()=>{stopData();profile=null;$('workspace').hidden=true;$('login').hidden=false;notice('Staff access check failed. Check Firestore rules or your connection.');});});
+ stopProfile=f.onSnapshot(f.doc(db,'sgStaff',u.uid),s=>{if(auth.currentUser?.uid!==u.uid||rev!==authRevision)return;const p=s.data();if(!p?.active||!['owner','admin','cashier','staff'].includes(p.role)){stopData();profile=null;$('workspace').hidden=true;$('login').hidden=false;$('loginMessage').textContent='Ask the owner to assign access. Your UID: '+u.uid;return;}const changed=profile?.role!==p.role;if(changed){stopReceipts?.();stopAudit?.();stopReceipts=stopAudit=null;receipts=[];audit=[];}if(p.role!=='owner')clearOwnerView();profile=p;$('login').hidden=true;$('workspace').hidden=false;$('staffName').textContent=u.displayName||u.email||'Staff';$('role').textContent=p.role.toUpperCase();$('usersView').hidden=p.role!=='owner';$('connectLoyverse').hidden=p.role!=='owner';$('disablePush').hidden=!pushToken;alertStatus();if(pendingDeepLink&&!selected)selected=pendingDeepLink;if(!stopOrders||changed)listen();else renderDetail();},()=>{stopData();profile=null;$('workspace').hidden=true;$('login').hidden=false;notice('Staff access check failed. Check Firestore rules or your connection.');});});
  }catch(e){notice('Could not connect to Firebase. '+e.message);}
 }boot();
 
