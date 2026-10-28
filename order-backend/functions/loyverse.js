@@ -93,9 +93,15 @@ async function createPaidReceipt(token,order) {
     if(!Array.isArray(item.variants)||item.variants.length!==1)throw new Error('Choose a Loyverse variant for '+line.name);
     return {variant_id:item.variants[0].variant_id||item.variants[0].id,quantity:line.qty,price:Number(line.price)};
   });
+  const orderNumber=String(order.orderId||'').slice(0,64);
+  if(!orderNumber)throw new Error('Online order is missing its order number');
+  const query=new URLSearchParams({order:orderNumber,store_id:stores[0].id,limit:'50'});
+  const existing=await api(token,'/receipts?'+query.toString());
+  const prior=(existing.receipts||[]).find(r=>r.order===orderNumber&&r.receipt_type==='SALE');
+  if(prior)return prior;
   const payload={
     store_id:stores[0].id,
-    order:order.orderId,
+    order:orderNumber,
     source:'Stone Grill Orders',
     note:'Online order '+order.orderId,
     line_items,
