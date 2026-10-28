@@ -44,3 +44,21 @@ npm run deploy:test -- --dry-run
 `web/order` contains the complete Firebase customer frontend. The build copies the staff source from `../order/staff` and the shared Firebase configuration from `../order/firebase-config.js`. The customer menu is generated from `functions/menu.json`, so the frontend/server catalog cannot drift. Generated `public` files are ignored in Git. The build validates local HTML links/assets, JSON, manifests and browser JavaScript syntax. Test pages use noindex and test-site canonical links.
 
 Automated checks cover pricing, payment references, permissions, preparation and completion, profiles/progress, retry behavior, and the staff queue/mobile interactions. Real Google sign-in, external GCash funds and push notifications must still be verified on the deployed test site with actual accounts/devices before any production launch.
+
+## Loyverse online receipt sync
+
+The owner connects Loyverse from the existing Staff Desk using **Connect Loyverse**. The registered Loyverse app must use this exact Redirect URL:
+
+`https://asia-southeast1-stone-grill-app.cloudfunctions.net/loyverseOAuthCallback`
+
+The registered client ID is configured as a default in `functions/index.js`. Store the Loyverse App secret in Firebase Secret Manager; never put it in website code or GitHub:
+
+```sh
+firebase functions:secrets:set LOYVERSE_CLIENT_SECRET --project stone-grill-app
+```
+
+After setting the secret, deploy the existing test project from Cloud Shell using the deployment command above. The deploy command targets `stone-grill-orders-test`; it does not switch production.
+
+When staff verifies a payment, the backend creates one Loyverse sales receipt. It sends the item prices saved with the customer order, checks Loyverse for an existing receipt with the same order number before retrying, and shows sync status in the order details. An owner can retry a failed sync. This creates a completed receipt, not an open POS/KDS ticket.
+
+Before using a real order, the Loyverse account needs one store, matching item names with one variant per item, and a GCash payment type. QR payment prefers a payment type whose name contains QR or GCash; GCash number payment uses a GCash type without QR in its name. If the catalogue cannot be matched, the order remains in the Orders app and the staff detail shows the reason instead of silently recording a wrong item.
