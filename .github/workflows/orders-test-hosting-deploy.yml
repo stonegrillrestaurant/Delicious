@@ -2,6 +2,15 @@ name: Deploy Stone Grill order test Hosting
 
 on:
   workflow_dispatch:
+    inputs:
+      source:
+        description: Source branch to publish to the existing test site
+        required: true
+        default: codex/staff-dashboard-mobile
+        type: choice
+        options:
+          - codex/staff-dashboard-mobile
+          - main
 
 permissions:
   contents: read
@@ -17,10 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Check out main
+      - name: Check out selected source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source }}
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
