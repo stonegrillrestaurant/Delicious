@@ -15,7 +15,7 @@ const PRICE_EDITOR_EMAILS=new Set(['ninoxx@gmail.com','ninox7475@gmail.com','sto
 initializeApp();const db=getFirestore(),bucketName=defineString('ORDER_STORAGE_BUCKET');
 const textBeeApiKey=defineSecret('TEXTBEE_API_KEY');
 const textBeeDeviceId=defineSecret('TEXTBEE_DEVICE_ID');
-const loyverseClientId=defineString('LOYVERSE_CLIENT_ID',{default:'KHtNN7jbRTbG6Fd6tahW'});
+const LOYVERSE_CLIENT_ID='KHtNN7jbRTbG6Fd6tahW';
 const loyverseClientSecret=defineSecret('LOYVERSE_CLIENT_SECRET');
 const LOYVERSE_REDIRECT_URI='https://asia-southeast1-stone-grill-app.cloudfunctions.net/loyverseOAuthCallback';
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -160,7 +160,7 @@ exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId,lo
   if(user.role!=='owner')throw d.error(403,'Only the owner can connect Loyverse');
   const state=randomUUID().replace(/-/g,''),now=Timestamp.now();
   await db.collection('sgLoyverseOAuthStates').doc(state).set({uid:user.uid,createdAt:now});
-  return res.json({ok:true,url:loyverse.authorizeUrl({clientId:loyverseClientId.value(),redirectUri:LOYVERSE_REDIRECT_URI,state})});
+  return res.json({ok:true,url:loyverse.authorizeUrl({clientId:LOYVERSE_CLIENT_ID,redirectUri:LOYVERSE_REDIRECT_URI,state})});
  }
  if(b.action==='setRole'){
   const patch=d.roleChange(user.uid,b.uid,b.role,OWNER_UID);
@@ -277,7 +277,7 @@ exports.loyverseOAuthCallback=onRequest({region:'asia-southeast1',secrets:[loyve
   if(error||typeof code!=='string'||typeof state!=='string')throw new Error('Loyverse authorization was not completed');
   const stateRef=db.collection('sgLoyverseOAuthStates').doc(state),stateSnap=await stateRef.get();
   if(!stateSnap.exists||Date.now()-stateSnap.data().createdAt.toMillis()>10*60*1000)throw new Error('Authorization expired; reconnect from the staff desk');
-  const token=await loyverse.exchangeCode({clientId:loyverseClientId.value(),clientSecret:loyverseClientSecret.value(),redirectUri:LOYVERSE_REDIRECT_URI,code});
+  const token=await loyverse.exchangeCode({clientId:LOYVERSE_CLIENT_ID,clientSecret:loyverseClientSecret.value(),redirectUri:LOYVERSE_REDIRECT_URI,code});
   await db.collection('sgIntegrations').doc('loyverse').set({accessToken:token.access_token,refreshToken:token.refresh_token,expiresAt:Timestamp.fromMillis(Date.now()+(token.expires_in||43200)*1000),scope:token.scope||'',connectedBy:stateSnap.data().uid,updatedAt:Timestamp.now()});
   await stateRef.delete();
   return res.redirect(302,'https://stone-grill-orders-test.web.app/order/staff/?loyverse=connected');
@@ -288,7 +288,7 @@ async function loyverseToken(){
  if(!snap.exists)throw new Error('Connect Loyverse from the owner staff account first');
  const data=snap.data();
  if(data.expiresAt&&data.expiresAt.toMillis()>Date.now()+60000)return {token:data.accessToken};
- const refreshed=await loyverse.refreshToken({clientId:loyverseClientId.value(),clientSecret:loyverseClientSecret.value(),refreshToken:data.refreshToken});
+ const refreshed=await loyverse.refreshToken({clientId:LOYVERSE_CLIENT_ID,clientSecret:loyverseClientSecret.value(),refreshToken:data.refreshToken});
  await ref.set({accessToken:refreshed.access_token,refreshToken:refreshed.refresh_token||data.refreshToken,expiresAt:Timestamp.fromMillis(Date.now()+(refreshed.expires_in||43200)*1000),scope:refreshed.scope||data.scope,updatedAt:Timestamp.now()},{merge:true});
  return {token:refreshed.access_token};
 }
