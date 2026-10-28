@@ -8,13 +8,16 @@ const {getAuth}=require('firebase-admin/auth');
 const {getStorage}=require('firebase-admin/storage');
 const {getMessaging}=require('firebase-admin/messaging');
 const {createHash,randomUUID}=require('node:crypto');
-const d=require('./domain'),menu=require('./menu.json');
+const d=require('./domain'),menu=require('./menu.json'),loyverse=require('./loyverse');
 const OWNER_UID='qhf2nu7zlOXcj6t5mU7e9gjWyRz2';
 const INITIAL_ADMIN_UID='dYqA7rVgDNRP7nRY9ghoUtVfcHj1';
 const PRICE_EDITOR_EMAILS=new Set(['ninoxx@gmail.com','ninox7475@gmail.com','stonegrill2014@gmail.com']);
 initializeApp();const db=getFirestore(),bucketName=defineString('ORDER_STORAGE_BUCKET');
 const textBeeApiKey=defineSecret('TEXTBEE_API_KEY');
 const textBeeDeviceId=defineSecret('TEXTBEE_DEVICE_ID');
+const loyverseClientId=defineString('LOYVERSE_CLIENT_ID',{default:'KHtNN7jbRTbG6Fd6tahW'});
+const loyverseClientSecret=defineSecret('LOYVERSE_CLIENT_SECRET');
+const LOYVERSE_REDIRECT_URI='https://asia-southeast1-stone-grill-app.cloudfunctions.net/loyverseOAuthCallback';
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const origins=['https://stone-grill-orders-test.web.app','https://stonegrillresto.net'];
 const options={region:'asia-southeast1',cors:origins,maxInstances:3,timeoutSeconds:60,memory:'256MiB',invoker:'public'};
@@ -118,7 +121,7 @@ exports.customerApi=onRequest(options,endpoint(async(req,res)=>{
   if(changed)t.set(ref.collection('signIns').doc(String(authTime)),{at:now,provider:user.firebase?.sign_in_provider||'unknown'});
  });res.json({ok:true});
 },20000));
-exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId]},endpoint(async(req,res)=>{
+exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId,loyverseClientSecret]},endpoint(async(req,res)=>{
  const b=req.body;
  if(['getMenu','saveMenu'].includes(b.action)){
   const user=await signedUser(req);
@@ -135,6 +138,30 @@ exports.staffApi=onRequest({...options,secrets:[textBeeApiKey,textBeeDeviceId]},
  }
 
  const user=await operator(req);
+ if(b.action==='retryLoyverseSync'){
+  if(user.role!=='owner')throw d.error(403,'Only the owner can retry Loyverse sync');
+  d.check(/^[a-f0-9]{32}$/.test(b.requestId||''),'Invalid order reference');
+  const orderRef=db.collection('sgOrders').doc(b.requestId);let order=null,claimed=false;
+  await db.runTransaction(async t=>{
+   const snap=await t.get(orderRef);if(!snap.exists)throw d.error(404,'Order not found');
+   const row=snap.data(),sync=row.loyverseSync||{};
+   if(row.paymentStatus!=='verified')throw d.error(409,'Verify payment before syncing to Loyverse');
+   if(sync.status==='sent'||sync.status==='processing')throw d.error(409,'Loyverse receipt is already synced or processing');
+   order={...row,orderId:row.orderId||'SG-'+b.requestId};
+   t.update(orderRef,{loyverseSync:{status:'processing',startedAt:Timestamp.now(),retriedBy:user.uid}});
+   claimed=true;
+  });
+  if(claimed){
+   try{const {token}=await loyverseToken();const receipt=await loyverse.createPaidReceipt(token,order);await orderRef.update({loyverseSync:{status:'sent',receiptNumber:receipt.receipt_number||'',sentAt:Timestamp.now()}});return res.json({ok:true,receiptNumber:receipt.receipt_number||''});}
+   catch(e){await orderRef.update({loyverseSync:{status:'failed',error:String(e.message||'Loyverse sync failed').slice(0,250),failedAt:Timestamp.now()}});throw d.error(502,'Loyverse sync failed: '+String(e.message||'check Loyverse setup').slice(0,180));}
+  }
+ }
+ if(b.action==='loyverseAuthorize'){
+  if(user.role!=='owner')throw d.error(403,'Only the owner can connect Loyverse');
+  const state=randomUUID().replace(/-/g,''),now=Timestamp.now();
+  await db.collection('sgLoyverseOAuthStates').doc(state).set({uid:user.uid,createdAt:now});
+  return res.json({ok:true,url:loyverse.authorizeUrl({clientId:loyverseClientId.value(),redirectUri:LOYVERSE_REDIRECT_URI,state})});
+ }
  if(b.action==='setRole'){
   const patch=d.roleChange(user.uid,b.uid,b.role,OWNER_UID);
   const target=db.collection('sgCustomers').doc(b.uid);
@@ -243,6 +270,48 @@ if(b.action==='seen'||b.action==='acknowledge'){
   t.update(ref,{...patch,updatedAt:now});t.create(ref.collection('audit').doc(randomUUID()),{action:b.action,actorUid:user.uid,actorEmail:user.email,at:now,fromStatus:s.data().status,toStatus:patch.status||s.data().status,reason:typeof b.reason==='string'?b.reason.slice(0,300):b.action==='verifyPayment'?(original.submittedPaymentReference||''):'',...(extra.reservationStatus?{tableAccepted:true}:{}),...(extra.paymentMethod?{paymentMethod:extra.paymentMethod}:{})});
  });res.json({ok:true,...(req.printResult?{order:req.printResult}:{})});
 },20000));
+exports.loyverseOAuthCallback=onRequest({region:'asia-southeast1',secrets:[loyverseClientSecret],maxInstances:1},async(req,res)=>{
+ res.set('Cache-Control','no-store');
+ try{
+  const {code,state,error}=req.query||{};
+  if(error||typeof code!=='string'||typeof state!=='string')throw new Error('Loyverse authorization was not completed');
+  const stateRef=db.collection('sgLoyverseOAuthStates').doc(state),stateSnap=await stateRef.get();
+  if(!stateSnap.exists||Date.now()-stateSnap.data().createdAt.toMillis()>10*60*1000)throw new Error('Authorization expired; reconnect from the staff desk');
+  const token=await loyverse.exchangeCode({clientId:loyverseClientId.value(),clientSecret:loyverseClientSecret.value(),redirectUri:LOYVERSE_REDIRECT_URI,code});
+  await db.collection('sgIntegrations').doc('loyverse').set({accessToken:token.access_token,refreshToken:token.refresh_token,expiresAt:Timestamp.fromMillis(Date.now()+(token.expires_in||43200)*1000),scope:token.scope||'',connectedBy:stateSnap.data().uid,updatedAt:Timestamp.now()});
+  await stateRef.delete();
+  return res.redirect(302,'https://stone-grill-orders-test.web.app/order/staff/?loyverse=connected');
+ }catch(e){return res.status(400).send('Loyverse connection failed. Return to the Stone Grill staff desk and retry.');}
+});
+async function loyverseToken(){
+ const ref=db.collection('sgIntegrations').doc('loyverse'),snap=await ref.get();
+ if(!snap.exists)throw new Error('Connect Loyverse from the owner staff account first');
+ const data=snap.data();
+ if(data.expiresAt&&data.expiresAt.toMillis()>Date.now()+60000)return {token:data.accessToken};
+ const refreshed=await loyverse.refreshToken({clientId:loyverseClientId.value(),clientSecret:loyverseClientSecret.value(),refreshToken:data.refreshToken});
+ await ref.set({accessToken:refreshed.access_token,refreshToken:refreshed.refresh_token||data.refreshToken,expiresAt:Timestamp.fromMillis(Date.now()+(refreshed.expires_in||43200)*1000),scope:refreshed.scope||data.scope,updatedAt:Timestamp.now()},{merge:true});
+ return {token:refreshed.access_token};
+}
+exports.syncVerifiedOrderToLoyverse=onDocumentUpdated({document:'sgOrders/{requestId}',region:'asia-southeast1',secrets:[loyverseClientSecret],retry:true,maxInstances:3},async event=>{
+ const before=event.data?.before.data(),after=event.data?.after.data();
+ if(!before||!after||before.paymentStatus==='verified'||after.paymentStatus!=='verified')return;
+ const orderRef=event.data.after.ref;
+ let claimed=false;
+ await db.runTransaction(async t=>{
+  const s=await t.get(orderRef),sync=s.data()?.loyverseSync;
+  if(sync?.status==='sent'||sync?.status==='processing')return;
+  t.update(orderRef,{loyverseSync:{status:'processing',startedAt:Timestamp.now()}});
+  claimed=true;
+ });
+ if(!claimed)return;
+ try{
+  const {token}=await loyverseToken();
+  const receipt=await loyverse.createPaidReceipt(token,{...after,orderId:after.orderId||'SG-'+event.params.requestId});
+  await orderRef.update({loyverseSync:{status:'sent',receiptNumber:receipt.receipt_number||'',sentAt:Timestamp.now()}});
+ }catch(e){
+  await orderRef.update({loyverseSync:{status:'failed',error:String(e.message||'Loyverse sync failed').slice(0,250),failedAt:Timestamp.now()}});
+ }
+});
 exports.notifyStaff=onDocumentCreated({document:'sgStaffAlerts/{alertId}',region:'asia-southeast1',retry:true,maxInstances:3},require('./notifications').createNotifier({db,getMessaging,Timestamp,isStaff:d.isStaff}));
 exports.notifyCustomerPaymentVerified=onDocumentUpdated({document:'sgOrders/{requestId}',region:'asia-southeast1',secrets:[textBeeApiKey,textBeeDeviceId],retry:true,maxInstances:3},require('./payment-sms').createPaymentSmsNotifier({db,apiKey:()=>textBeeApiKey.value(),deviceId:()=>textBeeDeviceId.value(),Timestamp}));
 
