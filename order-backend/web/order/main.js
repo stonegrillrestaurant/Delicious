@@ -306,7 +306,7 @@ async function handleSubmit(e){
 window.submitPrepaidOrder=async function(method,reference){
  const draft=window.pendingCheckout;
  if(!draft||draft.uid!==window.SG_AUTH.auth.currentUser?.uid)throw Error('Sign in with the account that started this order.');
- if(!draft.submitted){draft.paymentMethod=method;draft.submittedPaymentReference=reference;draft.submitted=true;
+ if(!draft.confirmed){draft.paymentMethod=method;draft.submittedPaymentReference=reference;draft.submitted=true;
   sessionStorage.setItem('sgPrepaidAttempt:'+draft.uid,JSON.stringify(draft));}
  const result=await orderApi({...draft.payload,action:draft.legacy?'payment':'order',paymentMethod:draft.paymentMethod,submittedPaymentReference:draft.submittedPaymentReference,paymentMobile:draft.payload.mobile,requestId:draft.requestId,receiptKey:draft.receiptKey});
  if(window.SG_AUTH.auth.currentUser?.uid!==draft.uid)throw Error('Account changed. Sign back in to see the saved order.');
