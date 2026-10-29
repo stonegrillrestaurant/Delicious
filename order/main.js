@@ -262,6 +262,23 @@ function checkoutPayload(){
  const form=$('#orderForm');
  return {name:$('#fullName').value,mobile:$('#mobileNumber').value,orderType:form.querySelector('input[name="orderType"]:checked')?.value,persons:$('#persons').value,date:$('#orderDate').value,time:$('#orderTime').value,requests:$('#specialRequests').value,items:cart.map(i=>({name:i.name,qty:i.qty,price:i.price})),subtotal:cartSubtotal()};
 }
+function checkoutMatches(a,b){
+ if(!a||!b)return false;
+ const keys=['name','mobile','orderType','persons','date','time','requests','subtotal'];
+ if(keys.some(k=>String(a[k]??'')!==String(b[k]??'')))return false;
+ if(!Array.isArray(a.items)||!Array.isArray(b.items)||a.items.length!==b.items.length)return false;
+ return a.items.every((item,i)=>item.name===b.items[i].name&&Number(item.qty)===Number(b.items[i].qty)&&Number(item.price)===Number(b.items[i].price));
+}
+window.restorePrepaidDraft=draft=>{
+ const p=draft?.payload;if(!p)return;
+ cart=(Array.isArray(p.items)?p.items:[]).filter(i=>i&&typeof i.name==='string'&&Number.isFinite(Number(i.price))&&Number(i.qty)>0).map(i=>({name:i.name,price:Number(i.price),qty:Math.max(1,Math.floor(Number(i.qty)))}));
+ renderCart();
+ for(const [id,key] of [['fullName','name'],['mobileNumber','mobile'],['persons','persons'],['orderDate','date'],['orderTime','time'],['specialRequests','requests']]){
+  const input=document.getElementById(id);if(input&&p[key]!=null)input.value=p[key];
+ }
+ if(p.orderType){const radio=document.querySelector('input[name="orderType"][value="'+CSS.escape(p.orderType)+'"]');if(radio){radio.checked=true;radio.dispatchEvent(new Event('change',{bubbles:true}));}}
+ updatePersonsVisibility();
+};
 function saveCheckoutIntent(){
  const form=$('#orderForm');if(!form)return;
  const data={name:$('#fullName').value,mobile:$('#mobileNumber').value,orderType:form.querySelector('input[name="orderType"]:checked')?.value||'',persons:$('#persons').value,date:$('#orderDate').value,time:$('#orderTime').value,requests:$('#specialRequests').value};
@@ -293,8 +310,9 @@ async function handleSubmit(e){
  try{
   await window.SG_AUTH.getToken();const uid=window.SG_AUTH.auth.currentUser.uid;
   const saved=JSON.parse(sessionStorage.getItem('sgPrepaidAttempt:'+uid)||'null');
-  if(saved&&!saved.confirmed){window.pendingCheckout=saved;window.openCheckout(saved);return;}
-  const payload=checkoutPayload(),draft={uid,payload,requestId:randomHex(16),receiptKey:randomHex(32)};
+  const payload=checkoutPayload();
+  if(saved&&!saved.confirmed&&(saved.submitted||checkoutMatches(saved.payload,payload))){window.pendingCheckout=saved;window.openCheckout(saved);return;}
+  const draft={uid,payload,requestId:randomHex(16),receiptKey:randomHex(32)};
   const quote=await orderApi({action:'quote',...payload,requestId:draft.requestId,receiptKey:draft.receiptKey});
   draft.payload=quote.order;
   if(window.SG_AUTH.auth.currentUser?.uid!==uid)throw Error('Account changed. Please try again.');
