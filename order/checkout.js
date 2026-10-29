@@ -8,10 +8,10 @@
   const p=draft.payload;el('payTotal').textContent='₱'+Number(p.subtotal).toLocaleString('en-PH',{minimumFractionDigits:2});
   el('checkoutSummary').textContent=p.orderType+' · '+p.date+' '+p.time+' · '+p.name;
   method=draft.paymentMethod||'qr';choose(method);
-  el('paymentReference').value=draft.submittedPaymentReference||'';el('paymentReference').readOnly=!!draft.submitted;
+  el('paymentReference').value=draft.submittedPaymentReference||'';el('paymentReference').readOnly=false;
   el('receiptStatus').textContent='';
   el('resumeNotice').textContent=draft.submitted?'A submission was attempted. Check My Orders before paying again. If it is not there, retry using the same reference.':'After transferring money, enter the reference from your GCash confirmation and submit once.';
-  document.querySelectorAll('input[name="paymentMethod"]').forEach(r=>{r.disabled=!!draft.submitted;});
+  document.querySelectorAll('input[name="paymentMethod"]').forEach(r=>{r.disabled=false;});
   el('copyPaymentNumber').textContent='Copy number';
   pop.classList.remove('hidden');pop.classList.add('show');pop.setAttribute('aria-hidden','false');pop.querySelector('.popup').scrollTop=0;
  };
@@ -24,7 +24,7 @@
   if(!/^[A-Z0-9]{3,80}$/.test(ref)){el('receiptStatus').textContent='Enter the transaction reference from your payment confirmation.';el('paymentReference').focus();return;}
   busy=true;el('submitCombined').disabled=true;el('receiptStatus').textContent='Submitting order and payment…';
   try{await window.submitPrepaidOrder(method,el('paymentReference').value.trim());}
-  catch(error){el('receiptStatus').textContent=error.message+' Do not send another payment. Use Messenger or call for help.';el('paymentReference').readOnly=true;document.querySelectorAll('input[name="paymentMethod"]').forEach(r=>r.disabled=true);}
+  catch(error){el('receiptStatus').textContent=error.message+' You can correct the reference and retry. Check My Orders before making another payment.';el('paymentReference').readOnly=false;document.querySelectorAll('input[name="paymentMethod"]').forEach(r=>r.disabled=false);}
   finally{busy=false;el('submitCombined').disabled=false;}
  };
 })();
