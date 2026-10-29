@@ -1,10 +1,15 @@
 'use strict';
 (()=> {
  const el=id=>document.getElementById(id),pop=el('paymentPopup');let method='qr',busy=false;
- window.closeCheckout=()=>{pop.classList.add('hidden');pop.classList.remove('show');pop.setAttribute('aria-hidden','true');};
+ window.closeCheckout=()=>{
+  const uid=window.pendingCheckout?.uid;
+  if(uid)try{sessionStorage.setItem('sgPrepaidPopupDismissed:'+uid,'1');}catch{}
+  pop.classList.add('hidden');pop.classList.remove('show');pop.setAttribute('aria-hidden','true');
+ };
  function choose(value){method=value;const radio=document.querySelector('input[name="paymentMethod"][value="'+value+'"]');if(radio)radio.checked=true;}
  async function copy(){choose('number');try{await navigator.clipboard.writeText('09178366126');el('copyPaymentNumber').textContent='Number copied';}catch{el('receiptStatus').textContent='Copy the displayed number: 09178366126';}}
  window.openCheckout=draft=>{
+  if(draft?.uid)try{sessionStorage.removeItem('sgPrepaidPopupDismissed:'+draft.uid);}catch{}
   const p=draft.payload;el('payTotal').textContent='₱'+Number(p.subtotal).toLocaleString('en-PH',{minimumFractionDigits:2});
   el('checkoutSummary').textContent=p.orderType+' · '+p.date+' '+p.time+' · '+p.name;
   method=draft.paymentMethod||'qr';choose(method);
