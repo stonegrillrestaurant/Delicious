@@ -17,6 +17,18 @@
  };
  el('copyPaymentNumber').onclick=copy;
  pop.querySelector('.popup-close').onclick=()=>{if(!busy)window.closeCheckout();};
- el('combinedCheckout').onsubmit=()=>{const draft=window.pendingCheckout;if(!draft||draft.submitted)return;sessionStorage.removeItem('sgPrepaidAttempt:'+draft.uid);window.pendingCheckout=null;window.closeCheckout();};
- el('combinedCheckout').onsubmit=async e=>{e.preventDefault();if(busy)return;method=document.querySelector('input[name="paymentMethod"]:checked')?.value||'qr';const ref=el('paymentReference').value.trim().replace(/[ -]/g,'').toUpperCase();if(!/^[A-Z0-9]{3,80}$/.test(ref)){el('receiptStatus').textContent='Enter the transaction reference from your payment confirmation.';el('paymentReference').focus();return;}busy=true;el('submitCombined').disabled=true;el('receiptStatus').textContent='Submitting order and payment…';try{await window.submitPrepaidOrder(method,el('paymentReference').value.trim());}catch(error){el('receiptStatus').textContent=error.message+' Do not send another payment. Use Messenger or call for help.';el('paymentReference').readOnly=true;el('discardCheckout').hidden=true;document.querySelectorAll('[data-method]').forEach(b=>b.disabled=true);}finally{busy=false;el('submitCombined').disabled=false;}};
+ el('discardCheckout').onclick=()=>{
+  const draft=window.pendingCheckout;if(!draft||draft.submitted)return;
+  sessionStorage.removeItem('sgPrepaidAttempt:'+draft.uid);window.pendingCheckout=null;window.closeCheckout();
+ };
+ el('combinedCheckout').onsubmit=async e=>{
+  e.preventDefault();if(busy)return;
+  method=document.querySelector('input[name="paymentMethod"]:checked')?.value||'qr';
+  const ref=el('paymentReference').value.trim().replace(/[ -]/g,'').toUpperCase();
+  if(!/^[A-Z0-9]{3,80}$/.test(ref)){el('receiptStatus').textContent='Enter the transaction reference from your payment confirmation.';el('paymentReference').focus();return;}
+  busy=true;el('submitCombined').disabled=true;el('receiptStatus').textContent='Submitting order and payment…';
+  try{await window.submitPrepaidOrder(method,el('paymentReference').value.trim());}
+  catch(error){el('receiptStatus').textContent=error.message+' Do not send another payment. Use Messenger or call for help.';el('paymentReference').readOnly=true;el('discardCheckout').hidden=true;document.querySelectorAll('input[name="paymentMethod"]').forEach(r=>r.disabled=true);}
+  finally{busy=false;el('submitCombined').disabled=false;}
+ };
 })();
