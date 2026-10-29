@@ -44,7 +44,11 @@ a.onAuthStateChanged(auth,async user=>{
     window.pendingCheckout={uid:user.uid,legacy:true,payload:o,requestId:paymentId,receiptKey:'0'.repeat(64)};
     window.openCheckout(window.pendingCheckout);
    }else notice('Check My Orders for the latest payment status. Do not pay again.');
-  }else if(savedDraft&&!savedDraft.confirmed){window.restorePrepaidDraft?.(savedDraft);window.pendingCheckout=savedDraft;window.openCheckout(savedDraft);}
+  }else if(savedDraft&&!savedDraft.confirmed){
+   window.restorePrepaidDraft?.(savedDraft);window.pendingCheckout=savedDraft;
+   let dismissed=false;try{dismissed=sessionStorage.getItem('sgPrepaidPopupDismissed:'+user.uid)==='1';}catch{}
+   if(!dismissed)window.openCheckout(savedDraft);
+  }
   stopProfile=f.onSnapshot(f.doc(db,'sgCustomers',user.uid),s=>{if(r!==revision)return;const p=s.data();if(!p)return;for(const [id,value] of [['fullName',p.name],['mobileNumber',p.mobile]]){const el=document.getElementById(id);if(el&&!el.value.trim())el.value=value||'';}restoreCheckoutIntent(user.uid);},e=>notice(e.message));
 
  }catch(e){if(r===revision)notice('Account setup failed: '+e.message);}
