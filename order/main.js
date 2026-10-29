@@ -301,7 +301,7 @@ async function handleSubmit(e){
   sessionStorage.setItem('sgPrepaidAttempt:'+uid,JSON.stringify(draft));
   window.pendingCheckout=draft;window.openCheckout(draft);
  }catch(err){showToast(err.message);}
- finally{btn.disabled=false;btn.textContent='Review order & pay';}
+ finally{btn.disabled=false;btn.textContent='Next';}
 }
 window.submitPrepaidOrder=async function(method,reference){
  const draft=window.pendingCheckout;
