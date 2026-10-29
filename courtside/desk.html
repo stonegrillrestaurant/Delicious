@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pickleball Venue Desk</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f6f7f4;--card:#fff;--tx:#1b2420;--mu:#6b7770;--bd:#dfe4de;--ac:#1f8a4c;--ac2:#e8f5ec;--red:#c0392b;--amb:#b7791f}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#121714;--card:#1b231e;--tx:#e8eee9;--mu:#92a198;--bd:#2c3831;--ac:#3fb872;--ac2:#1d3326;--red:#ef6b5b;--amb:#e0a84a}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:70px}
+header{padding:14px 16px 6px}h1{margin:0;font-size:20px}.sub{color:var(--mu);font-size:13px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav button{flex:1;border:0;background:none;color:var(--mu);padding:12px 4px;font:inherit;font-size:12px;cursor:pointer}
+nav button.on{color:var(--ac);font-weight:700}
+main{padding:8px 12px;max-width:820px;margin:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat b{display:block;font-size:20px}.stat span{color:var(--mu);font-size:12px}
+label{display:block;font-size:12px;color:var(--mu);margin:8px 0 3px}
+input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.btn{border:0;background:var(--ac);color:#fff;padding:10px 14px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.btn.s{padding:6px 10px;font-size:13px}.btn.g{background:var(--ac2);color:var(--ac)}.btn.r{background:none;color:var(--red);border:1px solid var(--bd)}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.pill{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700}
+.waiting{background:#fdf1d8;color:var(--amb)}.playing{background:var(--ac2);color:var(--ac)}.done{background:var(--bd);color:var(--mu)}
+.paid{color:var(--ac)}.unpaid{color:var(--red)}
+.courts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.court{border:1px solid var(--bd);border-radius:8px;padding:6px;text-align:center;font-size:12px;min-height:54px}
+.court.busy{background:var(--ac2);border-color:var(--ac)}.court small{display:block;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;gap:6px;margin:8px 0;overflow-x:auto}.tabs button{white-space:nowrap}
+.in{color:var(--ac)}.out{color:var(--red)}
+.note{font-size:12px;color:var(--mu)}
+.log{font-size:12px;color:var(--mu);margin-top:6px;border-top:1px dashed var(--bd);padding-top:6px}
+</style>
+</head>
+<body>
+<header><h1>🏓 Venue Desk</h1><div class="sub" id="date"></div></header>
+<main id="app"></main>
+<nav id="nav"></nav>
+<script>
+const COURTS=8, SERVICES={
+ "Open play (walk-in)":100,"Court 1–4 rental (per hr)":250,"Court 5–6 rental (per hr)":350,"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
+const METHODS=["Cash","Card","Mobile pay","Other"];
+const EXP_CATS=["Maintenance","Supplies","Staff","Utilities","Rent","Other"];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=n=>(n<0?"−":"")+"₱"+Math.abs(n).toFixed(2);
+const day=t=>new Date(t).toLocaleDateString("en-CA");
+const tm=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+let tab="desk",range="today",players=[],txns=[],store=null,busy=false;
+
+// ---- storage: Google Sheet through Apps Script
+const API="https://script.google.com/macros/s/AKfycbzLKxQglVBFMO7L-eV1c6N5SosuT02jDBV33rsSe626RoMjaP5E25EvHpOP-AfJWilr/exec";
+let STAFF="";try{STAFF=localStorage.getItem("staff")||""}catch(e){}
+if(!STAFF){STAFF=(prompt("Desk employee name?")||"Desk").trim();try{localStorage.setItem("staff",STAFF)}catch(e){}}
+let KEY="";try{KEY=localStorage.getItem("deskkey")||""}catch(e){}
+if(!KEY){KEY=(prompt("Access key (ask the admin)")||"").trim();try{localStorage.setItem("deskkey",KEY)}catch(e){}}
+const gcall=async(fn,...a)=>{
+ const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({key:KEY,fn:fn,args:a})});
+ const j=await r.json();
+ if(!j.ok){if(/key/i.test(j.error||"")){try{localStorage.removeItem("deskkey")}catch(e){}}throw new Error(j.error||"Request failed")}
+ return j.data};
+const gcb={};
+const gpull=c=>gcall("listRows",c).then(l=>gcb[c](l)).catch(e=>console.error(e));
+const gasStore={
+ add:async(c,o)=>{o.by=STAFF;await gcall("addRow",c,o);gpull(c)},
+ upd:async(c,id,p)=>{await gcall("updateRow",c,id,p);gpull(c)},
+ del:async(c,id)=>{await gcall("deleteRow",c,id);gpull(c)},
+ on:(c,cb)=>{gcb[c]=cb;gpull(c);setInterval(()=>gpull(c),8000)}};
+function download(filename,data){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}
+async function init(){
+ store=gasStore;
+ store.on("players",l=>{players=l;render()});store.on("txns",l=>{txns=l;render()});
+ render();
+}
+
+// ---- actions
+const guard=async f=>{if(busy)return;busy=true;try{await f()}catch(e){alert("Couldn’t save: "+(e.message||e.code||e))}busy=false};
+async function checkIn(f){
+ const now=Date.now(),fee=+f.fee.value||0,paid=f.paid.value==="yes";
+ const name=f.name.value.trim();if(!name)return alert("Enter a player name");
+ const log=[{t:now,e:"Checked in"}];
+ if(paid)log.push({t:now,e:"Paid "+money(fee)+" ("+f.method.value+")"});
+ await store.add("players",{name,phone:f.phone.value.trim(),service:f.service.value,fee,paid,method:paid?f.method.value:"",status:"waiting",court:null,inAt:now,outAt:null,log});
+ if(paid)await store.add("txns",{t:now,type:"income",cat:f.service.value,amt:fee,method:f.method.value,note:name});
+ f.reset();f.fee.value=SERVICES[f.service.value];
+}
+async function setStatus(id,status,court){
+ const p=players.find(x=>x.id===id),now=Date.now(),log=[...(p.log||[])];
+ if(status==="playing")log.push({t:now,e:"Started on Court "+court});
+ if(status==="waiting")log.push({t:now,e:"Back to queue"});
+ if(status==="done")log.push({t:now,e:"Checked out"});
+ await store.upd("players",id,{status,court:status==="playing"?court:null,log,outAt:status==="done"?now:null});
+}
+async function markPaid(id,method){
+ const p=players.find(x=>x.id===id),now=Date.now();
+ await store.upd("players",id,{paid:true,method,log:[...(p.log||[]),{t:now,e:"Paid "+money(p.fee)+" ("+method+")"}]});
+ await store.add("txns",{t:now,type:"income",cat:p.service,amt:p.fee,method,note:p.name});
+}
+async function addTxn(f){
+ const amt=+f.amt.value;if(!(amt>0))return alert("Enter an amount");
+ const type=f.type.value;
+ await store.add("txns",{t:Date.now(),type,cat:f.cat.value,amt,method:f.method.value,note:f.note.value.trim()});
+ f.reset();
+}
+
+// ---- helpers
+const inRange=t=>{const d=new Date(t),n=new Date();
+ if(range==="today")return day(t)===day(n);
+ if(range==="week")return n-d<7*864e5;
+ if(range==="month")return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();
+ return true};
+const sum=(l,type)=>l.filter(x=>x.type===type).reduce((a,x)=>a+x.amt,0);
+function rangeTabs(){return `<div class="tabs">${["today","week","month","all"].map(r=>`<button class="btn s ${r===range?"":"g"}" onclick="range='${r}';render()">${r==="week"?"7 days":r==="month"?"This month":r[0].toUpperCase()+r.slice(1)}</button>`).join("")}</div>`}
+
+// ---- views
+function vDesk(){
+ const today=players.filter(p=>day(p.inAt)===day(Date.now())).sort((a,b)=>b.inAt-a.inAt);
+ const act=players.filter(p=>p.status!=="done").sort((a,b)=>a.inAt-b.inAt);
+ const tt=txns.filter(t=>day(t.t)===day(Date.now()));
+ const owed=act.filter(p=>!p.paid).reduce((a,p)=>a+p.fee,0);
+ const occ={};act.forEach(p=>{if(p.status==="playing")occ[p.court]=p});
+ let courts="";for(let i=1;i<=COURTS;i++){const p=occ[i];courts+=`<div class="court ${p?"busy":""}"><b>${i}</b><small>${p?esc(p.name):"Free"}</small></div>`}
+ const free=[...Array(COURTS)].map((_,i)=>i+1).filter(i=>!occ[i]);
+ return `
+ <div class="grid">
+  <div class="card stat"><b>${today.length}</b><span>Players today</span></div>
+  <div class="card stat"><b>${money(sum(tt,"income"))}</b><span>Income today</span></div>
+  <div class="card stat"><b>${act.filter(p=>p.status==="playing").length}/${COURTS}</b><span>Courts in use</span></div>
+  <div class="card stat"><b class="${owed?"unpaid":""}">${money(owed)}</b><span>Unpaid balance</span></div>
+ </div>
+ <div class="card"><b>Courts</b><div class="courts" style="margin-top:8px">${courts}</div></div>
+ <div class="card"><b>Check in a walk-in</b>
+  <form onsubmit="event.preventDefault();guard(()=>checkIn(this))">
+   <label>Name</label><input name="name" required autocomplete="off" placeholder="Player name">
+   <label>Phone (optional)</label><input name="phone" type="tel">
+   <label>Service</label><select name="service" onchange="this.form.fee.value=${esc(JSON.stringify(SERVICES))}[this.value]">${Object.keys(SERVICES).map(s=>`<option>${s}</option>`).join("")}</select>
+   <div class="grid"><div><label>Fee (₱)</label><input name="fee" type="number" step="0.01" min="0" value="100"></div>
+   <div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div></div>
+   <label>Method</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select>
+   <p><button class="btn" style="width:100%">Check in</button></p>
+  </form></div>
+ <div class="card"><b>Active players (${act.length})</b>${act.length?act.map(p=>pCard(p,free)).join(""):'<p class="note">No one checked in right now.</p>'}</div>`;
+}
+function pCard(p,free){
+ const st=`<span class="pill ${p.status}">${p.status==="playing"?"Court "+p.court:p.status}</span>`;
+ const acts=[];
+ if(p.status==="waiting")acts.push(free.length?`<select id="c${p.id}" style="width:auto">${free.map(c=>`<option>${c}</option>`).join("")}</select><button class="btn s" onclick="guard(()=>setStatus('${p.id}','playing',+$('#c${p.id}').value))">Start</button>`:'<span class="note">All courts busy</span>');
+ if(p.status==="playing")acts.push(`<button class="btn s g" onclick="guard(()=>setStatus('${p.id}','waiting'))">Pause</button>`);
+ if(!p.paid)acts.push(`<select id="m${p.id}" style="width:auto">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select><button class="btn s" onclick="guard(()=>markPaid('${p.id}',$('#m${p.id}').value))">Collect ${money(p.fee)}</button>`);
+ acts.push(`<button class="btn s r" onclick="if(${p.paid}||confirm('Unpaid balance of ${money(p.fee)}. Check out anyway?'))guard(()=>setStatus('${p.id}','done'))">Check out</button>`);
+ return `<div style="border-top:1px solid var(--bd);padding:10px 0"><div class="row"><div><b>${esc(p.name)}</b> ${st}<div class="note">${esc(p.service)} · in ${tm(p.inAt)} · <span class="${p.paid?"paid":"unpaid"}">${p.paid?"Paid "+money(p.fee):"Unpaid "+money(p.fee)}</span></div></div></div>
+ <div class="row" style="justify-content:flex-start;flex-wrap:wrap;margin-top:6px">${acts.join("")}</div>
+ <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(l=>`${tm(l.t)} — ${esc(l.e)}`).join("<br>")}</div></details></div>`;
+}
+function vPlayers(){
+ const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>b.inAt-a.inAt);
+ return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill ${p.status}">${p.status}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service)}${p.phone?" · "+esc(p.phone):""}</div></div><div class="${p.paid?"paid":"unpaid"}">${money(p.fee)}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`;
+}
+function vLedger(){
+ const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t),inc=sum(l,"income"),ex=sum(l,"expense");
+ return rangeTabs()+`
+ <div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div>
+ <div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>
+ <div class="card"><b>Record a transaction</b>
+  <form onsubmit="event.preventDefault();guard(()=>addTxn(this))">
+   <label>Type</label><select name="type" onchange="const c=this.form.cat;c.innerHTML=(this.value==='income'?${esc(JSON.stringify(Object.keys(SERVICES)))}:${esc(JSON.stringify(EXP_CATS))}).map(x=>'<option>'+x+'</option>').join('')"><option value="income">Income</option><option value="expense">Expense</option></select>
+   <label>Category</label><select name="cat">${Object.keys(SERVICES).map(s=>`<option>${s}</option>`).join("")}</select>
+   <div class="grid"><div><label>Amount (₱)</label><input name="amt" type="number" step="0.01" min="0" required></div><div><label>Method</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
+   <label>Note</label><input name="note" autocomplete="off">
+   <p><button class="btn" style="width:100%">Save</button></p></form></div>
+ <div class="card"><div class="row"><b>Transactions (${l.length})</b><button class="btn s g" onclick="exportCsv()">Export CSV</button></div>
+ ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+esc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br><a href="#" class="note" onclick="event.preventDefault();if(confirm('Delete this transaction?'))guard(()=>store.del('txns','${t.id}'))">delete</a></div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`;
+}
+function vReports(){
+ const l=txns.filter(t=>inRange(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]]=(m[t[k]]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+ const tbl=(title,rows)=>`<div class="card"><b>${title}</b>${rows.map(([k,v])=>`<div class="row" style="padding:5px 0"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join("")||'<p class="note">No data.</p>'}</div>`;
+ const pl=players.filter(p=>inRange(p.inAt)),uniq=new Set(pl.map(p=>p.name.toLowerCase())).size;
+ return rangeTabs()+`<div class="grid"><div class="card stat"><b>${pl.length}</b><span>Visits</span></div><div class="card stat"><b>${uniq}</b><span>Unique players</span></div></div>`+
+ tbl("Income by service",by("income","cat"))+tbl("Income by payment method",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
+ `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><b class="unpaid">${money(p.fee)}</b></div>`).join("")||'<p class="note">All settled.</p>'}</div>`;
+}
+function exportCsv(){
+ const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>a.t-b.t);
+ const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+ download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Method,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,t.amt.toFixed(2),t.method,t.note,t.by].map(q).join(","))].join("\n"));
+}
+function exportVisits(){
+ const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>a.inAt-b.inAt);
+ const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+ download("visits-"+day(Date.now())+".csv",["Date,Check-in,Check-out,Name,Phone,Service,Fee,Paid,Method,Status,Court,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,(+p.fee).toFixed(2),p.paid?"Yes":"No",p.method,p.status,p.court||"",p.by].map(q).join(","))].join("\n"));
+}
+function render(){
+ const a=document.activeElement;
+ if(a&&/INPUT|SELECT/.test(a.tagName)&&a.closest("form")&&a.value)return;
+ $("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+" · "+STAFF;
+ $("#nav").innerHTML=[["desk","🏠","Desk"],["players","👥","Players"],["ledger","💵","Ledger"],["reports","📊","Reports"]].map(([k,i,n])=>`<button class="${tab===k?"on":""}" onclick="tab='${k}';render();scrollTo(0,0)">${i}<br>${n}</button>`).join("");
+ $("#app").innerHTML={desk:vDesk,players:vPlayers,ledger:vLedger,reports:vReports}[tab]();
+}
+init();
+</script>
+</body>
+</html>
