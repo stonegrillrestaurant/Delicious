@@ -6,8 +6,8 @@
 <title>Pickleball Venue Desk</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
---bg:#f6f7f4;--card:#fff;--tx:#1b2420;--mu:#6b7770;--bd:#dfe4de;--ac:#1f8a4c;--ac2:#e8f5ec;--red:#c0392b;--amb:#b7791f}
-@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#121714;--card:#1b231e;--tx:#e8eee9;--mu:#92a198;--bd:#2c3831;--ac:#3fb872;--ac2:#1d3326;--red:#ef6b5b;--amb:#e0a84a}}
+--bg:#f6f7f4;--card:#fff;--tx:#1b2420;--mu:#6b7770;--bd:#dfe4de;--ac:#1f8a4c;--ac2:#e8f5ec;--red:#c0392b;--amb:#b7791f;--blu:#2b6cb0;--blu2:#e3eefb;--red2:#fbe6e3;--amb2:#fdf1d8}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#121714;--card:#1b231e;--tx:#e8eee9;--mu:#92a198;--bd:#2c3831;--ac:#3fb872;--ac2:#1d3326;--red:#ef6b5b;--amb:#e0a84a;--blu:#6aa7e6;--blu2:#18283a;--red2:#3a1f1b;--amb2:#33290f}}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:70px}
@@ -20,16 +20,22 @@ main{padding:8px 12px;max-width:820px;margin:auto}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .stat b{display:block;font-size:20px}.stat span{color:var(--mu);font-size:12px}
 label{display:block;font-size:12px;color:var(--mu);margin:8px 0 3px}
-input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
 .btn{border:0;background:var(--ac);color:#fff;padding:10px 14px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
 .btn.s{padding:6px 10px;font-size:13px}.btn.g{background:var(--ac2);color:var(--ac)}.btn.r{background:none;color:var(--red);border:1px solid var(--bd)}
 .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
-.pill{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700}
-.waiting{background:#fdf1d8;color:var(--amb)}.playing{background:var(--ac2);color:var(--ac)}.done{background:var(--bd);color:var(--mu)}
-.paid{color:var(--ac)}.unpaid{color:var(--red)}.late{color:var(--red);font-weight:700}
-.courts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.court{border:1px solid var(--bd);border-radius:8px;padding:6px;text-align:center;font-size:12px;min-height:54px}
-.court.busy{background:var(--ac2);border-color:var(--ac)}.court small{display:block;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700;white-space:nowrap}
+.p-waiting{background:var(--amb2);color:var(--amb)}.p-playing{background:var(--ac2);color:var(--ac)}.p-reserved{background:var(--blu2);color:var(--blu)}.p-overtime{background:var(--red);color:#fff}.p-done{background:var(--bd);color:var(--mu)}
+.paid{color:var(--ac)}.unpaid{color:var(--red)}
+.courts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.court{border:2px solid var(--bd);border-radius:10px;padding:8px;font-size:12px;min-height:84px;cursor:pointer}
+.court b{font-size:15px}.court .cs{font-weight:700;font-size:12px;margin:2px 0}
+.court small{display:block;color:var(--mu)}
+.court.rent{background:var(--blu2);border-color:var(--blu)}.court.rent .cs{color:var(--blu)}
+.court.open{background:var(--ac2);border-color:var(--ac)}.court.open .cs{color:var(--ac)}
+.court.over{background:var(--red2);border-color:var(--red)}.court.over .cs{color:var(--red)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--mu);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .tabs{display:flex;gap:6px;margin:8px 0;overflow-x:auto}.tabs button{white-space:nowrap}
 .in{color:var(--ac)}.out{color:var(--red)}
 .note{font-size:12px;color:var(--mu)}
@@ -37,18 +43,29 @@ input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8p
 .scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space:nowrap}
+.sch{border-collapse:separate;border-spacing:2px}.sch th,.sch td{border:0;padding:0;text-align:center}
+.sch th{font-size:10px;color:var(--mu);font-weight:600;min-width:28px}
+.sch td.cn{font-size:11px;padding-right:4px;text-align:left;color:var(--mu)}
+.sch td.sl{height:30px;min-width:28px;border-radius:5px;background:var(--bg);border:1px solid var(--bd);cursor:pointer}
+.sch td.past{opacity:.35}.sch td.b-rent{background:var(--blu);border-color:var(--blu)}.sch td.b-open{background:var(--ac);border-color:var(--ac)}
+.sch td.nowc{outline:2px solid var(--amb)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;overflow:auto;padding:12px;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+.modal .sheet{max-width:520px;margin:0 auto 40px}
+#sync.ok{color:var(--ac)}#sync.warn{color:var(--amb)}#sync.bad{color:var(--red)}
 </style>
 </head>
 <body>
-<header class="row"><div><h1>🏓 Venue Desk</h1><div class="sub" id="date"></div></div><button class="btn s g" onclick="switchStaff()">Switch employee</button></header>
+<header>
+ <div class="row"><div><h1>🏓 Venue Desk</h1><div class="sub" id="date"></div></div><button class="btn s g" onclick="switchStaff()">Switch employee</button></div>
+ <div style="margin-top:6px"><button id="sync" class="btn s g" onclick="syncNow()">● Connecting…</button></div>
+</header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const COURTS=6, SERVICES={
- "Open play (walk-in)":100,
- "Court 1 rental (per hr)":250,"Court 2 rental (per hr)":250,"Court 3 rental (per hr)":250,"Court 4 rental (per hr)":250,
- "Court 5 rental (per hr)":350,"Court 6 rental (per hr)":350,
- "Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000;
+const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100;
+const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
+const INC_CATS=["Court rental","Open play",...Object.keys(QUICK)];
 const METHODS=["Cash","GCash"];
 const EXP_CATS=["Maintenance","Supplies","Staff","Utilities","Rent","Other"];
 const $=s=>document.querySelector(s);
@@ -56,14 +73,22 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const money=n=>(n<0?"−":"")+"₱"+Math.abs(n).toFixed(2);
 const day=t=>new Date(t).toLocaleDateString("en-CA");
 const tm=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
-let tab="desk",range="today",players=[],txns=[],allTx=[],store=null,busy=false;
-
-// ---- device / employee setup
-const API="https://script.google.com/macros/s/AKfycbzLKxQglVBFMO7L-eV1c6N5SosuT02jDBV33rsSe626RoMjaP5E25EvHpOP-AfJWilr/exec";
-let STAFF="",KEY="",DEV="",DEVNAME="";
-try{STAFF=localStorage.getItem("staff")||"";KEY=localStorage.getItem("deskkey")||"";DEV=localStorage.getItem("deviceid")||"";DEVNAME=localStorage.getItem("devname")||""}catch(e){}
+const dstart=s=>new Date(s+"T00:00:00").getTime();
+const fm=m=>m>=60?Math.floor(m/60)+"h "+String(m%60).padStart(2,"0")+"m":m+"m";
+const hl=h=>h===12?"12p":h>12?(h-12)+"p":h+"a";
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const ls=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const save=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-if(!DEV){DEV=Math.random().toString(36).slice(2,10)+Date.now().toString(36);save("deviceid",DEV)}
+const API="https://script.google.com/macros/s/AKfycbzLKxQglVBFMO7L-eV1c6N5SosuT02jDBV33rsSe626RoMjaP5E25EvHpOP-AfJWilr/exec";
+let STAFF=ls("staff")||"",KEY=ls("deskkey")||"",DEV=ls("deviceid")||"",DEVNAME=ls("devname")||"";
+if(!DEV){DEV=uid();save("deviceid",DEV)}
+let tab="desk",range="today",sdate=day(Date.now()),back=null,curSid=null;
+let players=[],allTx=[],txns=[],sessions=[];
+const COLS=["players","txns","sessions"];
+let server={players:[],txns:[],sessions:[]},outbox=[],epoch=0,flushing=false,online=true,loaded=false,syncMsg="",retryT=null,pulled=false;
+const draft={};
+
+// ================= setup / staff
 function setupScreen(){return new Promise(res=>{
  if(STAFF&&KEY&&DEVNAME)return res();
  const d=document.createElement("div");
@@ -79,228 +104,363 @@ function setupScreen(){return new Promise(res=>{
   if(!a||!b||!c)return alert("Please fill in all three fields");
   STAFF=a;DEVNAME=b;KEY=c;save("staff",a);save("devname",b);save("deskkey",c);d.remove();res()};
 })}
-function switchStaff(){
- const n=(prompt("Employee name for this shift?",STAFF)||"").trim();
- if(!n)return;
- STAFF=n;save("staff",n);render();
-}
+function switchStaff(){const n=(prompt("Employee name for this shift?",STAFF)||"").trim();if(!n)return;STAFF=n;save("staff",n);drawHead()}
+function keyBad(){try{localStorage.removeItem("deskkey")}catch(e){}if(!window._r){window._r=1;alert("Wrong access key. Please enter it again.");location.reload()}}
 
-// ---- storage: Google Sheet through Apps Script
-const gcall=async(fn,...a)=>{
- const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({key:KEY,fn:fn,args:a,staff:STAFF,dev:DEV,devname:DEVNAME,ua:navigator.userAgent})});
- const j=await r.json();
- if(!j.ok){
-  if(/key/i.test(j.error||"")){try{localStorage.removeItem("deskkey")}catch(e){}if(!window._r){window._r=1;alert("Wrong access key. Please enter it again.");location.reload()}}
-  throw new Error(j.error||"Request failed")}
- return j.data};
-const gcb={};
-const gpull=c=>gcall("listRows",c).then(l=>gcb[c](l)).catch(e=>console.error(e));
-const gasStore={
- add:async(c,o)=>{o.by=STAFF;await gcall("addRow",c,o);gpull(c)},
- upd:async(c,id,p)=>{await gcall("updateRow",c,id,p);gpull(c)},
- del:async(c,id)=>{await gcall("deleteRow",c,id);gpull(c)},
- on:(c,cb)=>{gcb[c]=cb;gpull(c);setInterval(()=>gpull(c),8000)}};
-function download(filename,data){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}
-async function init(){
- store=gasStore;
- store.on("players",l=>{players=l;render()});
- store.on("txns",l=>{allTx=l;txns=l.filter(t=>t.type==="income"||t.type==="expense");render()});
- render();
-}
+// ================= local-first storage + sync with Google Sheet
+async function api(fn,args){
+ const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({key:KEY,fn:fn,args:args,staff:STAFF,dev:DEV,devname:DEVNAME,ua:navigator.userAgent})});
+ let j;try{j=await r.json()}catch(e){throw new Error("Reply was not JSON. Check the web app access is Anyone and a new version is deployed.")}
+ if(!j.ok&&/access key/i.test(j.error||""))keyBad();
+ return j}
+const clone=o=>JSON.parse(JSON.stringify(o));
+function applyOp(a,op){
+ if(op.op==="add"){if(!a.some(x=>x.id===op.o.id))a.push(clone(op.o))}
+ else if(op.op==="upd"){const x=a.find(y=>y.id===op.id);if(x)Object.assign(x,clone(op.patch))}
+ else if(op.op==="del"){const i=a.findIndex(y=>y.id===op.id);if(i>-1)a.splice(i,1)}}
+function rebuild(){
+ const D={};COLS.forEach(c=>{const a=clone(server[c]);outbox.filter(o=>o.c===c).forEach(o=>applyOp(a,o));D[c]=a});
+ players=D.players;allTx=D.txns;sessions=D.sessions;txns=allTx.filter(t=>t.type==="income"||t.type==="expense")}
+function q(op){
+ if(op.op==="add")op.o.by=STAFF;
+ outbox.push(op);epoch++;save("outbox",JSON.stringify(outbox));rebuild();refresh();status();flush()}
+async function flush(){
+ if(flushing)return;flushing=true;let net=false;
+ try{
+  while(outbox.length){
+   const o=outbox[0],fn=o.op==="add"?"addRow":o.op==="upd"?"updateRow":"deleteRow";
+   const args=o.op==="add"?[o.c,o.o]:o.op==="upd"?[o.c,o.id,o.patch]:[o.c,o.id];
+   let r;try{r=await api(fn,args)}catch(e){net=true;online=false;syncMsg=String(e.message||e);break}
+   if(!r.ok){
+    if(/access key/i.test(r.error||""))break;
+    if(!/Row not found/i.test(r.error||""))alert("Not saved: "+r.error);
+    if(o.op==="add"&&o.c==="sessions"){const id=o.o.id;outbox=outbox.filter((x,i)=>i===0||!(x.dep===id||(x.o&&x.o.sid===id)||(x.patch&&x.patch.sid===id)))}
+   }
+   outbox.shift();epoch++;save("outbox",JSON.stringify(outbox));online=true;syncMsg="";
+  }
+ }finally{flushing=false}
+ if(outbox.length){clearTimeout(retryT);retryT=setTimeout(flush,10000)}else await pull();
+ rebuild();refresh();status()}
+async function pull(){
+ if(flushing||outbox.length)return;const ep=epoch;
+ try{
+  const got={};
+  for(const c of COLS){const r=await api("listRows",[c]);if(!r.ok)throw new Error(r.error);got[c]=r.data}
+  if(ep!==epoch||outbox.length||flushing)return;
+  server=got;loaded=true;online=true;syncMsg="";save("cache",JSON.stringify(server));rebuild();refresh();status()
+ }catch(e){online=false;syncMsg=String(e.message||e);status()}}
+async function syncNow(){
+ try{const r=await api("ping",[]);alert(r.ok?"Connected to Google Sheet: "+r.data+(outbox.length?"\n"+outbox.length+" change(s) waiting to upload.":"\nAll changes are saved."):"Server error: "+r.error)}
+ catch(e){alert("Cannot reach the Google Sheet script.\n"+(e.message||e)+"\nYour entries are kept on this device and will upload automatically.")}
+ flush();pull()}
+function status(){const b=$("#sync");if(!b)return;
+ if(outbox.length){b.className="btn s g warn";b.textContent=online?"● Saving "+outbox.length+"…":"● Offline – "+outbox.length+" waiting"}
+ else if(!online){b.className="btn s g bad";b.textContent="● Not connected"}
+ else if(!loaded){b.className="btn s g";b.textContent="● Connecting…"}
+ else{b.className="btn s g ok";b.textContent="● Saved to Sheet"}}
 
-// ---- actions
-const guard=async f=>{if(busy)return;busy=true;try{await f()}catch(e){alert("Couldn’t save: "+(e.message||e.code||e))}busy=false};
-function calc(f){f.fee.value=((SERVICES[f.service.value]||0)*(+f.hours.value||1))}
-async function checkIn(f){
- const now=Date.now(),hrs=+f.hours.value||1,fee=+f.fee.value||0,paid=f.paid.value==="yes",method=f.method.value;
- const name=f.name.value.trim();if(!name)return alert("Enter a player name");
- const svc=f.service.value,m=svc.match(/^Court (\d+) rental/),court=m?+m[1]:null;
- if(court&&players.some(p=>p.status==="playing"&&p.court===court))return alert("Court "+court+" is in use right now");
- const ref=f.ref.value.trim(),refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
- const log=[{t:now,e:"Checked in"}];
- if(court)log.push({t:now,e:"Rented Court "+court+" for "+hrs+" hr"});
- if(paid)log.push({t:now,e:"Paid "+money(fee)+" ("+method+")"+refTxt});
- await store.add("players",{name,phone:f.phone.value.trim(),service:svc,hours:hrs,fee,paid,method:paid?method:"",status:court?"playing":"waiting",court:court,lastCourt:court,rentCourt:court,until:court?now+hrs*36e5:null,inAt:now,outAt:null,log});
- if(paid)await store.add("txns",{t:now,type:"income",cat:svc,amt:fee,method,note:name+refTxt});
- f.reset();
-}
-async function setStatus(id,status,court){
- const p=players.find(x=>x.id===id),now=Date.now(),log=[...(p.log||[])];
- if(status==="playing")log.push({t:now,e:"Started on Court "+court});
- if(status==="waiting")log.push({t:now,e:"Back to queue"});
- if(status==="done")log.push({t:now,e:"Checked out"});
- await store.upd("players",id,{status,court:status==="playing"?court:null,lastCourt:status==="playing"?court:(p.lastCourt||null),log,outAt:status==="done"?now:null});
-}
-async function markPaid(id,method){
- const p=players.find(x=>x.id===id),now=Date.now();
- let ref="";if(method==="GCash")ref=(prompt("GCash reference # (optional)")||"").trim();
- const refTxt=ref?" · Ref "+ref:"";
- await store.upd("players",id,{paid:true,method,log:[...(p.log||[]),{t:now,e:"Paid "+money(p.fee)+" ("+method+")"+refTxt}]});
- await store.add("txns",{t:now,type:"income",cat:p.service,amt:p.fee,method,note:p.name+refTxt});
-}
-async function addTxn(f){
- const amt=+f.amt.value;if(!(amt>0))return alert("Enter an amount");
- const type=f.type.value;
- await store.add("txns",{t:Date.now(),type,cat:f.cat.value,amt,method:f.method.value,note:f.note.value.trim()});
- f.reset();
-}
-async function startShift(f){
- const v=+f.fl.value;if(isNaN(v)||f.fl.value==="")return alert("Enter the opening float");
- await store.add("txns",{t:Date.now(),type:"open",cat:"Shift open",amt:v,method:"Cash",note:"Opening float"});
-}
-async function endShift(f){
- const s=shiftCalc(),cnt=+f.cnt.value;
- if(f.cnt.value===""||isNaN(cnt))return alert("Enter the counted cash");
- const warn=(s.unpaid>0?"Unpaid balances: "+money(s.unpaid)+". ":"")+(s.playing.length?s.playing.length+" player(s) still on court. ":"");
- if(!confirm(warn+"End the shift? Counted "+money(cnt)+" vs expected "+money(s.expected)+"."))return;
- const v=cnt-s.expected,extra=f.note.value.trim();
- await store.add("txns",{t:Date.now(),type:"close",cat:"Shift close",amt:cnt,method:"Cash",note:"Expected "+s.expected.toFixed(2)+" · Counted "+cnt.toFixed(2)+" · Variance "+v.toFixed(2)+" · Remit "+(cnt-s.fl).toFixed(2)+(extra?" · "+extra:"")});
- f.reset();
-}
-
-// ---- helpers
+// ================= helpers
+const sum=(l,type)=>l.filter(x=>x.type===type).reduce((a,x)=>a+x.amt,0);
 const inRange=t=>{const d=new Date(t),n=new Date();
  if(range==="today")return day(t)===day(n);
  if(range==="week")return n-d<7*864e5;
  if(range==="month")return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();
  return true};
-const sum=(l,type)=>l.filter(x=>x.type===type).reduce((a,x)=>a+x.amt,0);
-function rangeTabs(){return `<div class="tabs">${["today","week","month","all"].map(r=>`<button class="btn s ${r===range?"":"g"}" onclick="range='${r}';render()">${r==="week"?"7 days":r==="month"?"This month":r[0].toUpperCase()+r.slice(1)}</button>`).join("")}</div>`}
+const actv=p=>!p.outAt&&p.status!=="done";
+function pst(p,n){n=n||Date.now();
+ if(!actv(p))return"done";if(!p.until||!p.court)return"waiting";
+ if(n<(p.startAt||p.inAt))return"reserved";if(n>p.until)return"overtime";return"playing"}
+const sessPlayers=sid=>players.filter(p=>p.sid===sid&&actv(p));
+function conflict(court,start,end,ign){return sessions.find(s=>!s.closed&&s.court===court&&s.id!==ign&&s.start<end&&start<s.until)}
+function courtState(c,n){
+ const ss=sessions.filter(s=>!s.closed&&s.court===c);
+ const cur=ss.find(s=>s.start<=n&&n<s.until);
+ const over=!cur&&ss.find(s=>s.until<=n&&sessPlayers(s.id).length>0);
+ const next=ss.filter(s=>s.start>n).sort((a,b)=>a.start-b.start)[0];
+ return{cur,over,next}}
+function rangeTabs(){return `<div class="tabs">${["today","week","month","all"].map(r=>`<button class="btn s ${r===range?"":"g"}" onclick="range='${r}';refresh()">${r==="week"?"7 days":r==="month"?"This month":r[0].toUpperCase()+r.slice(1)}</button>`).join("")}</div>`}
+function download(filename,data){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}
+
+// ================= drafts (form values survive refreshes and tab switches)
+function noteDraft(e){const t=e.target,f=t.form;if(f&&f.dataset.d&&t.name){(draft[f.dataset.d]=draft[f.dataset.d]||{})[t.name]=t.value}}
+document.addEventListener("input",noteDraft);document.addEventListener("change",noteDraft);
+function fillCat(f){f.cat.innerHTML=(f.type.value==="income"?INC_CATS:EXP_CATS).map(x=>`<option>${x}</option>`).join("")}
+function restoreDrafts(){document.querySelectorAll("form[data-d]").forEach(f=>{const d=draft[f.dataset.d];if(!d)return;
+ [...f.elements].forEach(el=>{if(el.name&&d[el.name]!=null){el.value=d[el.name];if(el.name==="type")fillCat(f)}})})}
+
+// ================= modal
+function modal(html){closeModal(true);const d=document.createElement("div");d.id="modal";d.className="modal";
+ d.innerHTML='<div class="card sheet">'+html+'</div>';d.addEventListener("click",e=>{if(e.target===d)closeModal()});document.body.appendChild(d)}
+function closeModal(keep){const m=$("#modal");if(m)m.remove();if(!keep)curSid=null}
+
+// ================= court setup (rent / open play / reservation)
+function slotOpts(sel){let o='<option value="now">Now</option>';
+ for(let m=OPEN_H*60;m<=CLOSE_H*60-30;m+=30){const h=Math.floor(m/60),mm=m%60;o+=`<option value="${m}" ${sel===m?"selected":""}>${h%12||12}:${String(mm).padStart(2,"0")} ${h<12?"AM":"PM"}</option>`}return o}
+function setupModal(pre){pre=pre||{};
+ const date=pre.date||sdate,court=pre.court||1,mins=pre.start?Math.round((pre.start-dstart(date))/60000):null;
+ modal(`<h3 style="margin:0 0 6px">Set up a court</h3><div class="note">Open 8:00 AM – 12:00 midnight. Booked times lock automatically.</div>
+ <form id="sf" onsubmit="event.preventDefault();saveSession()">
+ <div class="grid"><div><label>Court</label><select name="court" onchange="sfUp(true)">${[1,2,3,4,5,6].map(c=>`<option>${c}</option>`).join("")}</select></div>
+ <div><label>Mode</label><select name="mode" onchange="sfUp(true)"><option value="rent">Rented</option><option value="open">Open play</option></select></div></div>
+ <div class="grid"><div><label>Date</label><input type="date" name="date" value="${date}" min="${day(Date.now())}"></div>
+ <div><label>Start</label><select name="start">${slotOpts(mins)}</select></div></div>
+ <div class="grid"><div><label>Hours</label><input name="hours" type="number" min="0.5" step="0.5" value="1" oninput="sfUp()"></div>
+ <div><label>Max players</label><input name="max" type="number" min="1" max="12" value="4"></div></div>
+ <label id="ratelbl"></label><input name="rate" type="number" min="0" step="1" oninput="sfUp()">
+ <label id="nmlbl"></label><textarea name="names" rows="4"></textarea>
+ <label>Renter phone (optional)</label><input name="phone" type="tel">
+ <div class="grid"><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div>
+ <div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
+ <label>GCash ref # (optional)</label><input name="ref" autocomplete="off">
+ <div id="sftot" style="margin:10px 0;font-weight:700"></div>
+ <div class="row"><button type="button" class="btn g" onclick="closeModal()">Cancel</button><button class="btn">Save</button></div></form>`);
+ const f=$("#sf");f.court.value=court;sfUp(true)}
+function sfUp(reset){const f=$("#sf"),rent=f.mode.value==="rent";
+ if(reset)f.rate.value=rent?RENT_RATE(+f.court.value):OPEN_RATE;
+ $("#ratelbl").textContent=rent?"Rate (₱ per hour, whole court)":"Rate (₱ per player per hour)";
+ $("#nmlbl").textContent=rent?"Player names, one per line (first one is the renter who pays)":"Players joining now, one per line (optional)";
+ const h=+f.hours.value||0,r=+f.rate.value||0;
+ $("#sftot").textContent=rent?"Court fee: "+money(r*h):"Each player pays: "+money(r*h)}
+function saveSession(){
+ const f=$("#sf"),now=Date.now(),court=+f.court.value,mode=f.mode.value,hours=+f.hours.value,max=Math.max(1,+f.max.value||4),rate=+f.rate.value||0;
+ if(!(hours>0))return alert("Enter the number of hours");
+ if(!loaded&&!outbox.length&&!online)return alert("Not connected yet, so court bookings can't be checked for conflicts. Please wait for the green “Saved to Sheet” status.");
+ const base=dstart(f.date.value),today=day(now)===f.date.value;let start;
+ if(f.start.value==="now"){if(!today)return alert("Choose a start time for a future date");start=Math.floor(now/60000)*60000}
+ else start=base+(+f.start.value)*60000;
+ const end=start+hours*H;
+ if(start<base+OPEN_H*H)return alert("The venue opens at 8:00 AM. Choose a start time from 8:00 AM.");
+ if(end>base+CLOSE_H*H)return alert("The venue closes at 12:00 midnight. From that start the longest booking is "+((base+CLOSE_H*H-start)/H).toFixed(1)+" hours.");
+ if(start<now-10*60000)return alert("That start time has already passed");
+ const names=f.names.value.split("\n").map(s=>s.trim()).filter(Boolean);
+ if(mode==="rent"&&!names.length)return alert("Enter the renter's name");
+ if(names.length>max)return alert("Max players is "+max+" but "+names.length+" names were entered");
+ const c=conflict(court,start,end);
+ if(c)return alert("Court "+court+" is already booked "+tm(c.start)+" – "+tm(c.until)+" ("+(c.mode==="rent"?"rented":"open play")+"). Pick another time or court.");
+ const sid=uid(),paid=f.paid.value==="yes",method=f.method.value,ref=f.ref.value.trim(),refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
+ q({op:"add",c:"sessions",o:{id:sid,court,mode,start,until:end,hours,max,rate,closed:false,t:now}});
+ names.forEach((nm,i)=>{
+  const fee=mode==="rent"?(i===0?Math.round(rate*hours):0):Math.round(rate*hours),isPaid=fee===0?true:paid;
+  const log=[{t:now,e:(mode==="rent"?"Rented":"Joined open play on")+" Court "+court+" "+tm(start)+"–"+tm(end)}];
+  if(isPaid&&fee>0)log.push({t:now,e:"Paid "+money(fee)+" ("+method+")"+refTxt});
+  q({op:"add",c:"players",dep:sid,o:{id:uid(),name:nm,phone:i===0?f.phone.value.trim():"",sid,court,mode,role:mode==="rent"&&i===0?"renter":"player",service:mode==="rent"?"Court "+court+" rental":"Open play",hours,fee,paid:isPaid,method:isPaid&&fee>0?method:"",status:"active",startAt:start,until:end,inAt:now,outAt:null,log}});
+  if(isPaid&&fee>0)q({op:"add",c:"txns",dep:sid,o:{id:uid(),t:now,type:"income",cat:mode==="rent"?"Court "+court+" rental":"Open play",amt:fee,method,note:nm+refTxt+" · Court "+court}})});
+ closeModal();refresh()}
+
+// ================= manage a booked / running court
+function pLine(p,n){const s=pst(p,n);
+ const t=s==="playing"?fm(Math.max(0,Math.ceil((p.until-n)/60000)))+" left":s==="overtime"?"OVERTIME "+fm(Math.ceil((n-p.until)/60000)):s==="reserved"?"starts "+tm(p.startAt):"";
+ return{s,t}}
+function manage(sid){
+ const s=sessions.find(x=>x.id===sid);if(!s)return;curSid=sid;
+ const n=Date.now(),ps=sessPlayers(sid),st=n<s.start?"Reserved":n<s.until?(s.mode==="rent"?"Rented":"Open play"):"Time ended";
+ const rem=Math.max(0.5,Math.ceil((s.until-Math.max(n,s.start))/1800000)/2);
+ modal(`<div class="row"><h3 style="margin:0">Court ${s.court} · ${st}</h3><button class="btn s g" onclick="closeModal()">Close</button></div>
+ <div class="note">${new Date(s.start).toLocaleDateString()} · ${tm(s.start)} – ${tm(s.until)} (${s.hours} hr) · ${s.mode==="rent"?"Rented court":"Open play"} · ${ps.length}/${s.max} players · set by ${esc(s.by||"")}</div>
+ <div style="margin-top:8px">${ps.map(p=>{const i=pLine(p,n);return `<div style="border-top:1px solid var(--bd);padding:8px 0"><div class="row"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.role==="renter"?' <span class="note">renter</span>':""}<div class="note">${i.t} · <span class="${p.paid?"paid":"unpaid"}">${p.fee===0?"Included":p.paid?"Paid "+money(p.fee)+" ("+esc(p.method)+")":"Unpaid "+money(p.fee)}</span></div></div></div>
+ <div class="row" style="justify-content:flex-start;margin-top:6px">${p.paid?"":`<button class="btn s" onclick="collectModal('${p.id}')">Collect ${money(p.fee)}</button>`}<button class="btn s r" onclick="checkout('${p.id}')">Check out</button></div></div>`}).join("")||'<p class="note">No players on this court yet.</p>'}</div>
+ ${ps.length<s.max&&n<s.until?`<form id="pf" style="border-top:1px solid var(--bd);margin-top:6px" onsubmit="event.preventDefault();addPlayer('${sid}')"><label>Add a player (${ps.length}/${s.max})</label><input name="pname" placeholder="Player name" autocomplete="off">
+ ${s.mode==="open"?`<div class="grid"><div><label>Hours</label><input name="hrs" type="number" min="0.5" step="0.5" value="${rem}"></div><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div></div><div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref"></div></div>`:'<div class="note">Joins this rented court at no extra charge.</div>'}
+ <p><button class="btn" style="width:100%">Add player</button></p></form>`:""}
+ <div class="grid" style="margin-top:6px"><div><label>Max players</label><input id="mx" type="number" min="1" max="12" value="${s.max}"></div><div style="align-self:end"><button class="btn g" style="width:100%" onclick="setMax('${sid}')">Update max</button></div></div>
+ <p><button class="btn r" style="width:100%" onclick="endSession('${sid}')">${n<s.start?"Cancel this booking":"End session now"}</button></p>`)}
+function reopen(){if(curSid)manage(curSid)}
+function addPlayer(sid){
+ const f=$("#pf"),s=sessions.find(x=>x.id===sid),n=Date.now(),name=f.pname.value.trim();
+ if(!name)return alert("Enter the player's name");
+ if(sessPlayers(sid).length>=s.max)return alert("This court is full ("+s.max+" players max)");
+ if(n>=s.until)return alert("This session has ended");
+ const rem=Math.max(0.5,Math.ceil((s.until-Math.max(n,s.start))/1800000)/2),open=s.mode==="open";
+ const hrs=open?(+f.hrs.value||rem):rem,fee=open?Math.round(s.rate*hrs):0;
+ const paid=fee===0?true:f.paid.value==="yes",method=open?f.method.value:"",ref=open?f.ref.value.trim():"",refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
+ const until=Math.min(s.until,Math.max(n,s.start)+hrs*H),log=[{t:n,e:"Joined Court "+s.court}];
+ if(paid&&fee>0)log.push({t:n,e:"Paid "+money(fee)+" ("+method+")"+refTxt});
+ q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid,court:s.court,mode:s.mode,role:"player",service:open?"Open play":"Court "+s.court+" rental",hours:hrs,fee,paid,method:paid&&fee>0?method:"",status:"active",startAt:s.start,until,inAt:n,outAt:null,log}});
+ if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:"Open play",amt:fee,method,note:name+refTxt+" · Court "+s.court}});
+ reopen()}
+function setMax(sid){const v=+$("#mx").value,k=sessPlayers(sid).length;if(!(v>=1))return;if(v<k)return alert(k+" players are already on this court");q({op:"upd",c:"sessions",id:sid,patch:{max:v}});reopen()}
+function endSession(sid){
+ const s=sessions.find(x=>x.id===sid),ps=sessPlayers(sid),un=ps.filter(p=>!p.paid).length,n=Date.now();
+ if(!confirm((un?un+" player(s) still unpaid. ":"")+(n<s.start?"Cancel this booking?":"End this session now and check everyone out?")))return;
+ q({op:"upd",c:"sessions",id:sid,patch:{closed:true,closedAt:n}});
+ ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:n<s.start?"Booking cancelled":"Session ended"}]}}));
+ closeModal();refresh()}
+function checkout(pid){
+ const p=players.find(x=>x.id===pid);if(!p)return;
+ if(!p.paid&&!confirm(p.name+" has an unpaid balance of "+money(p.fee)+". Check out anyway?"))return;
+ const n=Date.now();
+ q({op:"upd",c:"players",id:pid,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:"Checked out"}]}});
+ const s=sessions.find(x=>x.id===p.sid);
+ if(s&&!s.closed&&s.until<=n&&!sessPlayers(s.id).length)q({op:"upd",c:"sessions",id:s.id,patch:{closed:true,closedAt:n}});
+ if(curSid)reopen();else refresh()}
+function collectModal(pid){
+ const p=players.find(x=>x.id===pid);if(!p)return;back=curSid;
+ modal(`<h3 style="margin:0 0 6px">Collect ${money(p.fee)} from ${esc(p.name)}</h3>
+ <form id="cf" onsubmit="event.preventDefault();doCollect('${pid}')"><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select>
+ <label>GCash ref # (optional)</label><input name="ref" autocomplete="off">
+ <div class="row" style="margin-top:12px"><button type="button" class="btn g" onclick="closeModal();back&&manage(back)">Cancel</button><button class="btn">Confirm payment</button></div></form>`)}
+function doCollect(pid){
+ const f=$("#cf"),p=players.find(x=>x.id===pid),n=Date.now(),method=f.method.value,ref=f.ref.value.trim(),refTxt=method==="GCash"&&ref?" · Ref "+ref:"";
+ q({op:"upd",c:"players",id:pid,patch:{paid:true,method,log:[...(p.log||[]),{t:n,e:"Paid "+money(p.fee)+" ("+method+")"+refTxt}]}});
+ q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:p.service||"Court rental",amt:p.fee,method,note:p.name+refTxt+(p.court?" · Court "+p.court:"")}});
+ closeModal();if(back){const b=back;back=null;manage(b)}else refresh()}
+
+// ================= desk actions
+function calcQ(f){f.fee.value=(QUICK[f.service.value]||0)*(+f.qty.value||1);noteDraft({target:f.fee})}
+function quickSale(f){
+ const amt=+f.fee.value;if(!(amt>0))return alert("Enter the amount");
+ const nm=f.cust.value.trim(),qty=+f.qty.value||1,m=f.method.value,ref=f.ref.value.trim();
+ q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"income",cat:f.service.value,amt,method:m,note:[nm,qty>1?"×"+qty:"",m==="GCash"&&ref?"Ref "+ref:""].filter(Boolean).join(" · ")}});
+ delete draft.qs;f.reset();calcQ(f)}
+function addTxn(f){
+ const amt=+f.amt.value;if(!(amt>0))return alert("Enter an amount");
+ q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:f.type.value,cat:f.cat.value,amt,method:f.method.value,note:f.note.value.trim()}});
+ delete draft.lg;f.reset();fillCat(f)}
+function delTx(id){if(confirm("Delete this transaction?"))q({op:"del",c:"txns",id})}
+function startShift(f){
+ const v=+f.fl.value;if(isNaN(v)||f.fl.value==="")return alert("Enter the opening float");
+ q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:v,method:"Cash",note:"Opening float"}});f.reset()}
+function endShift(f){
+ const s=shiftCalc(),cnt=+f.cnt.value;
+ if(f.cnt.value===""||isNaN(cnt))return alert("Enter the counted cash");
+ const act=players.filter(actv).length;
+ const warn=(s.unpaid>0?"Unpaid balances: "+money(s.unpaid)+". ":"")+(act?act+" player(s) still checked in. ":"");
+ if(!confirm(warn+"End the shift? Counted "+money(cnt)+" vs expected "+money(s.expected)+"."))return;
+ const v=cnt-s.expected,extra=f.note.value.trim();
+ q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"close",cat:"Shift close",amt:cnt,method:"Cash",note:"Expected "+s.expected.toFixed(2)+" · Counted "+cnt.toFixed(2)+" · Variance "+v.toFixed(2)+" · Remit "+(cnt-s.fl).toFixed(2)+(extra?" · "+extra:"")}});
+ delete draft.es;f.reset()}
 function shiftCalc(){
  const cl=allTx.filter(t=>t.type==="close").sort((a,b)=>b.t-a.t),lastClose=cl.length?cl[0].t:0;
  const st=allTx.filter(t=>t.t>lastClose),op=st.filter(t=>t.type==="open").sort((a,b)=>b.t-a.t)[0];
  const inc=st.filter(t=>t.type==="income"),exp=st.filter(t=>t.type==="expense");
  const tot=(l,m)=>l.filter(t=>t.method===m).reduce((a,t)=>a+t.amt,0);
  const cash=tot(inc,"Cash"),gc=tot(inc,"GCash"),cashOut=tot(exp,"Cash"),fl=op?op.amt:0;
- const sv=players.filter(p=>p.inAt>lastClose);
- return{last:cl[0],op,lastClose,cash,gc,cashOut,fl,remit:cash-cashOut,expected:fl+cash-cashOut,sv,
-  unpaid:sv.filter(p=>!p.paid).reduce((a,p)=>a+p.fee,0),playing:players.filter(p=>p.status==="playing")};
-}
+ const sv=players.filter(p=>p.inAt>lastClose),ss=sessions.filter(s=>s.t>lastClose);
+ return{last:cl[0],op,lastClose,cash,gc,cashOut,fl,remit:cash-cashOut,expected:fl+cash-cashOut,sv,ss,unpaid:sv.filter(p=>!p.paid).reduce((a,p)=>a+p.fee,0)}}
 
-// ---- views
-function vDesk(){
- const today=players.filter(p=>day(p.inAt)===day(Date.now())).sort((a,b)=>b.inAt-a.inAt);
- const act=players.filter(p=>p.status!=="done").sort((a,b)=>a.inAt-b.inAt);
- const tt=txns.filter(t=>day(t.t)===day(Date.now()));
- const owed=act.filter(p=>!p.paid).reduce((a,p)=>a+p.fee,0);
- const occ={};act.forEach(p=>{if(p.status==="playing")occ[p.court]=p});
- let courts="";for(let i=1;i<=COURTS;i++){const p=occ[i];courts+=`<div class="court ${p?"busy":""}"><b>${i}</b><small>${p?esc(p.name):"Free"}</small>${p&&p.until?`<small>until ${tm(p.until)}</small>`:""}</div>`}
- const free=[...Array(COURTS)].map((_,i)=>i+1).filter(i=>!occ[i]);
- return `
- <div class="grid">
-  <div class="card stat"><b>${today.length}</b><span>Players today</span></div>
-  <div class="card stat"><b>${money(sum(tt,"income"))}</b><span>Income today</span></div>
-  <div class="card stat"><b>${act.filter(p=>p.status==="playing").length}/${COURTS}</b><span>Courts in use</span></div>
-  <div class="card stat"><b class="${owed?"unpaid":""}">${money(owed)}</b><span>Unpaid balance</span></div>
- </div>
- <div class="card"><b>Courts</b><div class="courts" style="margin-top:8px">${courts}</div></div>
- <div class="card"><b>Check in a walk-in</b>
-  <form onsubmit="event.preventDefault();guard(()=>checkIn(this))">
-   <label>Name</label><input name="name" required autocomplete="off" placeholder="Player name">
-   <label>Phone (optional)</label><input name="phone" type="tel">
-   <label>Service (choose a court to rent it)</label><select name="service" onchange="calc(this.form)">${Object.keys(SERVICES).map(s=>`<option>${s}</option>`).join("")}</select>
-   <div class="grid"><div><label>Hours / qty</label><input name="hours" type="number" min="1" step="1" value="1" oninput="calc(this.form)"></div>
-   <div><label>Fee (₱)</label><input name="fee" type="number" step="0.01" min="0" value="100"></div></div>
-   <div class="grid"><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div>
-   <div><label>Mode</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
-   <label>GCash ref # (optional)</label><input name="ref" autocomplete="off">
-   <p><button class="btn" style="width:100%">Check in</button></p>
-  </form></div>
- <div class="card"><b>Active players (${act.length})</b>${act.length?act.map(p=>pCard(p,free)).join(""):'<p class="note">No one checked in right now.</p>'}</div>`;
-}
-function pCard(p,free){
- const st=`<span class="pill ${p.status}">${p.status==="playing"?"Court "+p.court:p.status}</span>`;
- const late=p.until&&p.status==="playing"&&Date.now()>p.until?' <span class="late">TIME UP</span>':"";
- const rent=p.until?` · until ${tm(p.until)}${late}`:"";
- const acts=[];
- if(p.status==="waiting")acts.push(free.length?`<select id="c${p.id}" style="width:auto">${free.map(c=>`<option>${c}</option>`).join("")}</select><button class="btn s" onclick="guard(()=>setStatus('${p.id}','playing',+$('#c${p.id}').value))">Start</button>`:'<span class="note">All courts busy</span>');
- if(p.status==="playing"&&!p.rentCourt)acts.push(`<button class="btn s g" onclick="guard(()=>setStatus('${p.id}','waiting'))">Pause</button>`);
- if(!p.paid)acts.push(`<select id="m${p.id}" style="width:auto">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select><button class="btn s" onclick="guard(()=>markPaid('${p.id}',$('#m${p.id}').value))">Collect ${money(p.fee)}</button>`);
- acts.push(`<button class="btn s r" onclick="if(${p.paid}||confirm('Unpaid balance of ${money(p.fee)}. Check out anyway?'))guard(()=>setStatus('${p.id}','done'))">Check out</button>`);
- return `<div style="border-top:1px solid var(--bd);padding:10px 0"><div class="row"><div><b>${esc(p.name)}</b> ${st}<div class="note">${esc(p.service)}${p.hours>1?" ×"+p.hours:""} · in ${tm(p.inAt)}${rent} · <span class="${p.paid?"paid":"unpaid"}">${p.paid?"Paid "+money(p.fee)+" ("+esc(p.method)+")":"Unpaid "+money(p.fee)}</span></div></div></div>
- <div class="row" style="justify-content:flex-start;flex-wrap:wrap;margin-top:6px">${acts.join("")}</div>
- <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(l=>`${tm(l.t)} — ${esc(l.e)}`).join("<br>")}</div></details></div>`;
-}
-function vPlayers(){
+// ================= dynamic regions (no inputs inside, safe to redraw)
+function dStats(){const n=Date.now();
+ const inuse=sessions.filter(s=>!s.closed&&s.start<=n&&n<s.until).length;
+ const owed=players.filter(p=>!p.paid).reduce((a,p)=>a+(+p.fee||0),0);
+ return `<div class="grid"><div class="card stat"><b>${players.filter(p=>day(p.inAt)===day(n)).length}</b><span>Players today</span></div>
+ <div class="card stat"><b>${money(sum(txns.filter(t=>day(t.t)===day(n)),"income"))}</b><span>Income today</span></div>
+ <div class="card stat"><b>${inuse}/${COURTS}</b><span>Courts in use now</span></div>
+ <div class="card stat"><b class="${owed?"unpaid":""}">${money(owed)}</b><span>Unpaid balance</span></div></div>`}
+function dCourts(){const n=Date.now();let h="";
+ for(let c=1;c<=COURTS;c++){
+  const{cur,over,next}=courtState(c,n),s=cur||over;let cls="",label="FREE",l2="",names="";
+  if(s){const ps=sessPlayers(s.id);cls=cur?(s.mode==="rent"?"rent":"open"):"over";
+   label=cur?(s.mode==="rent"?"RENTED":"OPEN PLAY"):"OVERTIME";
+   l2=cur?`until ${tm(s.until)} · ${fm(Math.ceil((s.until-n)/60000))} left`:`ended ${tm(s.until)}`;
+   names=(ps.map(p=>esc(p.name)).join(", ")||"no players yet")+` (${ps.length}/${s.max})`}
+  h+=`<div class="court ${cls}" onclick="courtTap(${c})"><b>Court ${c}</b><div class="cs">${label}</div>${l2?`<small>${l2}</small>`:""}${names?`<small style="color:var(--tx)">${names}</small>`:""}${next?`<small>Next: ${tm(next.start)} (${next.mode==="rent"?"rented":"open play"})</small>`:""}${!s&&!next?'<small>Tap to set up</small>':""}</div>`}
+ return h}
+function courtTap(c){const{cur,over}=courtState(c,Date.now()),s=cur||over;if(s)manage(s.id);else setupModal({court:c})}
+function dSched(){const n=Date.now(),base=dstart(sdate);
+ let h='<table class="sch"><tr><td></td>'+[...Array(CLOSE_H-OPEN_H)].map((_,i)=>`<th>${hl(OPEN_H+i)}</th>`).join("")+"</tr>";
+ for(let c=1;c<=COURTS;c++){h+=`<tr><td class="cn">Ct ${c}</td>`;
+  for(let k=OPEN_H;k<CLOSE_H;k++){
+   const a=base+k*H,b=a+H,s=sessions.find(x=>!x.closed&&x.court===c&&x.start<b&&x.until>a),past=b<=n,cur=a<=n&&n<b;
+   const cls=(s?(s.mode==="rent"?"b-rent":"b-open"):"")+(past&&!s?" past":"")+(cur?" nowc":"");
+   h+=`<td class="sl ${cls}" ${s?`onclick="manage('${s.id}')" title="${esc(s.mode==="rent"?"Rented":"Open play")} ${tm(s.start)}–${tm(s.until)}"`:past?"":`onclick="setupModal({court:${c},date:'${sdate}',start:${a}})"`}></td>`}
+  h+="</tr>"}
+ return h+"</table>"}
+function dActive(){const n=Date.now(),rk={overtime:0,playing:1,reserved:2,waiting:3};
+ const l=players.filter(actv).sort((a,b)=>rk[pst(a,n)]-rk[pst(b,n)]||a.inAt-b.inAt);
+ if(!l.length)return '<p class="note">No active players.</p>';
+ return l.map(p=>{const i=pLine(p,n);
+  return `<div style="border-top:1px solid var(--bd);padding:10px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.court?` <span class="note">Court ${p.court} · ${p.mode==="open"?"Open play":"Rented"}</span>`:""}
+  <div class="note">${i.t?`<b style="color:${i.s==="overtime"?"var(--red)":"inherit"}">${i.t}</b> · `:""}${esc(p.service||"")} · <span class="${p.paid?"paid":"unpaid"}">${p.fee===0?"Included":p.paid?"Paid "+money(p.fee)+" ("+esc(p.method)+")":"Unpaid "+money(p.fee)}</span></div></div>
+  <div class="row" style="justify-content:flex-start;margin-top:6px">${p.paid?"":`<button class="btn s" onclick="collectModal('${p.id}')">Collect ${money(p.fee)}</button>`}${p.sid?`<button class="btn s g" onclick="manage('${p.sid}')">Court</button>`:""}<button class="btn s r" onclick="checkout('${p.id}')">Check out</button></div>
+  <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(x=>`${tm(x.t)} — ${esc(x.e)}`).join("<br>")}</div></details></div>`}).join("")}
+function dPlayers(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>b.inAt-a.inAt);
- return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill ${p.status}">${p.status}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service)}${p.hours>1?" ×"+p.hours:""}${p.phone?" · "+esc(p.phone):""}${p.by?" · "+esc(p.by):""}</div></div><div class="${p.paid?"paid":"unpaid"}">${money(p.fee)}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`;
-}
-function vLedger(){
- const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t),inc=sum(l,"income"),ex=sum(l,"expense");
- return rangeTabs()+`
- <div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div>
- <div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>
- <div class="card"><b>Record a transaction</b>
-  <form onsubmit="event.preventDefault();guard(()=>addTxn(this))">
-   <label>Type</label><select name="type" onchange="const c=this.form.cat;c.innerHTML=(this.value==='income'?${esc(JSON.stringify(Object.keys(SERVICES)))}:${esc(JSON.stringify(EXP_CATS))}).map(x=>'<option>'+x+'</option>').join('')"><option value="income">Income</option><option value="expense">Expense</option></select>
-   <label>Category</label><select name="cat">${Object.keys(SERVICES).map(s=>`<option>${s}</option>`).join("")}</select>
-   <div class="grid"><div><label>Amount (₱)</label><input name="amt" type="number" step="0.01" min="0" required></div><div><label>Mode</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
-   <label>Note</label><input name="note" autocomplete="off">
-   <p><button class="btn" style="width:100%">Save</button></p></form></div>
- <div class="card"><div class="row"><b>Transactions (${l.length})</b><button class="btn s g" onclick="exportCsv()">Export CSV</button></div>
- ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+esc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br><a href="#" class="note" onclick="event.preventDefault();if(confirm('Delete this transaction?'))guard(()=>store.del('txns','${t.id}'))">delete</a></div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`;
-}
-function vReports(){
- const l=txns.filter(t=>inRange(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]]=(m[t[k]]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+ return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div class="${p.paid?"paid":"unpaid"}">${money(p.fee||0)}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
+function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=sum(l,"expense");
+ return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
+function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
+ return `<div class="card"><div class="row"><b>Transactions (${l.length})</b><button class="btn s g" onclick="exportCsv()">Export CSV</button></div>
+ ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+esc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br><a href="#" class="note" onclick="event.preventDefault();delTx('${t.id}')">delete</a></div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`}
+function dReports(){
+ const l=txns.filter(t=>inRange(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]||"-"]=(m[t[k]||"-"]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
  const tbl=(title,rows)=>`<div class="card"><b>${title}</b>${rows.map(([k,v])=>`<div class="row" style="padding:5px 0"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join("")||'<p class="note">No data.</p>'}</div>`;
- const pl=players.filter(p=>inRange(p.inAt)),uniq=new Set(pl.map(p=>p.name.toLowerCase())).size;
+ const pl=players.filter(p=>inRange(p.inAt)),uniq=new Set(pl.map(p=>(p.name||"").toLowerCase())).size;
  return rangeTabs()+`<div class="grid"><div class="card stat"><b>${pl.length}</b><span>Visits</span></div><div class="card stat"><b>${uniq}</b><span>Unique players</span></div></div>`+
  tbl("Income by service",by("income","cat"))+tbl("Income by payment mode",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
- `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><b class="unpaid">${money(p.fee)}</b></div>`).join("")||'<p class="note">All settled.</p>'}</div>`;
-}
-function vShift(){
- const s=shiftCalc();
- let rows="";
- for(let i=1;i<=COURTS;i++){
-  const r=s.sv.filter(p=>p.rentCourt===i),h=r.reduce((a,p)=>a+(p.hours||1),0),col=r.filter(p=>p.paid).reduce((a,p)=>a+p.fee,0);
-  const n=s.sv.filter(p=>p.lastCourt===i).length,u=s.playing.find(p=>p.court===i);
-  rows+=`<tr><td>Court ${i}</td><td>${n}</td><td>${h}</td><td>${money(col)}</td><td>${u?esc(u.name):"Free"}</td></tr>`;
- }
- const openCard=s.op
-  ?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`
-  :`<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>
-    <form onsubmit="event.preventDefault();guard(()=>startShift(this))"><label>Opening cash float (₱)</label><input name="fl" type="number" step="0.01" min="0" required><p><button class="btn" style="width:100%">Start shift</button></p></form>`;
- return `
- <div class="card"><b>Current shift</b>${openCard}
-  ${s.last?`<div class="note" style="margin-top:6px">Last close: ${new Date(s.last.t).toLocaleDateString()} ${tm(s.last.t)} by ${esc(s.last.by||"")} — ${esc(s.last.note||"")}</div>`:""}</div>
- <div class="grid">
-  <div class="card stat"><b>${money(s.cash)}</b><span>Cash sales</span></div>
-  <div class="card stat"><b>${money(s.gc)}</b><span>GCash sales</span></div>
-  <div class="card stat"><b class="out">${money(s.cashOut)}</b><span>Cash expenses</span></div>
-  <div class="card stat"><b class="${s.unpaid?"unpaid":""}">${money(s.unpaid)}</b><span>Unpaid balances</span></div>
- </div>
+ `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><b class="unpaid">${money(p.fee||0)}</b></div>`).join("")||'<p class="note">All settled.</p>'}</div>`}
+function dShift(){const s=shiftCalc(),n=Date.now();
+ return `<div class="card"><b>Current shift</b>${s.op?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`:'<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>'}
+ ${s.last?`<div class="note" style="margin-top:6px">Last close: ${new Date(s.last.t).toLocaleDateString()} ${tm(s.last.t)} by ${esc(s.last.by||"")} — ${esc(s.last.note||"")}</div>`:""}</div>
+ <div class="grid"><div class="card stat"><b>${money(s.cash)}</b><span>Cash sales</span></div><div class="card stat"><b>${money(s.gc)}</b><span>GCash sales</span></div>
+ <div class="card stat"><b class="out">${money(s.cashOut)}</b><span>Cash expenses</span></div><div class="card stat"><b class="${s.unpaid?"unpaid":""}">${money(s.unpaid)}</b><span>Unpaid balances</span></div></div>
  <div class="card"><b>Cash settlement</b>
-  <div class="row" style="padding:5px 0"><span>Opening float</span><b>${money(s.fl)}</b></div>
-  <div class="row" style="padding:5px 0"><span>+ Cash sales</span><b>${money(s.cash)}</b></div>
-  <div class="row" style="padding:5px 0"><span>− Cash expenses</span><b>${money(s.cashOut)}</b></div>
-  <div class="row" style="padding:5px 0;border-top:1px solid var(--bd)"><span><b>Expected cash in drawer</b></span><b>${money(s.expected)}</b></div>
-  <div class="row" style="padding:5px 0"><span>Cash to remit (keeping float)</span><b>${money(s.remit)}</b></div>
-  <div class="row" style="padding:5px 0"><span>GCash received (check wallet)</span><b>${money(s.gc)}</b></div>
-  <form onsubmit="event.preventDefault();guard(()=>endShift(this))">
-   <label>Counted cash in drawer (₱)</label><input name="cnt" type="number" step="0.01" min="0" required>
-   <label>Note (optional)</label><input name="note" autocomplete="off">
-   <p><button class="btn" style="width:100%">End shift &amp; remit</button></p></form></div>
- <div class="card"><b>Courts inventory (this shift)</b>
-  <div class="scroll"><table><tr><th>Court</th><th>Sessions</th><th>Rent hrs</th><th>Collected</th><th>Now</th></tr>${rows}</table></div></div>`;
-}
+ <div class="row" style="padding:5px 0"><span>Opening float</span><b>${money(s.fl)}</b></div>
+ <div class="row" style="padding:5px 0"><span>+ Cash sales</span><b>${money(s.cash)}</b></div>
+ <div class="row" style="padding:5px 0"><span>− Cash expenses</span><b>${money(s.cashOut)}</b></div>
+ <div class="row" style="padding:5px 0;border-top:1px solid var(--bd)"><span><b>Expected cash in drawer</b></span><b>${money(s.expected)}</b></div>
+ <div class="row" style="padding:5px 0"><span>Cash to remit (keeping float)</span><b>${money(s.remit)}</b></div>
+ <div class="row" style="padding:5px 0"><span>GCash received (check wallet)</span><b>${money(s.gc)}</b></div></div>`}
+function dShInv(){const s=shiftCalc(),n=Date.now();let rows="";
+ for(let c=1;c<=COURTS;c++){
+  const ss=s.ss.filter(x=>x.court===c),ids=ss.map(x=>x.id),pl=s.sv.filter(p=>ids.includes(p.sid));
+  const hr=m=>ss.filter(x=>x.mode===m).reduce((a,x)=>a+(x.hours||0),0),col=pl.filter(p=>p.paid).reduce((a,p)=>a+(+p.fee||0),0);
+  const{cur}=courtState(c,n);
+  rows+=`<tr><td>Court ${c}</td><td>${ss.length}</td><td>${hr("rent")}</td><td>${hr("open")}</td><td>${pl.length}</td><td>${money(col)}</td><td>${cur?(cur.mode==="rent"?"Rented":"Open play"):"Free"}</td></tr>`}
+ return `<div class="card"><b>Courts inventory (this shift)</b><div class="scroll"><table><tr><th>Court</th><th>Sessions</th><th>Rent hrs</th><th>Open hrs</th><th>Players</th><th>Collected</th><th>Now</th></tr>${rows}</table></div></div>`}
+function shiftPost(){const c=$("#sfloatc");if(c)c.style.display=shiftCalc().op?"none":"block"}
 function exportCsv(){
- const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>a.t-b.t);
- const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
- download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Mode,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,t.amt.toFixed(2),t.method,t.note,t.by].map(q).join(","))].join("\n"));
-}
+ const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>a.t-b.t),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+ download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Mode,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,t.amt.toFixed(2),t.method,t.note,t.by].map(qq).join(","))].join("\n"))}
 function exportVisits(){
- const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>a.inAt-b.inAt);
- const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
- download("visits-"+day(Date.now())+".csv",["Date,Check-in,Check-out,Name,Phone,Service,Fee,Paid,Mode,Status,Court,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,(+p.fee).toFixed(2),p.paid?"Yes":"No",p.method,p.status,p.court||p.lastCourt||"",p.by].map(q).join(","))].join("\n"));
-}
-function render(){
- const a=document.activeElement;
- if(a&&/INPUT|SELECT/.test(a.tagName)&&a.closest("form")&&a.value)return;
- $("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+" · "+STAFF;
- $("#nav").innerHTML=[["desk","🏠","Desk"],["players","👥","Players"],["ledger","💵","Ledger"],["reports","📊","Reports"],["shift","🧾","Shift"]].map(([k,i,n])=>`<button class="${tab===k?"on":""}" onclick="tab='${k}';render();scrollTo(0,0)">${i}<br>${n}</button>`).join("");
- $("#app").innerHTML={desk:vDesk,players:vPlayers,ledger:vLedger,reports:vReports,shift:vShift}[tab]();
-}
-setupScreen().then(init);
+ const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>a.inAt-b.inAt),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+ download("visits-"+day(Date.now())+".csv",["Date,Check-in,Check-out,Name,Phone,Service,Court,Mode,Start,End,Fee,Paid,Payment mode,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,p.court||"",p.mode||"",p.until?tm(p.startAt||p.inAt):"",p.until?tm(p.until):"",(+p.fee||0).toFixed(2),p.paid?"Yes":"No",p.method,p.by].map(qq).join(","))].join("\n"))}
+
+// ================= views (shell is built once per tab; only #regions are redrawn)
+const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle rental, lesson, VIP room, shop, food)</span>
+ <form data-d="qs" onsubmit="event.preventDefault();quickSale(this)">
+ <label>Customer name (optional)</label><input name="cust" autocomplete="off">
+ <label>Item</label><select name="service" onchange="calcQ(this.form)">${Object.keys(QUICK).map(s=>`<option>${s}</option>`).join("")}</select>
+ <div class="grid"><div><label>Qty</label><input name="qty" type="number" min="1" value="1" oninput="calcQ(this.form)"></div><div><label>Amount (₱)</label><input name="fee" type="number" step="0.01" min="0" value="50"></div></div>
+ <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
+ <p><button class="btn" style="width:100%">Record sale</button></p></form></div>`;
+const VIEWS={
+ desk:{shell:()=>`<div id="stats"></div>
+  <div class="card"><b>Courts</b> <span class="note">tap a court to set it up or manage it</span><div id="courts" class="courts"></div>
+  <div class="legend"><span><i style="background:var(--blu)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
+  <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
+  <div class="scroll" id="sched" style="margin-top:6px"></div><div class="note">8:00 AM – 12:00 midnight · tap a free slot to reserve · tap a coloured slot to manage</div>
+  <div class="row" style="margin-top:8px"><button class="btn" onclick="setupModal({})">+ New court booking</button></div></div>
+  ${formQS}
+  <div class="card"><b>Active players</b><div id="active"></div></div>`,
+  dyn:{stats:dStats,courts:dCourts,sched:dSched,active:dActive}},
+ players:{shell:()=>`<div id="pl"></div>`,dyn:{pl:dPlayers}},
+ ledger:{shell:()=>`<div id="lgtop"></div>
+  <div class="card"><b>Record a transaction</b>
+  <form data-d="lg" onsubmit="event.preventDefault();addTxn(this)">
+  <label>Type</label><select name="type" onchange="fillCat(this.form)"><option value="income">Income</option><option value="expense">Expense</option></select>
+  <label>Category</label><select name="cat">${INC_CATS.map(s=>`<option>${s}</option>`).join("")}</select>
+  <div class="grid"><div><label>Amount (₱)</label><input name="amt" type="number" step="0.01" min="0" required></div><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
+  <label>Note</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">Save</button></p></form></div><div id="lglist"></div>`,
+  dyn:{lgtop:dLgTop,lglist:dLgList}},
+ reports:{shell:()=>`<div id="rep"></div>`,dyn:{rep:dReports}},
+ shift:{shell:()=>`<div id="shtop"></div>
+  <div class="card" id="sfloatc"><b>Start shift</b><form onsubmit="event.preventDefault();startShift(this)"><label>Opening cash float (₱)</label><input name="fl" type="number" step="0.01" min="0" required><p><button class="btn" style="width:100%">Start shift</button></p></form></div>
+  <div class="card"><b>End shift &amp; remit</b><form data-d="es" onsubmit="event.preventDefault();endShift(this)"><label>Counted cash in drawer (₱)</label><input name="cnt" type="number" step="0.01" min="0" required><label>Note (optional)</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">End shift &amp; remit</button></p></form></div>
+  <div id="shinv"></div>`,dyn:{shtop:dShift,shinv:dShInv},post:shiftPost}};
+function drawHead(){$("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+" · "+STAFF}
+function drawNav(){$("#nav").innerHTML=[["desk","🏠","Desk"],["players","👥","Players"],["ledger","💵","Ledger"],["reports","📊","Reports"],["shift","🧾","Shift"]].map(([k,i,n])=>`<button class="${tab===k?"on":""}" onclick="go('${k}')">${i}<br>${n}</button>`).join("")}
+function go(t){tab=t;drawNav();drawHead();$("#app").innerHTML=VIEWS[t].shell();restoreDrafts();refresh();scrollTo(0,0)}
+function refresh(){const v=VIEWS[tab];if(!v||!$("#app"))return;
+ for(const id in v.dyn){const el=document.getElementById(id);if(el)el.innerHTML=v.dyn[id]()}
+ if(v.post)v.post()}
+
+async function boot(){
+ try{const c=JSON.parse(ls("cache")||"null");if(c){server=c;loaded=true}}catch(e){}
+ try{outbox=JSON.parse(ls("outbox")||"[]")}catch(e){outbox=[]}
+ rebuild();drawHead();go("desk");status();
+ flush();pull();
+ setInterval(pull,8000);setInterval(()=>{if(!$("#modal"))refresh()},30000);setInterval(drawHead,60000)}
+setupScreen().then(boot);
 </script>
 </body>
 </html>
