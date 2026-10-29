@@ -276,7 +276,7 @@ window.restorePrepaidDraft=draft=>{
  for(const [id,key] of [['fullName','name'],['mobileNumber','mobile'],['persons','persons'],['orderDate','date'],['orderTime','time'],['specialRequests','requests']]){
   const input=document.getElementById(id);if(input&&p[key]!=null)input.value=p[key];
  }
- if(p.orderType){const radio=document.querySelector('input[name="orderType"][value="'+CSS.escape(p.orderType)+'"]');if(radio){radio.checked=true;radio.dispatchEvent(new Event('change',{bubbles:true}));}}
+ if(p.orderType){const radio=[...document.querySelectorAll('input[name="orderType"]')].find(x=>x.value===p.orderType);if(radio){radio.checked=true;radio.dispatchEvent(new Event('change',{bubbles:true}));}}
  updatePersonsVisibility();
 };
 function saveCheckoutIntent(){
