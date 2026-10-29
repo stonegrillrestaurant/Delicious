@@ -95,6 +95,10 @@
 
   <!-- Minimal styles for popup + centered toast -->
   <style>
+    .form-status { min-height:1.25em; margin:8px 0; color:#9b1c1c; font-size:.92rem; }
+    .payment-methods { display:flex; flex-wrap:wrap; gap:14px; margin:12px 0; padding:10px; border:1px solid #d1d5db; border-radius:10px; }
+    .payment-methods legend { padding:0 5px; font-weight:700; }
+    .payment-methods label { display:flex; align-items:center; gap:6px; }
     .gcash-number { font-size:1.1rem; letter-spacing:.5px; font-weight:600; }
     .gcash-qr-wrap { margin:12px auto 14px; padding:12px; max-width:280px; text-align:center; background:#fff; border-radius:14px; box-shadow:0 8px 22px rgba(0,0,0,.10); }
     .gcash-qr-wrap img { display:block; width:100%; max-width:240px; height:auto; margin:0 auto; border-radius:8px; }
@@ -109,18 +113,6 @@
     .popup .row-sb { display:flex; justify-content:space-between; align-items:center; gap:10px; }
     .popup .small { font-size:.9rem; }
 
-    /* Center the toast on screen (overrides any bottom placement) */
-    #toast {
-      position: fixed !important;
-      left: 50% !important;
-      top: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      z-index: 1100 !important;
-      max-width: 90vw;
-      text-align: center;
-      border-radius: 12px;
-      box-shadow: 0 10px 20px rgba(0,0,0,.15);
-    }
   </style>
 <link rel="stylesheet" href="checkout.css?v=prepaid1"><link rel="stylesheet" href="company-nav.css?v=glass1"><link rel="stylesheet" href="ordering.css?v=glass1"></head>
 
@@ -158,7 +150,6 @@
             <span>Subtotal</span>
             <span id="cartSubtotal">₱0</span>
           </div>
-          <button id="checkoutBtn" class="btn primary wide">Continue</button>
         </div>
 
         <div class="cart-actions">
@@ -212,10 +203,8 @@
             <textarea id="specialRequests" rows="3" placeholder="Less spicy, extra rice, no peanuts…"></textarea>
           </label>
 
-          <button type="submit" class="btn primary wide">Continue to payment</button>
-
-          <!-- Combined checkout follows order review. -->
-          
+          <p id="orderFormStatus" class="form-status" role="status" aria-live="polite"></p>
+          <button type="submit" class="btn primary wide">Review order &amp; pay</button>
         </form>
       </div>
 
@@ -230,11 +219,11 @@
     <button type="button" class="popup-close" aria-label="Close payment">×</button>
     <div class="pay-heading"><h2 id="payTitle">Pay &amp; submit</h2><span>Amount to pay</span><strong id="payTotal">₱0</strong></div>
     <p id="checkoutSummary"></p>
-    <p>Pay once, then submit your order and reference together. Your payment must be verified before cooking starts. Reservation availability is confirmed separately.</p>
-    <div class="payment-choices"><button type="button" data-method="qr">Pay by QR</button><button type="button" data-method="number">Pay by GCash number</button></div>
-    <section id="qrPayment" hidden><img src="assets/gcash-qr.png" alt="Stone Grill payment QR" style="width:100%;max-width:300px;display:block;margin:auto"><p>QR payments are checked by the cashier or an authorized reviewer.</p></section>
-    <section id="numberPayment" hidden><p>Recipient: NI****** A.</p><strong id="gcashMobileText">09178366126</strong><button type="button" id="copyPaymentNumber">Copy number</button><p>The owner verifies payments sent to this number.</p></section>
-    <form id="combinedCheckout" hidden><label>GCash transaction reference<input id="paymentReference" required minlength="3" maxlength="80" autocomplete="off"></label><p>Each reference can be used for only one order. No screenshot needed.</p><button id="submitCombined" type="submit">Submit order & payment</button></form>
+    <p>Scan the QR or copy the GCash number below. Enter the reference from your payment confirmation, then submit once. Payment must be verified before cooking starts; reservation availability is confirmed separately.</p>
+    <fieldset class="payment-methods"><legend>How did you pay?</legend><label><input type="radio" name="paymentMethod" value="qr" checked> QR code</label><label><input type="radio" name="paymentMethod" value="number"> GCash number</label></fieldset>
+    <section id="qrPayment"><img src="assets/gcash-qr.png" alt="Stone Grill payment QR" style="width:100%;max-width:300px;display:block;margin:auto"><p>QR payments are checked by the cashier or an authorized reviewer.</p></section>
+    <section id="numberPayment"><p>Recipient: NI****** A.</p><strong id="gcashMobileText">09178366126</strong><button type="button" id="copyPaymentNumber">Copy number</button><p>The owner verifies payments sent to this number.</p></section>
+    <form id="combinedCheckout"><label>GCash transaction reference<input id="paymentReference" required minlength="3" maxlength="80" autocomplete="off"></label><p>Each reference can be used for only one order. No screenshot needed.</p><button id="submitCombined" type="submit">Submit order &amp; payment</button></form>
     <p id="receiptStatus" role="status" aria-live="polite"></p>
     <p id="resumeNotice"></p><button id="discardCheckout" type="button">Edit order before paying</button>
     <nav class="help-links" aria-label="Need help"><a class="messenger" href="https://m.me/stonecitygrill" target="_blank" rel="noopener"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle;margin-right:6px"><path fill="currentColor" d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.4 5.5 3.7 7.2V22l3.4-1.9c.9.2 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2Z"/><path fill="#0866ff" d="m6 14 5-5 3 2 4-2-5 5-3-2Z"/></svg>Messenger help</a><a href="tel:+63535680539">☎ 053 568 0539</a></nav>
@@ -242,20 +231,17 @@
   </div>
   <!-- How to Order link stays in current location -->
   <div class="cart-summary">
-    <details><summary>How to order</summary><p>Choose food, review your total, and pay by QR or GCash number. Submit the order and payment reference together. Check My Orders regularly; payment and table availability require confirmation.</p></details><nav class="help-links" aria-label="Need help"><a class="messenger" href="https://m.me/stonecitygrill" target="_blank" rel="noopener"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle;margin-right:6px"><path fill="currentColor" d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.4 5.5 3.7 7.2V22l3.4-1.9c.9.2 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2Z"/><path fill="#0866ff" d="m6 14 5-5 3 2 4-2-5 5-3-2Z"/></svg>Messenger help</a><a href="tel:+63535680539">☎ Call 053 568 0539</a></nav>
+    <details><summary>How to order</summary><p>Choose food and fill in your details, then scan the QR or copy the GCash number. Enter your payment reference and submit. Check My Orders regularly; payment and table availability require confirmation.</p></details><nav class="help-links" aria-label="Need help"><a class="messenger" href="https://m.me/stonecitygrill" target="_blank" rel="noopener"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle;margin-right:6px"><path fill="currentColor" d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.4 5.5 3.7 7.2V22l3.4-1.9c.9.2 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2Z"/><path fill="#0866ff" d="m6 14 5-5 3 2 4-2-5 5-3-2Z"/></svg>Messenger help</a><a href="tel:+63535680539">☎ Call 053 568 0539</a></nav>
   </div>
-
-  <!-- Toast -->
-  <div id="toast" class="toast hidden"></div>
 
   <!-- Scripts -->
   <script src="firebase-config.js?v=prepaid1"></script>
   <script src="config.js?v=prepaid1"></script>
   <script type="module" src="customer-bar.js?v=front11"></script>
-  <script src="main.js?v=prepaid3"></script>
+  <script src="main.js?v=prepaid4"></script>
 
   <script src="company-nav.js?v=front7"></script>
-  <script src="checkout.js?v=prepaid1"></script>
+  <script src="checkout.js?v=prepaid2"></script>
   <!-- Service worker (optional) -->
   <script>
     if ('serviceWorker' in navigator) {
@@ -264,79 +250,6 @@
         navigator.serviceWorker.register('sw.js?v=firebase1').catch(()=>{});
       }
     }
-  </script>
-
-  <!-- ===== Toast upgrade: top-center, close button, auto-dismiss, click-to-dismiss ===== -->
-  <script>
-  (function(){
-    // Ensure a toast element exists
-    var t = document.getElementById('toast');
-    if(!t){
-      t = document.createElement('div');
-      t.id = 'toast';
-      document.body.appendChild(t);
-    }
-
-    // Inject compact, top-center styles (won't block page center)
-    var css = document.createElement('style');
-    css.textContent = `
-      #toast{
-        position:fixed; left:50%; top:76px; transform:translateX(-50%);
-        z-index:1100; max-width:92vw; background:rgba(17,24,39,.96); color:#fff;
-        padding:12px 14px; border-radius:12px; box-shadow:0 10px 20px rgba(0,0,0,.15);
-        font-size:14px; line-height:1.35; display:none; opacity:0; transition:opacity .18s ease;
-      }
-      #toast.show{ display:block; opacity:1; }
-      #toast .toast-row{ display:flex; align-items:center; gap:10px; }
-      #toast .toast-msg{ flex:1; text-align:center; }
-      #toast .toast-close{
-        appearance:none; border:0; background:transparent; color:#fff; font-size:18px; line-height:1;
-        padding:2px 6px; cursor:pointer; opacity:.9;
-      }
-      #toast .toast-close:active{ transform:translateY(1px); }
-    `;
-    document.head.appendChild(css);
-
-    var hideTimer = null;
-
-    function hideToast(){
-      clearTimeout(hideTimer);
-      var t = document.getElementById('toast');
-      t.classList.remove('show');
-      setTimeout(function(){ if(!t.classList.contains('show')) t.style.display='none'; }, 180);
-    }
-
-    function renderToast(msg){
-      var t = document.getElementById('toast');
-      t.innerHTML = '';
-      var row = document.createElement('div'); row.className = 'toast-row';
-      var msgEl = document.createElement('div'); msgEl.className = 'toast-msg';
-      msgEl.textContent = (msg == null ? '' : String(msg));
-      var btn = document.createElement('button'); btn.className = 'toast-close'; btn.setAttribute('aria-label','Close'); btn.textContent = '×';
-      btn.onclick = hideToast;
-      row.appendChild(msgEl); row.appendChild(btn);
-      t.appendChild(row);
-      t.onclick = hideToast;
-    }
-
-    window.showToast = function(msg, ms){
-      try{
-        ms = ms || 5000;
-        renderToast(msg);
-        clearTimeout(hideTimer);
-        var t = document.getElementById('toast');
-        t.classList.remove('hidden'); t.style.display = 'block';
-        requestAnimationFrame(function(){ t.classList.add('show'); });
-        hideTimer = setTimeout(function(){ 
-          var t = document.getElementById('toast'); 
-          t.classList.remove('show'); 
-        }, ms);
-      }catch(e){
-        console.warn('[toast-upgrade] error:', e);
-        alert(msg);
-      }
-    };
-  })();
   </script>
 
   <footer style="text-align:center; padding:16px; font-size:0.9em; color:#555; background:#f9f9f9; margin-top:24px;">
