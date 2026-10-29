@@ -4,14 +4,13 @@
 function $(sel){ return document.querySelector(sel); }
 function $$(sel){ return document.querySelectorAll(sel); }
 function money(n){ return '₱' + Math.round(Number(n)); } // no decimals
-function showToast(msg, ms){
-  ms = ms || 5000;
-  var el = document.getElementById('toast');
-  if(!el){ alert(msg); return; }
-  el.textContent = msg;
-  el.classList.remove('hidden');
-  el.classList.add('show');
-  setTimeout(function(){ el.classList.remove('show'); }, ms);
+function escapeHtml(value){
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(msg){
+  var status = document.getElementById('orderFormStatus');
+  if(status) status.textContent = msg == null ? '' : String(msg);
+  else console.warn(msg);
 }
 
 /* ---- Fallback MENU ---- */
@@ -93,10 +92,14 @@ function buildCategoryBar(categories) {
   var bar = document.getElementById('categoryBar');
   if (!bar) return;
   bar.innerHTML = categories.map(function(c){
-    var emo = c.emoji ? '<span class="cat-emoji">'+c.emoji+'</span>' : '';
+    var emo = c.emoji ? '<span class="cat-emoji">'+escapeHtml(c.emoji)+'</span>' : '';
     var active = (c.id === currentCategory) ? ' active' : '';
-    return '<button class="'+active+'" onclick="showCategory(\''+c.id+'\')">'+ emo + '<span>' + (c.label || c.id) + '</span></button>';
+    var id = escapeHtml(c.id);
+    return '<button type="button" class="'+active+'" data-category="'+id+'">'+ emo + '<span>' + escapeHtml(c.label || c.id) + '</span></button>';
   }).join('');
+  bar.querySelectorAll('[data-category]').forEach(function(button){
+    button.addEventListener('click',function(){ showCategory(button.dataset.category); });
+  });
 }
 
 /* ---- State ---- */
@@ -129,10 +132,10 @@ function renderMenu() {
     var it = items[i];
     html += '' +
       '<div class="item" data-idx="'+i+'">' +
-        '<div class="item-title" title="'+it.name+'">'+it.name+'</div>' +
+        '<div class="item-title" title="'+escapeHtml(it.name)+'">'+escapeHtml(it.name)+'</div>' +
         '<div class="item-actions">' +
           '<span class="item-price">'+money(it.price)+'</span>' +
-          '<button class="add-btn" data-idx="'+i+'" aria-label="Add '+it.name+'">Add</button>' +
+          '<button class="add-btn" data-idx="'+i+'" aria-label="Add '+escapeHtml(it.name)+'">Add</button>' +
         '</div>' +
       '</div>';
   }
@@ -183,11 +186,11 @@ function renderCart(nudge){
     html += '' +
     '<div class="cart-row">'+
       '<div class="qty-wrap">'+
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>'+
+        '<button class="qty-btn" data-name="'+escapeHtml(it.name)+'" data-delta="-1">−</button>'+
         '<span>'+it.qty+'</span>'+
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>'+
+        '<button class="qty-btn" data-name="'+escapeHtml(it.name)+'" data-delta="1">+</button>'+
       '</div>'+
-      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
+      '<div class="cart-name" title="'+escapeHtml(it.name)+'">'+escapeHtml(it.name)+'</div>'+
       '<div class="cart-price">'+money(it.price*it.qty)+'</div>'+
     '</div>';
   }
@@ -264,38 +267,29 @@ function saveCheckoutIntent(){
  const data={name:$('#fullName').value,mobile:$('#mobileNumber').value,orderType:form.querySelector('input[name="orderType"]:checked')?.value||'',persons:$('#persons').value,date:$('#orderDate').value,time:$('#orderTime').value,requests:$('#specialRequests').value};
  try{sessionStorage.setItem('sgCheckoutIntent',JSON.stringify(data));}catch{}
 }
-function continueToPayment(){
- const form=$('#orderForm');if(!form)return;
- if(!form.checkValidity()){
-  const missing=form.querySelector(':invalid');
-  if(missing){missing.scrollIntoView?.({behavior:'smooth',block:'center'});missing.focus({preventScroll:true});}
-  showToast('Please complete the required details to continue to payment.');
-  return;
- }
- form.requestSubmit();
-}
+
 function queueCheckoutAfterSignIn(){
  saveCheckoutIntent();
  try{sessionStorage.setItem('sgContinueAfterLogin','1');}catch{}
  const signIn=document.getElementById('googleSignIn');
  if(signIn){signIn.click();return;}
- showToast('Sign-in is still loading. Tap Continue again in a moment.');
+ showToast('Sign-in is still loading. Please try again.');
 }
 window.resumeCheckoutAfterSignIn=()=>{
  if(!window.SG_AUTH?.auth?.currentUser){showToast('Please sign in to continue.');return;}
- continueToPayment();
+ document.getElementById('orderForm')?.requestSubmit();
 };
-function continueCheckout(){
- if(!cart.length){showToast('Add at least one menu item first.');return;}
- if(!window.SG_AUTH?.auth?.currentUser){queueCheckoutAfterSignIn();return;}
- continueToPayment();
-}
 async function handleSubmit(e){
  e.preventDefault();
  if(!window.SG_AUTH?.auth?.currentUser){queueCheckoutAfterSignIn();return;}
  const btn=e.currentTarget.querySelector('button[type="submit"]');
- if(!cart.length){showToast('Add at least one menu item.');return;}
- btn.disabled=true;btn.textContent='Checking order…';
+ if(!cart.length){
+  showToast('Add a menu item before continuing.');
+  document.getElementById('menuList')?.scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelector('#menuList button')?.focus({preventScroll:true});
+  return;
+ }
+ btn.disabled=true;btn.textContent='Preparing payment…';
  try{
   await window.SG_AUTH.getToken();const uid=window.SG_AUTH.auth.currentUser.uid;
   const saved=JSON.parse(sessionStorage.getItem('sgPrepaidAttempt:'+uid)||'null');
@@ -306,8 +300,8 @@ async function handleSubmit(e){
   if(window.SG_AUTH.auth.currentUser?.uid!==uid)throw Error('Account changed. Please try again.');
   sessionStorage.setItem('sgPrepaidAttempt:'+uid,JSON.stringify(draft));
   window.pendingCheckout=draft;window.openCheckout(draft);
- }catch(err){showToast(err.message,9000);}
- finally{btn.disabled=false;btn.textContent='Continue to payment';}
+ }catch(err){showToast(err.message);}
+ finally{btn.disabled=false;btn.textContent='Review order & pay';}
 }
 window.submitPrepaidOrder=async function(method,reference){
  const draft=window.pendingCheckout;
@@ -374,11 +368,10 @@ document.addEventListener('DOMContentLoaded', async function(){
     if(m){ m.addEventListener('blur', ()=>normalizeMobile(m)); m.addEventListener('input', ()=>{ if(m.value.indexOf('+63')!==0) m.value = '+63 '; }); }
     var form = $('#orderForm'); if(form) form.addEventListener('submit', handleSubmit);
     initClearButton();
-    var checkout = $('#checkoutBtn'); if(checkout) checkout.addEventListener('click', continueCheckout);
     wireHowToPopup();
   } catch(e) {
     console.error('Init error:', e);
-    showToast('Error initializing page scripts.');
+    showToast('The order form could not finish loading. Refresh the page and try again.');
   }
 });
 
@@ -386,5 +379,5 @@ document.addEventListener('DOMContentLoaded', async function(){
 function initClearButton(){
   var btn = document.getElementById('clearCartBtn');
   if (!btn) return;
-  btn.addEventListener('click', function(){ clearCart(); showToast('Cart cleared.',2000); });
+  btn.addEventListener('click', function(){ clearCart(); showToast('Cart cleared.'); });
 }
