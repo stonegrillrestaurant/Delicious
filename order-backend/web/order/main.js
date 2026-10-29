@@ -4,6 +4,9 @@
 function $(sel){ return document.querySelector(sel); }
 function $$(sel){ return document.querySelectorAll(sel); }
 function money(n){ return '₱' + Math.round(Number(n)); } // no decimals
+function escapeHtml(value){
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 function showToast(msg){
   var status = document.getElementById('orderFormStatus');
   if(status) status.textContent = msg == null ? '' : String(msg);
@@ -89,10 +92,14 @@ function buildCategoryBar(categories) {
   var bar = document.getElementById('categoryBar');
   if (!bar) return;
   bar.innerHTML = categories.map(function(c){
-    var emo = c.emoji ? '<span class="cat-emoji">'+c.emoji+'</span>' : '';
+    var emo = c.emoji ? '<span class="cat-emoji">'+escapeHtml(c.emoji)+'</span>' : '';
     var active = (c.id === currentCategory) ? ' active' : '';
-    return '<button class="'+active+'" onclick="showCategory(\''+c.id+'\')">'+ emo + '<span>' + (c.label || c.id) + '</span></button>';
+    var id = escapeHtml(c.id);
+    return '<button type="button" class="'+active+'" data-category="'+id+'">'+ emo + '<span>' + escapeHtml(c.label || c.id) + '</span></button>';
   }).join('');
+  bar.querySelectorAll('[data-category]').forEach(function(button){
+    button.addEventListener('click',function(){ showCategory(button.dataset.category); });
+  });
 }
 
 /* ---- State ---- */
@@ -125,10 +132,10 @@ function renderMenu() {
     var it = items[i];
     html += '' +
       '<div class="item" data-idx="'+i+'">' +
-        '<div class="item-title" title="'+it.name+'">'+it.name+'</div>' +
+        '<div class="item-title" title="'+escapeHtml(it.name)+'">'+escapeHtml(it.name)+'</div>' +
         '<div class="item-actions">' +
           '<span class="item-price">'+money(it.price)+'</span>' +
-          '<button class="add-btn" data-idx="'+i+'" aria-label="Add '+it.name+'">Add</button>' +
+          '<button class="add-btn" data-idx="'+i+'" aria-label="Add '+escapeHtml(it.name)+'">Add</button>' +
         '</div>' +
       '</div>';
   }
@@ -179,11 +186,11 @@ function renderCart(nudge){
     html += '' +
     '<div class="cart-row">'+
       '<div class="qty-wrap">'+
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="-1">−</button>'+
+        '<button class="qty-btn" data-name="'+escapeHtml(it.name)+'" data-delta="-1">−</button>'+
         '<span>'+it.qty+'</span>'+
-        '<button class="qty-btn" data-name="'+it.name+'" data-delta="1">+</button>'+
+        '<button class="qty-btn" data-name="'+escapeHtml(it.name)+'" data-delta="1">+</button>'+
       '</div>'+
-      '<div class="cart-name" title="'+it.name+'">'+it.name+'</div>'+
+      '<div class="cart-name" title="'+escapeHtml(it.name)+'">'+escapeHtml(it.name)+'</div>'+
       '<div class="cart-price">'+money(it.price*it.qty)+'</div>'+
     '</div>';
   }
