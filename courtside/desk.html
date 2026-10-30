@@ -58,6 +58,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 .sch td.nowc{outline:2px solid var(--amb)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;overflow:auto;padding:12px;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .modal .sheet{max-width:520px;margin:0 auto 40px}
+@keyframes pl{50%{opacity:.45}}.court.over{border-width:3px}.court.over .cs{animation:pl 1.2s infinite;font-size:14px}
 #sync.ok{color:var(--ac)}#sync.warn{color:var(--amb)}#sync.bad{color:var(--red)}
 </style>
 </head>
@@ -184,7 +185,7 @@ function conflict(court,start,end,ign){return sessions.find(s=>!s.closed&&s.cour
 function courtState(c,n){
  const ss=sessions.filter(s=>!s.closed&&s.court===c);
  const cur=ss.find(s=>s.start<=n&&n<s.until);
- const over=!cur&&ss.find(s=>s.until<=n&&sessPlayers(s.id).length>0);
+ const over=ss.find(s=>s.until<=n&&sessPlayers(s.id).length>0);
  const next=ss.filter(s=>s.start>n).sort((a,b)=>a.start-b.start)[0];
  return{cur,over,next}}
 function rangeTabs(){return `<div class="tabs">${["today","week","month","all"].map(r=>`<button class="btn s ${r===range?"":"g"}" onclick="range='${r}';refresh()">${r==="week"?"7 days":r==="month"?"This month":r[0].toUpperCase()+r.slice(1)}</button>`).join("")}</div>`}
@@ -264,8 +265,10 @@ function manage(sid){
  const s=sessions.find(x=>x.id===sid);if(!s)return;curSid=sid;
  const n=Date.now(),ps=sessPlayers(sid),st=n<s.start?"Reserved":n<s.until?ML(s.mode):"Time ended";
  const rem=Math.max(0.5,Math.ceil((s.until-Math.max(n,s.start))/1800000)/2);
+ const ov=n>=s.until&&ps.length>0,nxt=ov&&sessions.find(x=>!x.closed&&x.court===s.court&&x.id!==sid&&x.start<=n&&n<x.until);
  modal(`<div class="row"><h3 style="margin:0">Court ${s.court} · ${st}</h3><button class="btn s g" onclick="closeModal()">Close</button></div>
  <div class="note">${new Date(s.start).toLocaleDateString()} · ${tm(s.start)} – ${tm(s.until)} (${s.hours} hr) · ${s.mode==="rent"?"Rented court":ML(s.mode)}${s.mode!=="rent"?" · "+money(s.rate||0)+"/player":""} · ${ps.length}/${s.max} players · set by ${esc(s.by||"")}</div>
+ ${ov?`<div style="background:var(--red2);border:2px solid var(--red);border-radius:10px;padding:10px;margin:8px 0"><b style="color:var(--red);font-size:17px">⚠️ OVERTIME ${fm(Math.ceil((n-s.until)/60000))}</b><div class="note" style="color:var(--tx)">${nxt?"Next renter's slot started "+tm(nxt.start)+". Hand over the court.":"Time is up. Extend or end the session."}</div><div class="row" style="justify-content:flex-start;margin-top:8px;flex-wrap:wrap">${nxt?"":`<button class="btn s" onclick="extendModal('${sid}')">Extend</button>`}<button class="btn s r" onclick="endSession('${sid}')">${nxt?"Hand over to next renter":"End session"}</button></div></div>`:""}
  <div style="margin-top:8px">${ps.map(p=>{const i=pLine(p,n);return `<div style="border-top:1px solid var(--bd);padding:8px 0"><div class="row"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.role==="renter"?' <span class="note">renter</span>':""}<div class="note">${i.t} · <span class="${p.paid?"paid":"unpaid"}">${p.fee===0?"Included":p.paid?"Paid "+money(p.fee)+" ("+esc(p.method)+")":"Unpaid "+money(p.fee)}</span></div></div></div>
  <div class="row" style="justify-content:flex-start;margin-top:6px">${p.paid?"":`<button class="btn s" onclick="collectModal('${p.id}')">Collect ${money(p.fee)}</button>`}<button class="btn s r" onclick="checkout('${p.id}')">Check out</button></div></div>`}).join("")||'<p class="note">No players on this court yet.</p>'}</div>
  ${ps.length<s.max&&n<s.until?`<form id="pf" style="border-top:1px solid var(--bd);margin-top:6px" onsubmit="event.preventDefault();addPlayer('${sid}')"><label>Add a player (${ps.length}/${s.max})</label><input name="pname" placeholder="Player name" autocomplete="off">
@@ -287,20 +290,47 @@ function addPlayer(sid){
  q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid,court:s.court,mode:s.mode,role:"player",service:SVC(s.mode,s.court),hours:hrs,fee,paid,method:paid&&fee>0?method:"",status:"active",startAt:s.start,until,inAt:n,outAt:null,log}});
  if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:SVC(s.mode,s.court),amt:fee,method,note:name+refTxt+" · Court "+s.court}});
  reopen()}
+function extendModal(sid){
+ const s=sessions.find(x=>x.id===sid);if(!s)return;curSid=sid;
+ const nx=sessions.filter(x=>!x.closed&&x.court===s.court&&x.id!==sid&&x.start>=s.until).sort((a,b)=>a.start-b.start)[0];
+ const lim=Math.min(nx?nx.start:Infinity,dstart(day(s.start))+CLOSE_H*H),room=Math.floor((lim-s.until)/1800000)/2;
+ if(room<0.5){modal(`<h3 style="margin:0 0 6px">Can't extend Court ${s.court}</h3><div class="note">${nx?"The next booking starts at "+tm(nx.start)+".":"The venue closes at 12:00 midnight."} Hand over or end the session instead.</div><div class="row" style="margin-top:12px"><button class="btn g" onclick="reopen()">Back</button><button class="btn r" onclick="endSession('${sid}')">End session</button></div>`);return}
+ const h0=Math.min(1,room),rent=s.mode==="rent";
+ modal(`<h3 style="margin:0 0 6px">Extend Court ${s.court}</h3><div class="note">Ends ${tm(s.until)} now. ${nx?"Next booking at "+tm(nx.start)+" · ":""}up to ${room} hr available.</div>
+ <form id="ef" onsubmit="event.preventDefault();doExtend('${sid}')">
+ <label>Extra hours</label><input name="hours" type="number" min="0.5" max="${room}" step="0.5" value="${h0}" oninput="exUp(${rent?(+s.rate||0):0})">
+ <label>Extension fee (₱, total)</label><input name="fee" type="number" min="0" step="1" value="${rent?Math.round((+s.rate||0)*h0):0}">
+ <div class="grid"><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
+ <label>GCash ref # (optional)</label><input name="ref" autocomplete="off">
+ <div class="row" style="margin-top:12px"><button type="button" class="btn g" onclick="reopen()">Back</button><button class="btn">Extend</button></div></form>`)}
+function exUp(r){const f=$("#ef");if(r)f.fee.value=Math.round(r*(+f.hours.value||0))}
+function doExtend(sid){
+ const f=$("#ef"),s=sessions.find(x=>x.id===sid),n=Date.now(),h=+f.hours.value,fee=Math.round(+f.fee.value||0);
+ if(!s)return;if(!(h>0))return alert("Enter the extra hours");
+ const nu=s.until+h*H,c=conflict(s.court,s.until,nu,sid);
+ if(c)return alert("Court "+s.court+" is booked "+tm(c.start)+" – "+tm(c.until)+". Choose fewer hours.");
+ if(nu>dstart(day(s.start))+CLOSE_H*H)return alert("The venue closes at 12:00 midnight.");
+ const ps=sessPlayers(sid),paid=f.paid.value==="yes",method=f.method.value,ref=f.ref.value.trim(),refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
+ q({op:"upd",c:"sessions",id:sid,patch:{until:nu,hours:(+s.hours||0)+h}});
+ ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{until:nu,hours:(+p.hours||0)+h,log:[...(p.log||[]),{t:n,e:"Session extended +"+h+" hr until "+tm(nu)}]}}));
+ if(fee>0){const rn=(ps.find(p=>p.role==="renter")||ps[0]||{}).name||"Court "+s.court;
+  q({op:"add",c:"players",o:{id:uid(),name:rn+" (extension)",phone:"",sid,court:s.court,mode:s.mode,role:"extension",service:"Court "+s.court+" extension",hours:h,fee,paid,method:paid?method:"",status:"done",startAt:s.until,until:nu,inAt:n,outAt:n,log:[{t:n,e:"Extended +"+h+" hr"+(paid?" · Paid "+money(fee)+" ("+method+")"+refTxt:" · Unpaid "+money(fee))}]}});
+  if(paid)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:SVC(s.mode,s.court),amt:fee,method,note:rn+" · extension +"+h+" hr"+refTxt+" · Court "+s.court}})}
+ closeModal();refresh()}
 function setMax(sid){const v=+$("#mx").value,k=sessPlayers(sid).length;if(!(v>=1))return;if(v<k)return alert(k+" players are already on this court");q({op:"upd",c:"sessions",id:sid,patch:{max:v}});reopen()}
 function endSession(sid){
  const s=sessions.find(x=>x.id===sid),ps=sessPlayers(sid),un=ps.filter(p=>!p.paid).length,n=Date.now();
- if(!confirm((un?un+" player(s) still unpaid. ":"")+(n<s.start?"Cancel this booking?":"End this session now and check everyone out?")))return;
+ if(!confirm((n<s.start?"Cancel this booking?":"End this session now and check everyone out?")+(un?"\n\n⚠️ "+un+" player(s) are unpaid. They stay in Players history so you can collect later.":"")))return;
  q({op:"upd",c:"sessions",id:sid,patch:{closed:true,closedAt:n}});
  ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:n<s.start?"Booking cancelled":"Session ended"}]}}));
  closeModal();refresh()}
 function checkout(pid){
  const p=players.find(x=>x.id===pid);if(!p)return;
- if(!p.paid&&!confirm(p.name+" has an unpaid balance of "+money(p.fee)+". Check out anyway?"))return;
  const n=Date.now();
- q({op:"upd",c:"players",id:pid,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:"Checked out"}]}});
+ q({op:"upd",c:"players",id:pid,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:p.paid?"Checked out":"Checked out UNPAID ("+money(p.fee)+")"}]}});
  const s=sessions.find(x=>x.id===p.sid);
  if(s&&!s.closed&&s.until<=n&&!sessPlayers(s.id).length)q({op:"upd",c:"sessions",id:s.id,patch:{closed:true,closedAt:n}});
+ if(!p.paid)alert("⚠️ Reminder: "+p.name+" checked out with an UNPAID balance of "+money(p.fee)+".\n\nCollect later from Players tab → Visit history, or Reports → Outstanding balances.");
  if(curSid)reopen();else refresh()}
 function collectModal(pid){
  const p=players.find(x=>x.id===pid);if(!p)return;back=curSid;
@@ -313,6 +343,12 @@ function doCollect(pid){
  q({op:"upd",c:"players",id:pid,patch:{paid:true,method,log:[...(p.log||[]),{t:n,e:"Paid "+money(p.fee)+" ("+method+")"+refTxt}]}});
  q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:p.service||"Court rental",amt:p.fee,method,note:p.name+refTxt+(p.court?" · Court "+p.court:"")}});
  closeModal();if(back){const b=back;back=null;manage(b)}else refresh()}
+
+// ================= clear empty ended sessions (players in overtime wait for staff: extend or end)
+function autoClose(){
+ if(!loaded||!online||flushing||outbox.length)return;
+ const n=Date.now();
+ sessions.filter(s=>!s.closed&&s.until<=n&&!sessPlayers(s.id).length).forEach(s=>q({op:"upd",c:"sessions",id:s.id,patch:{closed:true,closedAt:n}}))}
 
 // ================= desk actions
 function calcQ(f){f.fee.value=(QUICK[f.service.value]||0)*(+f.qty.value||1);noteDraft({target:f.fee})}
@@ -348,23 +384,29 @@ function shiftCalc(){
  return{last:cl[0],op,lastClose,cash,gc,cashOut,fl,remit:cash-cashOut,expected:fl+cash-cashOut,sv,ss,unpaid:sv.filter(p=>!p.paid).reduce((a,p)=>a+p.fee,0)}}
 
 // ================= dynamic regions (no inputs inside, safe to redraw)
+function dAlerts(){const n=Date.now();let h="";
+ for(let c=1;c<=COURTS;c++){const{cur,over}=courtState(c,n);if(!over)continue;
+  h+=`<div class="card" style="background:var(--red2);border:2px solid var(--red)"><b style="color:var(--red);font-size:17px">⚠️ COURT ${c} · OVERTIME ${fm(Math.ceil((n-over.until)/60000))}</b>
+  <div class="note" style="color:var(--tx);margin:4px 0">${esc(sessPlayers(over.id).map(p=>p.name).join(", "))} · ended ${tm(over.until)}<br>${cur?"<b>Next renter's slot started "+tm(cur.start)+" – hand over the court.</b>":"Extend, or end the session."}</div>
+  <div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn s" style="${cur?"display:none":""}" onclick="extendModal('${over.id}')">Extend</button><button class="btn s r" onclick="endSession('${over.id}')">${cur?"Hand over to next renter":"End session"}</button></div></div>`}
+ return h}
 function dStats(){const n=Date.now();
  const inuse=sessions.filter(s=>!s.closed&&s.start<=n&&n<s.until).length;
  const owed=players.filter(p=>!p.paid).reduce((a,p)=>a+(+p.fee||0),0);
- return `<div class="grid"><div class="card stat"><b>${players.filter(p=>day(p.inAt)===day(n)).length}</b><span>Players today</span></div>
+ return `<div class="grid"><div class="card stat"><b>${players.filter(p=>day(p.inAt)===day(n)&&p.role!=="extension").length}</b><span>Players today</span></div>
  <div class="card stat"><b>${money(sum(txns.filter(t=>day(t.t)===day(n)),"income"))}</b><span>Income today</span></div>
  <div class="card stat"><b>${inuse}/${COURTS}</b><span>Courts in use now</span></div>
  <div class="card stat"><b class="${owed?"unpaid":""}">${money(owed)}</b><span>Unpaid balance</span></div></div>`}
 function dCourts(){const n=Date.now();let h="";
  for(let c=1;c<=COURTS;c++){
-  const{cur,over,next}=courtState(c,n),s=cur||over;let cls="",label="FREE",l2="",names="";
-  if(s){const ps=sessPlayers(s.id);cls=cur?(s.mode==="rent"?"rent":"open"):"over";
-   label=cur?ML(s.mode).toUpperCase():"OVERTIME";
-   l2=cur?`until ${tm(s.until)} · ${fm(Math.ceil((s.until-n)/60000))} left`:`ended ${tm(s.until)}`;
+  const{cur,over,next}=courtState(c,n),s=over||cur;let cls="",label="FREE",l2="",names="";
+  if(s){const ps=sessPlayers(s.id);cls=over?"over":(s.mode==="rent"?"rent":"open");
+   label=over?"⚠️ OVERTIME":ML(s.mode).toUpperCase();
+   l2=over?`ended ${tm(s.until)} · ${fm(Math.ceil((n-s.until)/60000))} over`:`until ${tm(s.until)} · ${fm(Math.ceil((s.until-n)/60000))} left`;
    names=(ps.map(p=>esc(p.name)).join(", ")||"no players yet")+` (${ps.length}/${s.max})`}
-  h+=`<div class="court ${cls}" onclick="courtTap(${c})"><b>Court ${c}</b><div class="cs">${label}</div>${l2?`<small>${l2}</small>`:""}${names?`<small style="color:var(--tx)">${names}</small>`:""}${next?`<small>Next: ${tm(next.start)} (${ML(next.mode).toLowerCase()})</small>`:""}${!s&&!next?'<small>Tap to set up</small>':""}</div>`}
+  h+=`<div class="court ${cls}" onclick="courtTap(${c})"><b>Court ${c}</b><div class="cs">${label}</div>${l2?`<small>${l2}</small>`:""}${names?`<small style="color:var(--tx)">${names}</small>`:""}${over?`<small style="color:var(--red);font-weight:800">${cur?"NEXT RENTER WAITING – tap to hand over":"Tap to extend or end"}</small>`:""}${next?`<small>Next: ${tm(next.start)} (${ML(next.mode).toLowerCase()})</small>`:""}${!s&&!next?'<small>Tap to set up</small>':""}</div>`}
  return h}
-function courtTap(c){const{cur,over}=courtState(c,Date.now()),s=cur||over;if(s)manage(s.id);else setupModal({court:c})}
+function courtTap(c){const{cur,over}=courtState(c,Date.now()),s=over||cur;if(s)manage(s.id);else setupModal({court:c})}
 function dSched(){const n=Date.now(),base=dstart(sdate);
  let h='<table class="sch"><tr><td></td>'+[...Array(CLOSE_H-OPEN_H)].map((_,i)=>`<th>${hl(OPEN_H+i)}</th>`).join("")+"</tr>";
  for(let c=1;c<=COURTS;c++){h+=`<tr><td class="cn">Ct ${c}</td>`;
@@ -384,7 +426,7 @@ function dActive(){const n=Date.now(),rk={overtime:0,playing:1,reserved:2,waitin
   <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(x=>`${tm(x.t)} — ${esc(x.e)}`).join("<br>")}</div></details></div>`}).join("")}
 function dPlayers(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>b.inAt-a.inAt);
- return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div class="${p.paid?"paid":"unpaid"}">${money(p.fee||0)}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
+ return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
 function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=sum(l,"expense");
  return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
 function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
@@ -393,10 +435,10 @@ function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
 function dReports(){
  const l=txns.filter(t=>inRange(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]||"-"]=(m[t[k]||"-"]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
  const tbl=(title,rows)=>`<div class="card"><b>${title}</b>${rows.map(([k,v])=>`<div class="row" style="padding:5px 0"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join("")||'<p class="note">No data.</p>'}</div>`;
- const pl=players.filter(p=>inRange(p.inAt)),uniq=new Set(pl.map(p=>(p.name||"").toLowerCase())).size;
+ const pl=players.filter(p=>inRange(p.inAt)&&p.role!=="extension"),uniq=new Set(pl.map(p=>(p.name||"").toLowerCase())).size;
  return rangeTabs()+`<div class="grid"><div class="card stat"><b>${pl.length}</b><span>Visits</span></div><div class="card stat"><b>${uniq}</b><span>Unique players</span></div></div>`+
  tbl("Income by service",by("income","cat"))+tbl("Income by payment mode",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
- `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><b class="unpaid">${money(p.fee||0)}</b></div>`).join("")||'<p class="note">All settled.</p>'}</div>`}
+ `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div>`}
 function dShift(){const s=shiftCalc(),n=Date.now();
  return `<div class="card"><b>Current shift</b>${s.op?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`:'<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>'}
  ${s.last?`<div class="note" style="margin-top:6px">Last close: ${new Date(s.last.t).toLocaleDateString()} ${tm(s.last.t)} by ${esc(s.last.by||"")} — ${esc(s.last.note||"")}</div>`:""}</div>
@@ -433,7 +475,7 @@ const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle ren
  <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
  <p><button class="btn" style="width:100%">Record sale</button></p></form></div>`;
 const VIEWS={
- desk:{shell:()=>`<div id="stats"></div>
+ desk:{shell:()=>`<div id="alerts"></div><div id="stats"></div>
   <div class="card"><b>Courts</b> <span class="note">tap a court to set it up or manage it</span><div id="courts" class="courts"></div>
   <div class="legend"><span><i style="background:var(--blu)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play / Special event</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
   <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
@@ -441,7 +483,7 @@ const VIEWS={
   <div class="row" style="margin-top:8px"><button class="btn" onclick="setupModal({})">+ New court booking</button></div></div>
   ${formQS}
   <div class="card"><b>Active players</b><div id="active"></div></div>`,
-  dyn:{stats:dStats,courts:dCourts,sched:dSched,active:dActive}},
+  dyn:{alerts:dAlerts,stats:dStats,courts:dCourts,sched:dSched,active:dActive}},
  players:{shell:()=>`<div id="pl"></div>`,dyn:{pl:dPlayers}},
  ledger:{shell:()=>`<div id="lgtop"></div>
   <div class="card"><b>Record a transaction</b>
@@ -468,7 +510,7 @@ async function boot(){
  try{outbox=JSON.parse(ls("outbox")||"[]")}catch(e){outbox=[]}
  rebuild();drawHead();go("desk");status();
  flush();pull();
- setInterval(pull,8000);setInterval(()=>{if(!$("#modal"))refresh()},30000);setInterval(drawHead,60000)}
+ setInterval(pull,8000);setInterval(autoClose,10000);setTimeout(autoClose,4000);setInterval(()=>{if(!$("#modal"))refresh()},30000);setInterval(drawHead,60000)}
 setupScreen().then(boot);
 </script>
 </body>
