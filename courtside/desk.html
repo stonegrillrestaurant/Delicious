@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pickleball Venue Desk</title>
+<link rel="icon" type="image/png" href="/courtside/courtside-manager3.png">
+<link rel="apple-touch-icon" href="/courtside/courtside-manager3.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Courtside">
+<meta name="theme-color" content="#1f8a4c">
+<script>(function(){try{var i=new URL("/courtside/courtside-manager3.png",location.origin).href,m={name:"Courtside Manager",short_name:"Courtside",start_url:location.href,display:"standalone",background_color:"#f6f7f4",theme_color:"#1f8a4c",icons:[{src:i,sizes:"any",type:"image/png",purpose:"any"}]};var l=document.createElement("link");l.rel="manifest";l.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(m));document.head.appendChild(l)}catch(e){}})()</script>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 --bg:#f6f7f4;--card:#fff;--tx:#1b2420;--mu:#6b7770;--bd:#dfe4de;--ac:#1f8a4c;--ac2:#e8f5ec;--red:#c0392b;--amb:#b7791f;--blu:#2b6cb0;--blu2:#e3eefb;--red2:#fbe6e3;--amb2:#fdf1d8}
@@ -63,11 +70,13 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <nav id="nav"></nav>
 <script>
 const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000;
-const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100;
+const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
-const INC_CATS=["Court rental","Open play",...Object.keys(QUICK)];
+const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
 const METHODS=["Cash","GCash"];
 const EXP_CATS=["Maintenance","Supplies","Staff","Utilities","Rent","Other"];
+const ML=m=>m==="rent"?"Rented":m==="event"?"Special event":"Open play";
+const SVC=(m,c)=>m==="rent"?"Court "+c+" rental":m==="event"?"Special event":"Open play";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const money=n=>(n<0?"−":"")+"₱"+Math.abs(n).toFixed(2);
@@ -193,7 +202,7 @@ function modal(html){closeModal(true);const d=document.createElement("div");d.id
  d.innerHTML='<div class="card sheet">'+html+'</div>';d.addEventListener("click",e=>{if(e.target===d)closeModal()});document.body.appendChild(d)}
 function closeModal(keep){const m=$("#modal");if(m)m.remove();if(!keep)curSid=null}
 
-// ================= court setup (rent / open play / reservation)
+// ================= court setup (rent / open play / special event / reservation)
 function slotOpts(sel){let o='<option value="now">Now</option>';
  for(let m=OPEN_H*60;m<=CLOSE_H*60-30;m+=30){const h=Math.floor(m/60),mm=m%60;o+=`<option value="${m}" ${sel===m?"selected":""}>${h%12||12}:${String(mm).padStart(2,"0")} ${h<12?"AM":"PM"}</option>`}return o}
 function setupModal(pre){pre=pre||{};
@@ -201,11 +210,11 @@ function setupModal(pre){pre=pre||{};
  modal(`<h3 style="margin:0 0 6px">Set up a court</h3><div class="note">Open 8:00 AM – 12:00 midnight. Booked times lock automatically.</div>
  <form id="sf" onsubmit="event.preventDefault();saveSession()">
  <div class="grid"><div><label>Court</label><select name="court" onchange="sfUp(true)">${[1,2,3,4,5,6].map(c=>`<option>${c}</option>`).join("")}</select></div>
- <div><label>Mode</label><select name="mode" onchange="sfUp(true)"><option value="rent">Rented</option><option value="open">Open play</option></select></div></div>
+ <div><label>Mode</label><select name="mode" onchange="sfUp(true)"><option value="rent">Rented</option><option value="open">Open play</option><option value="event">Special event</option></select></div></div>
  <div class="grid"><div><label>Date</label><input type="date" name="date" value="${date}" min="${day(Date.now())}"></div>
  <div><label>Start</label><select name="start">${slotOpts(mins)}</select></div></div>
- <div class="grid"><div><label>Hours</label><input name="hours" type="number" min="0.5" step="0.5" value="1" oninput="sfUp()"></div>
- <div><label>Max players</label><input name="max" type="number" min="1" max="12" value="4"></div></div>
+ <div class="grid"><div><label>Session length (hours)</label><input name="hours" type="number" min="0.5" step="0.5" value="1" oninput="sfUp()"></div>
+ <div><label>Max players</label><input name="max" type="number" min="1" max="50" value="4"></div></div>
  <label id="ratelbl"></label><input name="rate" type="number" min="0" step="1" oninput="sfUp()">
  <label id="nmlbl"></label><textarea name="names" rows="4"></textarea>
  <label>Renter phone (optional)</label><input name="phone" type="tel">
@@ -215,12 +224,12 @@ function setupModal(pre){pre=pre||{};
  <div id="sftot" style="margin:10px 0;font-weight:700"></div>
  <div class="row"><button type="button" class="btn g" onclick="closeModal()">Cancel</button><button class="btn">Save</button></div></form>`);
  const f=$("#sf");f.court.value=court;sfUp(true)}
-function sfUp(reset){const f=$("#sf"),rent=f.mode.value==="rent";
- if(reset)f.rate.value=rent?RENT_RATE(+f.court.value):OPEN_RATE;
- $("#ratelbl").textContent=rent?"Rate (₱ per hour, whole court)":"Rate (₱ per player per hour)";
+function sfUp(reset){const f=$("#sf"),m=f.mode.value,rent=m==="rent";
+ if(reset)f.rate.value=rent?RENT_RATE(+f.court.value):m==="event"?0:OPEN_RATE;
+ $("#ratelbl").textContent=rent?"Rate (₱ per hour, whole court)":m==="event"?"Event fee (₱ per player, flat per session)":"Open play fee (₱ per player, flat per session)";
  $("#nmlbl").textContent=rent?"Player names, one per line (first one is the renter who pays)":"Players joining now, one per line (optional)";
  const h=+f.hours.value||0,r=+f.rate.value||0;
- $("#sftot").textContent=rent?"Court fee: "+money(r*h):"Each player pays: "+money(r*h)}
+ $("#sftot").textContent=rent?"Court fee: "+money(r*h):"Each player pays: "+money(r)+" per session ("+h+" hr)"}
 function saveSession(){
  const f=$("#sf"),now=Date.now(),court=+f.court.value,mode=f.mode.value,hours=+f.hours.value,max=Math.max(1,+f.max.value||4),rate=+f.rate.value||0;
  if(!(hours>0))return alert("Enter the number of hours");
@@ -236,15 +245,15 @@ function saveSession(){
  if(mode==="rent"&&!names.length)return alert("Enter the renter's name");
  if(names.length>max)return alert("Max players is "+max+" but "+names.length+" names were entered");
  const c=conflict(court,start,end);
- if(c)return alert("Court "+court+" is already booked "+tm(c.start)+" – "+tm(c.until)+" ("+(c.mode==="rent"?"rented":"open play")+"). Pick another time or court.");
+ if(c)return alert("Court "+court+" is already booked "+tm(c.start)+" – "+tm(c.until)+" ("+ML(c.mode).toLowerCase()+"). Pick another time or court.");
  const sid=uid(),paid=f.paid.value==="yes",method=f.method.value,ref=f.ref.value.trim(),refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
  q({op:"add",c:"sessions",o:{id:sid,court,mode,start,until:end,hours,max,rate,closed:false,t:now}});
  names.forEach((nm,i)=>{
-  const fee=mode==="rent"?(i===0?Math.round(rate*hours):0):Math.round(rate*hours),isPaid=fee===0?true:paid;
-  const log=[{t:now,e:(mode==="rent"?"Rented":"Joined open play on")+" Court "+court+" "+tm(start)+"–"+tm(end)}];
+  const fee=mode==="rent"?(i===0?Math.round(rate*hours):0):Math.round(rate),isPaid=fee===0?true:paid;
+  const log=[{t:now,e:(mode==="rent"?"Rented":mode==="event"?"Joined special event on":"Joined open play on")+" Court "+court+" "+tm(start)+"–"+tm(end)}];
   if(isPaid&&fee>0)log.push({t:now,e:"Paid "+money(fee)+" ("+method+")"+refTxt});
-  q({op:"add",c:"players",dep:sid,o:{id:uid(),name:nm,phone:i===0?f.phone.value.trim():"",sid,court,mode,role:mode==="rent"&&i===0?"renter":"player",service:mode==="rent"?"Court "+court+" rental":"Open play",hours,fee,paid:isPaid,method:isPaid&&fee>0?method:"",status:"active",startAt:start,until:end,inAt:now,outAt:null,log}});
-  if(isPaid&&fee>0)q({op:"add",c:"txns",dep:sid,o:{id:uid(),t:now,type:"income",cat:mode==="rent"?"Court "+court+" rental":"Open play",amt:fee,method,note:nm+refTxt+" · Court "+court}})});
+  q({op:"add",c:"players",dep:sid,o:{id:uid(),name:nm,phone:i===0?f.phone.value.trim():"",sid,court,mode,role:mode==="rent"&&i===0?"renter":"player",service:SVC(mode,court),hours,fee,paid:isPaid,method:isPaid&&fee>0?method:"",status:"active",startAt:start,until:end,inAt:now,outAt:null,log}});
+  if(isPaid&&fee>0)q({op:"add",c:"txns",dep:sid,o:{id:uid(),t:now,type:"income",cat:mode==="rent"?"Court "+court+" rental":SVC(mode,court),amt:fee,method,note:nm+refTxt+" · Court "+court}})});
  closeModal();refresh()}
 
 // ================= manage a booked / running court
@@ -253,16 +262,16 @@ function pLine(p,n){const s=pst(p,n);
  return{s,t}}
 function manage(sid){
  const s=sessions.find(x=>x.id===sid);if(!s)return;curSid=sid;
- const n=Date.now(),ps=sessPlayers(sid),st=n<s.start?"Reserved":n<s.until?(s.mode==="rent"?"Rented":"Open play"):"Time ended";
+ const n=Date.now(),ps=sessPlayers(sid),st=n<s.start?"Reserved":n<s.until?ML(s.mode):"Time ended";
  const rem=Math.max(0.5,Math.ceil((s.until-Math.max(n,s.start))/1800000)/2);
  modal(`<div class="row"><h3 style="margin:0">Court ${s.court} · ${st}</h3><button class="btn s g" onclick="closeModal()">Close</button></div>
- <div class="note">${new Date(s.start).toLocaleDateString()} · ${tm(s.start)} – ${tm(s.until)} (${s.hours} hr) · ${s.mode==="rent"?"Rented court":"Open play"} · ${ps.length}/${s.max} players · set by ${esc(s.by||"")}</div>
+ <div class="note">${new Date(s.start).toLocaleDateString()} · ${tm(s.start)} – ${tm(s.until)} (${s.hours} hr) · ${s.mode==="rent"?"Rented court":ML(s.mode)}${s.mode!=="rent"?" · "+money(s.rate||0)+"/player":""} · ${ps.length}/${s.max} players · set by ${esc(s.by||"")}</div>
  <div style="margin-top:8px">${ps.map(p=>{const i=pLine(p,n);return `<div style="border-top:1px solid var(--bd);padding:8px 0"><div class="row"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.role==="renter"?' <span class="note">renter</span>':""}<div class="note">${i.t} · <span class="${p.paid?"paid":"unpaid"}">${p.fee===0?"Included":p.paid?"Paid "+money(p.fee)+" ("+esc(p.method)+")":"Unpaid "+money(p.fee)}</span></div></div></div>
  <div class="row" style="justify-content:flex-start;margin-top:6px">${p.paid?"":`<button class="btn s" onclick="collectModal('${p.id}')">Collect ${money(p.fee)}</button>`}<button class="btn s r" onclick="checkout('${p.id}')">Check out</button></div></div>`}).join("")||'<p class="note">No players on this court yet.</p>'}</div>
  ${ps.length<s.max&&n<s.until?`<form id="pf" style="border-top:1px solid var(--bd);margin-top:6px" onsubmit="event.preventDefault();addPlayer('${sid}')"><label>Add a player (${ps.length}/${s.max})</label><input name="pname" placeholder="Player name" autocomplete="off">
- ${s.mode==="open"?`<div class="grid"><div><label>Hours</label><input name="hrs" type="number" min="0.5" step="0.5" value="${rem}"></div><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div></div><div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref"></div></div>`:'<div class="note">Joins this rented court at no extra charge.</div>'}
+ ${s.mode!=="rent"?`<div class="grid"><div><label>Hours</label><input name="hrs" type="number" min="0.5" step="0.5" value="${rem}"></div><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div></div><div class="note">Flat fee: ${money(s.rate||0)} per player per session.</div><div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref"></div></div>`:'<div class="note">Joins this rented court at no extra charge.</div>'}
  <p><button class="btn" style="width:100%">Add player</button></p></form>`:""}
- <div class="grid" style="margin-top:6px"><div><label>Max players</label><input id="mx" type="number" min="1" max="12" value="${s.max}"></div><div style="align-self:end"><button class="btn g" style="width:100%" onclick="setMax('${sid}')">Update max</button></div></div>
+ <div class="grid" style="margin-top:6px"><div><label>Max players</label><input id="mx" type="number" min="1" max="50" value="${s.max}"></div><div style="align-self:end"><button class="btn g" style="width:100%" onclick="setMax('${sid}')">Update max</button></div></div>
  <p><button class="btn r" style="width:100%" onclick="endSession('${sid}')">${n<s.start?"Cancel this booking":"End session now"}</button></p>`)}
 function reopen(){if(curSid)manage(curSid)}
 function addPlayer(sid){
@@ -270,13 +279,13 @@ function addPlayer(sid){
  if(!name)return alert("Enter the player's name");
  if(sessPlayers(sid).length>=s.max)return alert("This court is full ("+s.max+" players max)");
  if(n>=s.until)return alert("This session has ended");
- const rem=Math.max(0.5,Math.ceil((s.until-Math.max(n,s.start))/1800000)/2),open=s.mode==="open";
- const hrs=open?(+f.hrs.value||rem):rem,fee=open?Math.round(s.rate*hrs):0;
+ const rem=Math.max(0.5,Math.ceil((s.until-Math.max(n,s.start))/1800000)/2),open=s.mode!=="rent";
+ const hrs=open?(+f.hrs.value||rem):rem,fee=open?Math.round(s.rate||0):0;
  const paid=fee===0?true:f.paid.value==="yes",method=open?f.method.value:"",ref=open?f.ref.value.trim():"",refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
  const until=Math.min(s.until,Math.max(n,s.start)+hrs*H),log=[{t:n,e:"Joined Court "+s.court}];
  if(paid&&fee>0)log.push({t:n,e:"Paid "+money(fee)+" ("+method+")"+refTxt});
- q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid,court:s.court,mode:s.mode,role:"player",service:open?"Open play":"Court "+s.court+" rental",hours:hrs,fee,paid,method:paid&&fee>0?method:"",status:"active",startAt:s.start,until,inAt:n,outAt:null,log}});
- if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:"Open play",amt:fee,method,note:name+refTxt+" · Court "+s.court}});
+ q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid,court:s.court,mode:s.mode,role:"player",service:SVC(s.mode,s.court),hours:hrs,fee,paid,method:paid&&fee>0?method:"",status:"active",startAt:s.start,until,inAt:n,outAt:null,log}});
+ if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:SVC(s.mode,s.court),amt:fee,method,note:name+refTxt+" · Court "+s.court}});
  reopen()}
 function setMax(sid){const v=+$("#mx").value,k=sessPlayers(sid).length;if(!(v>=1))return;if(v<k)return alert(k+" players are already on this court");q({op:"upd",c:"sessions",id:sid,patch:{max:v}});reopen()}
 function endSession(sid){
@@ -350,10 +359,10 @@ function dCourts(){const n=Date.now();let h="";
  for(let c=1;c<=COURTS;c++){
   const{cur,over,next}=courtState(c,n),s=cur||over;let cls="",label="FREE",l2="",names="";
   if(s){const ps=sessPlayers(s.id);cls=cur?(s.mode==="rent"?"rent":"open"):"over";
-   label=cur?(s.mode==="rent"?"RENTED":"OPEN PLAY"):"OVERTIME";
+   label=cur?ML(s.mode).toUpperCase():"OVERTIME";
    l2=cur?`until ${tm(s.until)} · ${fm(Math.ceil((s.until-n)/60000))} left`:`ended ${tm(s.until)}`;
    names=(ps.map(p=>esc(p.name)).join(", ")||"no players yet")+` (${ps.length}/${s.max})`}
-  h+=`<div class="court ${cls}" onclick="courtTap(${c})"><b>Court ${c}</b><div class="cs">${label}</div>${l2?`<small>${l2}</small>`:""}${names?`<small style="color:var(--tx)">${names}</small>`:""}${next?`<small>Next: ${tm(next.start)} (${next.mode==="rent"?"rented":"open play"})</small>`:""}${!s&&!next?'<small>Tap to set up</small>':""}</div>`}
+  h+=`<div class="court ${cls}" onclick="courtTap(${c})"><b>Court ${c}</b><div class="cs">${label}</div>${l2?`<small>${l2}</small>`:""}${names?`<small style="color:var(--tx)">${names}</small>`:""}${next?`<small>Next: ${tm(next.start)} (${ML(next.mode).toLowerCase()})</small>`:""}${!s&&!next?'<small>Tap to set up</small>':""}</div>`}
  return h}
 function courtTap(c){const{cur,over}=courtState(c,Date.now()),s=cur||over;if(s)manage(s.id);else setupModal({court:c})}
 function dSched(){const n=Date.now(),base=dstart(sdate);
@@ -362,14 +371,14 @@ function dSched(){const n=Date.now(),base=dstart(sdate);
   for(let k=OPEN_H;k<CLOSE_H;k++){
    const a=base+k*H,b=a+H,s=sessions.find(x=>!x.closed&&x.court===c&&x.start<b&&x.until>a),past=b<=n,cur=a<=n&&n<b;
    const cls=(s?(s.mode==="rent"?"b-rent":"b-open"):"")+(past&&!s?" past":"")+(cur?" nowc":"");
-   h+=`<td class="sl ${cls}" ${s?`onclick="manage('${s.id}')" title="${esc(s.mode==="rent"?"Rented":"Open play")} ${tm(s.start)}–${tm(s.until)}"`:past?"":`onclick="setupModal({court:${c},date:'${sdate}',start:${a}})"`}></td>`}
+   h+=`<td class="sl ${cls}" ${s?`onclick="manage('${s.id}')" title="${esc(ML(s.mode))} ${tm(s.start)}–${tm(s.until)}"`:past?"":`onclick="setupModal({court:${c},date:'${sdate}',start:${a}})"`}></td>`}
   h+="</tr>"}
  return h+"</table>"}
 function dActive(){const n=Date.now(),rk={overtime:0,playing:1,reserved:2,waiting:3};
  const l=players.filter(actv).sort((a,b)=>rk[pst(a,n)]-rk[pst(b,n)]||a.inAt-b.inAt);
  if(!l.length)return '<p class="note">No active players.</p>';
  return l.map(p=>{const i=pLine(p,n);
-  return `<div style="border-top:1px solid var(--bd);padding:10px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.court?` <span class="note">Court ${p.court} · ${p.mode==="open"?"Open play":"Rented"}</span>`:""}
+  return `<div style="border-top:1px solid var(--bd);padding:10px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.court?` <span class="note">Court ${p.court} · ${ML(p.mode)}</span>`:""}
   <div class="note">${i.t?`<b style="color:${i.s==="overtime"?"var(--red)":"inherit"}">${i.t}</b> · `:""}${esc(p.service||"")} · <span class="${p.paid?"paid":"unpaid"}">${p.fee===0?"Included":p.paid?"Paid "+money(p.fee)+" ("+esc(p.method)+")":"Unpaid "+money(p.fee)}</span></div></div>
   <div class="row" style="justify-content:flex-start;margin-top:6px">${p.paid?"":`<button class="btn s" onclick="collectModal('${p.id}')">Collect ${money(p.fee)}</button>`}${p.sid?`<button class="btn s g" onclick="manage('${p.sid}')">Court</button>`:""}<button class="btn s r" onclick="checkout('${p.id}')">Check out</button></div>
   <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(x=>`${tm(x.t)} — ${esc(x.e)}`).join("<br>")}</div></details></div>`}).join("")}
@@ -403,10 +412,10 @@ function dShift(){const s=shiftCalc(),n=Date.now();
 function dShInv(){const s=shiftCalc(),n=Date.now();let rows="";
  for(let c=1;c<=COURTS;c++){
   const ss=s.ss.filter(x=>x.court===c),ids=ss.map(x=>x.id),pl=s.sv.filter(p=>ids.includes(p.sid));
-  const hr=m=>ss.filter(x=>x.mode===m).reduce((a,x)=>a+(x.hours||0),0),col=pl.filter(p=>p.paid).reduce((a,p)=>a+(+p.fee||0),0);
+  const hr=m=>ss.filter(x=>m==="rent"?x.mode==="rent":x.mode!=="rent").reduce((a,x)=>a+(x.hours||0),0),col=pl.filter(p=>p.paid).reduce((a,p)=>a+(+p.fee||0),0);
   const{cur}=courtState(c,n);
-  rows+=`<tr><td>Court ${c}</td><td>${ss.length}</td><td>${hr("rent")}</td><td>${hr("open")}</td><td>${pl.length}</td><td>${money(col)}</td><td>${cur?(cur.mode==="rent"?"Rented":"Open play"):"Free"}</td></tr>`}
- return `<div class="card"><b>Courts inventory (this shift)</b><div class="scroll"><table><tr><th>Court</th><th>Sessions</th><th>Rent hrs</th><th>Open hrs</th><th>Players</th><th>Collected</th><th>Now</th></tr>${rows}</table></div></div>`}
+  rows+=`<tr><td>Court ${c}</td><td>${ss.length}</td><td>${hr("rent")}</td><td>${hr("open")}</td><td>${pl.length}</td><td>${money(col)}</td><td>${cur?ML(cur.mode):"Free"}</td></tr>`}
+ return `<div class="card"><b>Courts inventory (this shift)</b><div class="scroll"><table><tr><th>Court</th><th>Sessions</th><th>Rent hrs</th><th>Open/Event hrs</th><th>Players</th><th>Collected</th><th>Now</th></tr>${rows}</table></div></div>`}
 function shiftPost(){const c=$("#sfloatc");if(c)c.style.display=shiftCalc().op?"none":"block"}
 function exportCsv(){
  const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>a.t-b.t),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
@@ -426,7 +435,7 @@ const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle ren
 const VIEWS={
  desk:{shell:()=>`<div id="stats"></div>
   <div class="card"><b>Courts</b> <span class="note">tap a court to set it up or manage it</span><div id="courts" class="courts"></div>
-  <div class="legend"><span><i style="background:var(--blu)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
+  <div class="legend"><span><i style="background:var(--blu)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play / Special event</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
   <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
   <div class="scroll" id="sched" style="margin-top:6px"></div><div class="note">8:00 AM – 12:00 midnight · tap a free slot to reserve · tap a coloured slot to manage</div>
   <div class="row" style="margin-top:8px"><button class="btn" onclick="setupModal({})">+ New court booking</button></div></div>
