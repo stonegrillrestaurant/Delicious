@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pickleball Venue Desk</title>
-<link rel="icon" type="image/png" href="/courtside/courtside-manager3.png">
-<link rel="apple-touch-icon" href="/courtside/courtside-manager3.png">
+<link rel="icon" type="image/png" href="courtside-manager3.png">
+<link rel="apple-touch-icon" href="courtside-manager3.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Courtside">
 <meta name="theme-color" content="#1f8a4c">
-<script>(function(){try{var i=new URL("/courtside/courtside-manager3.png",location.origin).href,m={name:"Courtside Manager",short_name:"Courtside",start_url:location.href,display:"standalone",background_color:"#f6f7f4",theme_color:"#1f8a4c",icons:[{src:i,sizes:"any",type:"image/png",purpose:"any"}]};var l=document.createElement("link");l.rel="manifest";l.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(m));document.head.appendChild(l)}catch(e){}})()</script>
+<script>(function(){try{var i=new URL("courtside-manager3.png",location.href).href,m={name:"Courtside Manager",short_name:"Courtside",start_url:location.href,display:"standalone",background_color:"#f6f7f4",theme_color:"#1f8a4c",icons:[{src:i,sizes:"any",type:"image/png",purpose:"any"}]};var l=document.createElement("link");l.rel="manifest";l.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(m));document.head.appendChild(l)}catch(e){}})()</script>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 --bg:#f6f7f4;--card:#fff;--tx:#1b2420;--mu:#6b7770;--bd:#dfe4de;--ac:#1f8a4c;--ac2:#e8f5ec;--red:#c0392b;--amb:#b7791f;--blu:#2b6cb0;--blu2:#e3eefb;--red2:#fbe6e3;--amb2:#fdf1d8}
@@ -20,7 +20,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:70px}
 header{padding:14px 16px 6px}h1{margin:0;font-size:20px}.sub{color:var(--mu);font-size:13px}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
-nav button{flex:1;border:0;background:none;color:var(--mu);padding:12px 2px;font:inherit;font-size:11px;cursor:pointer}
+nav button{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;border:0;background:none;color:var(--mu);padding:12px 2px;font:inherit;font-size:11px;cursor:pointer}
 nav button.on{color:var(--ac);font-weight:700}
 main{padding:8px 12px;max-width:820px;margin:auto}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0}
@@ -59,6 +59,25 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;overflow:auto;padding:12px;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .modal .sheet{max-width:520px;margin:0 auto 40px}
 @keyframes pl{50%{opacity:.45}}.court.over{border-width:3px}.court.over .cs{animation:pl 1.2s infinite;font-size:14px}
+@media (min-width:900px){
+ body{padding:0 0 24px 210px}
+ nav{top:0;right:auto;width:210px;flex-direction:column;border-top:0;border-right:1px solid var(--bd);padding:18px 10px;gap:4px}
+ nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;font-size:15px;padding:12px 14px;border-radius:10px}
+ nav button.on{background:var(--ac2)}nav .ni{font-size:18px}
+ header{padding:18px 24px 6px}
+ main{padding:8px 24px;max-width:900px;margin:0}
+ main.t-desk,main.t-ledger,main.t-reports{max-width:1320px}
+ .dgrid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:16px;align-items:start}
+ .lg2{display:grid;grid-template-columns:minmax(320px,1fr) minmax(0,1.5fr);gap:16px;align-items:start}
+ #stats .grid{grid-template-columns:repeat(4,1fr)}
+ .courts{grid-template-columns:repeat(3,1fr)}
+ #rep{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;align-items:start}
+ #rep>.tabs,#rep>.grid{grid-column:1/-1}
+ .modal{display:flex;align-items:flex-start;justify-content:center;padding-top:6vh}
+ .modal .sheet{width:560px;max-width:100%;margin:0 0 40px}
+ .sch td.sl{height:34px;min-width:32px}
+ .court:hover,.btn:hover{filter:brightness(1.07)}
+}
 #sync.ok{color:var(--ac)}#sync.warn{color:var(--amb)}#sync.bad{color:var(--red)}
 </style>
 </head>
@@ -89,7 +108,8 @@ const hl=h=>h===12?"12p":h>12?(h-12)+"p":h+"a";
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const ls=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const save=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-const API="https://script.google.com/macros/s/AKfycbzLKxQglVBFMO7L-eV1c6N5SosuT02jDBV33rsSe626RoMjaP5E25EvHpOP-AfJWilr/exec";
+const SUPA_URL="https://ssfdtxjigyiddbjkvsls.supabase.co",SUPA_ANON="sb_publishable_L6hfDfqFcayeZL195m-T0w_oYRAzzXi";
+const API=SUPA_URL+"/functions/v1/desk"; // same-server by default; open the app once with ?api=https://your-server/api to point elsewhere
 let STAFF=ls("staff")||"",KEY=ls("deskkey")||"",DEV=ls("deviceid")||"",DEVNAME=ls("devname")||"";
 if(!DEV){DEV=uid();save("deviceid",DEV)}
 let tab="desk",range="today",sdate=day(Date.now()),back=null,curSid=null;
@@ -138,27 +158,31 @@ async function flush(){
  if(flushing)return;flushing=true;let net=false;
  try{
   while(outbox.length){
-   const o=outbox[0],fn=o.op==="add"?"addRow":o.op==="upd"?"updateRow":"deleteRow";
-   const args=o.op==="add"?[o.c,o.o]:o.op==="upd"?[o.c,o.id,o.patch]:[o.c,o.id];
-   let r;try{r=await api(fn,args)}catch(e){net=true;online=false;syncMsg=String(e.message||e);break}
-   if(!r.ok){
-    if(/access key/i.test(r.error||""))break;
-    if(!/Row not found/i.test(r.error||""))alert("Not saved: "+r.error);
-    if(o.op==="add"&&o.c==="sessions"){const id=o.o.id;outbox=outbox.filter((x,i)=>i===0||!(x.dep===id||(x.o&&x.o.sid===id)||(x.patch&&x.patch.sid===id)))}
-   }
-   outbox.shift();epoch++;save("outbox",JSON.stringify(outbox));online=true;syncMsg="";
+   const batch=outbox.slice(0,40),ops=batch.map(o=>({fn:o.op==="add"?"addRow":o.op==="upd"?"updateRow":"deleteRow",args:o.op==="add"?[o.c,o.o]:o.op==="upd"?[o.c,o.id,o.patch]:[o.c,o.id]}));
+   let r;try{r=await api("batch",[ops])}catch(e){net=true;online=false;syncMsg=String(e.message||e);break}
+   if(!r.ok){online=false;syncMsg=r.error||"Server error";break}
+   (r.data||[]).forEach(x=>{if(x&&!x.ok&&!/Row not found/i.test(x.error||""))alert("Not saved: "+x.error)});
+   outbox.splice(0,batch.length);epoch++;save("outbox",JSON.stringify(outbox));online=true;syncMsg="";
   }
  }finally{flushing=false}
  if(outbox.length){clearTimeout(retryT);retryT=setTimeout(flush,10000)}else await pull();
  rebuild();refresh();status()}
+let lastVer=null;
+async function verNow(){ // tiny "anything new?" check, no server function involved
+ if(!SUPA_ANON)return null;
+ try{const h={apikey:SUPA_ANON,"Content-Type":"application/json"};if(SUPA_ANON.startsWith("eyJ"))h.Authorization="Bearer "+SUPA_ANON;
+  const r=await fetch(SUPA_URL+"/rest/v1/rpc/desk_ver",{method:"POST",headers:h,body:"{}"});return r.ok?await r.json():null}catch(e){return null}}
 async function pull(){
  if(flushing||outbox.length)return;const ep=epoch;
  try{
-  const got={};
-  for(const c of COLS){const r=await api("listRows",[c]);if(!r.ok)throw new Error(r.error);got[c]=r.data}
+  const v=await verNow();
+  if(v!==null&&v===lastVer&&loaded){online=true;syncMsg="";status();return}
+  let got;const ra=await api("listAll",[]);
+  if(ra.ok)got=ra.data;else{got={};for(const c of COLS){const r=await api("listRows",[c]);if(!r.ok)throw new Error(r.error);got[c]=r.data}}
   if(ep!==epoch||outbox.length||flushing)return;
-  server=got;loaded=true;online=true;syncMsg="";save("cache",JSON.stringify(server));rebuild();refresh();status()
+  server=got;lastVer=v;loaded=true;online=true;syncMsg="";save("cache",JSON.stringify(server));rebuild();refresh();status()
  }catch(e){online=false;syncMsg=String(e.message||e);status()}}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
 async function syncNow(){
  try{const r=await api("ping",[]);alert(r.ok?"Connected to Google Sheet: "+r.data+(outbox.length?"\n"+outbox.length+" change(s) waiting to upload.":"\nAll changes are saved."):"Server error: "+r.error)}
  catch(e){alert("Cannot reach the Google Sheet script.\n"+(e.message||e)+"\nYour entries are kept on this device and will upload automatically.")}
@@ -475,23 +499,23 @@ const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle ren
  <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
  <p><button class="btn" style="width:100%">Record sale</button></p></form></div>`;
 const VIEWS={
- desk:{shell:()=>`<div id="alerts"></div><div id="stats"></div>
+ desk:{shell:()=>`<div class="dgrid"><div class="dl"><div id="alerts"></div><div id="stats"></div>
   <div class="card"><b>Courts</b> <span class="note">tap a court to set it up or manage it</span><div id="courts" class="courts"></div>
   <div class="legend"><span><i style="background:var(--blu)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play / Special event</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
   <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
   <div class="scroll" id="sched" style="margin-top:6px"></div><div class="note">8:00 AM – 12:00 midnight · tap a free slot to reserve · tap a coloured slot to manage</div>
   <div class="row" style="margin-top:8px"><button class="btn" onclick="setupModal({})">+ New court booking</button></div></div>
-  ${formQS}
-  <div class="card"><b>Active players</b><div id="active"></div></div>`,
+  </div><div class="dr">${formQS}
+  <div class="card"><b>Active players</b><div id="active"></div></div></div></div>`,
   dyn:{alerts:dAlerts,stats:dStats,courts:dCourts,sched:dSched,active:dActive}},
  players:{shell:()=>`<div id="pl"></div>`,dyn:{pl:dPlayers}},
- ledger:{shell:()=>`<div id="lgtop"></div>
+ ledger:{shell:()=>`<div class="lg2"><div><div id="lgtop"></div>
   <div class="card"><b>Record a transaction</b>
   <form data-d="lg" onsubmit="event.preventDefault();addTxn(this)">
   <label>Type</label><select name="type" onchange="fillCat(this.form)"><option value="income">Income</option><option value="expense">Expense</option></select>
   <label>Category</label><select name="cat">${INC_CATS.map(s=>`<option>${s}</option>`).join("")}</select>
   <div class="grid"><div><label>Amount (₱)</label><input name="amt" type="number" step="0.01" min="0" required></div><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
-  <label>Note</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">Save</button></p></form></div><div id="lglist"></div>`,
+  <label>Note</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">Save</button></p></form></div></div><div id="lglist"></div></div>`,
   dyn:{lgtop:dLgTop,lglist:dLgList}},
  reports:{shell:()=>`<div id="rep"></div>`,dyn:{rep:dReports}},
  shift:{shell:()=>`<div id="shtop"></div>
@@ -499,8 +523,8 @@ const VIEWS={
   <div class="card"><b>End shift &amp; remit</b><form data-d="es" onsubmit="event.preventDefault();endShift(this)"><label>Counted cash in drawer (₱)</label><input name="cnt" type="number" step="0.01" min="0" required><label>Note (optional)</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">End shift &amp; remit</button></p></form></div>
   <div id="shinv"></div>`,dyn:{shtop:dShift,shinv:dShInv},post:shiftPost}};
 function drawHead(){$("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+" · "+STAFF}
-function drawNav(){$("#nav").innerHTML=[["desk","🏠","Desk"],["players","👥","Players"],["ledger","💵","Ledger"],["reports","📊","Reports"],["shift","🧾","Shift"]].map(([k,i,n])=>`<button class="${tab===k?"on":""}" onclick="go('${k}')">${i}<br>${n}</button>`).join("")}
-function go(t){tab=t;drawNav();drawHead();$("#app").innerHTML=VIEWS[t].shell();restoreDrafts();refresh();scrollTo(0,0)}
+function drawNav(){$("#nav").innerHTML=[["desk","🏠","Desk"],["players","👥","Players"],["ledger","💵","Ledger"],["reports","📊","Reports"],["shift","🧾","Shift"]].map(([k,i,n])=>`<button class="${tab===k?"on":""}" onclick="go('${k}')"><span class="ni">${i}</span><span>${n}</span></button>`).join("")}
+function go(t){tab=t;$("#app").className="t-"+t;drawNav();drawHead();$("#app").innerHTML=VIEWS[t].shell();restoreDrafts();refresh();scrollTo(0,0)}
 function refresh(){const v=VIEWS[tab];if(!v||!$("#app"))return;
  for(const id in v.dyn){const el=document.getElementById(id);if(el)el.innerHTML=v.dyn[id]()}
  if(v.post)v.post()}
@@ -510,7 +534,7 @@ async function boot(){
  try{outbox=JSON.parse(ls("outbox")||"[]")}catch(e){outbox=[]}
  rebuild();drawHead();go("desk");status();
  flush();pull();
- setInterval(pull,8000);setInterval(autoClose,10000);setTimeout(autoClose,4000);setInterval(()=>{if(!$("#modal"))refresh()},30000);setInterval(drawHead,60000)}
+ setInterval(pull,4000);setInterval(autoClose,10000);setTimeout(autoClose,4000);setInterval(()=>{if(!$("#modal"))refresh()},30000);setInterval(drawHead,60000)}
 setupScreen().then(boot);
 </script>
 </body>
