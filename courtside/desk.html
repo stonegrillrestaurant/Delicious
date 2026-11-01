@@ -91,7 +91,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.4"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -402,7 +402,7 @@ async function loginDone(name){STAFF=name;save("staff",name);save("lastuser",nam
 function loginScreen(){return new Promise(res=>{
  const act=staffList.filter(x=>x.active!==false);
  if(!act.length){
-  overlay('<h2 style="margin:0 0 8px">Create the admin account</h2><div class="note">This first account can add the other employees.</div><label>Your name</label><input id="l1" autocomplete="off"><label>Password (min 4 characters)</label><input id="l2" type="password"><label>Repeat password</label><input id="l3" type="password"><p><button class="btn" id="lg" style="width:100%">Create &amp; start</button></p>');
+  overlay('<h2 style="margin:0 0 8px">First-time setup: create the admin account</h2><div class="note">The owner or manager creates this one account. Employees are added afterwards from the Staff tab, each with their own password. If you are an employee, ask your admin to set you up first.</div><label>Your name</label><input id="l1" autocomplete="off"><label>Password (min 4 characters)</label><input id="l2" type="password"><label>Repeat password</label><input id="l3" type="password"><p><button class="btn" id="lg" style="width:100%">Create &amp; start</button></p>');
   $("#lg").onclick=async()=>{const n=$("#l1").value.trim(),p=$("#l2").value;
    if(!n||p.length<4)return alert("Enter your name and a password of at least 4 characters");
    if(p!==$("#l3").value)return alert("Passwords do not match");
@@ -614,7 +614,7 @@ const VIEWS={
   <div class="card" id="sfloatc"><b>Start shift</b><form onsubmit="event.preventDefault();startShift(this)"><label>Opening cash float (₱)</label><input name="fl" type="number" step="0.01" min="0" required><p><button class="btn" style="width:100%">Start shift</button></p></form></div>
   <div class="card"><b>End shift &amp; remit</b><form data-d="es" onsubmit="event.preventDefault();endShift(this)"><label>Counted cash in drawer (₱)</label><input name="cnt" type="number" step="0.01" min="0" required><label>Note (optional)</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">End shift &amp; remit</button></p></form></div>
   <div id="shinv"></div>`,dyn:{shtop:dShift,shinv:dShInv},post:shiftPost}};
-function drawHead(){$("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+" · "+STAFF}
+function drawHead(){$("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+(STAFF?" · "+STAFF:"")+" · v"+APP_VER}
 function drawNav(){$("#nav").innerHTML=[["desk","🏠","Desk"],["players","👥","Players"],["ledger","💵","Ledger"],["reports","📊","Reports"],["shift","🧾","Shift"]].concat(roleNow()==="admin"?[["staff","👤","Staff"]]:[]).map(([k,i,n])=>`<button class="${tab===k?"on":""}" onclick="go('${k}')"><span class="ni">${i}</span><span>${n}</span></button>`).join("")}
 function go(t){tab=t;$("#app").className="t-"+t;drawNav();drawHead();$("#app").innerHTML=VIEWS[t].shell();restoreDrafts();refresh();scrollTo(0,0)}
 function refresh(){const v=VIEWS[tab];if(!v||!$("#app"))return;
@@ -629,7 +629,7 @@ async function boot(){
  while(!loaded){overlay('<h2 style="margin:0 0 8px">Connecting…</h2><div class="note">Could not reach the server. Check the internet, then retry.</div><p><button class="btn" id="rt" style="width:100%">Retry</button></p>');
   await new Promise(r=>{$("#rt").onclick=r});await pull()}
  overlayOff();flush();
- if(!STAFF||!meRow())await loginScreen();
+ if(!STAFF||!meRow()){STAFF="";save("staff","");drawHead();await loginScreen()}
  go("desk");status();
  await shiftGate();
  setInterval(pull,4000);setInterval(autoClose,10000);setTimeout(autoClose,4000);setInterval(()=>{if(!$("#modal")&&!$("#ov"))refresh()},30000);setInterval(drawHead,60000)}
