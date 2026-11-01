@@ -28,7 +28,8 @@ export const ADMIN_UIDS = new Set([
 
 // Confirmed Staff 1 account. Add Staff 2 here when its Firebase UID is confirmed.
 export const STAFF_UIDS = new Set([
-  "r4UwTxOgiKcEkHimmlAkVVlUJMt1"
+  "r4UwTxOgiKcEkHimmlAkVVlUJMt1",
+  "G7yFd6NTnaVeMCAPpkW6ir2qHb52"
 ]);
 
 function normalizedEmail(user) {
