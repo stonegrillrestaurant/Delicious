@@ -1082,16 +1082,24 @@
   <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(function () {
-            console.log('✅ Service Worker registered');
-          })
-          .catch(function (err) {
-            console.error('❌ Service Worker registration failed', err);
-          });
+      window.addEventListener('load', async function () {
+        try {
+          // Independent apps manage their own workers under their own paths.
+          // Retire only a legacy worker registered for the entire site.
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            const worker = registration.active || registration.waiting || registration.installing;
+            if (registration.scope === location.origin + '/' && worker &&
+                new URL(worker.scriptURL).pathname === '/service-worker.js') {
+              await registration.unregister();
+            }
+          }
+        } catch (err) {
+          console.warn('Could not check the legacy site worker:', err);
+        }
       });
     }
   </script>
 </body>
 </html>
+

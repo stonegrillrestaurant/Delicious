@@ -42,7 +42,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 
 <link rel="manifest" href="./manifest.webmanifest" />
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192x192.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
 <link rel="apple-touch-icon" sizes="152x152" href="./icon-152x152.png" />
 
 <!-- UPDATED: Structured data -->
@@ -1269,6 +1269,14 @@
 }
 ];
 
+  function readSetting(key) {
+    try { return localStorage.getItem(key); } catch (_) { return null; }
+  }
+
+  function writeSetting(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) { /* Playback still works without storage. */ }
+  }
+
   const audio = document.getElementById("audio");
   const playButton = document.getElementById("playButton");
   const playIcon = document.getElementById("playIcon");
@@ -1297,7 +1305,9 @@
   let filteredTrackIndexes = tracks.map((_, index) => index);
   let isSeeking = false;
   let deferredInstallPrompt = null;
-  let playPromise = null; // UPDATED: tracking the play promise to handle interruption
+  let playPromise = null;
+  let trackLoadId = 0;
+  let metadataHandler = null;
 
   function formatTime(seconds) {
     if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -1341,6 +1351,10 @@
     const track = tracks[index];
     if (!track) return;
 
+    const loadId = ++trackLoadId;
+    if (metadataHandler) audio.removeEventListener("loadedmetadata", metadataHandler);
+    audio.pause();
+    playPromise = null;
     currentTrackIndex = index;
 
     titleEl.textContent = track.title;
@@ -1361,7 +1375,9 @@
     setPlayingUI(false);
     setStatus("Loading audio…");
 
-    const onReady = async () => {
+    const onReady = () => {
+      if (loadId !== trackLoadId) return;
+      metadataHandler = null;
       durationSpan.textContent = formatTime(audio.duration);
 
       if (restoreTime > 0 && Number.isFinite(audio.duration)) {
@@ -1373,74 +1389,59 @@
         setRangeFill(progressInput, percent);
       }
 
-      setStatus("Ready to listen");
-
-      if (autoplay) {
-        await playAudio();
-      }
+      if (audio.paused && !playPromise) setStatus("Ready to listen");
     };
 
+    metadataHandler = onReady;
     audio.addEventListener("loadedmetadata", onReady, { once: true });
 
     audio.src = track.audio;
     audio.load();
+    // Start during the user's click, rather than after a later metadata event.
+    if (autoplay) playAudio();
 
     updatePlaylist();
 
-    localStorage.setItem("ninox-current-track", String(index));
+    writeSetting("ninox-current-track", String(index));
     document.title = `${track.title} | Ninox Audio Player`;
   }
 
-  // UPDATED: Better handling of the play promise to stop random errors
   async function playAudio() {
+    const loadId = trackLoadId;
+    let pending;
     try {
       setStatus("Starting…");
-      playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        await playPromise;
-      }
-      
+      pending = audio.play();
+      playPromise = pending || null;
+      if (pending) await pending;
+      if (loadId !== trackLoadId || audio.paused) return;
       setPlayingUI(true);
       setStatus("Now playing");
     } catch (error) {
-      // AbortError is perfectly normal if you click 'Next' before it finished loading the current track
-      if (error.name === "AbortError") {
-        console.log("Audio play aborted (usually because you skipped tracks).");
-      } else if (error.name === "NotAllowedError") {
-        setPlayingUI(false);
-        setStatus("Click Play to start listening."); // Browser enforcing user interaction
+      if (loadId !== trackLoadId || error.name === "AbortError") return;
+      setPlayingUI(false);
+      if (error.name === "NotAllowedError") {
+        setStatus("Tap Play to start listening.");
       } else {
         console.error("Audio could not play:", error);
-        setPlayingUI(false);
-        setStatus("Unable to play this file. Check the MP3 path.", true);
+        setStatus("Unable to play this file. Please try again.", true);
       }
+    } finally {
+      if (playPromise === pending) playPromise = null;
     }
   }
 
   function pauseAudio() {
-    // UPDATED: Ensure we don't pause while play is still pending, preventing AbortErrors
-    if (playPromise !== undefined && playPromise !== null) {
-      playPromise.then(() => {
-        audio.pause();
-        setPlayingUI(false);
-        setStatus("Paused");
-      }).catch(() => {
-        // Ignored safely
-      });
-    } else {
-      audio.pause();
-      setPlayingUI(false);
-      setStatus("Paused");
-    }
+    // Pause immediately, including while the browser is starting playback.
+    audio.pause();
+    playPromise = null;
+    setPlayingUI(false);
+    setStatus("Paused");
   }
 
   function togglePlay() {
-    if (audio.paused) {
-      playAudio();
-    } else {
-      pauseAudio();
-    }
+    if (!audio.paused || playPromise) pauseAudio();
+    else playAudio();
   }
 
   function previousTrack() {
@@ -1473,7 +1474,7 @@
     setRangeFill(progressInput, percent);
     currentTimeSpan.textContent = formatTime(audio.currentTime);
 
-    localStorage.setItem(
+    writeSetting(
       "ninox-playback-position",
       JSON.stringify({
         index: currentTrackIndex,
@@ -1569,11 +1570,11 @@
 
   audio.addEventListener("loadedmetadata", () => {
     durationSpan.textContent = formatTime(audio.duration);
-    setStatus("Ready to listen");
+    if (audio.paused && !playPromise) setStatus("Ready to listen");
   });
 
   audio.addEventListener("canplay", () => {
-    if (audio.paused) setStatus("Ready to listen");
+    if (audio.paused && !playPromise) setStatus("Ready to listen");
   });
 
   audio.addEventListener("waiting", () => {
@@ -1594,7 +1595,7 @@
   // UPDATED: Mute false "error" alerts when the user is simply skipping tracks
   audio.addEventListener("error", (e) => {
     // Only show an error if it's not simply an aborted load request due to switching sources
-    if (audio.src && audio.src !== window.location.href) {
+    if (audio.error && audio.error.code !== 1) {
       setPlayingUI(false);
       setStatus("Audio file not found or could not be loaded.", true);
     }
@@ -1625,12 +1626,12 @@
   volumeInput.addEventListener("input", () => {
     audio.volume = Number(volumeInput.value);
     setRangeFill(volumeInput, Number(volumeInput.value) * 100);
-    localStorage.setItem("ninox-volume", volumeInput.value);
+    writeSetting("ninox-volume", volumeInput.value);
   });
 
   speedSelect.addEventListener("change", () => {
     audio.playbackRate = Number(speedSelect.value);
-    localStorage.setItem("ninox-speed", speedSelect.value);
+    writeSetting("ninox-speed", speedSelect.value);
   });
 
   coverImg.addEventListener("error", () => {
@@ -1676,21 +1677,23 @@
     installButton.classList.remove("visible");
   });
 
-  const savedVolume = Number(localStorage.getItem("ninox-volume"));
-  if (Number.isFinite(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+  const savedVolumeText = readSetting("ninox-volume");
+  const savedVolume = Number(savedVolumeText);
+  if (savedVolumeText !== null && savedVolumeText.trim() !== "" &&
+      Number.isFinite(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
     audio.volume = savedVolume;
     volumeInput.value = String(savedVolume);
   }
 
   setRangeFill(volumeInput, Number(volumeInput.value) * 100);
 
-  const savedSpeed = localStorage.getItem("ninox-speed");
+  const savedSpeed = readSetting("ninox-speed");
   if ([...speedSelect.options].some(option => option.value === savedSpeed)) {
     speedSelect.value = savedSpeed;
     audio.playbackRate = Number(savedSpeed);
   }
 
-  let initialIndex = Number(localStorage.getItem("ninox-current-track"));
+  let initialIndex = Number(readSetting("ninox-current-track"));
   if (!Number.isInteger(initialIndex) || initialIndex < 0 || initialIndex >= tracks.length) {
     initialIndex = 0;
   }
@@ -1698,7 +1701,7 @@
   let restoreTime = 0;
 
   try {
-    const savedPosition = JSON.parse(localStorage.getItem("ninox-playback-position"));
+    const savedPosition = JSON.parse(readSetting("ninox-playback-position"));
 
     if (
       savedPosition &&
@@ -1713,7 +1716,15 @@
 
   trackCountEl.textContent = `${tracks.length} reflections`;
   loadTrack(initialIndex, { restoreTime });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/audio-player/sw.js', { scope: '/audio-player/' })
+        .catch(error => console.warn('Audio offline support is unavailable:', error));
+    });
+  }
 </script>
 </body>
 </html>
+
 
