@@ -1,782 +1,779 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-950 text-slate-100">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Iron Discipline Engine</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Tone.js for synthesized audio notifications -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-    .font-mono-code {
-      font-family: 'JetBrains Mono', monospace;
-    }
-    /* Pulsing & Alarm Effects */
-    @keyframes strictPulse {
-      0%, 100% { background-color: rgba(225, 29, 72, 0.15); border-color: rgba(225, 29, 72, 0.8); }
-      50% { background-color: rgba(225, 29, 72, 0.35); border-color: rgba(244, 63, 94, 1); }
-    }
-    .alarm-active {
-      animation: strictPulse 1.2s infinite ease-in-out;
-    }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iron Discipline Engine</title>
+<!-- PWA Web App Metadata for iOS / Android Home Screen Installation -->
+<meta name="theme-color" content="#020617">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Iron Discipline">
+<!-- iOS Touch Icon pointing to your discipline folder path -->
+<link rel="apple-touch-icon" href="dicipline/IMG_5533.jpeg">
+<link rel="apple-touch-icon" sizes="152x152" href="dicipline/IMG_5533.jpeg">
+<link rel="apple-touch-icon" sizes="180x180" href="dicipline/IMG_5533.jpeg">
+<link rel="apple-touch-icon" sizes="167x167" href="dicipline/IMG_5533.jpeg">
+<link rel="icon" type="image/jpeg" href="dicipline/IMG_5533.jpeg">
+<!-- Dynamic Inline Web App Manifest -->
+<link rel="manifest" id="manifestPlaceholder">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Tone.js for synthesized audio notifications -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap');
+body {
+font-family: 'Inter', sans-serif;
+}
+.font-mono-code {
+font-family: 'JetBrains Mono', monospace;
+}
+/* Pulsing & Alarm Effects /
+@keyframes strictPulse {
+0%, 100% { background-color: rgba(225, 29, 72, 0.15); border-color: rgba(225, 29, 72, 0.8); }
+50% { background-color: rgba(225, 29, 72, 0.35); border-color: rgba(244, 63, 94, 1); }
+}
+.alarm-active {
+animation: strictPulse 1.2s infinite ease-in-out;
+}
+/ Custom Scrollbar */
+::-webkit-scrollbar {
+width: 6px;
+}
+::-webkit-scrollbar-track {
+background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+background: #334155;
+border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+background: #475569;
+}
+</style>
 </head>
 <body class="h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-rose-600 selection:text-white">
-
-  <!-- TOP HEADER / DISCIPLINE INDEX BANNER -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center space-x-3">
-        <div class="p-2.5 bg-rose-950 border border-rose-800/60 rounded-xl text-rose-500 shadow-lg shadow-rose-950/50">
-          <i class="fa-solid fa-shield-halved text-xl"></i>
-        </div>
-        <div>
-          <h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-white flex items-center gap-2">
-            IRON DISCIPLINE <span class="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono-code uppercase">Strict Mode v2.4</span>
-          </h1>
-          <p class="text-xs text-slate-400">Zero excuses. Uncompromising execution tracker.</p>
-        </div>
-      </div>
-
-      <!-- DISCIPLINE RATING CARD -->
-      <div class="flex items-center gap-4 bg-slate-950/80 border border-slate-800 px-4 py-2 rounded-xl">
-        <div class="text-right">
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Character Status</div>
-          <div id="statusTierLabel" class="text-sm font-black text-rose-500 uppercase tracking-wide">Evaluating...</div>
-        </div>
-        <div class="h-10 w-px bg-slate-800"></div>
-        <div class="text-center">
-          <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Discipline Score</div>
-          <div id="disciplineScoreDisplay" class="text-xl font-black font-mono-code text-white">50%</div>
-        </div>
-        <div class="w-12 h-12 relative flex items-center justify-center">
-          <svg class="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
-            <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-            <path id="scoreCirclePath" class="text-rose-500 transition-all duration-700 ease-out" stroke-linecap="round" stroke-width="3.5" stroke-dasharray="50, 100" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-          </svg>
-          <i id="statusIcon" class="fa-solid fa-skull absolute text-xs text-rose-400"></i>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- ACTIVE ALARM ALERT BANNER -->
-  <div id="activeAlarmBanner" class="bg-rose-950 border-b border-rose-800 px-4 py-3 hidden alarm-active">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center space-x-3">
-        <i class="fa-solid fa-bell-triangle-exclamation text-rose-400 text-xl animate-bounce"></i>
-        <div>
-          <div id="alarmBannerTaskName" class="text-sm font-bold text-white">Task Name Here</div>
-          <div id="alarmBannerEscalationText" class="text-xs text-rose-300">Strict Alarm Escalation Active</div>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="alarmAckBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">
-          <i class="fa-solid fa-check"></i> Execute & Clear
-        </button>
-        <button id="alarmSkipBtn" class="bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold px-3 py-1.5 rounded-lg text-xs transition border border-rose-700">
-          <i class="fa-solid fa-scale-balanced"></i> Dispute Reason
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN CONTAINER -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-    <!-- LEFT COLUMN: CONTROLS & ADD TASK (4 Cols) -->
-    <div class="lg:col-span-4 space-y-6">
-      
-      <!-- ADD NEW DUTY / TASK CARD -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 via-amber-500 to-emerald-500"></div>
-        <h2 class="text-base font-bold text-white flex items-center gap-2 mb-4">
-          <i class="fa-solid fa-plus-circle text-rose-500"></i> Command New Responsibility
-        </h2>
-
-        <form id="taskForm" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Task Title</label>
-            <input type="text" id="taskTitle" required placeholder="e.g. Morning Shift Setup" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Purpose / Consequence</label>
-            <input type="text" id="taskSubtext" placeholder="Why skipping this destroys your momentum..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Scheduled Time</label>
-              <input type="time" id="taskTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono-code focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Category</label>
-              <select id="taskCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
-                <option value="Physical">💪 Physical Discipline</option>
-                <option value="Deep Work">🧠 Deep Focus / Work</option>
-                <option value="Personal Growth">📖 Mastery / Craft</option>
-                <option value="Lifestyle" selected>🛡️ Operational Duty</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Alarm Repeat Interval</label>
-            <select id="taskEscalation" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
-              <option value="1">Strict (Repeat Siren every 1 min)</option>
-              <option value="2" selected>Relentless (Repeat Siren every 2 min)</option>
-              <option value="5">Standard (Repeat Siren every 5 min)</option>
-            </select>
-          </div>
-
-          <button type="submit" class="w-full bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-rose-950/40 transition-all flex items-center justify-center gap-2 active:scale-98">
-            <i class="fa-solid fa-lock"></i> Lock Into Schedule
-          </button>
-        </form>
-      </div>
-
-      <!-- ENFORCEMENT CONTROLS -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-        <h2 class="text-base font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-sliders text-amber-500"></i> Enforcement Controls
-        </h2>
-
-        <div class="space-y-3">
-          <!-- Notification Toggle -->
-          <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
-            <div class="flex items-center space-x-3">
-              <i class="fa-solid fa-bell text-rose-400 text-base"></i>
-              <div>
-                <div class="text-xs font-bold text-slate-200">Push Notifications</div>
-                <div id="notifStatusText" class="text-[10px] text-slate-400">Not Granted</div>
-              </div>
-            </div>
-            <button id="enableNotifBtn" onclick="requestNotificationPermission()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
-              Enable
-            </button>
-          </div>
-
-          <!-- Sound Test -->
-          <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
-            <div class="flex items-center space-x-3">
-              <i class="fa-solid fa-volume-high text-amber-400 text-base"></i>
-              <div>
-                <div class="text-xs font-bold text-slate-200">Audio Alarm Test</div>
-                <div class="text-[10px] text-slate-400">Synthesized Tone.js Siren</div>
-              </div>
-            </div>
-            <button onclick="testAlarmSound()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
-              Test Siren
-            </button>
-          </div>
-
-          <!-- Reset Day Data -->
-          <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
-            <div class="flex items-center space-x-3">
-              <i class="fa-solid fa-rotate-right text-slate-400 text-base"></i>
-              <div>
-                <div class="text-xs font-bold text-slate-200">Reset Today's Slate</div>
-                <div class="text-[10px] text-slate-400">Clear logs & reset daily counters</div>
-              </div>
-            </div>
-            <button onclick="resetTodayData()" class="text-xs bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 px-3 py-1.5 rounded-lg border border-rose-800/60 transition">
-              Reset
-            </button>
-          </div>
-
-          <!-- How It Works Guide Toggle -->
-          <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
-            <div class="flex items-center space-x-3">
-              <i class="fa-solid fa-circle-question text-cyan-400 text-base"></i>
-              <div>
-                <div class="text-xs font-bold text-slate-200">How The App Works</div>
-                <div class="text-[10px] text-slate-400">System mechanics & score rules</div>
-              </div>
-            </div>
-            <button onclick="openGuideModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
-              View Guide
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT COLUMN: SCHEDULE & AUDIT LOG (8 Cols) -->
-    <div class="lg:col-span-8 space-y-6">
-
-      <!-- STATS OVERVIEW CARDS -->
-      <div class="grid grid-cols-3 gap-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Executed Duties</div>
-          <div id="statCompleted" class="text-2xl font-black text-emerald-400 font-mono-code mt-1">0</div>
-        </div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Breached / Excused</div>
-          <div id="statSkipped" class="text-2xl font-black text-rose-400 font-mono-code mt-1">0</div>
-        </div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unbroken Streak</div>
-          <div id="statStreak" class="text-2xl font-black text-amber-400 font-mono-code mt-1">0 Days</div>
-        </div>
-      </div>
-
-      <!-- DAILY SCHEDULE LIST CONTAINER -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <h2 class="text-base font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-list-check text-rose-500"></i> Daily Operational Routine
-          </h2>
-          <span id="taskCountBadge" class="text-xs font-mono-code bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400">0 Tasks Scheduled</span>
-        </div>
-
-        <div id="taskList" class="space-y-3">
-          <!-- Dynamic Task Cards Rendered Here -->
-        </div>
-      </div>
-
-      <!-- AUDIT LOG & BEHAVIORAL HISTORY -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-        <h2 class="text-base font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-terminal text-cyan-400"></i> Behavioral Audit Log
-        </h2>
-        <div id="auditLog" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 h-36 overflow-y-auto font-mono-code text-xs space-y-1">
-          <!-- Real-time log entries -->
-        </div>
-      </div>
-
-    </div>
-  </main>
-
-  <!-- DISPUTE / EXCEPTION AUDIT MODAL -->
-  <div id="disputeModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-      <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-scale-balanced text-amber-400"></i> Judicial Reason Audit
-        </h3>
-        <button onclick="closeDisputeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Exception Category</label>
-          <select id="disputeCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-            <option value="Emergency">🚨 Force Majeure / Urgent Emergency</option>
-            <option value="Health">🏥 Medical / Health Conflict</option>
-            <option value="Operational Shift">🏬 Restaurant Operational Shift</option>
-            <option value="Social">🍻 Social / Gathering Extension</option>
-            <option value="Fatigue">😴 Fatigue / Lack of Motivation</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Detailed Explanation</label>
-          <textarea id="disputeReasonText" rows="3" placeholder="Provide full context for skipping or postponing this non-negotiable duty..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"></textarea>
-        </div>
-
-        <div id="disputeAuditResult" class="hidden"></div>
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button onclick="closeDisputeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">
-            Cancel
-          </button>
-          <button onclick="submitDisputeAudit()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-2 rounded-xl text-xs shadow-lg transition">
-            Submit For Audit
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- HOW IT WORKS SYSTEM MANUAL MODAL -->
-  <div id="guideModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
-          <i class="fa-solid fa-book-bookmark text-cyan-400"></i> System Operational Manual
-        </h3>
-        <button onclick="closeGuideModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div class="overflow-y-auto space-y-4 py-4 pr-1 text-xs leading-relaxed text-slate-300">
-        <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
-          <div class="flex items-center gap-2 font-bold text-sm text-white mb-1">
-            <span class="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px]">1</span>
-            Automated Shift & Schedule Routing
-          </div>
-          <p class="text-slate-400">
-            The app detects whether today is a <strong>Weekday</strong> or <strong>Weekend (Saturday/Sunday)</strong> and loads your exact schedule automatically.
-          </p>
-        </div>
-
-        <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
-          <div class="flex items-center gap-2 font-bold text-sm text-white mb-1">
-            <span class="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px]">2</span>
-            Strict Alarm Escalation System
-          </div>
-          <p class="text-slate-400">
-            When a task time strikes, the internal loop activates tone sirens and push notifications. Ignoring alerts penalizes your Discipline Score.
-          </p>
-        </div>
-
-        <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
-          <div class="flex items-center gap-2 font-bold text-sm text-white mb-1">
-            <span class="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px]">3</span>
-            Audited Reason & Exception System
-          </div>
-          <p class="text-slate-400">
-            Skipping requires an explanation. Verified emergencies preserve your score, while fatigue or self-indulgent reasons reset your streak and trigger score penalties.
-          </p>
-        </div>
-      </div>
-
-      <div class="pt-3 border-t border-slate-800 flex justify-end">
-        <button onclick="closeGuideModal()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition">
-          Got It, Understood!
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- GENERIC CUSTOM MODAL -->
-  <div id="customModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-      <h3 id="modalTitle" class="text-lg font-bold text-white mb-2">Notification Alert</h3>
-      <p id="modalBody" class="text-sm text-slate-300 mb-6">Alert message content...</p>
-      <div class="flex justify-end gap-3">
-        <button id="modalCloseBtn" onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-xl text-sm transition">
-          Dismiss
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- APPLICATION LOGIC & TONE.JS ENGINE -->
-  <script>
-    // --- STATE MANAGEMENT ---
-    let state = {
-      score: 75,
-      completedCount: 0,
-      skippedCount: 0,
-      streakDays: 0,
-      tasks: [],
-      logs: [],
-      activeAlarmTaskId: null,
-      pendingDisputeTaskId: null,
-      escalationLevel: 0
-    };
-
-    const weekdayTasks = [
-      { id: '1', title: 'Morning Shift Opening & Prep', subtext: 'Restaurant morning operation setup & service (09:30 AM - 01:30 PM)', time: '09:30', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
-      { id: '2', title: 'Pickleball & Courtside Gathering', subtext: 'Physical training, match play, and social courtside session (02:00 PM - 06:30 PM)', time: '14:00', category: 'Physical', status: 'pending', escalationMinutes: 2 },
-      { id: '3', title: 'Evening Shift & Service On-Site', subtext: 'Restaurant evening service & operational closure (06:30 PM - 09:00 PM)', time: '18:30', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
-      { id: '4', title: 'Night Wrap-Up & Home Transition', subtext: 'Close out duties, head home, review daily wins without excuses', time: '21:00', category: 'Personal Growth', status: 'pending', escalationMinutes: 5 }
-    ];
-
-    const weekendTasks = [
-      { id: 'w1', title: 'Weekend Opening & Peak Floor Audit', subtext: 'Early weekend rush monitoring & prep setup (09:00 AM - 02:00 PM)', time: '09:00', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
-      { id: 'w2', title: 'Weekend Pickleball Session', subtext: 'Match play and active recovery session (02:30 PM - 06:30 PM)', time: '14:30', category: 'Physical', status: 'pending', escalationMinutes: 2 },
-      { id: 'w3', title: 'Peak Weekend Service Management', subtext: 'Floor presence during heavy weekend supper service (06:30 PM - 10:00 PM)', time: '18:30', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
-      { id: 'w4', title: 'Weekend Operations Closure', subtext: 'Final inventory check & register balancing', time: '22:00', category: 'Personal Growth', status: 'pending', escalationMinutes: 5 }
-    ];
-
-    let timerInterval = null;
-    let synth = null;
-
-    window.onload = () => {
-      loadState();
-      checkAndApplyDaySchedule();
-      initAudio();
-      renderAll();
-      startScheduleChecker();
-      checkNotificationStatus();
-      logEvent('Iron Discipline Engine initialized.', 'info');
-    };
-
-    function checkAndApplyDaySchedule() {
-      const dayIndex = new Date().getDay();
-      const isWeekend = (dayIndex === 0 || dayIndex === 6);
-      if (!state.tasks || state.tasks.length === 0) {
-        state.tasks = isWeekend ? weekendTasks : weekdayTasks;
-      }
-    }
-
-    function initAudio() {
-      try {
-        synth = new Tone.Synth({
-          oscillator: { type: "sawtooth" },
-          envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 0.4 }
-        }).toDestination();
-      } catch (e) {
-        console.warn("Audio initialization pending user gesture.");
-      }
-    }
-
-    function playHarshSiren(escalation = 1) {
-      if (!synth) initAudio();
-      try {
-        Tone.start();
-        const now = Tone.now();
-        const baseFreq = 440 + (escalation * 120);
-        const highFreq = 880 + (escalation * 160);
-        synth.triggerAttackRelease(baseFreq, "0.15", now);
-        synth.triggerAttackRelease(highFreq, "0.15", now + 0.2);
-      } catch(e) {}
-    }
-
-    function testAlarmSound() {
-      playHarshSiren(1);
-      showModal("Audio Siren Test", "Triggered standard Tone.js synthesizer alarm sound.");
-    }
-
-    function saveState() {
-      localStorage.setItem('iron_discipline_state', JSON.stringify(state));
-    }
-
-    function loadState() {
-      const saved = localStorage.getItem('iron_discipline_state');
-      if (saved) {
-        try {
-          state = JSON.parse(saved);
-        } catch (e) {
-          state.tasks = weekdayTasks;
-        }
-      } else {
-        state.tasks = weekdayTasks;
-      }
-    }
-
-    function resetTodayData() {
-      state.tasks.forEach(t => t.status = 'pending');
-      state.completedCount = 0;
-      state.skippedCount = 0;
-      state.activeAlarmTaskId = null;
-      recalculateScore();
-      saveState();
-      renderAll();
-      logEvent("Daily slate reset.", "warning");
-    }
-
-    function recalculateScore() {
-      const totalDecided = state.completedCount + state.skippedCount;
-      if (totalDecided === 0) {
-        state.score = Math.max(state.score, 60);
-      } else {
-        const ratio = (state.completedCount / totalDecided) * 100;
-        const streakBonus = Math.min(state.streakDays * 3, 15);
-        state.score = Math.round(Math.min(100, Math.max(0, ratio + streakBonus)));
-      }
-      saveState();
-      updateTierDisplay();
-    }
-
-    function updateTierDisplay() {
-      const score = state.score;
-      const labelEl = document.getElementById('statusTierLabel');
-      const scoreEl = document.getElementById('disciplineScoreDisplay');
-      const iconEl = document.getElementById('statusIcon');
-      const pathEl = document.getElementById('scoreCirclePath');
-
-      scoreEl.innerText = `${score}%`;
-      pathEl.setAttribute('stroke-dasharray', `${score}, 100`);
-
-      if (score >= 85) {
-        labelEl.innerText = "UNSHAKEABLE TITAN";
-        labelEl.className = "text-sm font-black text-emerald-400 uppercase tracking-wide";
-        iconEl.className = "fa-solid fa-crown absolute text-xs text-emerald-400";
-        pathEl.setAttribute('class', 'text-emerald-500 transition-all duration-700 ease-out');
-      } else if (score >= 65) {
-        labelEl.innerText = "DISCIPLINED EXECUTOR";
-        labelEl.className = "text-sm font-black text-amber-400 uppercase tracking-wide";
-        iconEl.className = "fa-solid fa-shield absolute text-xs text-amber-400";
-        pathEl.setAttribute('class', 'text-amber-500 transition-all duration-700 ease-out');
-      } else if (score >= 40) {
-        labelEl.innerText = "STUBBORN / SLACKING";
-        labelEl.className = "text-sm font-black text-orange-500 uppercase tracking-wide";
-        iconEl.className = "fa-solid fa-person-running absolute text-xs text-orange-400";
-        pathEl.setAttribute('class', 'text-orange-500 transition-all duration-700 ease-out');
-      } else {
-        labelEl.innerText = "REBELLIOUS / DEFEATED";
-        labelEl.className = "text-sm font-black text-rose-500 uppercase tracking-wide animate-pulse";
-        iconEl.className = "fa-solid fa-skull absolute text-xs text-rose-500";
-        pathEl.setAttribute('class', 'text-rose-600 transition-all duration-700 ease-out');
-      }
-    }
-
-    function startScheduleChecker() {
-      if (timerInterval) clearInterval(timerInterval);
-
-      timerInterval = setInterval(() => {
-        const now = new Date();
-        const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-        state.tasks.forEach(task => {
-          if (task.status === 'pending' && task.time === currentHHMM && state.activeAlarmTaskId !== task.id) {
-            triggerAlarm(task.id);
-          }
-        });
-      }, 15000);
-    }
-
-    function triggerAlarm(taskId) {
-      const task = state.tasks.find(t => t.id === taskId);
-      if (!task) return;
-
-      state.activeAlarmTaskId = taskId;
-      state.escalationLevel = 1;
-      playHarshSiren(1);
-      logEvent(`ALARM TRIGGERED: "${task.title}".`, "warning");
-      renderAll();
-    }
-
-    function checkNotificationStatus() {
-      const txt = document.getElementById('notifStatusText');
-      if (!("Notification" in window)) {
-        txt.innerText = "Unsupported";
-        return;
-      }
-      if (Notification.permission === "granted") {
-        txt.innerText = "Active / Granted";
-        txt.className = "text-[10px] text-emerald-400 font-bold";
-      } else {
-        txt.innerText = "Permission Required";
-        txt.className = "text-[10px] text-amber-400";
-      }
-    }
-
-    function requestNotificationPermission() {
-      if (!("Notification" in window)) {
-        showModal("Unsupported", "Desktop Push Notifications are not supported in this browser environment.");
-        return;
-      }
-      Notification.requestPermission().then(permission => {
-        checkNotificationStatus();
-      });
-    }
-
-    function completeTask(id) {
-      const task = state.tasks.find(t => t.id === id);
-      if (!task) return;
-
-      task.status = 'completed';
-      state.completedCount++;
-      
-      if (state.activeAlarmTaskId === id) {
-        state.activeAlarmTaskId = null;
-      }
-
-      logEvent(`EXECUTED: "${task.title}".`, "success");
-      recalculateScore();
-      saveState();
-      renderAll();
-    }
-
-    function initiateSkipDispute(id) {
-      state.pendingDisputeTaskId = id;
-      document.getElementById('disputeReasonText').value = '';
-      document.getElementById('disputeAuditResult').classList.add('hidden');
-      document.getElementById('disputeModal').classList.remove('hidden');
-    }
-
-    function closeDisputeModal() {
-      state.pendingDisputeTaskId = null;
-      document.getElementById('disputeModal').classList.add('hidden');
-    }
-
-    function submitDisputeAudit() {
-      const taskId = state.pendingDisputeTaskId;
-      const task = state.tasks.find(t => t.id === taskId);
-      if (!task) return;
-
-      const category = document.getElementById('disputeCategory').value;
-      const text = document.getElementById('disputeReasonText').value.trim();
-
-      let isReasonable = (category === "Emergency" || category === "Health" || (category === "Operational Shift" && text.length >= 8));
-      let penalty = isReasonable ? 0 : (category === "Social" ? 8 : 12);
-
-      const resultContainer = document.getElementById('disputeAuditResult');
-      resultContainer.classList.remove('hidden');
-
-      if (isReasonable) {
-        resultContainer.className = "p-3 rounded-xl border text-xs font-mono-code bg-emerald-950/80 border-emerald-800 text-emerald-300 mb-3";
-        resultContainer.innerHTML = `<i class="fa-solid fa-circle-check"></i> APPROVED EXCEPTION: Score preserved.`;
-        task.status = 'skipped';
-      } else {
-        resultContainer.className = "p-3 rounded-xl border text-xs font-mono-code bg-rose-950/80 border-rose-800 text-rose-300 mb-3";
-        resultContainer.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> REJECTED: Penalty -${penalty} pts applied.`;
-        task.status = 'skipped';
-        state.skippedCount++;
-        state.streakDays = 0;
-        state.score = Math.max(0, state.score - penalty);
-      }
-
-      if (state.activeAlarmTaskId === taskId) {
-        state.activeAlarmTaskId = null;
-      }
-
-      setTimeout(() => {
-        closeDisputeModal();
-        recalculateScore();
-        saveState();
-        renderAll();
-      }, 1200);
-    }
-
-    function deleteTask(id) {
-      state.tasks = state.tasks.filter(t => t.id !== id);
-      if (state.activeAlarmTaskId === id) state.activeAlarmTaskId = null;
-      saveState();
-      renderAll();
-    }
-
-    document.getElementById('taskForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const title = document.getElementById('taskTitle').value.trim();
-      const subtext = document.getElementById('taskSubtext').value.trim();
-      const time = document.getElementById('taskTime').value;
-      const category = document.getElementById('taskCategory').value;
-
-      if (!title || !time) return;
-
-      state.tasks.push({
-        id: Date.now().toString(),
-        title,
-        subtext: subtext || "No excuses allowed.",
-        time,
-        category,
-        status: 'pending'
-      });
-
-      state.tasks.sort((a, b) => a.time.localeCompare(b.time));
-      saveState();
-      renderAll();
-      document.getElementById('taskTitle').value = '';
-      document.getElementById('taskSubtext').value = '';
-    });
-
-    function logEvent(msg, type = "info") {
-      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      state.logs.unshift({ timestamp, msg, type });
-      if (state.logs.length > 30) state.logs.pop();
-      renderLogs();
-    }
-
-    function renderLogs() {
-      const logContainer = document.getElementById('auditLog');
-      if (!logContainer) return;
-      if (state.logs.length === 0) {
-        logContainer.innerHTML = `<div class="text-slate-500 italic">No activity logged today.</div>`;
-        return;
-      }
-      logContainer.innerHTML = state.logs.map(log => `<div class="${log.type === 'success' ? 'text-emerald-400 font-bold' : log.type === 'danger' ? 'text-rose-400 font-bold' : 'text-slate-400'}"><span class="text-slate-600">[${log.timestamp}]</span> ${log.msg}</div>`).join('');
-    }
-
-    function renderAll() {
-      renderStats();
-      renderTasks();
-      renderAlarmBanner();
-      renderLogs();
-      updateTierDisplay();
-    }
-
-    function renderStats() {
-      document.getElementById('statCompleted').innerText = state.completedCount;
-      document.getElementById('statSkipped').innerText = state.skippedCount;
-      document.getElementById('statStreak').innerText = `${state.streakDays} Days`;
-      document.getElementById('taskCountBadge').innerText = `${state.tasks.length} Tasks Scheduled`;
-    }
-
-    function renderAlarmBanner() {
-      const banner = document.getElementById('activeAlarmBanner');
-      if (state.activeAlarmTaskId) {
-        const activeTask = state.tasks.find(t => t.id === state.activeAlarmTaskId);
-        if (activeTask) {
-          banner.classList.remove('hidden');
-          document.getElementById('alarmBannerTaskName').innerText = `${activeTask.time} — ${activeTask.title}`;
-          document.getElementById('alarmAckBtn').onclick = () => completeTask(activeTask.id);
-          document.getElementById('alarmSkipBtn').onclick = () => initiateSkipDispute(activeTask.id);
-          return;
-        }
-      }
-      banner.classList.add('hidden');
-    }
-
-    function renderTasks() {
-      const taskListEl = document.getElementById('taskList');
-      if (state.tasks.length === 0) {
-        taskListEl.innerHTML = `<div class="text-center py-8 text-slate-500">No duties scheduled yet.</div>`;
-        return;
-      }
-
-      taskListEl.innerHTML = state.tasks.map(task => {
-        const isAlarming = state.activeAlarmTaskId === task.id;
-        let cardBg = task.status === 'completed' ? 'bg-slate-950/40 border-emerald-950/50' : task.status === 'skipped' ? 'bg-slate-950/40 border-rose-950/50' : isAlarming ? 'alarm-active border-rose-600' : 'bg-slate-950/70 border-slate-800';
-
-        return `
-          <div class="p-4 rounded-xl border ${cardBg} flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="flex items-start space-x-3.5">
-              <div class="font-mono-code text-sm font-black text-rose-400 bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg mt-0.5">${task.time}</div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-sm text-slate-100">${escapeHtml(task.title)}</span>
-                  <span class="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">${task.category}</span>
-                </div>
-                <div class="text-xs text-slate-400 mt-1">${escapeHtml(task.subtext)}</div>
-              </div>
-            </div>
-
-            <div class="flex items-center space-x-2 self-end sm:self-center">
-              ${task.status === 'pending' ? `
-                <button onclick="completeTask('${task.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-2 px-3 rounded-lg text-xs">
-                  <i class="fa-solid fa-check"></i> Done
-                </button>
-                <button onclick="initiateSkipDispute('${task.id}')" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold p-2 px-3 rounded-lg text-xs">
-                  <i class="fa-solid fa-scale-balanced"></i> Skip / Dispute
-                </button>
-              ` : `<span class="text-xs font-mono-code ${task.status === 'completed' ? 'text-emerald-400' : 'text-rose-400'} uppercase font-bold">${task.status}</span>`}
-              <button onclick="deleteTask('${task.id}')" class="text-slate-500 hover:text-slate-300 p-2 text-xs"><i class="fa-solid fa-trash"></i></button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, function(m) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-      });
-    }
-
-    function openGuideModal() { document.getElementById('guideModal').classList.remove('hidden'); }
-    function closeGuideModal() { document.getElementById('guideModal').classList.add('hidden'); }
-    function showModal(title, body) {
-      document.getElementById('modalTitle').innerText = title;
-      document.getElementById('modalBody').innerText = body;
-      document.getElementById('customModal').classList.remove('hidden');
-    }
-    function closeModal() { document.getElementById('customModal').classList.add('hidden'); }
-  </script>
+<!-- TOP HEADER / DISCIPLINE INDEX BANNER -->
+<header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center space-x-3">
+<!-- Custom Civet Icon Header Badge -->
+<div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden shadow-lg shadow-rose-950/50 flex items-center justify-center">
+<img src="dicipline/IMG_5533.jpeg" alt="Musang Discipline Icon" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23f43f5e\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z\'/></svg>';">
+</div>
+<div>
+<h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-white flex items-center gap-2">
+IRON DISCIPLINE <span class="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono-code uppercase">PWA Active</span>
+</h1>
+<p class="text-xs text-slate-400">Zero excuses. Uncompromising execution tracker.</p>
+</div>
+</div>
+<!-- DISCIPLINE RATING CARD -->
+<div class="flex items-center gap-4 bg-slate-950/80 border border-slate-800 px-4 py-2 rounded-xl">
+<div class="text-right">
+<div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Character Status</div>
+<div id="statusTierLabel" class="text-sm font-black text-rose-500 uppercase tracking-wide">Evaluating...</div>
+</div>
+<div class="h-10 w-px bg-slate-800"></div>
+<div class="text-center">
+<div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Discipline Score</div>
+<div id="disciplineScoreDisplay" class="text-xl font-black font-mono-code text-white">50%</div>
+</div>
+<div class="w-12 h-12 relative flex items-center justify-center">
+<svg class="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+<path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+<path id="scoreCirclePath" class="text-rose-500 transition-all duration-700 ease-out" stroke-linecap="round" stroke-width="3.5" stroke-dasharray="50, 100" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+</svg>
+<i id="statusIcon" class="fa-solid fa-skull absolute text-xs text-rose-400"></i>
+</div>
+</div>
+</div>
+</header>
+<!-- ACTIVE ALARM ALERT BANNER -->
+<div id="activeAlarmBanner" class="bg-rose-950 border-b border-rose-800 px-4 py-3 hidden alarm-active">
+<div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center space-x-3">
+<i class="fa-solid fa-bell-triangle-exclamation text-rose-400 text-xl animate-bounce"></i>
+<div>
+<div id="alarmBannerTaskName" class="text-sm font-bold text-white">Task Name Here</div>
+<div id="alarmBannerEscalationText" class="text-xs text-rose-300">Strict Alarm Escalation Active</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button id="alarmAckBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">
+<i class="fa-solid fa-check"></i> Execute & Clear
+</button>
+<button id="alarmSkipBtn" class="bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold px-3 py-1.5 rounded-lg text-xs transition border border-rose-700">
+<i class="fa-solid fa-scale-balanced"></i> Dispute Reason
+</button>
+</div>
+</div>
+</div>
+<!-- MAIN CONTAINER -->
+<main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- LEFT COLUMN: CONTROLS & ADD TASK (4 Cols) -->
+<div class="lg:col-span-4 space-y-6">
+<!-- ADD NEW DUTY / TASK CARD -->
+<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 via-amber-500 to-emerald-500"></div>
+<h2 class="text-base font-bold text-white flex items-center gap-2 mb-4">
+<i class="fa-solid fa-plus-circle text-rose-500"></i> Command New Responsibility
+</h2>
+<form id="taskForm" class="space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Task Title</label>
+<input type="text" id="taskTitle" required placeholder="e.g. Morning Shift Setup" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Purpose / Consequence</label>
+<input type="text" id="taskSubtext" placeholder="Why skipping this destroys your momentum..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Scheduled Time</label>
+<input type="time" id="taskTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono-code focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Category</label>
+<select id="taskCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
+<option value="Physical">💪 Physical Discipline</option>
+<option value="Deep Work">🧠 Deep Focus / Work</option>
+<option value="Personal Growth">📖 Mastery / Craft</option>
+<option value="Lifestyle" selected>🛡️ Operational Duty</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Alarm Repeat Interval</label>
+<select id="taskEscalation" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
+<option value="1">Strict (Repeat Siren every 1 min)</option>
+<option value="2" selected>Relentless (Repeat Siren every 2 min)</option>
+<option value="5">Standard (Repeat Siren every 5 min)</option>
+</select>
+</div>
+<button type="submit" class="w-full bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-rose-950/40 transition-all flex items-center justify-center gap-2 active:scale-98">
+<i class="fa-solid fa-lock"></i> Lock Into Schedule
+</button>
+</form>
+</div>
+<!-- ENFORCEMENT CONTROLS -->
+<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+<h2 class="text-base font-bold text-white flex items-center gap-2">
+<i class="fa-solid fa-sliders text-amber-500"></i> Enforcement Controls
+</h2>
+<div class="space-y-3">
+<!-- Notification Toggle -->
+<div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+<div class="flex items-center space-x-3">
+<i class="fa-solid fa-bell text-rose-400 text-base"></i>
+<div>
+<div class="text-xs font-bold text-slate-200">Push Notifications</div>
+<div id="notifStatusText" class="text-[10px] text-slate-400">Not Granted</div>
+</div>
+</div>
+<button id="enableNotifBtn" onclick="requestNotificationPermission()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+Enable
+</button>
+</div>
+<!-- Audio Siren Test -->
+<div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+<div class="flex items-center space-x-3">
+<i class="fa-solid fa-volume-high text-amber-400 text-base"></i>
+<div>
+<div class="text-xs font-bold text-slate-200">Audio Alarm Test</div>
+<div class="text-[10px] text-slate-400">Synthesized Tone.js Siren</div>
+</div>
+</div>
+<button onclick="testAlarmSound()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+Test Siren
+</button>
+</div>
+<!-- Offline / PWA Status Badge -->
+<div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+<div class="flex items-center space-x-3">
+<i id="networkIcon" class="fa-solid fa-mobile-screen-button text-emerald-400 text-base"></i>
+<div>
+<div class="text-xs font-bold text-slate-200">Apple Home Screen PWA</div>
+<div id="networkStatusText" class="text-[10px] text-emerald-400 font-bold">Icon Path Configured</div>
+</div>
+</div>
+<button onclick="cacheAssetsOffline()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+Sync PWA
+</button>
+</div>
+<!-- How It Works Guide Toggle -->
+<div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+<div class="flex items-center space-x-3">
+<i class="fa-solid fa-circle-question text-cyan-400 text-base"></i>
+<div>
+<div class="text-xs font-bold text-slate-200">How The App Works</div>
+<div class="text-[10px] text-slate-400">System mechanics & score rules</div>
+</div>
+</div>
+<button onclick="openGuideModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+View Guide
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: SCHEDULE & AUDIT LOG (8 Cols) -->
+<div class="lg:col-span-8 space-y-6">
+<!-- DAILY DUTIES CONTAINER -->
+<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="text-base font-bold text-white flex items-center gap-2">
+<i class="fa-solid fa-calendar-check text-rose-500"></i> Active Operational Schedule
+</h2>
+<p id="scheduleModeTitle" class="text-xs text-slate-400">Loading daily routine...</p>
+</div>
+<span id="taskCountBadge" class="text-xs font-mono-code font-bold bg-slate-950 border border-slate-800 px-3 py-1 rounded-full text-slate-300">
+0 Tasks
+</span>
+</div>
+<!-- TASK LIST -->
+<div id="taskList" class="space-y-3">
+<!-- Tasks dynamically populated -->
+</div>
+</div>
+<!-- PERFORMANCE STATS GRID -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+<div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Duties Completed</div>
+<div id="statCompleted" class="text-2xl font-black font-mono-code text-emerald-400 mt-1">0</div>
+</div>
+<div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+<div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Duties Skipped</div>
+<div id="statSkipped" class="text-2xl font-black font-mono-code text-rose-400 mt-1">0</div>
+</div>
+<div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+<div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Unbroken Streak</div>
+<div id="statStreak" class="text-2xl font-black font-mono-code text-amber-400 mt-1">0 Days</div>
+</div>
+</div>
+<!-- REAL-TIME AUDIT LOG -->
+<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+<h2 class="text-base font-bold text-white flex items-center gap-2">
+<i class="fa-solid fa-list-check text-slate-400"></i> Behavioral Audit Log
+</h2>
+<div id="auditLog" class="bg-slate-950 border border-slate-800 rounded-xl p-3 h-36 overflow-y-auto font-mono-code text-xs space-y-1 text-slate-400">
+<!-- Logs appended here -->
+</div>
+</div>
+</div>
+</main>
+<!-- DISPUTE & REASON EVALUATION MODAL -->
+<div id="disputeModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+<div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
+<div class="flex items-center justify-between border-b border-slate-800 pb-3">
+<h3 class="text-base font-bold text-white flex items-center gap-2">
+<i class="fa-solid fa-gavel text-amber-500"></i> Duty Exception & Reason Audit
+</h3>
+<button onclick="closeDisputeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+</div>
+<p class="text-xs text-slate-300">
+Submitting an exception requires a justifiable cause. Excuses based on low motivation or social convenience will incur a discipline penalty.
+</p>
+<div>
+<label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Reason Category</label>
+<select id="disputeCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+<option value="Operational Shift">🏬 Kitchen / Floor Emergency Shift</option>
+<option value="Emergency">🚨 Critical Medical or Safety Emergency</option>
+<option value="Health">🤒 Physical Injury / Severe Exhaustion</option>
+<option value="Social">🍻 Extended Courtside Gathering / Social</option>
+<option value="Fatigue">😴 Lack of Motivation / Tired</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Detailed Explanation</label>
+<textarea id="disputeReasonText" rows="3" placeholder="Explain the unavoidable operational circumstance..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"></textarea>
+</div>
+<div id="disputeAuditResult" class="hidden"></div>
+<div class="flex justify-end gap-3 pt-2">
+<button onclick="closeDisputeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold">
+Cancel
+</button>
+<button onclick="submitDisputeAudit()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-lg shadow-amber-950/40">
+Submit For Judicial Audit
+</button>
+</div>
+</div>
+</div>
+<!-- HOW IT WORKS GUIDE MODAL -->
+<div id="guideModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+<div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative space-y-4 max-h-[85vh] overflow-y-auto">
+<div class="flex items-center justify-between border-b border-slate-800 pb-3">
+<h3 class="text-base font-bold text-white flex items-center gap-2">
+<i class="fa-solid fa-book-bookmark text-cyan-400"></i> System Operational Manual
+</h3>
+<button onclick="closeGuideModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+</div>
+<div class="space-y-4 text-xs text-slate-300 leading-relaxed">
+<div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+<h4 class="font-bold text-cyan-400 uppercase tracking-wide text-xs mb-1">1. Automatic PWA Home Screen Setup</h4>
+<p>This web application is configured with icons at path <code class="text-rose-400">dicipline/IMG_5533.jpeg</code>. When you tap <strong>"Add to Home Screen"</strong> in Safari on iOS, your iPhone automatically uses this file as the app icon.</p>
+</div>
+<div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+<h4 class="font-bold text-cyan-400 uppercase tracking-wide text-xs mb-1">2. Dynamic Schedule Routing</h4>
+<p>The app automatically detects the day of the week:</p>
+<ul class="list-disc list-inside mt-1 space-y-1 text-slate-400">
+<li><strong>Weekdays (Mon–Fri):</strong> 09:30 AM Shift 1 ➔ 02:00 PM Courtside Pickleball ➔ 06:30 PM Shift 2 ➔ 09:00 PM Home Wrap-Up.</li>
+<li><strong>Weekends (Sat–Sun):</strong> Weekend peak floor audits and match sessions.</li>
+</ul>
+</div>
+</div>
+<div class="flex justify-end pt-2">
+<button onclick="closeGuideModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold">
+Close Guide
+</button>
+</div>
+</div>
+</div>
+<!-- GENERIC CUSTOM MODAL -->
+<div id="customModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+<div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+<h3 id="modalTitle" class="text-lg font-bold text-white mb-2">Notification Alert</h3>
+<p id="modalBody" class="text-sm text-slate-300 mb-6">Alert message content...</p>
+<div class="flex justify-end gap-3">
+<button id="modalCloseBtn" onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-xl text-sm transition">
+Dismiss
+</button>
+</div>
+</div>
+</div>
+<!-- APPLICATION LOGIC & TONE.JS ENGINE -->
+<script>
+// Inject Dynamic Inline Web App Manifest for Native Installation & Offline PWA support
+(function injectManifest() {
+const manifestJSON = {
+name: "Iron Discipline Engine",
+short_name: "Discipline",
+start_url: "./index.html",
+display: "standalone",
+background_color: "#020617",
+theme_color: "#020617",
+icons: [
+{
+src: "dicipline/IMG_5533.jpeg",
+sizes: "192x192",
+type: "image/jpeg",
+purpose: "any maskable"
+},
+{
+src: "dicipline/IMG_5533.jpeg",
+sizes: "512x512",
+type: "image/jpeg",
+purpose: "any maskable"
+}
+]
+};
+const stringManifest = JSON.stringify(manifestJSON);
+const blob = new Blob([stringManifest], { type: 'application/json' });
+const manifestUrl = URL.createObjectURL(blob);
+document.getElementById('manifestPlaceholder').setAttribute('href', manifestUrl);
+})();
+// --- STATE MANAGEMENT ---
+let state = {
+score: 75,
+completedCount: 0,
+skippedCount: 0,
+streakDays: 0,
+tasks: [],
+logs: [],
+activeAlarmTaskId: null,
+pendingDisputeTaskId: null,
+escalationLevel: 0
+};
+const weekdayTasks = [
+{ id: '1', title: 'Morning Shift Opening & Prep', subtext: 'Restaurant morning operation setup & service (09:30 AM - 01:30 PM)', time: '09:30', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
+{ id: '2', title: 'Pickleball & Courtside Gathering', subtext: 'Physical training, match play, and social courtside session (02:00 PM - 06:30 PM)', time: '14:00', category: 'Physical', status: 'pending', escalationMinutes: 2 },
+{ id: '3', title: 'Evening Shift & Service On-Site', subtext: 'Restaurant evening service & operational closure (06:30 PM - 09:00 PM)', time: '18:30', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
+{ id: '4', title: 'Night Wrap-Up & Home Transition', subtext: 'Close out duties, head home, review daily wins without excuses', time: '21:00', category: 'Personal Growth', status: 'pending', escalationMinutes: 5 }
+];
+const weekendTasks = [
+{ id: 'w1', title: 'Weekend Opening & Peak Floor Audit', subtext: 'Early weekend rush monitoring & prep setup (09:00 AM - 02:00 PM)', time: '09:00', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
+{ id: 'w2', title: 'Weekend Pickleball Session', subtext: 'Match play and active recovery session (02:30 PM - 06:30 PM)', time: '14:30', category: 'Physical', status: 'pending', escalationMinutes: 2 },
+{ id: 'w3', title: 'Peak Weekend Service Management', subtext: 'Floor presence during heavy weekend supper service (06:30 PM - 10:00 PM)', time: '18:30', category: 'Lifestyle', status: 'pending', escalationMinutes: 2 },
+{ id: 'w4', title: 'Weekend Operations Closure', subtext: 'Final inventory check & register balancing', time: '22:00', category: 'Personal Growth', status: 'pending', escalationMinutes: 5 }
+];
+let timerInterval = null;
+let synth = null;
+let nativeAudioCtx = null;
+window.onload = () => {
+loadState();
+checkAndApplyDaySchedule();
+initAudio();
+registerOfflineServiceWorker();
+setupNetworkStatusListeners();
+renderAll();
+startScheduleChecker();
+checkNotificationStatus();
+logEvent('Iron Discipline Engine initialized with PWA Path: dicipline/IMG_5533.jpeg.', 'info');
+};
+// --- AUDIO SYSTEM WITH OFFLINE NATIVE FALLBACK ---
+function initAudio() {
+try {
+if (typeof Tone !== 'undefined') {
+synth = new Tone.Synth({
+oscillator: { type: "sawtooth" },
+envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 0.4 }
+}).toDestination();
+}
+} catch (e) {
+console.warn("Tone.js init failed or offline; using Web Audio API fallback.");
+}
+}
+function playHarshSiren(escalation = 1) {
+if (typeof Tone !== 'undefined' && synth) {
+try {
+Tone.start();
+const now = Tone.now();
+const baseFreq = 440 + (escalation * 120);
+const highFreq = 880 + (escalation * 160);
+synth.triggerAttackRelease(baseFreq, "0.15", now);
+synth.triggerAttackRelease(highFreq, "0.15", now + 0.2);
+return;
+} catch(e) {}
+}
+try {
+if (!nativeAudioCtx) {
+nativeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+if (nativeAudioCtx.state === 'suspended') {
+nativeAudioCtx.resume();
+}
+const osc = nativeAudioCtx.createOscillator();
+const gain = nativeAudioCtx.createGain();
+osc.type = 'sawtooth';
+const freq = 500 + (escalation * 150);
+osc.frequency.setValueAtTime(freq, nativeAudioCtx.currentTime);
+osc.frequency.exponentialRampToValueAtTime(freq * 1.8, nativeAudioCtx.currentTime + 0.2);
+gain.gain.setValueAtTime(0.3, nativeAudioCtx.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.01, nativeAudioCtx.currentTime + 0.35);
+osc.connect(gain);
+gain.connect(nativeAudioCtx.destination);
+osc.start();
+osc.stop(nativeAudioCtx.currentTime + 0.35);
+} catch(err) {
+console.warn("Audio playback issue:", err);
+}
+}
+// --- PWA SERVICE WORKER & OFFLINE STORAGE ---
+function registerOfflineServiceWorker() {
+if ('serviceWorker' in navigator) {
+const swCode = ⁠const CACHE_NAME = 'iron-discipline-v2'; const ASSETS_TO_CACHE = [ './', './index.html', 'dicipline/IMG_5533.jpeg' ]; self.addEventListener('install', (e) => { e.waitUntil( caches.open(CACHE_NAME).then((cache) => { return cache.addAll(ASSETS_TO_CACHE); }) ); }); self.addEventListener('fetch', (e) => { e.respondWith( caches.match(e.request).then((res) => res || fetch(e.request)) ); });⁠;
+const blob = new Blob([swCode], { type: 'application/javascript' });
+const workerUrl = URL.createObjectURL(blob);
+navigator.serviceWorker.register(workerUrl).catch(() => {});
+}
+}
+function setupNetworkStatusListeners() {
+const icon = document.getElementById('networkIcon');
+const txt = document.getElementById('networkStatusText');
+function updateStatus() {
+if (navigator.onLine) {
+icon.className = "fa-solid fa-mobile-screen-button text-emerald-400 text-base";
+txt.innerText = "PWA Cached & Ready";
+txt.className = "text-[10px] text-emerald-400 font-bold";
+} else {
+icon.className = "fa-solid fa-plane text-amber-400 text-base";
+txt.innerText = "Offline Mode (Local Storage Active)";
+txt.className = "text-[10px] text-amber-400 font-bold";
+}
+}
+window.addEventListener('online', updateStatus);
+window.addEventListener('offline', updateStatus);
+updateStatus();
+}
+function cacheAssetsOffline() {
+showModal("PWA Synced", "Icon path 'dicipline/IMG_5533.jpeg', application manifest, and web synthesizers are cached for offline deployment on GitHub Pages.");
+}
+function checkAndApplyDaySchedule() {
+const dayIndex = new Date().getDay();
+const isWeekend = (dayIndex === 0 || dayIndex === 6);
+const titleEl = document.getElementById('scheduleModeTitle');
+if (titleEl) {
+titleEl.innerText = isWeekend ? "Weekend Peak Shift & Training Routine" : "Standard Weekday Split-Shift & Training Routine";
+}
+if (!state.tasks || state.tasks.length === 0) {
+state.tasks = isWeekend ? weekendTasks : weekdayTasks;
+}
+}
+function testAlarmSound() {
+playHarshSiren(1);
+showModal("Audio Siren Test", "Triggered synthesized siren tone (Works online and offline).");
+}
+function saveState() {
+localStorage.setItem('iron_discipline_state', JSON.stringify(state));
+}
+function loadState() {
+const saved = localStorage.getItem('iron_discipline_state');
+if (saved) {
+try {
+state = JSON.parse(saved);
+} catch (e) {
+state.tasks = weekdayTasks;
+}
+} else {
+state.tasks = weekdayTasks;
+}
+}
+function recalculateScore() {
+const totalDecided = state.completedCount + state.skippedCount;
+if (totalDecided === 0) {
+state.score = Math.max(state.score, 60);
+} else {
+const ratio = (state.completedCount / totalDecided) * 100;
+const streakBonus = Math.min(state.streakDays * 3, 15);
+state.score = Math.round(Math.min(100, Math.max(0, ratio + streakBonus)));
+}
+saveState();
+updateTierDisplay();
+}
+function updateTierDisplay() {
+const score = state.score;
+const labelEl = document.getElementById('statusTierLabel');
+const scoreEl = document.getElementById('disciplineScoreDisplay');
+const iconEl = document.getElementById('statusIcon');
+const pathEl = document.getElementById('scoreCirclePath');
+scoreEl.innerText = ⁠${score}%⁠;
+pathEl.setAttribute('stroke-dasharray', ⁠${score}, 100⁠);
+if (score >= 85) {
+labelEl.innerText = "UNSHAKEABLE TITAN";
+labelEl.className = "text-sm font-black text-emerald-400 uppercase tracking-wide";
+iconEl.className = "fa-solid fa-crown absolute text-xs text-emerald-400";
+pathEl.setAttribute('class', 'text-emerald-500 transition-all duration-700 ease-out');
+} else if (score >= 65) {
+labelEl.innerText = "DISCIPLINED EXECUTOR";
+labelEl.className = "text-sm font-black text-amber-400 uppercase tracking-wide";
+iconEl.className = "fa-solid fa-shield absolute text-xs text-amber-400";
+pathEl.setAttribute('class', 'text-amber-500 transition-all duration-700 ease-out');
+} else if (score >= 40) {
+labelEl.innerText = "STUBBORN / SLACKING";
+labelEl.className = "text-sm font-black text-orange-500 uppercase tracking-wide";
+iconEl.className = "fa-solid fa-person-running absolute text-xs text-orange-400";
+pathEl.setAttribute('class', 'text-orange-500 transition-all duration-700 ease-out');
+} else {
+labelEl.innerText = "REBELLIOUS / DEFEATED";
+labelEl.className = "text-sm font-black text-rose-500 uppercase tracking-wide animate-pulse";
+iconEl.className = "fa-solid fa-skull absolute text-xs text-rose-500";
+pathEl.setAttribute('class', 'text-rose-600 transition-all duration-700 ease-out');
+}
+}
+function startScheduleChecker() {
+if (timerInterval) clearInterval(timerInterval);
+timerInterval = setInterval(() => {
+const now = new Date();
+const currentHHMM = ⁠${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}⁠;
+state.tasks.forEach(task => {
+if (task.status === 'pending' && task.time === currentHHMM && state.activeAlarmTaskId !== task.id) {
+triggerAlarm(task.id);
+}
+});
+}, 15000);
+}
+function triggerAlarm(taskId) {
+const task = state.tasks.find(t => t.id === taskId);
+if (!task) return;
+state.activeAlarmTaskId = taskId;
+state.escalationLevel = 1;
+playHarshSiren(1);
+logEvent(⁠ALARM TRIGGERED: "${task.title}".⁠, "warning");
+renderAll();
+}
+function checkNotificationStatus() {
+const txt = document.getElementById('notifStatusText');
+if (!("Notification" in window)) {
+txt.innerText = "Unsupported";
+return;
+}
+if (Notification.permission === "granted") {
+txt.innerText = "Active / Granted";
+txt.className = "text-[10px] text-emerald-400 font-bold";
+} else {
+txt.innerText = "Permission Required";
+txt.className = "text-[10px] text-amber-400";
+}
+}
+function requestNotificationPermission() {
+if (!("Notification" in window)) {
+showModal("Unsupported", "Desktop Push Notifications are not supported in this browser environment.");
+return;
+}
+Notification.requestPermission().then(permission => {
+checkNotificationStatus();
+});
+}
+function completeTask(id) {
+const task = state.tasks.find(t => t.id === id);
+if (!task) return;
+task.status = 'completed';
+state.completedCount++;
+if (state.activeAlarmTaskId === id) {
+state.activeAlarmTaskId = null;
+}
+logEvent(⁠EXECUTED: "${task.title}".⁠, "success");
+recalculateScore();
+saveState();
+renderAll();
+}
+function initiateSkipDispute(id) {
+state.pendingDisputeTaskId = id;
+document.getElementById('disputeReasonText').value = '';
+document.getElementById('disputeAuditResult').classList.add('hidden');
+document.getElementById('disputeModal').classList.remove('hidden');
+}
+function closeDisputeModal() {
+state.pendingDisputeTaskId = null;
+document.getElementById('disputeModal').classList.add('hidden');
+}
+function submitDisputeAudit() {
+const taskId = state.pendingDisputeTaskId;
+const task = state.tasks.find(t => t.id === taskId);
+if (!task) return;
+const category = document.getElementById('disputeCategory').value;
+const text = document.getElementById('disputeReasonText').value.trim();
+let isReasonable = (category === "Emergency" || category === "Health" || (category === "Operational Shift" && text.length >= 8));
+let penalty = isReasonable ? 0 : (category === "Social" ? 8 : 12);
+const resultContainer = document.getElementById('disputeAuditResult');
+resultContainer.classList.remove('hidden');
+if (isReasonable) {
+resultContainer.className = "p-3 rounded-xl border text-xs font-mono-code bg-emerald-950/80 border-emerald-800 text-emerald-300 mb-3";
+resultContainer.innerHTML = ⁠<i class="fa-solid fa-circle-check"></i> APPROVED EXCEPTION: Score preserved.⁠;
+task.status = 'skipped';
+} else {
+resultContainer.className = "p-3 rounded-xl border text-xs font-mono-code bg-rose-950/80 border-rose-800 text-rose-300 mb-3";
+resultContainer.innerHTML = ⁠<i class="fa-solid fa-triangle-exclamation"></i> REJECTED: Penalty -${penalty} pts applied.⁠;
+task.status = 'skipped';
+state.skippedCount++;
+state.streakDays = 0;
+state.score = Math.max(0, state.score - penalty);
+}
+if (state.activeAlarmTaskId === taskId) {
+state.activeAlarmTaskId = null;
+}
+setTimeout(() => {
+closeDisputeModal();
+recalculateScore();
+saveState();
+renderAll();
+}, 1200);
+}
+function deleteTask(id) {
+state.tasks = state.tasks.filter(t => t.id !== id);
+if (state.activeAlarmTaskId === id) state.activeAlarmTaskId = null;
+saveState();
+renderAll();
+}
+document.getElementById('taskForm').addEventListener('submit', (e) => {
+e.preventDefault();
+const title = document.getElementById('taskTitle').value.trim();
+const subtext = document.getElementById('taskSubtext').value.trim();
+const time = document.getElementById('taskTime').value;
+const category = document.getElementById('taskCategory').value;
+if (!title || !time) return;
+state.tasks.push({
+id: Date.now().toString(),
+title,
+subtext: subtext || "No excuses allowed.",
+time,
+category,
+status: 'pending'
+});
+state.tasks.sort((a, b) => a.time.localeCompare(b.time));
+saveState();
+renderAll();
+document.getElementById('taskTitle').value = '';
+document.getElementById('taskSubtext').value = '';
+});
+function logEvent(msg, type = "info") {
+const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+state.logs.unshift({ timestamp, msg, type });
+if (state.logs.length > 30) state.logs.pop();
+renderLogs();
+}
+function renderLogs() {
+const logContainer = document.getElementById('auditLog');
+if (!logContainer) return;
+if (state.logs.length === 0) {
+logContainer.innerHTML = ⁠<div class="text-slate-500 italic">No activity logged today.</div>⁠;
+return;
+}
+logContainer.innerHTML = state.logs.map(log => ⁠<div class="${log.type === 'success' ? 'text-emerald-400 font-bold' : log.type === 'danger' ? 'text-rose-400 font-bold' : 'text-slate-400'}"><span class="text-slate-600">[${log.timestamp}]</span> ${log.msg}</div>⁠).join('');
+}
+function renderAll() {
+renderStats();
+renderTasks();
+renderAlarmBanner();
+renderLogs();
+updateTierDisplay();
+}
+function renderStats() {
+document.getElementById('statCompleted').innerText = state.completedCount;
+document.getElementById('statSkipped').innerText = state.skippedCount;
+document.getElementById('statStreak').innerText = ⁠${state.streakDays} Days⁠;
+document.getElementById('taskCountBadge').innerText = ⁠${state.tasks.length} Tasks Scheduled⁠;
+}
+function renderAlarmBanner() {
+const banner = document.getElementById('activeAlarmBanner');
+if (state.activeAlarmTaskId) {
+const activeTask = state.tasks.find(t => t.id === state.activeAlarmTaskId);
+if (activeTask) {
+banner.classList.remove('hidden');
+document.getElementById('alarmBannerTaskName').innerText = ⁠${activeTask.time} — ${activeTask.title}⁠;
+document.getElementById('alarmAckBtn').onclick = () => completeTask(activeTask.id);
+document.getElementById('alarmSkipBtn').onclick = () => initiateSkipDispute(activeTask.id);
+return;
+}
+}
+banner.classList.add('hidden');
+}
+function renderTasks() {
+const taskListEl = document.getElementById('taskList');
+if (state.tasks.length === 0) {
+taskListEl.innerHTML = ⁠<div class="text-center py-8 text-slate-500">No duties scheduled yet.</div>⁠;
+return;
+}
+taskListEl.innerHTML = state.tasks.map(task => {
+const isAlarming = state.activeAlarmTaskId === task.id;
+let cardBg = task.status === 'completed' ? 'bg-slate-950/40 border-emerald-950/50' : task.status === 'skipped' ? 'bg-slate-950/40 border-rose-950/50' : isAlarming ? 'alarm-active border-rose-600' : 'bg-slate-950/70 border-slate-800';
+return `
+<div class="p-4 rounded-xl border ${cardBg} flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex items-start space-x-3.5">
+<div class="font-mono-code text-sm font-black text-rose-400 bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg mt-0.5">￼
+￼
+￼
+￼{escapeHtml(task.title)}</span>
+<span class="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">￼
+￼
+￼{escapeHtml(task.subtext)}</div>
+</div>
+</div>
+<div class="flex items-center space-x-2 self-end sm:self-center">
+${task.status === 'pending' ? ⁠<button onclick="completeTask('${task.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-2 px-3 rounded-lg text-xs"> <i class="fa-solid fa-check"></i> Done </button> <button onclick="initiateSkipDispute('${task.id}')" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold p-2 px-3 rounded-lg text-xs"> <i class="fa-solid fa-scale-balanced"></i> Skip / Dispute </button>⁠ : ⁠<span class="text-xs font-mono-code ${task.status === 'completed' ? 'text-emerald-400' : 'text-rose-400'} uppercase font-bold">${task.status}</span>⁠}
+<button onclick="deleteTask('${task.id}')" class="text-slate-500 hover:text-slate-300 p-2 text-xs"><i class="fa-solid fa-trash"></i></button>
+</div>
+</div>
+`;
+}).join('');
+}
+function escapeHtml(str) {
+return str.replace(/[&<>"']/g, function(m) {
+return { '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[m];
+});
+}
+function openGuideModal() { document.getElementById('guideModal').classList.remove('hidden'); }
+function closeGuideModal() { document.getElementById('guideModal').classList.add('hidden'); }
+function showModal(title, body) {
+document.getElementById('modalTitle').innerText = title;
+document.getElementById('modalBody').innerText = body;
+document.getElementById('customModal').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('customModal').classList.add('hidden'); }
+</script>
 </body>
 </html>
