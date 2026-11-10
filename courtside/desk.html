@@ -611,14 +611,14 @@ function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
 function openRef(p){
  const lines=(p.log||[]).map(x=>String(x.e||""));
  for(let i=lines.length-1;i>=0;i--){
-  const m=lines[i].match(/\\bRef\\s*#?\\s*([^\\s·,;]+)/i);
+  const m=lines[i].match(/\bRef\s*#?\s*([^\s·,;]+)/i);
   if(m)return m[1];
  }
  // Support historic player data where the reference was only recorded in a transaction note.
  const t=allTx.find(x=>x.type==="income"&&x.method==="GCash"&&x.cat==="Open play"&&
   String(x.note||"").toLowerCase().startsWith(String(p.name||"").toLowerCase()+" ·")&&
-  day(x.t)===day(p.inAt)&&/\\bRef\\s*#?\\s*([^\\s·,;]+)/i.test(x.note||""));
- return t?(String(t.note).match(/\\bRef\\s*#?\\s*([^\\s·,;]+)/i)||[])[1]||"":"";
+  day(x.t)===day(p.inAt)&&/\bRef\s*#?\s*([^\s·,;]+)/i.test(x.note||""));
+ return t?(String(t.note).match(/\bRef\s*#?\s*([^\s·,;]+)/i)||[])[1]||"":"";
 }
 function dReports(){
  const l=txns.filter(t=>inRange(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]||"-"]=(m[t[k]||"-"]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
