@@ -81,6 +81,27 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 .court.closed{background:var(--bg);opacity:.65;cursor:not-allowed}.court.closed .cs{color:var(--mu)}
 .sch td.closed{cursor:not-allowed;background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 4px,var(--bd) 4px,var(--bd) 8px)}
 #sync.ok{color:var(--ac)}#sync.warn{color:var(--amb)}#sync.bad{color:var(--red)}
+
+/* Open Play spreadsheet report */
+#rep{display:block}
+.op-summary{position:sticky;top:0;z-index:4;background:var(--bg);padding:8px 0 7px;box-shadow:0 5px 12px -12px #000}
+.op-summary .op-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.op-total{background:var(--card);border:1px solid var(--bd);border-radius:9px;padding:8px 6px;min-width:0;text-align:center}
+.op-total span{display:block;color:var(--mu);font-size:11px;line-height:1.25;margin-bottom:4px}
+.op-total b{display:block;font-size:16px;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.op-summary .tabs{margin:0 0 6px}
+.op-sheet{overflow-x:auto;border:1px solid var(--bd);border-radius:9px;margin-top:10px}
+.op-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;font-variant-numeric:tabular-nums}
+.op-table th{background:var(--ac2);color:var(--tx);font-size:11px;white-space:normal;padding:10px 5px;text-transform:uppercase;border-bottom:2px solid var(--ac)}
+.op-table td{white-space:normal;overflow-wrap:anywhere;padding:10px 5px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.op-table tr:nth-child(even) td{background:var(--bg)}
+.op-table th:nth-child(1){width:21%}.op-table th:nth-child(2){width:34%}.op-table th:nth-child(3){width:24%}.op-table th:nth-child(4){width:21%}
+.op-table .amount{text-align:right;font-weight:700;white-space:nowrap}
+.op-table .ref{text-align:left;font-size:11px}
+.op-table .subcell{display:block;font-size:10px;color:var(--mu);font-weight:400}
+.op-table tfoot td{background:var(--ac2);font-weight:700;border-top:2px solid var(--ac)}
+@media(min-width:600px){.op-summary .op-totals{grid-template-columns:repeat(5,minmax(0,1fr))}.op-total b{font-size:20px}.op-table{font-size:13px}.op-table th{font-size:12px}}
+@media(min-width:900px){.report-breakdowns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}}
 </style>
 </head>
 <body>
@@ -587,13 +608,38 @@ function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=su
 function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
  return `<div class="card"><div class="row"><b>Transactions (${l.length})</b><button class="btn s g" onclick="exportCsv()">Export CSV</button></div>
  ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+esc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br><a href="#" class="note" onclick="event.preventDefault();delTx('${t.id}')">delete</a></div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`}
+function openRef(p){
+ const lines=(p.log||[]).map(x=>String(x.e||""));
+ for(let i=lines.length-1;i>=0;i--){
+  const m=lines[i].match(/\\bRef\\s*#?\\s*([^\\s·,;]+)/i);
+  if(m)return m[1];
+ }
+ // Support historic player data where the reference was only recorded in a transaction note.
+ const t=allTx.find(x=>x.type==="income"&&x.method==="GCash"&&x.cat==="Open play"&&
+  String(x.note||"").toLowerCase().startsWith(String(p.name||"").toLowerCase()+" ·")&&
+  day(x.t)===day(p.inAt)&&/\\bRef\\s*#?\\s*([^\\s·,;]+)/i.test(x.note||""));
+ return t?(String(t.note).match(/\\bRef\\s*#?\\s*([^\\s·,;]+)/i)||[])[1]||"":"";
+}
 function dReports(){
  const l=txns.filter(t=>inRange(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]||"-"]=(m[t[k]||"-"]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
  const tbl=(title,rows)=>`<div class="card"><b>${title}</b>${rows.map(([k,v])=>`<div class="row" style="padding:5px 0"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join("")||'<p class="note">No data.</p>'}</div>`;
  const pl=players.filter(p=>inRange(p.inAt)&&p.role!=="extension"),uniq=new Set(pl.map(p=>(p.name||"").toLowerCase())).size;
- return rangeTabs()+`<div class="grid"><div class="card stat"><b>${pl.length}</b><span>Visits</span></div><div class="card stat"><b>${uniq}</b><span>Unique players</span></div></div>`+
+ const op=pl.filter(p=>p.mode==="open"||p.service==="Open play").sort((a,b)=>a.inAt-b.inAt);
+ const cash=op.filter(p=>p.paid&&p.method==="Cash").reduce((a,p)=>a+(+p.fee||0),0);
+ const gcash=op.filter(p=>p.paid&&p.method==="GCash").reduce((a,p)=>a+(+p.fee||0),0);
+ const paid=op.filter(p=>p.paid).reduce((a,p)=>a+(+p.fee||0),0);
+ const owing=op.filter(p=>!p.paid).reduce((a,p)=>a+(+p.fee||0),0);
+ const summary=[["Players",String(op.length)],["Cash",money(cash)],["GCash",money(gcash)],["Total paid",money(paid)],["Unpaid",money(owing)]];
+ const sheet=`<div class="card"><div class="row"><b>Open Play payment report</b><span class="note">${range==="today"?"Today":range==="week"?"Last 7 days":range==="month"?"This month":"All dates"}</span></div>
+ <div class="op-sheet"><table class="op-table"><thead><tr><th>Time in</th><th>Open Play</th><th>Amount paid</th><th>GCash ref #</th></tr></thead>
+ <tbody>${op.map(p=>`<tr><td>${tm(p.inAt)}${range!=="today"?`<span class="subcell">${esc(day(p.inAt))}</span>`:""}</td><td><b>${esc(p.name)}</b>${p.court?`<span class="subcell">Court ${p.court}</span>`:""}</td><td class="amount">${p.paid?money(+p.fee||0):"—"}<span class="subcell">${p.paid?esc(p.method||"Paid"):"Unpaid "+money(+p.fee||0)}</span></td><td class="ref">${p.paid&&p.method==="GCash"?esc(openRef(p))||"—":"—"}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;padding:20px">No Open Play players for this period.</td></tr>'}</tbody>
+ <tfoot><tr><td colspan="2">TOTAL · ${op.length} players</td><td class="amount">${money(paid)}</td><td></td></tr></tfoot></table></div></div>`;
+ return `<div class="op-summary">${rangeTabs()}<div class="op-totals">${summary.map(([k,v])=>`<div class="op-total"><span>${k}</span><b>${v}</b></div>`).join("")}</div></div>`+
+ sheet+`<div class="report-breakdowns">`+
+ `<div class="card"><div class="row"><b>All services overview</b><span class="note">${pl.length} visits · ${uniq} unique players</span></div></div>`+
  tbl("Income by service",by("income","cat"))+tbl("Income by payment mode",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
- `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div>`}
+ `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
+}
 function dShift(){const s=shiftCalc(),n=Date.now();
  return `<div class="card"><b>Current shift</b>${s.op?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`:'<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>'}
  ${s.last?`<div class="note" style="margin-top:6px">Last close: ${new Date(s.last.t).toLocaleDateString()} ${tm(s.last.t)} by ${esc(s.last.by||"")} — ${esc(s.last.note||"")}</div>`:""}</div>
