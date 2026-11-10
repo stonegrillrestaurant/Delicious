@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">
 <title>Pickleball Venue Desk</title>
 <link rel="icon" type="image/png" href="courtside-manager3.png">
 <link rel="apple-touch-icon" href="courtside-manager3.png">
@@ -115,7 +115,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.8"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.9"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -127,6 +127,10 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const whole=n=>Math.round(Number(n)||0).toLocaleString("en-US",{maximumFractionDigits:0});
 const money=n=>(Number(n)<0?"−":"")+"₱"+whole(Math.abs(Number(n)||0));
+const formattedNote=s=>String(s??"")
+ .replace(/₱\\s*([−-]?)([\\d,]+)(?:\\.(\\d{1,2}))?/g,(_,sign,amount,cents)=>money((sign? -1:1)*(Number(amount.replace(/,/g,""))+Number("0."+(cents||"0")))))
+ .replace(/\\b(Expected|Counted|Variance|Remit)\\s+(-?[\\d,]+)(?:\\.(\\d{1,2}))?\\b/gi,(_,label,amount,cents)=>label+" "+(Number(amount.replace(/,/g,""))<0?"−":"")+whole(Number(amount.replace(/,/g,""))+Math.sign(Number(amount.replace(/,/g,"")))*Number("0."+(cents||"0"))));
+const formattedEsc=s=>esc(formattedNote(s));
 const day=t=>new Date(t).toLocaleDateString("en-CA");
 const tm=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 const dstart=s=>new Date(s+"T00:00:00").getTime();
@@ -657,7 +661,7 @@ function gHead(s,ps,rv){const rent=s&&s.mode==="rent";
  return `<div class="row" style="background:${rent?"var(--org2)":"var(--ac2)"};border-left:4px solid ${rent?"var(--org)":"var(--ac)"};border-radius:8px;padding:8px 10px;margin:10px 0 2px"><b style="font-size:13px">${s&&s.court?`Court ${s.court} · ${ML(s.mode)} · ${tm(s.start)}–${tm(s.until)} · ${ps.length}/${s.max}`:"Walk-in"}</b><span style="display:flex;gap:6px">${rv&&s?`<button class="btn s" onclick="checkinAll('${s.id}')">Check in all</button>`:""}${s&&s.court?`<button class="btn s g" onclick="manage('${s.id}')">Court</button>`:""}</span></div>`}
 function pRow(p,n,rv){const i=pLine(p,n);
  return `<div style="padding:7px 4px;border-bottom:1px solid var(--bd)"><div class="row"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.role==="renter"?' <span class="note">renter</span>':""}${i.t?`<div class="note"><b style="color:${i.s==="overtime"?"var(--red)":"inherit"}">${i.t}</b></div>`:""}</div>${rv?`<button class="btn s" onclick="checkin('${p.id}')">✅ Check in</button>`:`<button class="btn s r" onclick="checkout('${p.id}')">Check out</button>`}</div>
- <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(x=>`${tm(x.t)} — ${esc(x.e)}${x.u?" · "+esc(x.u):""}`).join("<br>")}</div></details></div>`}
+ <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(x=>`${tm(x.t)} — ${formattedEsc(x.e)}${x.u?" · "+esc(x.u):""}`).join("<br>")}</div></details></div>`}
 function dActive(){const n=Date.now(),l=players.filter(p=>actv(p)&&pst(p,n)!=="reserved");
  if(!l.length)return '<p class="note">No active players.</p>';
  return grp(l).map(([k,ps])=>{ps.sort((a,b)=>(b.role==="renter")-(a.role==="renter")||a.inAt-b.inAt);const s=sessions.find(x=>x.id===k);return gHead(s,ps,false)+ps.map(p=>pRow(p,n,false)).join("")}).join("")}
@@ -675,7 +679,7 @@ function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=su
  return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
 function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
  return `<div class="card"><div class="row"><b>Transactions (${l.length})</b><button class="btn s g" onclick="exportCsv()">Export CSV</button></div>
- ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+esc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br><a href="#" class="note" onclick="event.preventDefault();delTx('${t.id}')">delete</a></div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`}
+ ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+formattedEsc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br><a href="#" class="note" onclick="event.preventDefault();delTx('${t.id}')">delete</a></div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`}
 function openRef(p){
  const lines=(p.log||[]).map(x=>String(x.e||""));
  for(let i=lines.length-1;i>=0;i--){
@@ -710,7 +714,7 @@ function dReports(){
 }
 function dShift(){const s=shiftCalc(),n=Date.now();
  return `<div class="card"><b>Current shift</b>${s.op?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`:'<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>'}
- ${s.last?`<div class="note" style="margin-top:6px">Last close: ${new Date(s.last.t).toLocaleDateString()} ${tm(s.last.t)} by ${esc(s.last.by||"")} — ${esc(s.last.note||"")}</div>`:""}</div>
+ ${s.last?`<div class="note" style="margin-top:6px">Last close: ${new Date(s.last.t).toLocaleDateString()} ${tm(s.last.t)} by ${esc(s.last.by||"")} — ${formattedEsc(s.last.note||"")}</div>`:""}</div>
  <div class="grid"><div class="card stat"><b>${money(s.cash)}</b><span>Cash sales</span></div><div class="card stat"><b>${money(s.gc)}</b><span>GCash sales</span></div>
  <div class="card stat"><b class="out">${money(s.cashOut)}</b><span>Cash expenses</span></div><div class="card stat"><b class="${s.unpaid?"unpaid":""}">${money(s.unpaid)}</b><span>Unpaid balances</span></div></div>
  <div class="card"><b>Cash settlement</b>
@@ -730,7 +734,7 @@ function dShInv(){const s=shiftCalc(),n=Date.now();let rows="";
 function shiftPost(){const c=$("#sfloatc");if(c)c.style.display=shiftCalc().op?"none":"block"}
 function exportCsv(){
  const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>a.t-b.t),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
- download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Mode,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,whole(t.amt),t.method,t.note,t.by].map(qq).join(","))].join("\n"))}
+ download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Mode,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,whole(t.amt),t.method,formattedNote(t.note),t.by].map(qq).join(","))].join("\n"))}
 function exportVisits(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>a.inAt-b.inAt),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
  download("visits-"+day(Date.now())+".csv",["Date,Check-in,Check-out,Name,Phone,Service,Court,Mode,Start,End,Fee,Paid,Payment mode,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,p.court||"",p.mode||"",p.until?tm(p.startAt||p.inAt):"",p.until?tm(p.until):"",whole(+p.fee||0),p.paid?"Yes":"No",p.method,p.by].map(qq).join(","))].join("\n"))}
