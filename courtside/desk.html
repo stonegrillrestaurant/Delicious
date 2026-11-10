@@ -115,7 +115,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.6"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.7"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -502,9 +502,9 @@ function loginScreen(){return new Promise(res=>{
   await loginDone(r.name);res()};
  $("#lg").onclick=go;$("#l2").addEventListener("keydown",e=>{if(e.key==="Enter")go()})})}
 function startShiftModal(cb){
- overlay('<h2 style="margin:0 0 8px">Start your shift</h2><div class="note">Hello '+esc(STAFF)+'. Count the cash drawer and enter the opening float.</div><label>Opening cash float (₱)</label><input id="sf1" type="number" step="0.01" min="0" inputmode="decimal"><p><button class="btn" id="sfg" style="width:100%">Start shift</button></p><p><button class="btn g" id="sfo" style="width:100%">Not me – log out</button></p>');
- $("#sfg").onclick=()=>{const v=$("#sf1").value;if(v===""||isNaN(+v))return alert("Enter the opening float");
-  q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:+v,method:"Cash",note:"Opening float"}});overlayOff();cb()};
+ overlay('<h2 style="margin:0 0 8px">Start your shift</h2><div class="note">Hello '+esc(STAFF)+'. Opening cash is optional. Leave the amount blank to start with ₱0.</div><label>Opening cash float (₱)</label><input id="sf1" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Optional · defaults to ₱0"><p><button class="btn" id="sfg" style="width:100%">Start shift</button></p><p><button class="btn g" id="sfo" style="width:100%">Not me – log out</button></p>');
+ $("#sfg").onclick=()=>{const v=$("#sf1").value.trim();if(v!==""&&(!Number.isFinite(+v)||+v<0))return alert("Enter a valid opening cash amount.");
+  q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:v===""?0:+v,method:"Cash",note:v===""?"Shift started · No opening cash":"Opening float"}});overlayOff();cb()};
  $("#sfo").onclick=()=>{STAFF="";save("staff","");location.reload()}}
 function endShiftModal(cb,msg,cancel){
  const s=shiftCalc(),un=players.filter(p=>!p.paid&&(+p.fee||0)>0);
@@ -589,8 +589,8 @@ function addTxn(f){
  delete draft.lg;f.reset();fillCat(f)}
 function delTx(id){if(confirm("Delete this transaction?"))q({op:"del",c:"txns",id})}
 function startShift(f){
- const v=+f.fl.value;if(isNaN(v)||f.fl.value==="")return alert("Enter the opening float");
- q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:v,method:"Cash",note:"Opening float"}});f.reset()}
+ const raw=f.fl.value.trim(),v=raw===""?0:+raw;if(!Number.isFinite(v)||v<0)return alert("Enter a valid opening cash amount.");
+ q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:v,method:"Cash",note:raw===""?"Shift started · No opening cash":"Opening float"}});f.reset()}
 function endShift(f){
  const s=shiftCalc(),cnt=+f.cnt.value;
  if(f.cnt.value===""||isNaN(cnt))return alert("Enter the counted cash");
@@ -776,7 +776,7 @@ const VIEWS={
  reports:{shell:()=>`<div id="rep"></div>`,dyn:{rep:dReports}},
  staff:{shell:()=>`<div class="card"><b>Add employee</b><form onsubmit="event.preventDefault();addStaff(this)"><label>Name</label><input name="nm" autocomplete="off"><label>Password (min 4 characters)</label><input name="pw" autocomplete="off"><label>Role</label><select name="role"><option value="staff">Staff</option><option value="admin">Admin</option></select><p><button class="btn" style="width:100%">Add employee</button></p></form></div><div id="stlist"></div>`,dyn:{stlist:dStaff}},
  shift:{shell:()=>`<div id="shtop"></div>
-  <div class="card" id="sfloatc"><b>Start shift</b><form onsubmit="event.preventDefault();startShift(this)"><label>Opening cash float (₱)</label><input name="fl" type="number" step="0.01" min="0" required><p><button class="btn" style="width:100%">Start shift</button></p></form></div>
+  <div class="card" id="sfloatc"><b>Start shift</b><form onsubmit="event.preventDefault();startShift(this)"><label>Opening cash (₱ · optional)</label><input name="fl" type="number" step="0.01" min="0" placeholder="Leave blank to start with ₱0"><p><button class="btn" style="width:100%">Start shift</button></p></form></div>
   <div class="card"><b>End shift &amp; remit</b><form data-d="es" onsubmit="event.preventDefault();endShift(this)"><label>Counted cash in drawer (₱)</label><input name="cnt" type="number" step="0.01" min="0" required><label>Note (optional)</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">End shift &amp; remit</button></p></form></div>
   <div id="shinv"></div>`,dyn:{shtop:dShift,shinv:dShInv},post:shiftPost}};
 function drawHead(){$("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+(STAFF?" · "+STAFF:"")+" · v"+APP_VER}
