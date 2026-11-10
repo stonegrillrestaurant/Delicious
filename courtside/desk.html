@@ -118,7 +118,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.9"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.0"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -547,7 +547,15 @@ function quickOpenCourts(at=Date.now()){
   .sort((a,b)=>a.court-b.court||a.start-b.start);
 }
 function quickOpenTime(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+function placeQuickOpen(){
+ const card=$("#quick-open-card"),mobile=$("#quick-mobile"),desktop=$("#quick-desktop");
+ if(!card||!mobile||!desktop)return;
+ const target=window.matchMedia("(max-width:899px)").matches?mobile:desktop;
+ if(card.parentNode!==target)target.appendChild(card);
+}
+window.addEventListener("resize",placeQuickOpen);
 function quickOpenPost(){
+ placeQuickOpen();
  const f=$("#opquick");if(!f)return;
  const n=Date.now(),available=quickOpenCourts(n),note=$("#opquickcourt");
  if(note)note.textContent=available.length?"Automatic assignment: "+available.map(s=>"Court "+s.court+" ("+sessPlayers(s.id).length+"/"+s.max+")").join(" · "):"No active Open Play court with available space";
@@ -750,7 +758,7 @@ const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle ren
  <div class="grid"><div><label>Qty</label><input name="qty" type="number" min="1" value="1" oninput="calcQ(this.form)"></div><div><label>Amount (₱)</label><input name="fee" type="number" step="1" min="0" value="50"></div></div>
  <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
  <p><button class="btn" style="width:100%">Record sale</button></p></form></div>`;
-const formOpenQuick=`<div class="card"><b>Quick Open Play entry</b><div class="note" id="opquickcourt">Finding available courts…</div>
+const formOpenQuick=`<div class="card" id="quick-open-card"><b>Quick Open Play entry</b><div class="note" id="opquickcourt">Finding available courts…</div>
  <form id="opquick" data-d="opquick" onsubmit="event.preventDefault();quickOpenSave(this)">
  <label>Player name</label><input name="pname" autocomplete="off" placeholder="Player name" required>
  <div class="grid"><div><label>Time in</label><input name="intime" type="time" value="${quickOpenTime()}" oninput="quickOpenRate(true)" required></div>
@@ -762,13 +770,13 @@ const formOpenQuick=`<div class="card"><b>Quick Open Play entry</b><div class="n
  <p><button class="btn" style="width:100%">Add player to Open Play</button></p></form>
  <div class="note" id="opquickresult"></div></div>`;
 const VIEWS={
- desk:{shell:()=>`<div class="dgrid"><div class="dl"><div id="alerts"></div><div id="stats"></div><div id="unpaid"></div>
+ desk:{shell:()=>`<div class="dgrid"><div class="dl"><div id="alerts"></div><div id="stats"></div><div id="quick-mobile"></div><div id="unpaid"></div>
   <div class="card"><b>Courts</b> <span class="note">tap a court to set it up or manage it</span><div id="courts" class="courts"></div>
   <div class="legend"><span><i style="background:var(--org)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play / Special event</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
   <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
   <div class="scroll" id="sched" style="margin-top:6px"></div><div class="note">8:00 AM – 12:00 midnight · tap a free slot to reserve · tap a coloured slot to manage</div>
   <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setupModal({})">+ New court booking</button><button class="btn g" onclick="lateOpenModal()">+ Late Open Play Entry</button></div></div>
-  </div><div class="dr">${formOpenQuick}${formQS}
+  </div><div class="dr"><div id="quick-desktop">${formOpenQuick}</div>${formQS}
   <div class="card"><b>Active players</b> <span class="note">playing now, by court</span><div id="active"></div></div>
   <div class="card"><b>Reservations</b> <span class="note">waiting to arrive</span><div id="resv"></div></div></div></div>`,
   dyn:{alerts:dAlerts,stats:dStats,unpaid:dUnpaid,courts:dCourts,sched:dSched,active:dActive,resv:dResv},post:quickOpenPost},
