@@ -115,7 +115,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.7"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.8"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -125,7 +125,8 @@ const ML=m=>m==="rent"?"Rented":m==="event"?"Special event":"Open play";
 const SVC=(m,c)=>m==="rent"?"Court "+c+" rental":m==="event"?"Special event":"Open play";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const money=n=>(n<0?"−":"")+"₱"+Math.abs(n).toFixed(2);
+const whole=n=>Math.round(Number(n)||0).toLocaleString("en-US",{maximumFractionDigits:0});
+const money=n=>(Number(n)<0?"−":"")+"₱"+whole(Math.abs(Number(n)||0));
 const day=t=>new Date(t).toLocaleDateString("en-CA");
 const tm=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 const dstart=s=>new Date(s+"T00:00:00").getTime();
@@ -502,7 +503,7 @@ function loginScreen(){return new Promise(res=>{
   await loginDone(r.name);res()};
  $("#lg").onclick=go;$("#l2").addEventListener("keydown",e=>{if(e.key==="Enter")go()})})}
 function startShiftModal(cb){
- overlay('<h2 style="margin:0 0 8px">Start your shift</h2><div class="note">Hello '+esc(STAFF)+'. Opening cash is optional. Leave the amount blank to start with ₱0.</div><label>Opening cash float (₱)</label><input id="sf1" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Optional · defaults to ₱0"><p><button class="btn" id="sfg" style="width:100%">Start shift</button></p><p><button class="btn g" id="sfo" style="width:100%">Not me – log out</button></p>');
+ overlay('<h2 style="margin:0 0 8px">Start your shift</h2><div class="note">Hello '+esc(STAFF)+'. Opening cash is optional. Leave the amount blank to start with ₱0.</div><label>Opening cash float (₱)</label><input id="sf1" type="number" step="1" min="0" inputmode="numeric" placeholder="Optional · defaults to ₱0"><p><button class="btn" id="sfg" style="width:100%">Start shift</button></p><p><button class="btn g" id="sfo" style="width:100%">Not me – log out</button></p>');
  $("#sfg").onclick=()=>{const v=$("#sf1").value.trim();if(v!==""&&(!Number.isFinite(+v)||+v<0))return alert("Enter a valid opening cash amount.");
   q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:v===""?0:+v,method:"Cash",note:v===""?"Shift started · No opening cash":"Opening float"}});overlayOff();cb()};
  $("#sfo").onclick=()=>{STAFF="";save("staff","");location.reload()}}
@@ -511,7 +512,7 @@ function endShiftModal(cb,msg,cancel){
  overlay('<h2 style="margin:0 0 8px">End shift &amp; remit</h2><div class="note">'+esc(msg||"")+'</div>'+
   '<div class="row" style="margin-top:8px"><span>Expected cash in drawer</span><b>'+money(s.expected)+'</b></div><div class="row"><span>GCash received</span><b>'+money(s.gc)+'</b></div>'+
   (un.length?'<div class="card" style="border:2px solid var(--red)"><b class="unpaid">⚠️ '+un.length+' unpaid · '+money(un.reduce((a,p)=>a+(+p.fee||0),0))+'</b><div class="note">'+un.slice(0,6).map(p=>esc(p.name)+" "+money(p.fee)).join(" · ")+(un.length>6?" …":"")+'<br>Ask them to pay before you remit.</div></div>':"")+
-  '<label>Counted cash in drawer (₱)</label><input id="e1" type="number" step="0.01" min="0" inputmode="decimal"><label>Note (optional)</label><input id="e2" autocomplete="off"><p><button class="btn" id="eg" style="width:100%">End shift &amp; remit</button></p>'+(cancel?'<p><button class="btn g" id="ec" style="width:100%">Cancel</button></p>':""));
+  '<label>Counted cash in drawer (₱)</label><input id="e1" type="number" step="1" min="0" inputmode="numeric"><label>Note (optional)</label><input id="e2" autocomplete="off"><p><button class="btn" id="eg" style="width:100%">End shift &amp; remit</button></p>'+(cancel?'<p><button class="btn g" id="ec" style="width:100%">Cancel</button></p>':""));
  $("#eg").onclick=()=>{const v=$("#e1").value;if(v===""||isNaN(+v))return alert("Enter the counted cash");const c=+v;
   if(!confirm("Counted "+money(c)+" vs expected "+money(s.expected)+". End the shift?"))return;closeShift(c,$("#e2").value.trim());overlayOff();cb()};
  if(cancel)$("#ec").onclick=overlayOff}
@@ -600,7 +601,7 @@ function endShift(f){
  closeShift(cnt,f.note.value.trim());
  delete draft.es;f.reset()}
 function closeShift(cnt,extra){const s=shiftCalc(),v=cnt-s.expected;
- q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"close",cat:"Shift close",amt:cnt,method:"Cash",note:"Expected "+s.expected.toFixed(2)+" · Counted "+cnt.toFixed(2)+" · Variance "+v.toFixed(2)+" · Remit "+(cnt-s.fl).toFixed(2)+(extra?" · "+extra:"")}})}
+ q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"close",cat:"Shift close",amt:cnt,method:"Cash",note:"Expected "+whole(s.expected)+" · Counted "+whole(cnt)+" · Variance "+whole(v)+" · Remit "+whole(cnt-s.fl)+(extra?" · "+extra:"")}})}
 function shiftCalc(){
  const cl=allTx.filter(t=>t.type==="close").sort((a,b)=>b.t-a.t),lastClose=cl.length?cl[0].t:0;
  const st=allTx.filter(t=>t.t>lastClose),op=st.filter(t=>t.type==="open").sort((a,b)=>b.t-a.t)[0];
@@ -729,24 +730,24 @@ function dShInv(){const s=shiftCalc(),n=Date.now();let rows="";
 function shiftPost(){const c=$("#sfloatc");if(c)c.style.display=shiftCalc().op?"none":"block"}
 function exportCsv(){
  const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>a.t-b.t),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
- download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Mode,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,t.amt.toFixed(2),t.method,t.note,t.by].map(qq).join(","))].join("\n"))}
+ download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Mode,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,whole(t.amt),t.method,t.note,t.by].map(qq).join(","))].join("\n"))}
 function exportVisits(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>a.inAt-b.inAt),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
- download("visits-"+day(Date.now())+".csv",["Date,Check-in,Check-out,Name,Phone,Service,Court,Mode,Start,End,Fee,Paid,Payment mode,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,p.court||"",p.mode||"",p.until?tm(p.startAt||p.inAt):"",p.until?tm(p.until):"",(+p.fee||0).toFixed(2),p.paid?"Yes":"No",p.method,p.by].map(qq).join(","))].join("\n"))}
+ download("visits-"+day(Date.now())+".csv",["Date,Check-in,Check-out,Name,Phone,Service,Court,Mode,Start,End,Fee,Paid,Payment mode,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,p.court||"",p.mode||"",p.until?tm(p.startAt||p.inAt):"",p.until?tm(p.until):"",whole(+p.fee||0),p.paid?"Yes":"No",p.method,p.by].map(qq).join(","))].join("\n"))}
 
 // ================= views (shell is built once per tab; only #regions are redrawn)
 const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle rental, lesson, VIP room, shop, food)</span>
  <form data-d="qs" onsubmit="event.preventDefault();quickSale(this)">
  <label>Customer name (optional)</label><input name="cust" autocomplete="off">
  <label>Item</label><select name="service" onchange="calcQ(this.form)">${Object.keys(QUICK).map(s=>`<option>${s}</option>`).join("")}</select>
- <div class="grid"><div><label>Qty</label><input name="qty" type="number" min="1" value="1" oninput="calcQ(this.form)"></div><div><label>Amount (₱)</label><input name="fee" type="number" step="0.01" min="0" value="50"></div></div>
+ <div class="grid"><div><label>Qty</label><input name="qty" type="number" min="1" value="1" oninput="calcQ(this.form)"></div><div><label>Amount (₱)</label><input name="fee" type="number" step="1" min="0" value="50"></div></div>
  <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
  <p><button class="btn" style="width:100%">Record sale</button></p></form></div>`;
 const formOpenQuick=`<div class="card"><b>Quick Open Play entry</b><div class="note" id="opquickcourt">Finding available courts…</div>
  <form id="opquick" data-d="opquick" onsubmit="event.preventDefault();quickOpenSave(this)">
  <label>Player name</label><input name="pname" autocomplete="off" placeholder="Player name" required>
  <div class="grid"><div><label>Time in</label><input name="intime" type="time" value="${quickOpenTime()}" oninput="quickOpenRate(true)" required></div>
- <div><label>Amount (₱)</label><input name="amount" type="number" min="0" step="0.01" oninput="this.form.dataset.autorate='0'" required></div></div>
+ <div><label>Amount (₱)</label><input name="amount" type="number" min="0" step="1" oninput="this.form.dataset.autorate='0'" required></div></div>
  <div class="note" id="opquickhint"></div>
  <div class="grid"><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Unpaid</option></select></div>
  <div><label>Method</label><select name="method"><option>Cash</option><option>GCash</option></select></div></div>
@@ -770,14 +771,14 @@ const VIEWS={
   <form data-d="lg" onsubmit="event.preventDefault();addTxn(this)">
   <label>Type</label><select name="type" onchange="fillCat(this.form)"><option value="income">Income</option><option value="expense">Expense</option></select>
   <label>Category</label><select name="cat">${INC_CATS.map(s=>`<option>${s}</option>`).join("")}</select>
-  <div class="grid"><div><label>Amount (₱)</label><input name="amt" type="number" step="0.01" min="0" required></div><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
+  <div class="grid"><div><label>Amount (₱)</label><input name="amt" type="number" step="1" min="0" required></div><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
   <label>Note</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">Save</button></p></form></div></div><div id="lglist"></div></div>`,
   dyn:{lgtop:dLgTop,lglist:dLgList}},
  reports:{shell:()=>`<div id="rep"></div>`,dyn:{rep:dReports}},
  staff:{shell:()=>`<div class="card"><b>Add employee</b><form onsubmit="event.preventDefault();addStaff(this)"><label>Name</label><input name="nm" autocomplete="off"><label>Password (min 4 characters)</label><input name="pw" autocomplete="off"><label>Role</label><select name="role"><option value="staff">Staff</option><option value="admin">Admin</option></select><p><button class="btn" style="width:100%">Add employee</button></p></form></div><div id="stlist"></div>`,dyn:{stlist:dStaff}},
  shift:{shell:()=>`<div id="shtop"></div>
-  <div class="card" id="sfloatc"><b>Start shift</b><form onsubmit="event.preventDefault();startShift(this)"><label>Opening cash (₱ · optional)</label><input name="fl" type="number" step="0.01" min="0" placeholder="Leave blank to start with ₱0"><p><button class="btn" style="width:100%">Start shift</button></p></form></div>
-  <div class="card"><b>End shift &amp; remit</b><form data-d="es" onsubmit="event.preventDefault();endShift(this)"><label>Counted cash in drawer (₱)</label><input name="cnt" type="number" step="0.01" min="0" required><label>Note (optional)</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">End shift &amp; remit</button></p></form></div>
+  <div class="card" id="sfloatc"><b>Start shift</b><form onsubmit="event.preventDefault();startShift(this)"><label>Opening cash (₱ · optional)</label><input name="fl" type="number" step="1" min="0" placeholder="Leave blank to start with ₱0"><p><button class="btn" style="width:100%">Start shift</button></p></form></div>
+  <div class="card"><b>End shift &amp; remit</b><form data-d="es" onsubmit="event.preventDefault();endShift(this)"><label>Counted cash in drawer (₱)</label><input name="cnt" type="number" step="1" min="0" required><label>Note (optional)</label><input name="note" autocomplete="off"><p><button class="btn" style="width:100%">End shift &amp; remit</button></p></form></div>
   <div id="shinv"></div>`,dyn:{shtop:dShift,shinv:dShInv},post:shiftPost}};
 function drawHead(){$("#date").textContent=new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})+(STAFF?" · "+STAFF:"")+" · v"+APP_VER}
 function drawNav(){$("#nav").innerHTML=[["desk","🏠","Desk"],["players","👥","Players"],["ledger","💵","Ledger"],["reports","📊","Reports"],["shift","🧾","Shift"]].concat(roleNow()==="admin"?[["staff","👤","Staff"]]:[]).map(([k,i,n])=>`<button class="${tab===k?"on":""}" onclick="go('${k}')"><span class="ni">${i}</span><span>${n}</span></button>`).join("")}
