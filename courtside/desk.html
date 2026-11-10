@@ -102,6 +102,9 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 .op-table tfoot td{background:var(--ac2);font-weight:700;border-top:2px solid var(--ac)}
 @media(min-width:600px){.op-summary .op-totals{grid-template-columns:repeat(5,minmax(0,1fr))}.op-total b{font-size:20px}.op-table{font-size:13px}.op-table th{font-size:12px}}
 @media(min-width:900px){.report-breakdowns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}}
+.report-filters{display:grid;gap:6px;background:var(--card);border:1px solid var(--bd);border-radius:9px;padding:8px;margin-bottom:6px}
+.report-filters label input{margin-top:4px}
+@media(min-width:640px){.report-filters{grid-template-columns:auto minmax(160px,240px) 1fr;align-items:center}}
 </style>
 </head>
 <body>
@@ -112,7 +115,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.5"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="1.6"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -135,7 +138,7 @@ const SUPA_URL="https://ssfdtxjigyiddbjkvsls.supabase.co",SUPA_ANON="sb_publisha
 const API=SUPA_URL+"/functions/v1/desk"; // same-server by default; open the app once with ?api=https://your-server/api to point elsewhere
 let STAFF=ls("staff")||"",KEY=ls("deskkey")||"",DEV=ls("deviceid")||"",DEVNAME=ls("devname")||"";
 if(!DEV){DEV=uid();save("deviceid",DEV)}
-let tab="desk",range="today",sdate=day(Date.now()),back=null,curSid=null;
+let tab="desk",range="today",sdate=day(Date.now()),reportRange="day",reportDate=day(Date.now()),back=null,curSid=null;
 let players=[],allTx=[],txns=[],sessions=[],staffList=[];
 const COLS=["players","txns","sessions","staff"];
 let server={players:[],txns:[],sessions:[],staff:[]},outbox=[],epoch=0,flushing=false,online=true,loaded=false,syncMsg="",retryT=null,pulled=false;
@@ -243,6 +246,18 @@ function courtState(c,n){
  const next=ss.filter(s=>s.start>n).sort((a,b)=>a.start-b.start)[0];
  return{cur,over,next}}
 function rangeTabs(){return `<div class="tabs">${["today","week","month","all"].map(r=>`<button class="btn s ${r===range?"":"g"}" onclick="range='${r}';refresh()">${r==="week"?"7 days":r==="month"?"This month":r[0].toUpperCase()+r.slice(1)}</button>`).join("")}</div>`}
+// Reports use the explicitly chosen calendar day, Monday-to-Sunday week, or month.
+function reportBounds(){
+ const d=dstart(reportDate||day(Date.now())),v=new Date(d);
+ if(reportRange==="month")return [new Date(v.getFullYear(),v.getMonth(),1).getTime(),new Date(v.getFullYear(),v.getMonth()+1,1).getTime()];
+ if(reportRange==="week"){const monday=d-((v.getDay()+6)%7)*86400000;return [monday,monday+7*86400000]}
+ return [d,d+86400000];
+}
+function reportMatch(t){const [start,end]=reportBounds();return +t>=start&&+t<end}
+function reportControls(){
+ const [a,b]=reportBounds(),end=new Date(b-1);
+ const label=reportRange==="day"?new Date(a).toLocaleDateString():reportRange==="week"?new Date(a).toLocaleDateString()+" – "+end.toLocaleDateString():new Date(a).toLocaleDateString([],{month:"long",year:"numeric"});
+ return `<div class="report-filters"><div class="tabs" style="margin:0">${[["day","Day"],["week","Week"],["month","Month"]].map(([k,v])=>`<button class="btn s ${reportRange===k?"":"g"}" onclick="reportRange='${k}';refresh()">${v}</button>`).join("")}</div><label style="margin:0">Select date / week / month<input type="date" value="${reportDate}" onchange="if(this.value){reportDate=this.value;refresh()}" aria-label="Choose report period"></label><div class="note">${esc(label)}</div></div>`;}
 function download(filename,data){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}
 
 // ================= drafts (form values survive refreshes and tab switches)
@@ -518,6 +533,49 @@ function toggleStaff(id){const x=staffList.find(y=>y.id===id);if(!x)return;if(x.
  const on=x.active===false;if(!on&&x.role==="admin"&&staffList.filter(y=>y.role==="admin"&&y.active!==false).length<2)return alert("Keep at least one active admin");
  q({op:"upd",c:"staff",id,patch:{active:on}})}
 
+// Automatically place desk entries on the lowest-numbered active Open Play court with capacity.
+function quickOpenCourts(at=Date.now()){
+ return sessions.filter(s=>s.mode==="open"&&!s.closed&&s.start<=at&&(openLive(s)||at<s.until)&&sessPlayers(s.id).length<s.max)
+  .sort((a,b)=>a.court-b.court||a.start-b.start);
+}
+function quickOpenTime(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+function quickOpenPost(){
+ const f=$("#opquick");if(!f)return;
+ const n=Date.now(),available=quickOpenCourts(n),note=$("#opquickcourt");
+ if(note)note.textContent=available.length?"Automatic assignment: "+available.map(s=>"Court "+s.court+" ("+sessPlayers(s.id).length+"/"+s.max+")").join(" · "):"No active Open Play court with available space";
+ quickOpenRate(false);
+}
+function quickOpenRate(force){
+ const f=$("#opquick");if(!f)return;
+ const s=quickOpenCourts()[0],hint=$("#opquickhint");if(!s){if(hint)hint.textContent="Start an Open Play session or free a space to accept entries.";return}
+ const t=f.intime.value||quickOpenTime(),parts=t.split(":").map(Number),n=new Date();n.setHours(parts[0],parts[1],0,0);
+ const fee=openRate(s,n.getTime());
+ if(hint)hint.textContent="Automatic rate on Court "+s.court+": "+openPeriod(s,n.getTime())+" "+money(fee)+" · Amount can be edited.";
+ if(force||!f.amount.value||f.dataset.autorate==="1"){f.amount.value=fee;f.dataset.autorate="1"}
+}
+function quickOpenSave(f){
+ const now=Date.now(),eligible=quickOpenCourts(now),s=eligible[0];
+ if(!s)return alert("No active Open Play court has space. Start Open Play or increase capacity first.");
+ const name=f.pname.value.trim(),value=f.amount.value.trim(),fee=Number(value);
+ if(!name)return alert("Enter the player's name.");
+ if(value===""||!Number.isFinite(fee)||fee<0)return alert("Enter a valid amount (₱0 or more).");
+ if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(f.intime.value))return alert("Enter a valid arrival time.");
+ const [hh,mm]=f.intime.value.split(":").map(Number),arrival=new Date(now);
+ arrival.setHours(hh,mm,0,0);
+ if(arrival.getTime()>now+60000)return alert("Arrival time cannot be in the future.");
+ if(arrival.getTime()<s.start-60000)return alert("Arrival time is earlier than the automatically selected Open Play session.");
+ if(sessPlayers(s.id).some(p=>p.name.toLowerCase()===name.toLowerCase())&&!confirm(name+" is already active on Court "+s.court+". Record another entry?"))return;
+ const paid=fee===0||f.paid.value==="yes",method=f.method.value,ref=f.ref.value.trim(),refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
+ const log=[{t:now,e:"Desk Open Play entry · Court "+s.court+" · "+openPeriod(s,arrival.getTime())+" rate · arrival "+tm(arrival.getTime())}];
+ if(paid&&fee>0)log.push({t:now,e:"Paid "+money(fee)+" ("+method+")"+refTxt});
+ q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid:s.id,court:s.court,mode:"open",role:"player",service:"Open play",hours:0,fee,paid,method:paid&&fee>0?method:"",status:"active",ci:true,startAt:s.start,until:s.until,inAt:arrival.getTime(),outAt:null,log}});
+ if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:now,type:"income",cat:"Open play",amt:fee,method,note:name+refTxt+" · Court "+s.court+" · Desk entry"}});
+ delete draft.opquick;
+ f.reset();f.intime.value=quickOpenTime();f.dataset.autorate="1";quickOpenRate(true);
+ const status=$("#opquickresult");if(status)status.textContent=name+" added to Court "+s.court+(paid?" · Paid "+money(fee):" · Unpaid "+money(fee));
+ quickOpenPost();
+}
+
 // ================= desk actions
 function calcQ(f){f.fee.value=(QUICK[f.service.value]||0)*(+f.qty.value||1);noteDraft({target:f.fee})}
 function quickSale(f){
@@ -630,24 +688,24 @@ function openRef(p){
  return t?(String(t.note).match(/\bRef\s*#?\s*([^\s·,;]+)/i)||[])[1]||"":"";
 }
 function dReports(){
- const l=txns.filter(t=>inRange(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]||"-"]=(m[t[k]||"-"]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+ const l=txns.filter(t=>reportMatch(t.t)),by=(type,k)=>{const m={};l.filter(t=>t.type===type).forEach(t=>m[t[k]||"-"]=(m[t[k]||"-"]||0)+t.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
  const tbl=(title,rows)=>`<div class="card"><b>${title}</b>${rows.map(([k,v])=>`<div class="row" style="padding:5px 0"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join("")||'<p class="note">No data.</p>'}</div>`;
- const pl=players.filter(p=>inRange(p.inAt)&&p.role!=="extension"),uniq=new Set(pl.map(p=>(p.name||"").toLowerCase())).size;
+ const pl=players.filter(p=>reportMatch(p.inAt)&&p.role!=="extension"),uniq=new Set(pl.map(p=>(p.name||"").toLowerCase())).size;
  const op=pl.filter(p=>p.mode==="open"||p.service==="Open play").sort((a,b)=>a.inAt-b.inAt);
  const cash=op.filter(p=>p.paid&&p.method==="Cash").reduce((a,p)=>a+(+p.fee||0),0);
  const gcash=op.filter(p=>p.paid&&p.method==="GCash").reduce((a,p)=>a+(+p.fee||0),0);
  const paid=op.filter(p=>p.paid).reduce((a,p)=>a+(+p.fee||0),0);
  const owing=op.filter(p=>!p.paid).reduce((a,p)=>a+(+p.fee||0),0);
  const summary=[["Players",String(op.length)],["Cash",money(cash)],["GCash",money(gcash)],["Total paid",money(paid)],["Unpaid",money(owing)]];
- const sheet=`<div class="card"><div class="row"><b>Open Play payment report</b><span class="note">${range==="today"?"Today":range==="week"?"Last 7 days":range==="month"?"This month":"All dates"}</span></div>
+ const sheet=`<div class="card"><div class="row"><b>Open Play payment report</b><span class="note">${reportRange==="day"?"Selected day":reportRange==="week"?"Selected week":"Selected month"}</span></div>
  <div class="op-sheet"><table class="op-table"><thead><tr><th>Time in</th><th>Open Play</th><th>Amount paid</th><th>GCash ref #</th></tr></thead>
- <tbody>${op.map(p=>`<tr><td>${tm(p.inAt)}${range!=="today"?`<span class="subcell">${esc(day(p.inAt))}</span>`:""}</td><td><b>${esc(p.name)}</b>${p.court?`<span class="subcell">Court ${p.court}</span>`:""}</td><td class="amount">${p.paid?money(+p.fee||0):"—"}<span class="subcell">${p.paid?esc(p.method||"Paid"):"Unpaid "+money(+p.fee||0)}</span></td><td class="ref">${p.paid&&p.method==="GCash"?esc(openRef(p))||"—":"—"}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;padding:20px">No Open Play players for this period.</td></tr>'}</tbody>
+ <tbody>${op.map(p=>`<tr><td>${tm(p.inAt)}${reportRange!=="day"?`<span class="subcell">${esc(day(p.inAt))}</span>`:""}</td><td><b>${esc(p.name)}</b>${p.court?`<span class="subcell">Court ${p.court}</span>`:""}</td><td class="amount">${p.paid?money(+p.fee||0):"—"}<span class="subcell">${p.paid?esc(p.method||"Paid"):"Unpaid "+money(+p.fee||0)}</span></td><td class="ref">${p.paid&&p.method==="GCash"?esc(openRef(p))||"—":"—"}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;padding:20px">No Open Play players for this period.</td></tr>'}</tbody>
  <tfoot><tr><td colspan="2">TOTAL · ${op.length} players</td><td class="amount">${money(paid)}</td><td></td></tr></tfoot></table></div></div>`;
- return `<div class="op-summary">${rangeTabs()}<div class="op-totals">${summary.map(([k,v])=>`<div class="op-total"><span>${k}</span><b>${v}</b></div>`).join("")}</div></div>`+
+ return `<div class="op-summary">${reportControls()}<div class="op-totals">${summary.map(([k,v])=>`<div class="op-total"><span>${k}</span><b>${v}</b></div>`).join("")}</div></div>`+
  sheet+`<div class="report-breakdowns">`+
  `<div class="card"><div class="row"><b>All services overview</b><span class="note">${pl.length} visits · ${uniq} unique players</span></div></div>`+
  tbl("Income by service",by("income","cat"))+tbl("Income by payment mode",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
- `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
+ `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid&&reportMatch(p.inAt)).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
 }
 function dShift(){const s=shiftCalc(),n=Date.now();
  return `<div class="card"><b>Current shift</b>${s.op?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`:'<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>'}
@@ -684,6 +742,17 @@ const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle ren
  <div class="grid"><div><label>Qty</label><input name="qty" type="number" min="1" value="1" oninput="calcQ(this.form)"></div><div><label>Amount (₱)</label><input name="fee" type="number" step="0.01" min="0" value="50"></div></div>
  <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
  <p><button class="btn" style="width:100%">Record sale</button></p></form></div>`;
+const formOpenQuick=`<div class="card"><b>Quick Open Play entry</b><div class="note" id="opquickcourt">Finding available courts…</div>
+ <form id="opquick" data-d="opquick" onsubmit="event.preventDefault();quickOpenSave(this)">
+ <label>Player name</label><input name="pname" autocomplete="off" placeholder="Player name" required>
+ <div class="grid"><div><label>Time in</label><input name="intime" type="time" value="${quickOpenTime()}" oninput="quickOpenRate(true)" required></div>
+ <div><label>Amount (₱)</label><input name="amount" type="number" min="0" step="0.01" oninput="this.form.dataset.autorate='0'" required></div></div>
+ <div class="note" id="opquickhint"></div>
+ <div class="grid"><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Unpaid</option></select></div>
+ <div><label>Method</label><select name="method"><option>Cash</option><option>GCash</option></select></div></div>
+ <label>GCash reference (if applicable)</label><input name="ref" autocomplete="off">
+ <p><button class="btn" style="width:100%">Add player to Open Play</button></p></form>
+ <div class="note" id="opquickresult"></div></div>`;
 const VIEWS={
  desk:{shell:()=>`<div class="dgrid"><div class="dl"><div id="alerts"></div><div id="stats"></div><div id="unpaid"></div>
   <div class="card"><b>Courts</b> <span class="note">tap a court to set it up or manage it</span><div id="courts" class="courts"></div>
@@ -691,10 +760,10 @@ const VIEWS={
   <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
   <div class="scroll" id="sched" style="margin-top:6px"></div><div class="note">8:00 AM – 12:00 midnight · tap a free slot to reserve · tap a coloured slot to manage</div>
   <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setupModal({})">+ New court booking</button><button class="btn g" onclick="lateOpenModal()">+ Late Open Play Entry</button></div></div>
-  </div><div class="dr">${formQS}
+  </div><div class="dr">${formOpenQuick}${formQS}
   <div class="card"><b>Active players</b> <span class="note">playing now, by court</span><div id="active"></div></div>
   <div class="card"><b>Reservations</b> <span class="note">waiting to arrive</span><div id="resv"></div></div></div></div>`,
-  dyn:{alerts:dAlerts,stats:dStats,unpaid:dUnpaid,courts:dCourts,sched:dSched,active:dActive,resv:dResv}},
+  dyn:{alerts:dAlerts,stats:dStats,unpaid:dUnpaid,courts:dCourts,sched:dSched,active:dActive,resv:dResv},post:quickOpenPost},
  players:{shell:()=>`<div id="pl"></div>`,dyn:{pl:dPlayers}},
  ledger:{shell:()=>`<div class="lg2"><div><div id="lgtop"></div>
   <div class="card"><b>Record a transaction</b>
