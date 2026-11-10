@@ -320,6 +320,47 @@ function addPlayer(sid){
  q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid,court:s.court,mode:s.mode,role:"player",service:SVC(s.mode,s.court),hours:hrs,fee,paid,method:paid&&fee>0?method:"",status:"active",ci:true,startAt:s.start,until,inAt:n,outAt:null,log}});
  if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:SVC(s.mode,s.court),amt:fee,method,note:name+refTxt+" · Court "+s.court}});
  reopen()}
+// Record omitted Open Play participants without reopening completed sessions.
+function lateOpenModal(){
+ const now=Date.now(),cutoff=now-30*86400000;
+ const opts=sessions.filter(s=>s.mode==="open"&&s.start<=now&&s.start>=cutoff)
+  .sort((a,b)=>b.start-a.start);
+ if(!opts.length)return alert("No Open Play sessions in the past 30 days.");
+ modal(`<h3 style="margin:0 0 6px">Late Open Play Entry</h3>
+ <div class="note">Add player names missed during check-in. These entries belong to the selected existing session, even if it has ended.</div>
+ <form id="latepf" onsubmit="event.preventDefault();saveLateOpen()">
+ <label>Open Play session</label><select name="sid" onchange="lateOpenInfo()">${opts.map(s=>`<option value="${s.id}">${esc(new Date(s.start).toLocaleDateString())} · Court ${s.court} · ${tm(s.start)}–${tm(s.until)}${s.closed?" (ended)":""}</option>`).join("")}</select>
+ <div class="note" id="lateinfo" style="margin-top:6px"></div>
+ <label>Player names (one per line)</label><textarea name="names" rows="4" placeholder="Enter each missed player's name" required></textarea>
+ <div class="grid"><div><label>Payment</label><select name="paid"><option value="yes">Paid</option><option value="no">Pay later</option></select></div>
+ <div><label>Method</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div></div>
+ <label>GCash reference (optional)</label><input name="ref" autocomplete="off">
+ <div class="note">The session's original per-player rate is used. Payment received now is recorded now; unpaid players remain collectible.</div>
+ <div class="row" style="margin-top:12px"><button type="button" class="btn g" onclick="closeModal()">Cancel</button><button class="btn">Save late entries</button></div></form>`);
+ lateOpenInfo()}
+function lateOpenInfo(){
+ const f=$("#latepf");if(!f)return;const s=sessions.find(x=>x.id===f.sid.value);if(!s)return;
+ const existing=players.filter(p=>p.sid===s.id&&p.role!=="extension");
+ $("#lateinfo").textContent="Court "+s.court+" · "+existing.length+"/"+s.max+" registered · "+money(+s.rate||0)+" per player"+(s.closed?" · Session closed":"")}
+function saveLateOpen(){
+ const f=$("#latepf");if(!f)return;
+ const s=sessions.find(x=>x.id===f.sid.value&&x.mode==="open");
+ if(!s)return alert("Select an existing Open Play session.");
+ const names=f.names.value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+ if(!names.length)return alert("Enter at least one player name.");
+ const existing=players.filter(p=>p.sid===s.id&&p.role!=="extension");
+ if(existing.length+names.length>s.max)return alert("Session capacity is "+s.max+". Increase the maximum on the court first if needed.");
+ const duplicates=names.filter((name,i)=>names.findIndex(x=>x.toLocaleLowerCase()===name.toLocaleLowerCase())!==i||existing.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase()));
+ if(duplicates.length&&!confirm("These names already appear in this session or in your entry: "+[...new Set(duplicates)].join(", ")+". Add anyway?"))return;
+ const n=Date.now(),fee=Math.round(+s.rate||0),paid=fee===0||f.paid.value==="yes",method=f.method.value,ref=f.ref.value.trim();
+ const refTxt=paid&&method==="GCash"&&ref?" · Ref "+ref:"";
+ const historical=!!s.closed||n>=s.until;
+ names.forEach(name=>{
+  const log=[{t:n,e:"Late entry recorded for Open Play on "+new Date(s.start).toLocaleDateString()+" · Court "+s.court+" ("+tm(s.start)+"–"+tm(s.until)+")"}];
+  if(paid&&fee>0)log.push({t:n,e:"Paid "+money(fee)+" ("+method+")"+refTxt});
+  q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid:s.id,court:s.court,mode:"open",role:"player",service:"Open play",hours:s.hours,fee,paid,method:paid&&fee>0?method:"",status:historical?"done":"active",ci:true,startAt:s.start,until:s.until,inAt:s.start,outAt:historical?(s.closedAt||s.until):null,log}});
+  if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:"Open play",amt:fee,method,note:name+refTxt+" · Court "+s.court+" · late entry for "+new Date(s.start).toLocaleDateString()}})});
+ closeModal();refresh();alert(names.length+" late Open Play player"+(names.length===1?"":"s")+" recorded. "+(paid?"Payment entered in today's ledger.":"Unpaid balance added."))}
 function extendModal(sid){
  const s=sessions.find(x=>x.id===sid);if(!s)return;curSid=sid;
  const nx=sessions.filter(x=>!x.closed&&x.court===s.court&&x.id!==sid&&x.start>=s.until).sort((a,b)=>a.start-b.start)[0];
@@ -594,7 +635,7 @@ const VIEWS={
   <div class="legend"><span><i style="background:var(--org)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play / Special event</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
   <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
   <div class="scroll" id="sched" style="margin-top:6px"></div><div class="note">8:00 AM – 12:00 midnight · tap a free slot to reserve · tap a coloured slot to manage</div>
-  <div class="row" style="margin-top:8px"><button class="btn" onclick="setupModal({})">+ New court booking</button></div></div>
+  <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setupModal({})">+ New court booking</button><button class="btn g" onclick="lateOpenModal()">+ Late Open Play Entry</button></div></div>
   </div><div class="dr">${formQS}
   <div class="card"><b>Active players</b> <span class="note">playing now, by court</span><div id="active"></div></div>
   <div class="card"><b>Reservations</b> <span class="note">waiting to arrive</span><div id="resv"></div></div></div></div>`,
