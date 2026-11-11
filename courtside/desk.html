@@ -124,7 +124,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.3"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.4"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -762,7 +762,7 @@ function visitReservedWhen(p){
 function removePlayer(pid){
  if(roleNow()!=="admin")return alert("Admin access required.");
  const p=players.find(x=>x.id===pid);if(!p)return;
- if(p.paid&&Number(p.fee)>0)return alert("This player is paid. Review the ledger payment first; no money will be erased.");
+ if(p.paid&&Number(p.fee)>0&&!confirm("This player has a recorded payment of "+money(p.fee)+". Removing the player does NOT delete or refund that payment. Verify or void any mistaken ledger transaction separately. Continue?"))return;
  const reason=prompt("Removal reason (duplicate, mistaken, unwanted):");
  if(reason===null)return;
  if(!reason.trim())return alert("Reason required.");
@@ -776,7 +776,7 @@ function dPlayers(){
  return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">Booked/entered: ${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" · Out: "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${visitReservedWhen(p)}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?(p.paid?'<br><span class="note">Cancelled · Paid (review refund)</span>':'<br><span class="note">Cancelled · No payment due</span>'):p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}${roleNow()==="admin"?`<button class="btn s r" onclick="removePlayer('${p.id}')">Remove entry</button>`:""}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
 function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=sum(l,"expense");
  return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
-function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
+function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t),voids=roleNow()==="admin"?allTx.filter(t=>t.voided&&inRange(t.t)).sort((a,b)=>b.voidedAt-a.voidedAt):[];
  return `<div class="card"><div class="row"><b>Transactions (${l.length})</b><button class="btn s g" onclick="exportCsv()">Export CSV</button></div>
  ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+formattedEsc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br>${roleNow()==="admin"?`<a href="#" class="note" onclick="event.preventDefault();delTx('${t.id}')">Void</a>`:""}</div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`}
 function openRef(p){
