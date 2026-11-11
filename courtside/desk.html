@@ -118,7 +118,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.0"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.1"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -530,13 +530,24 @@ async function shiftGate(){
 function switchStaff(){
  const out=()=>{STAFF="";save("staff","");location.reload()};
  if(shiftCalc().op)endShiftModal(out,"Ending the shift for "+STAFF+" before switching employee.",true);else out()}
-function dStaff(){return '<div class="card"><b>Employees</b>'+staffList.map(x=>`<div style="border-top:1px solid var(--bd);padding:8px 0"><b>${esc(x.name)}</b> <span class="pill ${x.role==="admin"?"p-reserved":"p-done"}">${x.role}</span>${x.active===false?' <span class="pill p-overtime">inactive</span>':""}<div class="note">${x.last?"Last login "+new Date(x.last).toLocaleString()+(x.lastDev?" · "+esc(x.lastDev):""):"Never logged in"}</div><div class="row" style="justify-content:flex-start;margin-top:6px"><button class="btn s g" onclick="resetPw('${x.id}')">Reset password</button><button class="btn s r" onclick="toggleStaff('${x.id}')">${x.active===false?"Reactivate":"Deactivate"}</button></div></div>`).join("")+'</div>'}
+function dStaff(){return '<div class="card"><b>Employees</b>'+staffList.map(x=>`<div style="border-top:1px solid var(--bd);padding:8px 0"><b>${esc(x.name)}</b> <span class="pill ${x.role==="admin"?"p-reserved":"p-done"}">${x.role}</span>${x.active===false?' <span class="pill p-overtime">inactive</span>':""}<div class="note">${x.last?"Last login "+new Date(x.last).toLocaleString()+(x.lastDev?" · "+esc(x.lastDev):""):"Never logged in"}</div><div class="row" style="justify-content:flex-start;margin-top:6px"><button class="btn s g" onclick="resetPw('${x.id}')">Reset password</button><button class="btn s g" onclick="changeStaffRole('${x.id}')">Change role</button><button class="btn s r" onclick="toggleStaff('${x.id}')">${x.active===false?"Reactivate":"Deactivate"}</button></div></div>`).join("")+'</div>'}
 async function addStaff(f){const nm=f.nm.value.trim(),pw=f.pw.value;
  if(!nm||pw.length<4)return alert("Enter a name and a password (at least 4 characters)");
  if(staffList.some(x=>x.name.toLowerCase()===nm.toLowerCase()))return alert("That name already exists");
  const salt=rsalt();q({op:"add",c:"staff",o:{id:uid(),name:nm,salt,hash:await sha(salt+":"+pw),role:f.role.value,active:true,created:Date.now()}});f.reset()}
 async function resetPw(id){const x=staffList.find(y=>y.id===id);if(!x)return;const pw=prompt("New password for "+x.name+" (min 4 characters)");if(!pw||pw.length<4)return;
  const salt=rsalt();q({op:"upd",c:"staff",id,patch:{salt,hash:await sha(salt+":"+pw)}});alert("Password changed for "+x.name)}
+function changeStaffRole(id){
+ if(roleNow()!=="admin")return alert("Admin access required.");
+ const x=staffList.find(y=>y.id===id);if(!x)return;
+ const next=x.role==="admin"?"staff":"admin";
+ if(x.role==="admin"&&next==="staff"&&x.active!==false&&staffList.filter(y=>y.role==="admin"&&y.active!==false).length<2)
+  return alert("The last active Admin cannot be changed to Staff.");
+ if(x.name===STAFF)return alert("Switch to your other Admin account before changing this account's role.");
+ if(!confirm("Change "+x.name+" from "+x.role+" to "+next+"? Their password and transaction history will be preserved."))return;
+ q({op:"upd",c:"staff",id,patch:{role:next}});
+ alert(x.name+" is now assigned the "+next+" role. Confirm 'Saved to cloud' before testing on another device.");
+}
 function toggleStaff(id){const x=staffList.find(y=>y.id===id);if(!x)return;if(x.name===STAFF)return alert("You can't deactivate yourself");
  const on=x.active===false;if(!on&&x.role==="admin"&&staffList.filter(y=>y.role==="admin"&&y.active!==false).length<2)return alert("Keep at least one active admin");
  q({op:"upd",c:"staff",id,patch:{active:on}})}
