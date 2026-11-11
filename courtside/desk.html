@@ -234,10 +234,10 @@ const inRange=t=>{const d=new Date(t),n=new Date();
  if(range==="week")return n-d<7*864e5;
  if(range==="month")return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();
  return true};
-const actv=p=>!p.outAt&&p.status!=="done";
+const actv=p=>!p.cancelled&&!p.outAt&&p.status!=="done";
 const closedNow=n=>new Date(n).getHours()<OPEN_H;
 function pst(p,n){n=n||Date.now();
- if(!actv(p))return"done";if(!p.until||!p.court)return"waiting";
+ if(p.cancelled)return"cancelled";if(!actv(p))return"done";if(!p.until||!p.court)return"waiting";
  const st=p.startAt||p.inAt;
  if(p.ci===false?n<=p.until:(!p.ci&&n<st))return"reserved";
  if(p.ci&&n<st)return"arrived";
@@ -352,12 +352,12 @@ function manage(sid){
  <div class="note">${new Date(s.start).toLocaleDateString()} · ${tm(s.start)} – ${openLive(s)?"Open until ended":tm(s.until)+" ("+s.hours+" hr)"} · ${s.mode==="rent"?"Rented court":ML(s.mode)}${s.mode!=="rent"?" · "+money(s.rate||0)+"/player":""} · ${ps.length}/${s.max} players · set by ${esc(s.by||"")}</div>
  ${ov?`<div style="background:var(--red2);border:2px solid var(--red);border-radius:10px;padding:10px;margin:8px 0"><b style="color:var(--red);font-size:17px">⚠️ OVERTIME ${fm(Math.ceil((n-s.until)/60000))}</b><div class="note" style="color:var(--tx)">${nxt?"Next renter's slot started "+tm(nxt.start)+". Hand over the court.":"Time is up. Extend or end the session."}</div><div class="row" style="justify-content:flex-start;margin-top:8px;flex-wrap:wrap">${nxt?"":`<button class="btn s" onclick="extendModal('${sid}')">Extend</button>`}<button class="btn s r" onclick="endSession('${sid}')">${nxt?"Hand over to next renter":"End session"}</button></div></div>`:""}
  <div style="margin-top:8px">${ps.map(p=>{const i=pLine(p,n);return `<div style="border-top:1px solid var(--bd);padding:8px 0"><div class="row"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.role==="renter"?' <span class="note">renter</span>':""}<div class="note">${i.t} · <span class="${p.paid?"paid":"unpaid"}">${p.fee===0?"Included":p.paid?"Paid "+money(p.fee)+" ("+esc(p.method)+")":"Unpaid "+money(p.fee)}</span></div></div></div>
- <div class="row" style="justify-content:flex-start;margin-top:6px">${p.paid?"":`<button class="btn s" onclick="collectModal('${p.id}')">Collect ${money(p.fee)}</button>`}${i.s==="reserved"?`<button class="btn s" onclick="checkin('${p.id}')">✅ Check in</button>`:`<button class="btn s r" onclick="checkout('${p.id}')">Check out</button>`}</div></div>`}).join("")||'<p class="note">No players on this court yet.</p>'}</div>
+ <div class="row" style="justify-content:flex-start;margin-top:6px">${p.paid||p.cancelled?"":`<button class="btn s" onclick="collectModal('${p.id}')">Collect ${money(p.fee)}</button>`}${i.s==="reserved"?`<button class="btn s" onclick="checkin('${p.id}')">✅ Check in</button>`:`<button class="btn s r" onclick="checkout('${p.id}')">Check out</button>`}</div></div>`}).join("")||'<p class="note">No players on this court yet.</p>'}</div>
  ${ps.length<s.max&&(openLive(s)||n<s.until)?`<form id="pf" style="border-top:1px solid var(--bd);margin-top:6px" onsubmit="event.preventDefault();addPlayer('${sid}')"><label>Add a player (${ps.length}/${s.max})</label><input name="pname" placeholder="Player name" autocomplete="off">
  ${s.mode!=="rent"?`<div class="grid">${s.mode==="open"?"":`<div><label>Hours</label><input name="hrs" type="number" min="0.5" step="0.5" value="${rem}"></div>`}<div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Pay later</option></select></div></div><div class="note">${s.mode==="open"?openPeriod(s,n)+" rate: "+money(openRate(s,n))+" per player; no hourly limit":"Flat fee: "+money(s.rate||0)+" per player per session."}</div><div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref"></div></div>`:'<div class="note">Joins this rented court at no extra charge.</div>'}
  <p><button class="btn" style="width:100%">Add player</button></p></form>`:""}
  <div class="grid" style="margin-top:6px"><div><label>Max players</label><input id="mx" type="number" min="1" max="50" value="${s.max}"></div><div style="align-self:end"><button class="btn g" style="width:100%" onclick="setMax('${sid}')">Update max</button></div></div>
- <p><button class="btn r" style="width:100%" onclick="endSession('${sid}')">${n<s.start?"Cancel this booking":"End session now"}</button></p>`)}
+ ${roleNow()==="admin"?`<p><button class="btn r" style="width:100%" onclick="cancelBooking('${sid}')">Cancel booking (Admin)</button></p>`:""}${n>=s.start?`<p><button class="btn g" style="width:100%" onclick="endSession('${sid}')">End session now</button></p>`:""}`)}
 function reopen(){if(curSid)manage(curSid)}
 function addPlayer(sid){
  const f=$("#pf"),s=sessions.find(x=>x.id===sid),n=Date.now(),name=f.pname.value.trim();
@@ -441,12 +441,31 @@ function doExtend(sid){
   if(paid)q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:SVC(s.mode,s.court),amt:fee,method,note:rn+" · extension +"+h+" hr"+refTxt+" · Court "+s.court}})}
  closeModal();refresh()}
 function setMax(sid){const v=+$("#mx").value,k=sessPlayers(sid).length;if(!(v>=1))return;if(v<k)return alert(k+" players are already on this court");q({op:"upd",c:"sessions",id:sid,patch:{max:v}});reopen()}
+function cancelBooking(sid){
+ if(roleNow()!=="admin")return alert("Only an admin can cancel bookings.");
+ const s=sessions.find(x=>x.id===sid);
+ if(!s||s.closed)return alert("This booking is already closed.");
+ const ps=players.filter(p=>p.sid===sid);
+ const paid=ps.filter(p=>p.paid&&Number(p.fee)>0);
+ const amount=paid.reduce((n,p)=>n+(Number(p.fee)||0),0);
+ const note=paid.length?"\\n\\n"+paid.length+" paid record(s), totaling "+money(amount)+", will remain in the ledger. Handle any refund separately.":"";
+ if(!confirm("Cancel Court "+s.court+" booking and waive all uncollected payments?\\nThe booking stays in history. This cannot be undone from the desk."+note))return;
+ const n=Date.now();
+ q({op:"upd",c:"sessions",id:sid,patch:{closed:true,cancelled:true,cancelledAt:n,cancelledBy:STAFF,closedAt:n}});
+ ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{
+   cancelled:true,cancelledAt:n,cancelledBy:STAFF,outAt:n,status:"cancelled",
+   ...(p.paid?{}:{originalFee:Number(p.originalFee??p.fee)||0,fee:0}),
+   log:[...(p.log||[]),{t:n,e:p.paid?"Booking cancelled by admin · Already paid; refund not processed automatically":"Booking cancelled by admin · Unpaid charge waived"}]
+ }}));
+ closeModal();refresh();
+}
 function endSession(sid){
  const s=sessions.find(x=>x.id===sid),ps=sessPlayers(sid),un=ps.filter(p=>!p.paid).length,n=Date.now();
  if(!s||s.closed)return;
- if(!confirm((n<s.start?"Cancel this booking?":"End this session now and check everyone out?")+(un?"\n\n⚠️ "+un+" player(s) are unpaid. They stay in Players history so you can collect later.":"")))return;
+ if(n<s.start)return alert("Only an admin can cancel a booking. Use Cancel booking (Admin).");
+ if(!confirm("End this session now and check everyone out?"+(un?"\\n\\n⚠️ "+un+" player(s) are unpaid. They stay in Players history so you can collect later.":"")))return;
  q({op:"upd",c:"sessions",id:sid,patch:{closed:true,closedAt:n,until:openLive(s)?n:s.until}});
- ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:n<s.start?"Booking cancelled":"Session ended"}]}}));
+ ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:"Session ended"}]}}));
  closeModal();refresh()}
 function checkin(pid){
  const p=players.find(x=>x.id===pid);if(!p)return;const n=Date.now();
@@ -462,13 +481,13 @@ function checkout(pid){
  if(!p.paid)alert("⚠️ Reminder: "+p.name+" checked out with an UNPAID balance of "+money(p.fee)+".\n\nCollect later from Players tab → Visit history, or Reports → Outstanding balances.");
  if(curSid)reopen();else refresh()}
 function collectModal(pid){
- const p=players.find(x=>x.id===pid);if(!p)return;back=curSid;
+ const p=players.find(x=>x.id===pid);if(!p)return;if(p.cancelled||sessions.some(s=>s.id===p.sid&&s.cancelled))return alert("This booking was cancelled. No payment is due.");back=curSid;
  modal(`<h3 style="margin:0 0 6px">Collect ${money(p.fee)} from ${esc(p.name)}</h3>
  <form id="cf" onsubmit="event.preventDefault();doCollect('${pid}')"><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select>
  <label>GCash ref # (optional)</label><input name="ref" autocomplete="off">
  <div class="row" style="margin-top:12px"><button type="button" class="btn g" onclick="closeModal();back&&manage(back)">Cancel</button><button class="btn">Confirm payment</button></div></form>`)}
 function doCollect(pid){
- const f=$("#cf"),p=players.find(x=>x.id===pid),n=Date.now(),method=f.method.value,ref=f.ref.value.trim(),refTxt=method==="GCash"&&ref?" · Ref "+ref:"";
+ const f=$("#cf"),p=players.find(x=>x.id===pid);if(!p||p.cancelled||sessions.some(s=>s.id===p.sid&&s.cancelled))return alert("Cancelled bookings cannot collect payment.");const n=Date.now(),method=f.method.value,ref=f.ref.value.trim(),refTxt=method==="GCash"&&ref?" · Ref "+ref:"";
  q({op:"upd",c:"players",id:pid,patch:{paid:true,method,log:[...(p.log||[]),{t:n,e:"Paid "+money(p.fee)+" ("+method+")"+refTxt}]}});
  q({op:"add",c:"txns",o:{id:uid(),t:n,type:"income",cat:p.service||"Court rental",amt:p.fee,method,note:p.name+refTxt+(p.court?" · Court "+p.court:"")}});
  closeModal();if(back){const b=back;back=null;manage(b)}else refresh()}
@@ -515,7 +534,7 @@ function startShiftModal(cb){
   q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:v===""?0:+v,method:"Cash",note:v===""?"Shift started · No opening cash":"Opening float"}});overlayOff();cb()};
  $("#sfo").onclick=()=>{STAFF="";save("staff","");location.reload()}}
 function endShiftModal(cb,msg,cancel){
- const s=shiftCalc(),un=players.filter(p=>!p.paid&&(+p.fee||0)>0);
+ const s=shiftCalc(),un=players.filter(p=>!p.cancelled&&!p.paid&&(+p.fee||0)>0);
  overlay('<h2 style="margin:0 0 8px">End shift &amp; remit</h2><div class="note">'+esc(msg||"")+'</div>'+
   '<div class="row" style="margin-top:8px"><span>Expected cash in drawer</span><b>'+money(s.expected)+'</b></div><div class="row"><span>GCash received</span><b>'+money(s.gc)+'</b></div>'+
   (un.length?'<div class="card" style="border:2px solid var(--red)"><b class="unpaid">⚠️ '+un.length+' unpaid · '+money(un.reduce((a,p)=>a+(+p.fee||0),0))+'</b><div class="note">'+un.slice(0,6).map(p=>esc(p.name)+" "+money(p.fee)).join(" · ")+(un.length>6?" …":"")+'<br>Ask them to pay before you remit.</div></div>':"")+
@@ -635,7 +654,7 @@ function shiftCalc(){
  const tot=(l,m)=>l.filter(t=>t.method===m).reduce((a,t)=>a+t.amt,0);
  const cash=tot(inc,"Cash"),gc=tot(inc,"GCash"),cashOut=tot(exp,"Cash"),fl=op?op.amt:0;
  const sv=players.filter(p=>p.inAt>lastClose),ss=sessions.filter(s=>s.t>lastClose);
- return{last:cl[0],op,lastClose,cash,gc,cashOut,fl,remit:cash-cashOut,expected:fl+cash-cashOut,sv,ss,unpaid:sv.filter(p=>!p.paid).reduce((a,p)=>a+p.fee,0)}}
+ return{last:cl[0],op,lastClose,cash,gc,cashOut,fl,remit:cash-cashOut,expected:fl+cash-cashOut,sv,ss,unpaid:sv.filter(p=>!p.cancelled&&!p.paid).reduce((a,p)=>a+p.fee,0)}}
 
 // ================= dynamic regions (no inputs inside, safe to redraw)
 function dAlerts(){const n=Date.now();let h="";
@@ -651,7 +670,7 @@ function dUnpaid(){const n=Date.now(),l=players.filter(p=>!p.paid&&(+p.fee||0)>0
  return `<div class="card" style="border:2px solid var(--red)"><div class="row"><b>💸 Unpaid balances</b><b class="unpaid">${money(l.reduce((a,p)=>a+p.fee,0))}</b></div><div class="note">Ask these players to pay before the shift remit.</div>${t.length?'<div class="note" style="margin-top:6px"><b>Today ('+t.length+')</b></div>'+t.map(row).join(""):""}${o.length?'<div class="note" style="margin-top:8px"><b>Carried over from earlier days ('+o.length+')</b></div>'+o.map(row).join(""):""}</div>`}
 function dStats(){const n=Date.now();
  const inuse=sessions.filter(s=>!s.closed&&s.start<=n&&(openLive(s)||n<s.until)).length;
- const owed=players.filter(p=>!p.paid&&day(p.inAt)===day(n)).reduce((a,p)=>a+(+p.fee||0),0);
+ const owed=players.filter(p=>!p.cancelled&&!p.paid&&day(p.inAt)===day(n)).reduce((a,p)=>a+(+p.fee||0),0);
  return `<div class="grid"><div class="card stat"><b>${players.filter(p=>day(p.inAt)===day(n)&&p.role!=="extension").length}</b><span>Players today</span></div>
  <div class="card stat"><b>${money(sum(txns.filter(t=>day(t.t)===day(n)),"income"))}</b><span>Income today</span></div>
  <div class="card stat"><b>${inuse}/${COURTS}</b><span>Courts in use now</span></div>
@@ -696,7 +715,7 @@ function checkinAll(sid){const n=Date.now(),l=players.filter(p=>p.sid===sid&&act
  refresh()}
 function dPlayers(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>b.inAt-a.inAt);
- return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
+ return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?'<br><span class="note">Cancelled · No payment due</span>':p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
 function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=sum(l,"expense");
  return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
 function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
@@ -722,7 +741,7 @@ function dReports(){
  const cash=op.filter(p=>p.paid&&p.method==="Cash").reduce((a,p)=>a+(+p.fee||0),0);
  const gcash=op.filter(p=>p.paid&&p.method==="GCash").reduce((a,p)=>a+(+p.fee||0),0);
  const paid=op.filter(p=>p.paid).reduce((a,p)=>a+(+p.fee||0),0);
- const owing=op.filter(p=>!p.paid).reduce((a,p)=>a+(+p.fee||0),0);
+ const owing=op.filter(p=>!p.cancelled&&!p.paid).reduce((a,p)=>a+(+p.fee||0),0);
  const summary=[["Players",String(op.length)],["Cash",money(cash)],["GCash",money(gcash)],["Total paid",money(paid)],["Unpaid",money(owing)]];
  const sheet=`<div class="card"><div class="row"><b>Open Play payment report</b><span class="note">${reportRange==="day"?"Selected day":reportRange==="week"?"Selected week":"Selected month"}</span></div>
  <div class="op-sheet"><table class="op-table"><thead><tr><th>Time in</th><th>Open Play</th><th>Amount paid</th><th>GCash ref #</th></tr></thead>
@@ -732,7 +751,7 @@ function dReports(){
  sheet+`<div class="report-breakdowns">`+
  `<div class="card"><div class="row"><b>All services overview</b><span class="note">${pl.length} visits · ${uniq} unique players</span></div></div>`+
  tbl("Income by service",by("income","cat"))+tbl("Income by payment mode",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
- `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.paid&&reportMatch(p.inAt)).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
+ `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.cancelled&&!p.paid&&reportMatch(p.inAt)).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
 }
 function dShift(){const s=shiftCalc(),n=Date.now();
  return `<div class="card"><b>Current shift</b>${s.op?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`:'<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>'}
