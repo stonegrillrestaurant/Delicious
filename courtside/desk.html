@@ -124,7 +124,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.2"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.3"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="18:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
@@ -188,7 +188,7 @@ function applyOp(a,op){
  else if(op.op==="del"){const i=a.findIndex(y=>y.id===op.id);if(i>-1)a.splice(i,1)}}
 function rebuild(){
  const D={};COLS.forEach(c=>{const a=clone(server[c]||[]);outbox.filter(o=>o.c===c).forEach(o=>applyOp(a,o));D[c]=a});
- players=D.players;staffList=D.staff;allTx=D.txns;sessions=D.sessions;txns=allTx.filter(t=>t.type==="income"||t.type==="expense")}
+ players=D.players.filter(p=>!p.removed);staffList=D.staff;allTx=D.txns;sessions=D.sessions;txns=allTx.filter(t=>!t.voided&&(t.type==="income"||t.type==="expense"))}
 function q(op){
  if(op.op==="add")op.o.by=STAFF;
  if(op.op==="add"&&op.o&&Array.isArray(op.o.log))op.o.log.forEach(x=>{if(!x.u)x.u=STAFF});
@@ -652,7 +652,14 @@ function addTxn(f){
  const amt=+f.amt.value;if(!(amt>0))return alert("Enter an amount");
  q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:f.type.value,cat:f.cat.value,amt,method:f.method.value,note:f.note.value.trim()}});
  delete draft.lg;f.reset();fillCat(f)}
-function delTx(id){if(confirm("Delete this transaction?"))q({op:"del",c:"txns",id})}
+function delTx(id){
+ if(roleNow()!=="admin")return alert("Admin only.");
+ const t=allTx.find(x=>x.id===id);if(!t||t.voided)return;
+ const reason=prompt("Reason for voiding transaction?");
+ if(reason===null)return;if(!reason.trim())return alert("Reason required.");
+ if(!confirm("Void "+money(t.amt)+" and exclude from totals? Audit record remains; player payment status must be corrected separately."))return;
+ q({op:"upd",c:"txns",id,patch:{voided:true,voidedAt:Date.now(),voidedBy:STAFF,voidReason:reason.trim()}});
+}
 function startShift(f){
  const raw=f.fl.value.trim(),v=raw===""?0:+raw;if(!Number.isFinite(v)||v<0)return alert("Enter a valid opening cash amount.");
  q({op:"add",c:"txns",o:{id:uid(),t:Date.now(),type:"open",cat:"Shift open",amt:v,method:"Cash",note:raw===""?"Shift started · No opening cash":"Opening float"}});f.reset()}
@@ -752,14 +759,26 @@ function visitReservedWhen(p){
  if(!start)return "";
  return " · <b>"+(start>Date.now()?"Reserved for: ":"Court date: ")+esc(new Date(start).toLocaleDateString())+"</b> "+tm(start)+(end?"–"+tm(end):"");
 }
+function removePlayer(pid){
+ if(roleNow()!=="admin")return alert("Admin access required.");
+ const p=players.find(x=>x.id===pid);if(!p)return;
+ if(p.paid&&Number(p.fee)>0)return alert("This player is paid. Review the ledger payment first; no money will be erased.");
+ const reason=prompt("Removal reason (duplicate, mistaken, unwanted):");
+ if(reason===null)return;
+ if(!reason.trim())return alert("Reason required.");
+ if(!confirm("Remove "+p.name+" from lists? A record is retained for audit."))return;
+ const n=Date.now();
+ q({op:"upd",c:"players",id:pid,patch:{removed:true,removedAt:n,removedBy:STAFF,removedReason:reason.trim(),log:[...(p.log||[]),{t:n,e:"Removed by admin: "+reason.trim()}]}});
+ if(curSid)reopen();else refresh();
+}
 function dPlayers(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>b.inAt-a.inAt);
- return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">Booked/entered: ${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" · Out: "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${visitReservedWhen(p)}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?(p.paid?'<br><span class="note">Cancelled · Paid (review refund)</span>':'<br><span class="note">Cancelled · No payment due</span>'):p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
+ return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">Booked/entered: ${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" · Out: "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${visitReservedWhen(p)}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?(p.paid?'<br><span class="note">Cancelled · Paid (review refund)</span>':'<br><span class="note">Cancelled · No payment due</span>'):p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}${roleNow()==="admin"?`<button class="btn s r" onclick="removePlayer('${p.id}')">Remove entry</button>`:""}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
 function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=sum(l,"expense");
  return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
 function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
  return `<div class="card"><div class="row"><b>Transactions (${l.length})</b><button class="btn s g" onclick="exportCsv()">Export CSV</button></div>
- ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+formattedEsc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br><a href="#" class="note" onclick="event.preventDefault();delTx('${t.id}')">delete</a></div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`}
+ ${l.map(t=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(t.cat)}</b><div class="note">${new Date(t.t).toLocaleDateString()} ${tm(t.t)} · ${esc(t.method)}${t.note?" · "+formattedEsc(t.note):""}${t.by?" · "+esc(t.by):""}</div></div><div style="text-align:right" class="${t.type==="income"?"in":"out"}"><b>${t.type==="income"?"+":"−"}${money(t.amt).replace("−","")}</b><br>${roleNow()==="admin"?`<a href="#" class="note" onclick="event.preventDefault();delTx('${t.id}')">Void</a>`:""}</div></div>`).join("")||'<p class="note">Nothing recorded yet.</p>'}</div>`}
 function openRef(p){
  const lines=(p.log||[]).map(x=>String(x.e||""));
  for(let i=lines.length-1;i>=0;i--){
