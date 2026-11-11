@@ -235,6 +235,9 @@ const inRange=t=>{const d=new Date(t),n=new Date();
  if(range==="month")return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();
  return true};
 const actv=p=>!p.cancelled&&!p.outAt&&p.status!=="done";
+// A reservation not yet checked in is a future booking, not a current-shift debt.
+// Its fee stays on the player record and becomes collectible on check-in.
+const pendingReservation=p=>!!p&&!p.cancelled&&p.ci===false&&!p.arrivedAt&&!p.outAt&&p.mode==="rent";
 const closedNow=n=>new Date(n).getHours()<OPEN_H;
 function pst(p,n){n=n||Date.now();
  if(p.cancelled)return"cancelled";if(!actv(p))return"done";if(!p.until||!p.court)return"waiting";
@@ -654,7 +657,7 @@ function shiftCalc(){
  const tot=(l,m)=>l.filter(t=>t.method===m).reduce((a,t)=>a+t.amt,0);
  const cash=tot(inc,"Cash"),gc=tot(inc,"GCash"),cashOut=tot(exp,"Cash"),fl=op?op.amt:0;
  const sv=players.filter(p=>p.inAt>lastClose),ss=sessions.filter(s=>s.t>lastClose);
- return{last:cl[0],op,lastClose,cash,gc,cashOut,fl,remit:cash-cashOut,expected:fl+cash-cashOut,sv,ss,unpaid:sv.filter(p=>!p.cancelled&&!p.paid).reduce((a,p)=>a+p.fee,0)}}
+ return{last:cl[0],op,lastClose,cash,gc,cashOut,fl,remit:cash-cashOut,expected:fl+cash-cashOut,sv,ss,unpaid:sv.filter(p=>!p.cancelled&&!p.paid&&!pendingReservation(p)).reduce((a,p)=>a+p.fee,0)}}
 
 // ================= dynamic regions (no inputs inside, safe to redraw)
 function dAlerts(){const n=Date.now();let h="";
@@ -663,14 +666,14 @@ function dAlerts(){const n=Date.now();let h="";
   <div class="note" style="color:var(--tx);margin:4px 0">${esc(sessPlayers(over.id).map(p=>p.name).join(", "))} · ended ${tm(over.until)} · auto-clears in ${Math.max(0,GRACE_MIN-Math.floor((n-over.until)/60000))} min<br>${cur?"<b>Next renter's slot started "+tm(cur.start)+" – hand over the court.</b>":"Extend, or end the session."}</div>
   <div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn s" style="${cur?"display:none":""}" onclick="extendModal('${over.id}')">Extend</button><button class="btn s r" onclick="endSession('${over.id}')">${cur?"Hand over to next renter":"End session"}</button></div></div>`}
  return h}
-function dUnpaid(){const n=Date.now(),l=players.filter(p=>!p.paid&&(+p.fee||0)>0).sort((a,b)=>b.inAt-a.inAt);
+function dUnpaid(){const n=Date.now(),l=players.filter(p=>!p.cancelled&&!p.paid&&!pendingReservation(p)&&(+p.fee||0)>0).sort((a,b)=>b.inAt-a.inAt);
  if(!l.length)return '<div class="card"><b>💸 Unpaid balances</b><p class="note">All settled ✅</p></div>';
  const row=p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b><div class="note">${p.court?"Court "+p.court+" · ":""}${esc(p.service||"")} · ${new Date(p.inAt).toLocaleDateString()} · ${actv(p)?"still here":"left"}</div></div><div style="text-align:right"><b class="unpaid">${money(p.fee)}</b><br><button class="btn s" onclick="collectModal('${p.id}')">Collect</button></div></div>`;
  const t=l.filter(p=>day(p.inAt)===day(n)),o=l.filter(p=>day(p.inAt)!==day(n));
  return `<div class="card" style="border:2px solid var(--red)"><div class="row"><b>💸 Unpaid balances</b><b class="unpaid">${money(l.reduce((a,p)=>a+p.fee,0))}</b></div><div class="note">Ask these players to pay before the shift remit.</div>${t.length?'<div class="note" style="margin-top:6px"><b>Today ('+t.length+')</b></div>'+t.map(row).join(""):""}${o.length?'<div class="note" style="margin-top:8px"><b>Carried over from earlier days ('+o.length+')</b></div>'+o.map(row).join(""):""}</div>`}
 function dStats(){const n=Date.now();
  const inuse=sessions.filter(s=>!s.closed&&s.start<=n&&n<s.until).length;
- const owed=players.filter(p=>!p.cancelled&&!p.paid&&day(p.inAt)===day(n)).reduce((a,p)=>a+(+p.fee||0),0);
+ const owed=players.filter(p=>!p.cancelled&&!p.paid&&!pendingReservation(p)&&day(p.inAt)===day(n)).reduce((a,p)=>a+(+p.fee||0),0);
  return `<div class="grid"><div class="card stat"><b>${players.filter(p=>day(p.inAt)===day(n)&&p.role!=="extension").length}</b><span>Players today</span></div>
  <div class="card stat"><b>${money(sum(txns.filter(t=>day(t.t)===day(n)),"income"))}</b><span>Income today</span></div>
  <div class="card stat"><b>${inuse}/${COURTS}</b><span>Courts in use now</span></div>
@@ -706,9 +709,22 @@ function pRow(p,n,rv){const i=pLine(p,n);
 function dActive(){const n=Date.now(),l=players.filter(p=>actv(p)&&pst(p,n)!=="reserved");
  if(!l.length)return '<p class="note">No active players.</p>';
  return grp(l).map(([k,ps])=>{ps.sort((a,b)=>(b.role==="renter")-(a.role==="renter")||a.inAt-b.inAt);const s=sessions.find(x=>x.id===k);return gHead(s,ps,false)+ps.map(p=>pRow(p,n,false)).join("")}).join("")}
-function dResv(){const n=Date.now(),l=players.filter(p=>actv(p)&&pst(p,n)==="reserved");
+function dResv(){
+ const n=Date.now(),l=players.filter(p=>actv(p)&&pst(p,n)==="reserved");
  if(!l.length)return '<p class="note">No reservations waiting.</p>';
- return grp(l,true).map(([k,ps])=>{ps.sort((a,b)=>(b.role==="renter")-(a.role==="renter")||a.inAt-b.inAt);const s=sessions.find(x=>x.id===k);return gHead(s,ps,true)+ps.map(p=>pRow(p,n,true)).join("")}).join("")}
+ return grp(l,true).map(([sid,ps])=>{
+  const s=sessions.find(x=>x.id===sid),start=s?.start||ps[0].startAt||ps[0].inAt;
+  const end=s?.until||ps[0].until;
+  const unpaid=ps.filter(p=>!p.paid).reduce((total,p)=>total+(Number(p.fee)||0),0);
+  const names=ps.map(p=>esc(p.name)).join(", ");
+  const time=esc(new Date(start).toLocaleDateString())+" · "+tm(start)+(end?"–"+tm(end):"");
+  return '<div class="row" style="padding:8px 0;border-bottom:1px solid var(--bd);gap:8px;align-items:center">'+
+   '<div style="min-width:0;flex:1"><b>Court '+esc(s?.court||ps[0].court||"—")+' · '+names+'</b>'+
+   '<div class="note">'+time+' · '+(unpaid?'Due on arrival '+money(unpaid):'Paid')+'</div></div>'+
+   '<div style="display:flex;gap:5px;flex-shrink:0"><button class="btn s" onclick="'+(s?"checkinAll('"+sid+"')":"checkin('"+ps[0].id+"')")+'">Check in</button>'+
+   (s?'<button class="btn s g" onclick="manage(\''+sid+'\')">Court</button>':"")+'</div></div>';
+ }).join("");
+}
 function checkinAll(sid){const n=Date.now(),l=players.filter(p=>p.sid===sid&&actv(p)&&pst(p,n)==="reserved");if(!l.length)return;
  l.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{ci:true,arrivedAt:n,log:[...(p.log||[]),{t:n,e:"Checked in (arrived)"}]}}));
  const un=l.filter(p=>!p.paid);if(un.length)alert("💸 Unpaid: "+un.map(p=>p.name+" "+money(p.fee)).join(", ")+". Please collect.");
