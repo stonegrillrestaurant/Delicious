@@ -104,6 +104,12 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 .op-table .subcell{display:block;font-size:10px;color:var(--mu);font-weight:400}
 .op-table tfoot td{background:var(--ac2);font-weight:700;border-top:2px solid var(--ac)}
 @media(min-width:600px){.op-summary .op-totals{grid-template-columns:repeat(5,minmax(0,1fr))}.op-total b{font-size:20px}.op-table{font-size:13px}.op-table th{font-size:12px}}
+.rental-report-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start}
+.rental-report-grid>.card{min-width:0;margin:0}
+.rental-report-grid .op-table{min-width:520px}
+.rental-report-grid .rent-table{min-width:660px}
+.rent-table th:nth-child(1){width:23%}.rent-table th:nth-child(2){width:25%}.rent-table th:nth-child(3){width:17%}.rent-table th:nth-child(4){width:15%}.rent-table th:nth-child(5){width:20%}
+@media(min-width:1050px){.rental-report-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}}
 @media(min-width:900px){.report-breakdowns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}}
 .report-filters{display:grid;gap:6px;background:var(--card);border:1px solid var(--bd);border-radius:9px;padding:8px;margin-bottom:6px}
 .report-filters label input{margin-top:4px}
@@ -770,8 +776,29 @@ function dReports(){
  <div class="op-sheet"><table class="op-table"><thead><tr><th>Time in</th><th>Open Play</th><th>Amount paid</th><th>GCash ref #</th></tr></thead>
  <tbody>${op.map(p=>`<tr><td>${tm(p.inAt)}${reportRange!=="day"?`<span class="subcell">${esc(day(p.inAt))}</span>`:""}</td><td><b>${esc(p.name)}</b>${p.court?`<span class="subcell">Court ${p.court}</span>`:""}</td><td class="amount">${p.paid?money(+p.fee||0):"—"}<span class="subcell">${p.paid?esc(p.method||"Paid"):"Unpaid "+money(+p.fee||0)}</span></td><td class="ref">${p.paid&&p.method==="GCash"?esc(openRef(p))||"—":"—"}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;padding:20px">No Open Play players for this period.</td></tr>'}</tbody>
  <tfoot><tr><td colspan="2">TOTAL · ${op.length} players</td><td class="amount">${money(paid)}</td><td></td></tr></tfoot></table></div></div>`;
+ const rentRows=sessions.filter(s=>s.mode==="rent"&&reportMatch(s.start)).sort((a,b)=>a.start-b.start||a.court-b.court).map(s=>{
+  const ps=players.filter(p=>p.sid===s.id&&p.role!=="extension");
+  const renter=ps.find(p=>p.role==="renter")||ps.find(p=>Number(p.fee)>0)||ps[0];
+  const fee=ps.reduce((n,p)=>n+(Number(p.fee)||0),0);
+  const received=ps.filter(p=>p.paid).reduce((n,p)=>n+(Number(p.fee)||0),0);
+  const due=ps.filter(p=>!p.paid&&!p.cancelled).reduce((n,p)=>n+(Number(p.fee)||0),0);
+  return {s,renter,fee,received,due,status:s.cancelled?"Cancelled":s.closed?"Completed":s.start>Date.now()?"Reserved":"Active"};
+ });
+ const rentTotal=rentRows.reduce((n,r)=>n+r.received,0),rentDue=rentRows.reduce((n,r)=>n+r.due,0);
+ const rentSheet=`<div class="card"><div class="row"><b>Rented Courts report</b><span class="note">${rentRows.length} bookings · Paid ${money(rentTotal)} · Due ${money(rentDue)}</span></div>
+ <div class="op-sheet"><table class="op-table rent-table">
+ <thead><tr><th>Reserved time range</th><th>Rented court / customer</th><th>Amount paid</th><th>GCash ref #</th><th>Status / Balance</th></tr></thead>
+ <tbody>${rentRows.map(({s,renter,fee,received,due,status})=>`<tr>
+ <td>${tm(s.start)}–${tm(s.until)}<span class="subcell">${esc(new Date(s.start).toLocaleDateString())}</span><span class="subcell">${Number(s.hours)||((s.until-s.start)/H)} hr</span></td>
+ <td><b>Court ${s.court}</b><span class="subcell">${esc(renter?.name||"No renter name")}</span><span class="subcell">Rental fee ${money(fee)}</span></td>
+ <td class="amount">${money(received)}<span class="subcell">${esc(renter?.paid?renter.method||"Paid":"Not yet paid")}</span></td>
+ <td class="ref">${esc(renter?.paid&&renter.method==="GCash"?openRef(renter)||"—":"—")}</td>
+ <td><b>${status}</b><span class="subcell">${due?"Balance "+money(due):s.cancelled?"Cancelled / waived":"No balance"}</span></td>
+ </tr>`).join("")||'<tr><td colspan="5" style="text-align:center;padding:20px">No rented courts for this period.</td></tr>'}</tbody>
+ <tfoot><tr><td colspan="2">TOTAL · ${rentRows.length} rentals</td><td class="amount">${money(rentTotal)}</td><td></td><td>${rentDue?"Due "+money(rentDue):"No balance"}</td></tr></tfoot>
+ </table></div></div>`;
  return `<div class="op-summary">${reportControls()}<div class="op-totals">${summary.map(([k,v])=>`<div class="op-total"><span>${k}</span><b>${v}</b></div>`).join("")}</div></div>`+
- sheet+`<div class="report-breakdowns">`+
+ '<div class="rental-report-grid">'+sheet+rentSheet+'</div>'+ `<div class="report-breakdowns">`+
  `<div class="card"><div class="row"><b>All services overview</b><span class="note">${pl.length} visits · ${uniq} unique players</span></div></div>`+
  tbl("Income by service",by("income","cat"))+tbl("Income by payment mode",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
  `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.cancelled&&!p.paid&&reportMatch(p.inAt)).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
