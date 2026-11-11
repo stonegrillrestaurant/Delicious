@@ -821,14 +821,14 @@ function dReports(){
  const summary=[["Players",String(op.length)],["Cash",money(cash)],["GCash",money(gcash)],["Total paid",money(paid)],["Unpaid",money(owing)]];
  const sheet=`<div class="card"><div class="row"><b>Open Play payment report</b><span class="note">${reportRange==="day"?"Selected day":reportRange==="week"?"Selected week":"Selected month"}</span></div>
  <div class="op-sheet"><table class="op-table"><thead><tr><th>Time in</th><th>Open Play</th><th>Amount paid</th><th>GCash ref #</th></tr></thead>
- <tbody>${op.map(p=>`<tr><td>${tm(p.inAt)}${reportRange!=="day"?`<span class="subcell">${esc(day(p.inAt))}</span>`:""}</td><td><b>${esc(p.name)}</b>${p.court?`<span class="subcell">Court ${p.court}</span>`:""}</td><td class="amount">${p.paid?money(+p.fee||0):"—"}<span class="subcell">${p.paid?esc(p.method||"Paid"):"Unpaid "+money(+p.fee||0)}</span></td><td class="ref">${p.paid&&p.method==="GCash"?esc(openRef(p))||"—":"—"}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;padding:20px">No Open Play players for this period.</td></tr>'}</tbody>
+ <tbody>${op.map(p=>`<tr><td>${tm(p.inAt)}${reportRange!=="day"?`<span class="subcell">${esc(day(p.inAt))}</span>`:""}</td><td><b>${esc(p.name)}</b>${p.court?`<span class="subcell">Court ${p.court}</span>`:""}</td><td class="amount">${p.paid?money(+p.fee||0):"—"}<span class="subcell">${p.paid?esc(p.method||"Paid"):"Unpaid "+money(paymentDue(p))}</span></td><td class="ref">${p.paid&&p.method==="GCash"?esc(openRef(p))||"—":"—"}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;padding:20px">No Open Play players for this period.</td></tr>'}</tbody>
  <tfoot><tr><td colspan="2">TOTAL · ${op.length} players</td><td class="amount">${money(paid)}</td><td></td></tr></tfoot></table></div></div>`;
  const rentRows=sessions.filter(s=>s.mode==="rent"&&reportMatch(s.start)).sort((a,b)=>a.start-b.start||a.court-b.court).map(s=>{
   const ps=players.filter(p=>p.sid===s.id&&p.role!=="extension");
   const renter=ps.find(p=>p.role==="renter")||ps.find(p=>Number(p.fee)>0)||ps[0];
   const fee=ps.reduce((n,p)=>n+(Number(p.fee)||0),0);
   const received=ps.filter(p=>p.paid).reduce((n,p)=>n+(Number(p.fee)||0),0);
-  const due=ps.filter(p=>!p.paid&&!p.cancelled).reduce((n,p)=>n+(Number(p.fee)||0),0);
+  const due=ps.filter(p=>!p.paid&&!p.cancelled).reduce((n,p)=>n+paymentDue(p),0);
   return {s,renter,fee,received,due,status:s.cancelled?"Cancelled":s.closed?"Completed":s.start>Date.now()?"Reserved":"Active"};
  });
  const rentTotal=rentRows.reduce((n,r)=>n+r.received,0),rentDue=rentRows.reduce((n,r)=>n+r.due,0);
@@ -848,7 +848,7 @@ function dReports(){
  '<div class="rental-report-grid">'+sheet+rentSheet+'</div>'+ `<div class="report-breakdowns">`+
  `<div class="card"><div class="row"><b>All services overview</b><span class="note">${pl.length} visits · ${uniq} unique players</span></div></div>`+
  tbl("Income by service",by("income","cat"))+tbl("Income by payment mode",by("income","method"))+tbl("Income by staff",by("income","by"))+tbl("Expenses by category",by("expense","cat"))+
- `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.cancelled&&!p.paid&&reportMatch(p.inAt)).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(p.fee||0)}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
+ `<div class="card"><b>Outstanding balances</b>${players.filter(p=>!p.cancelled&&!p.paid&&reportMatch(p.inAt)).map(p=>`<div class="row" style="padding:5px 0"><span>${esc(p.name)} <span class="note">${new Date(p.inAt).toLocaleDateString()}</span></span><span><b class="unpaid">${money(paymentDue(p))}</b> <button class="btn s" onclick="collectModal('${p.id}')">Collect</button></span></div>`).join("")||'<p class="note">All settled.</p>'}</div></div>`;
 }
 function dShift(){const s=shiftCalc(),n=Date.now();
  return `<div class="card"><b>Current shift</b>${s.op?`<div class="note">Opened ${new Date(s.op.t).toLocaleDateString()} ${tm(s.op.t)} by ${esc(s.op.by||"")} · float ${money(s.op.amt)}</div>`:'<div class="note" style="color:var(--red)">No opening float recorded for this shift.</div>'}
