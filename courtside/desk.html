@@ -114,6 +114,64 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 .report-filters{display:grid;gap:6px;background:var(--card);border:1px solid var(--bd);border-radius:9px;padding:8px;margin-bottom:6px}
 .report-filters label input{margin-top:4px}
 @media(min-width:640px){.report-filters{grid-template-columns:auto minmax(160px,240px) 1fr;align-items:center}}
+
+/* Desktop venue ambiance: layered court-green atmosphere, preserving familiar mobile controls. */
+@media (min-width:900px){
+ body{
+  min-height:100vh;
+  background:
+   radial-gradient(ellipse 58% 52% at 94% 4%,rgba(102,178,114,.24) 0%,transparent 70%),
+   radial-gradient(ellipse 48% 65% at 28% 100%,rgba(22,121,85,.13) 0%,transparent 75%),
+   repeating-linear-gradient(118deg,transparent 0 110px,rgba(29,112,69,.026) 111px 112px,transparent 113px 220px),
+   linear-gradient(135deg,#edf5ef 0%,#dcebe1 44%,#edf2e9 100%);
+  background-attachment:fixed;
+ }
+ body:before{content:"";position:fixed;pointer-events:none;inset:0 0 0 210px;z-index:-1;background:linear-gradient(135deg,rgba(255,255,255,.42),transparent 58%)}
+ nav{
+  background:linear-gradient(180deg,#123e2c 0%,#0e3026 65%,#0a271f 100%);
+  border-right:1px solid rgba(183,230,191,.25);
+  box-shadow:8px 0 32px rgba(10,60,34,.12);
+ }
+ nav button{color:#d5e9db;transition:background .16s ease,color .16s ease}
+ nav button:hover{background:rgba(255,255,255,.11);color:#fff}
+ nav button.on{background:rgba(108,210,136,.21);color:#fff;box-shadow:inset 3px 0 #7ee1a0}
+ header{padding-top:23px;padding-bottom:12px}
+ header h1{font-size:25px;letter-spacing:-.035em;color:#144b32}
+ header .sub{color:#47745b}
+ main{padding-bottom:30px}
+ .card,.op-total,.report-filters{
+  background:rgba(255,255,255,.85);
+  border-color:rgba(92,149,107,.22);
+  box-shadow:0 7px 24px rgba(18,74,44,.065),0 1px 2px rgba(17,60,38,.045);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+ }
+ .card{border-radius:16px;padding:16px;margin:12px 0}
+ .stat{background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(224,242,228,.75))}
+ .stat b{font-size:24px;letter-spacing:-.035em}
+ .court{border-radius:12px;box-shadow:0 3px 10px rgba(27,77,46,.06);transition:transform .15s,box-shadow .15s}
+ .court:hover{transform:translateY(-2px);box-shadow:0 8px 17px rgba(27,77,46,.12)}
+ .court:not(.rent):not(.open):not(.over):not(.closed){background:rgba(245,251,246,.78)}
+ .btn:not(.g):not(.r){box-shadow:0 3px 8px rgba(16,100,59,.14)}
+ .op-summary{background:rgba(230,242,232,.93);border-radius:12px;padding:10px;backdrop-filter:blur(14px)}
+ .op-table th{background:#e0f0e5}
+ .op-table tr:nth-child(even) td{background:rgba(230,244,234,.45)}
+ input,select,textarea{background:rgba(247,252,248,.9)}
+}
+@media(min-width:900px) and (prefers-color-scheme:dark){
+ body{background:radial-gradient(ellipse at 90% 0%,rgba(45,135,88,.22),transparent 56%),linear-gradient(145deg,#101c17,#182c21 58%,#14231b)}
+ body:before{background:none}
+ nav{background:linear-gradient(180deg,#0a2018,#091c16)}
+ header h1{color:#e1f5e6}
+ header .sub{color:#9cb9a5}
+ .card,.op-total,.report-filters{background:rgba(27,43,34,.9);border-color:rgba(109,166,122,.22);box-shadow:0 7px 24px rgba(0,0,0,.18)}
+ .stat{background:linear-gradient(145deg,rgba(37,64,46,.94),rgba(26,45,33,.88))}
+ .court:not(.rent):not(.open):not(.over):not(.closed){background:rgba(32,50,39,.78)}
+ .op-summary{background:rgba(24,45,32,.94)}
+ .op-table th{background:#234433}
+ .op-table tr:nth-child(even) td{background:rgba(39,61,46,.55)}
+ input,select,textarea{background:rgba(25,43,31,.95)}
+}
 </style>
 </head>
 <body>
@@ -124,7 +182,7 @@ th,td{padding:6px 4px;border-top:1px solid var(--bd);text-align:left;white-space
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.7"; // GRACE_MIN: minutes after time-up before a court clears itself
+const OPEN_H=8,CLOSE_H=24,COURTS=6,H=3600000,GRACE_MIN=10,APP_VER="2.8"; // GRACE_MIN: minutes after time-up before a court clears itself
 const RENT_RATE=c=>c<=4?250:350, OPEN_RATE=100, OPEN_NIGHT_RATE=120, NIGHT_START="17:00"; // OPEN_RATE = flat per player per session (any length)
 const QUICK={"Paddle rental":50,"Lesson":150,"VIP room":0,"Pro shop":0,"Food & drinks":0};
 const INC_CATS=["Court rental","Open play","Special event",...Object.keys(QUICK)];
