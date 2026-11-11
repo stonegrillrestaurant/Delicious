@@ -414,6 +414,21 @@
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
+    // Format stored ISO dates for display only; retain YYYY-MM-DD for filters and Firestore.
+    const formatDisplayDate = (value) => {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+        if (!match) return value || '';
+        const [, year, month, day] = match;
+        const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+        if (date.getUTCFullYear() !== Number(year) || date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== Number(day)) return value;
+        return date.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric', timeZone:'UTC'});
+    };
+    const formatDisplayMonth = (value) => {
+        const match = /^(\d{4})-(\d{2})$/.exec(String(value || ''));
+        if (!match || Number(match[2]) < 1 || Number(match[2]) > 12) return value || '';
+        return new Date(Date.UTC(Number(match[1]),Number(match[2])-1,1)).toLocaleDateString('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
+    };
+
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('c_date').value = today;
 
@@ -578,7 +593,7 @@
             }
 
             tr.innerHTML = `
-                <td>${t.date}</td>
+                <td>${formatDisplayDate(t.date)}</td>
                 <td class="desc-col">${t.description} ${badgeHtml}</td>
                 <td class="money-col val-in">${inCol}</td>
                 <td class="money-col val-out">${outCol}</td>
@@ -608,11 +623,11 @@
         let printHeaderStr = "Master Ledger: All Time";
 
         if (dateFilter) {
-            dateDisplayStr = `(Filtered Daily: ${dateFilter})`;
-            printHeaderStr = `Master Ledger: Daily Report (${dateFilter})`;
+            dateDisplayStr = `(Filtered Daily: ${formatDisplayDate(dateFilter)})`;
+            printHeaderStr = `Master Ledger: Daily Report (${formatDisplayDate(dateFilter)})`;
         } else if (monthFilter) {
-            dateDisplayStr = `(Filtered Monthly: ${monthFilter})`;
-            printHeaderStr = `Master Ledger: Monthly Report (${monthFilter})`;
+            dateDisplayStr = `(Filtered Monthly: ${formatDisplayMonth(monthFilter)})`;
+            printHeaderStr = `Master Ledger: Monthly Report (${formatDisplayMonth(monthFilter)})`;
         }
         
         document.getElementById('adminDateLabel').innerText = dateDisplayStr;
@@ -659,7 +674,7 @@
                     totalPendingAuth += amt;
                     pendingItemsHtml += `
                         <div class="pending-item">
-                            <span>👤 <strong>${name}</strong> wants to remit <strong class="val-out">₱${formatMoney(amt)}</strong> (${t.date})</span>
+                            <span>👤 <strong>${name}</strong> wants to remit <strong class="val-out">₱${formatMoney(amt)}</strong> (${formatDisplayDate(t.date)})</span>
                             <button class="btn-approve" onclick="approveRemit('${t.id}')">Approve</button>
                         </div>`;
                 } else {
@@ -753,7 +768,7 @@
                 }
 
                 tr.innerHTML = `
-                    <td>${t.date}</td>
+                    <td>${formatDisplayDate(t.date)}</td>
                     <td style="color:#555; font-weight:bold;">${t.cashierName || 'Unknown'}</td>
                     <td class="desc-col">${t.description} ${badgeHtml}</td>
                     <td class="money-col val-in">${inCol}</td>
