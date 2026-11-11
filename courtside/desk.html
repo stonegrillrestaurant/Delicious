@@ -699,7 +699,7 @@ function grp(list,byStart){const m=new Map();list.forEach(p=>{const k=p.sid||"x"
  const sv=k=>sessions.find(x=>x.id===k)||{};
  return [...m.entries()].sort((a,b)=>byStart?(sv(a[0]).start||0)-(sv(b[0]).start||0):(sv(a[0]).court||99)-(sv(b[0]).court||99))}
 function gHead(s,ps,rv){const rent=s&&s.mode==="rent";
- return `<div class="row" style="background:${rent?"var(--org2)":"var(--ac2)"};border-left:4px solid ${rent?"var(--org)":"var(--ac)"};border-radius:8px;padding:8px 10px;margin:10px 0 2px"><b style="font-size:13px">${s&&s.court?`Court ${s.court} · ${ML(s.mode)} · ${tm(s.start)}–${tm(s.until)} · ${ps.length}/${s.max}`:"Walk-in"}</b><span style="display:flex;gap:6px">${rv&&s?`<button class="btn s" onclick="checkinAll('${s.id}')">Check in all</button>`:""}${s&&s.court?`<button class="btn s g" onclick="manage('${s.id}')">Court</button>`:""}</span></div>`}
+ return `<div class="row" style="background:${rent?"var(--org2)":"var(--ac2)"};border-left:4px solid ${rent?"var(--org)":"var(--ac)"};border-radius:8px;padding:8px 10px;margin:10px 0 2px"><b style="font-size:13px">${s&&s.court?`Court ${s.court} · ${ML(s.mode)} · ${new Date(s.start).toLocaleDateString()} ${tm(s.start)}–${tm(s.until)} · ${ps.length}/${s.max}`:"Walk-in"}</b><span style="display:flex;gap:6px">${rv&&s?`<button class="btn s" onclick="checkinAll('${s.id}')">Check in all</button>`:""}${s&&s.court?`<button class="btn s g" onclick="manage('${s.id}')">Court</button>`:""}</span></div>`}
 function pRow(p,n,rv){const i=pLine(p,n);
  return `<div style="padding:7px 4px;border-bottom:1px solid var(--bd)"><div class="row"><div><b>${esc(p.name)}</b> <span class="pill p-${i.s}">${i.s}</span>${p.role==="renter"?' <span class="note">renter</span>':""}${i.t?`<div class="note"><b style="color:${i.s==="overtime"?"var(--red)":"inherit"}">${i.t}</b></div>`:""}</div>${rv?`<button class="btn s" onclick="checkin('${p.id}')">✅ Check in</button>`:`<button class="btn s r" onclick="checkout('${p.id}')">Check out</button>`}</div>
  <details><summary class="note">Activity log</summary><div class="log">${(p.log||[]).map(x=>`${tm(x.t)} — ${formattedEsc(x.e)}${x.u?" · "+esc(x.u):""}`).join("<br>")}</div></details></div>`}
@@ -713,9 +713,16 @@ function checkinAll(sid){const n=Date.now(),l=players.filter(p=>p.sid===sid&&act
  l.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{ci:true,arrivedAt:n,log:[...(p.log||[]),{t:n,e:"Checked in (arrived)"}]}}));
  const un=l.filter(p=>!p.paid);if(un.length)alert("💸 Unpaid: "+un.map(p=>p.name+" "+money(p.fee)).join(", ")+". Please collect.");
  refresh()}
+function visitReservedWhen(p){
+ const session=sessions.find(s=>s.id===p.sid);
+ const start=Number(p.startAt||session?.start||0);
+ const end=Number(p.until||session?.until||0);
+ if(!start)return "";
+ return " · <b>"+(start>Date.now()?"Reserved for: ":"Court date: ")+esc(new Date(start).toLocaleDateString())+"</b> "+tm(start)+(end?"–"+tm(end):"");
+}
 function dPlayers(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>b.inAt-a.inAt);
- return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?(p.paid?'<br><span class="note">Cancelled · Paid (review refund)</span>':'<br><span class="note">Cancelled · No payment due</span>'):p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
+ return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">Booked/entered: ${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" · Out: "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${visitReservedWhen(p)}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?(p.paid?'<br><span class="note">Cancelled · Paid (review refund)</span>':'<br><span class="note">Cancelled · No payment due</span>'):p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
 function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=sum(l,"expense");
  return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
 function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
@@ -778,7 +785,7 @@ function exportCsv(){
  download("transactions-"+day(Date.now())+".csv",["Date,Time,Type,Category,Amount,Mode,Note,Staff",...l.map(t=>[day(t.t),tm(t.t),t.type,t.cat,whole(t.amt),t.method,formattedNote(t.note),t.by].map(qq).join(","))].join("\n"))}
 function exportVisits(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>a.inAt-b.inAt),qq=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
- download("visits-"+day(Date.now())+".csv",["Date,Check-in,Check-out,Name,Phone,Service,Court,Mode,Start,End,Fee,Paid,Payment mode,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,p.court||"",p.mode||"",p.until?tm(p.startAt||p.inAt):"",p.until?tm(p.until):"",whole(+p.fee||0),p.paid?"Yes":"No",p.method,p.by].map(qq).join(","))].join("\n"))}
+ download("visits-"+day(Date.now())+".csv",["Entry Date,Entry Time,Check-out,Name,Phone,Service,Court,Mode,Reserved Date,Start,End,Fee,Paid,Payment mode,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,p.court||"",p.mode||"",p.startAt?day(p.startAt):(sessions.find(s=>s.id===p.sid)?.start?day(sessions.find(s=>s.id===p.sid).start):""),p.until?tm(p.startAt||p.inAt):"",p.until?tm(p.until):"",whole(+p.fee||0),p.paid?"Yes":"No",p.method,p.by].map(qq).join(","))].join("\n"))}
 
 // ================= views (shell is built once per tab; only #regions are redrawn)
 const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle rental, lesson, VIP room, shop, food)</span>
