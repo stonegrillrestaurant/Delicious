@@ -110,6 +110,8 @@
             body.payroll-list-active #payroll-a4-compact td.signature { min-width: 18mm; }
             body.payroll-list-active #payroll-a4-compact tbody tr { height: 11mm; break-inside: avoid; }
             body.payroll-list-active #payroll-a4-compact .payroll-sheet-head { text-align: center; margin-bottom: 5mm; }
+            @page payroll-summary-landscape { size: A4 landscape; margin: 8mm; }
+            body.payroll-list-active #payroll-a4-compact { page: payroll-summary-landscape; }
             body.payroll-list-active #payroll-a4-compact .payroll-group-head th { background: #d99a9a !important; color: #111 !important; border-color: #111; text-align: center; font-weight: bold; font-size: 9pt; }
             body.payroll-list-active #payroll-a4-compact thead tr:nth-child(2) th { background: #183b61 !important; color: #fff !important; border-color: #111; font-size: 8pt; }
             body.payroll-list-active #payroll-a4-compact th, body.payroll-list-active #payroll-a4-compact td { border: 1px solid #111 !important; }
@@ -1966,13 +1968,13 @@
                                                 <thead>
                                                     <tr className="payroll-group-head">
                                                         <th colSpan="7"></th>
-                                                        <th colSpan="5">DEDUCTIONS</th>
+                                                        <th colSpan="4">DEDUCTIONS</th>
                                                         <th>NET</th>
                                                         <th></th>
                                                     </tr>
                                                     <tr>
                                                         <th>No.</th><th>Name of Employee</th><th>Days Worked</th><th>C.A.</th><th>Rate</th><th>Gross Total</th><th>Bonus</th>
-                                                        <th>SSS</th><th>Misc.</th><th>Other</th><th>Cash Adv.</th><th>Totals</th>
+                                                        <th>SSS</th><th>Misc.</th><th>Other</th><th>Totals</th>
                                                         <th>Amount Paid</th><th>Signature</th>
                                                     </tr>
                                                 </thead>
@@ -2009,13 +2011,12 @@
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.sssRate||0),0))}</td>
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.miscRate||0),0))}</td>
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+(Number(x.gross||0)-Number(x.net||0)-Number(x.monthlyCA||0)-Number(x.sssRate||0)-Number(x.miscRate||0)),0))}</td>
-                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.monthlyCA||0),0))}</td>
                                                     <td className="money deduction-total">{formatMoney(payrollSummary.reduce((n,x)=>n+(Number(x.gross||0)-Number(x.net||0)),0))}</td>
                                                     <td className="money net-total">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.net||0),0))}</td>
                                                     <td></td>
                                                 </tr></tfoot>
                                             </table>
-                                            <div className="payroll-print-note">Gross Total includes recorded bonuses. C.A. is also shown in the deductions group for reference and is deducted only once.</div>
+                                            <div className="payroll-print-note">Gross Total includes recorded bonuses. C.A. is included in deduction totals and deducted only once.</div>
                                         </div>
                                         <div id="payroll-list-thermal">
                                             <div className="thermal-title">STONE GRILL</div>
