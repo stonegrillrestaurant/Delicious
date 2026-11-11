@@ -1998,7 +1998,42 @@
                                     <div className="bg-white w-full p-4 lg:p-8 animate-slide-up">
                                         <div className="flex justify-between items-center mb-8 print-hidden">
                                             <div className="flex items-center gap-4"><h2 className="text-2xl font-black text-slate-900 uppercase">Payroll List</h2><select className="border-2 rounded-xl px-4 py-2 text-sm font-bold outline-none" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>{monthOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                                            <button onClick={() => { document.body.classList.add('payroll-list-active'); window.print(); document.body.classList.remove('payroll-list-active'); }} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><Printer className="w-4 h-4"/> Print</button>
+                                            <button onClick={() => {
+                                                const source = document.getElementById('payroll-a4-compact');
+                                                if (!source) { alert('Payroll list is not ready.'); return; }
+                                                // Open synchronously from the tap so iOS permits the print window.
+                                                const printWindow = window.open('', '_blank');
+                                                if (!printWindow) { alert('Allow the payroll print window in your browser and try again.'); return; }
+                                                const printStyles = `<style>
+                                                    @page { size: letter landscape; margin: 8mm; }
+                                                    * { box-sizing: border-box; }
+                                                    body { font: 9pt Arial, sans-serif; color: #111; margin: 0; background: white; }
+                                                    .payroll-sheet-head { text-align: center; margin: 0 0 5mm; }
+                                                    .payroll-sheet-head h2 { font: bold 15pt Arial, sans-serif; margin: 0 0 2mm; }
+                                                    table { width: 100%; border-collapse: collapse; table-layout: auto; font: 8pt Arial, sans-serif; }
+                                                    th, td { border: 1px solid #111; padding: 5px 3px; vertical-align: middle; }
+                                                    thead { display: table-header-group; }
+                                                    tfoot { display: table-row-group; font-weight: bold; }
+                                                    tbody tr { height: 11mm; break-inside: avoid; }
+                                                    th { text-align: center; white-space: nowrap; }
+                                                    td.money { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+                                                    td.number { text-align: center; }
+                                                    td.employee { white-space: nowrap; }
+                                                    td.signature { min-width: 18mm; }
+                                                    .payroll-group-head th { background: #d99a9a; text-align: center; font-weight: bold; }
+                                                    thead tr:nth-child(2) th { background: #183b61; color: white; }
+                                                    .deduction-total { color: #b00; font-weight: bold; }
+                                                    .net-total { font-weight: bold; }
+                                                    .payroll-print-note { font: 7pt Arial, sans-serif; margin-top: 3mm; }
+                                                    .print-toolbar { display: flex; gap: 10px; padding: 10px; margin-bottom: 12px; border-bottom: 1px solid #ddd; }
+                                                    .print-toolbar button { padding: 10px 18px; font: bold 14px Arial; cursor: pointer; }
+                                                    @media print { .print-toolbar { display: none !important; } }
+                                                </style>`;
+                                                printWindow.document.open();
+                                                printWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Stone Grill Payroll Summary</title>' + printStyles + '</head><body><div class="print-toolbar"><button onclick="window.print()">Print Payroll List</button><button onclick="window.close()">Close</button></div>' + source.outerHTML + '</body></html>');
+                                                printWindow.document.close();
+                                                printWindow.focus();
+                                            }} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><Printer className="w-4 h-4"/> Print</button>
                                         </div>
                                         <div id="payroll-a4-compact">
                                             <div className="payroll-sheet-head">
@@ -2037,7 +2072,6 @@
                                                         <td className="money">{sss ? formatMoney(sss) : ''}</td>
                                                         <td className="money">{misc ? formatMoney(misc) : ''}</td>
                                                         <td className="money">{other ? formatMoney(other) : ''}</td>
-                                                        <td className="money">{ca ? formatMoney(ca) : ''}</td>
                                                         <td className="money deduction-total">{formatMoney(deductions)}</td>
                                                         <td className="money net-total">{formatMoney(net)}</td>
                                                         <td className="signature"></td>
