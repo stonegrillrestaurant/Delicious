@@ -1227,9 +1227,24 @@
                     alert('Only approved cash advance vouchers may be saved or printed.'); return;
                 }
                 const emp = employees.find(e => normalizeId(e.id) === normalizeId(req.empId));
-                setReceiptToPrint({ ...req, empName: emp?.name || 'Unknown Employee',
-                    approvedLabel: timestampLabel(req.approvedAt || req.dateApproved),
-                    receivedLabel: timestampLabel(req.receivedAt) });
+                try {
+                    const voucher = buildVoucherDocument({ ...req, empName: emp?.name || 'Unknown Employee',
+                        approvedLabel: timestampLabel(req.approvedAt || req.dateApproved),
+                        receivedLabel: timestampLabel(req.receivedAt) });
+                    // Open the isolated 58mm PDF without a full-screen voucher overlay.
+                    // The app remains visible and the original voucher layout is untouched.
+                    const url = URL.createObjectURL(voucher.file);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 120000);
+                } catch (error) {
+                    alert('Unable to open voucher: ' + (error.message || error));
+                }
             };
 
             const handleEditProfile = (emp) => {
@@ -1904,9 +1919,9 @@
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                            <div className="bg-white p-8 rounded-3xl shadow-xl space-y-4 h-max">
-                                                <h2 className="font-black text-blue-900 uppercase">Issue Entry</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 order-first" id="manual-cash-advance-entry">
+                                            <div className="bg-white p-5 md:p-8 rounded-3xl shadow-xl space-y-4 h-max">
+                                                <h2 className="font-black text-blue-900 uppercase">Manual Cash Advance / Payment Entry</h2>
                                                 <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
                                                     <button onClick={()=>setCaType('advance')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='advance'?'bg-white shadow text-blue-900':'text-slate-400'}`}>ADVANCE</button>
                                                     <button onClick={()=>setCaType('payment')} className={`flex-1 py-2 text-[10px] font-black rounded-lg ${caType==='payment'?'bg-white shadow text-emerald-600':'text-slate-400'}`}>PAYMENT</button>
@@ -1926,7 +1941,7 @@
                                                 <input type="date" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.date} onChange={e=>setNewCa({...newCa, date: e.target.value})} />
                                                 <input type="number" placeholder="Amount" className="w-full p-3 border rounded-xl font-black bg-slate-50 outline-none" value={newCa.amount} onChange={e=>setNewCa({...newCa, amount: e.target.value})} />
                                                 <input type="text" placeholder="Note" className="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none" value={newCa.reason} onChange={e=>setNewCa({...newCa, reason: e.target.value})} />
-                                                <button onClick={handleIssueCA} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase shadow-lg active:scale-95">Commit Entry</button>
+                                                <button onClick={handleIssueCA} disabled={caBusy} className="w-full bg-blue-600 disabled:opacity-50 text-white py-4 rounded-xl font-black uppercase shadow-lg active:scale-95">{caBusy ? 'Saving...' : (caType === 'advance' ? 'Record Cash Advance' : 'Record Payment')}</button>
                                             </div>
                                             <div className="md:col-span-2 bg-white rounded-3xl border shadow-xl overflow-hidden">
                                                 <div className="p-5 bg-gray-50 border-b font-black text-blue-900 uppercase text-[10px]">Cloud Ledger history</div>
