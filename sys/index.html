@@ -544,6 +544,29 @@
                 };
             }, []);
             const [profileCA, setProfileCA] = useState({ amount: '', reason: '', date: new Date().toISOString().slice(0, 10), type: 'advance' });
+            const [profileCABatch, setProfileCABatch] = useState([]);
+            const [profileCABusy, setProfileCABusy] = useState(false);
+            const queueProfileCA = () => {
+                const amount = Number(profileCA.amount);
+                const reason = profileCA.reason.trim();
+                if (!Number.isFinite(amount) || amount <= 0 || !reason || !profileCA.date) { alert('Enter a date, positive amount and reason.'); return; }
+                setProfileCABatch(items => [...items, {...profileCA, amount, reason, id: window.crypto?.randomUUID?.() || String(Date.now()) + '-' + items.length}]);
+                setProfileCA(prev => ({...prev, amount:'', reason:''}));
+            };
+            const saveProfileCABatch = async () => {
+                if (!isAdmin || !onIssueCA || profileCABusy || !profileCABatch.length) return;
+                setProfileCABusy(true);
+                let completed = 0;
+                try {
+                    for (const entry of profileCABatch) {
+                        const success = await onIssueCA(emp, entry, true);
+                        if (!success) break;
+                        completed++;
+                        setProfileCABatch(list => list.filter(item => item.id !== entry.id));
+                    }
+                    alert(completed === profileCABatch.length ? completed + ' entries saved to ' + emp.name + ' ledger.' : completed + ' entries saved. Unprocessed entries remain queued; check the ledger before retrying.');
+                } finally { setProfileCABusy(false); }
+            };
             const [adjustment,setAdjustment] = useState({type:'Bonus',amount:'',note:''});
             const [adjustmentBusy,setAdjustmentBusy] = useState(false);
             const handleAdjustmentSubmit = async (event) => {
@@ -704,6 +727,24 @@
                     </div>
 
                     <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6 custom-scrollbar max-h-[60vh]">
+                        {isAdmin && onIssueCA && (
+                                    <form onSubmit={handleProfileCASubmit} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-blue-100 space-y-3 print-hidden">
+                                        <div><h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">Cash Advance — {emp.name}</h4><p className="text-[10px] text-slate-500 mt-1">Enter several advances for this employee, then save the batch to their ledger.</p></div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button type="button" onClick={() => setProfileCA({...profileCA, type: 'advance'})} className={`py-2 rounded-lg text-[10px] font-black uppercase ${profileCA.type === 'advance' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-500'}`}>Advance</button>
+                                            <button type="button" onClick={() => setProfileCA({...profileCA, type: 'payment'})} className={`py-2 rounded-lg text-[10px] font-black uppercase ${profileCA.type === 'payment' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>Repayment</button>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Date<input required type="date" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm font-bold" value={profileCA.date} onChange={e=>setProfileCA({...profileCA, date:e.target.value})} /></label>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Amount (₱)<input required type="number" min="0.01" step="0.01" inputMode="decimal" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm font-black" placeholder="0.00" value={profileCA.amount} onChange={e=>setProfileCA({...profileCA, amount:e.target.value})} /></label>
+                                        </div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Note / Reason<input required type="text" maxLength="500" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm" placeholder="Reason or repayment note" value={profileCA.reason} onChange={e=>setProfileCA({...profileCA, reason:e.target.value})} /></label>
+                                        {profileCABatch.length > 0 && <div className="rounded-xl bg-blue-50 p-3 space-y-2"><p className="font-black text-xs text-blue-900">{profileCABatch.length} queued entries · ₱{formatMoney(profileCABatch.reduce((sum, item) => sum + (item.type === 'advance' ? Number(item.amount) : -Number(item.amount)), 0))} net advance</p>{profileCABatch.map((item, index) => <div key={item.id} className="flex gap-2 items-center text-xs border-t pt-2"><div className="flex-1 min-w-0"><strong>{item.date} · ₱{formatMoney(item.amount)}</strong><p className="truncate">{item.type === 'payment' ? 'Repayment' : 'Advance'} — {item.reason}</p></div><button type="button" disabled={profileCABusy} onClick={() => setProfileCABatch(list => list.filter(row => row.id !== item.id))} className="text-rose-700 font-bold px-2 py-1">Remove</button></div>)}</div>}
+                                        <div className="grid grid-cols-2 gap-2"><button type="button" disabled={profileCABusy || caBusy || !profileCA.amount || !profileCA.reason.trim()} onClick={queueProfileCA} className="border-2 border-blue-700 text-blue-700 rounded-xl py-3 text-xs font-black disabled:opacity-50">Add to Batch</button><button type="button" disabled={profileCABusy || caBusy || profileCABatch.length === 0} onClick={saveProfileCABatch} className="bg-emerald-700 text-white rounded-xl py-3 text-xs font-black disabled:opacity-50">{profileCABusy ? 'Saving Batch…' : 'Save Batch (' + profileCABatch.length + ')'}</button></div>
+                                        <button type="submit" disabled={profileCABusy || caBusy || !profileCA.amount || !profileCA.reason.trim()} className="w-full py-3 bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50">{caBusy ? 'Saving…' : profileCA.type === 'payment' ? 'Record Repayment' : 'Record Cash Advance'}</button>
+                                    </form>
+                                )}
+
                         {activeTab === 'payslip' ? (
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 mt-2">
                                 <div className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex justify-between items-center">
@@ -778,21 +819,6 @@
                                     {receiptPrintLines.map((row,index)=><div key={index} style={{fontWeight:row.bold?'bold':'normal',textAlign:row.align||'left',whiteSpace:'pre-wrap'}}>{row.text||' '}</div>)}
                                 </div>
                                 {ledgerPrintData && <ThermalReportDialog title="Employee Ledger" documentData={ledgerPrintData} onClose={() => setLedgerPrintData(null)} onThermer={(rows) => { const entries=rows.map(row=>({type:0,content:String(row.text||''),bold:row.bold?1:0,align:row.align==='center'?1:row.align==='right'?2:0,format:0})); entries.push({type:0,content:'\\n\\n\\n\\n',bold:0,align:0,format:0}); try { sessionStorage.setItem('payroll-thermer-handoff-at',String(Date.now())); } catch (_) {} setLedgerPrintData(null); window.setTimeout(() => { window.location.assign('thermer://'+encodeURIComponent(JSON.stringify(entries))); }, 180); }} />}
-                                {isAdmin && onIssueCA && (
-                                    <form onSubmit={handleProfileCASubmit} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-blue-100 space-y-3 print-hidden">
-                                        <div><h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">Record Cash Advance</h4><p className="text-[10px] text-slate-500 mt-1">This entry will be added directly to {emp.name}’s ledger.</p></div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button type="button" onClick={() => setProfileCA({...profileCA, type: 'advance'})} className={`py-2 rounded-lg text-[10px] font-black uppercase ${profileCA.type === 'advance' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-500'}`}>Advance</button>
-                                            <button type="button" onClick={() => setProfileCA({...profileCA, type: 'payment'})} className={`py-2 rounded-lg text-[10px] font-black uppercase ${profileCA.type === 'payment' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>Repayment</button>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Date<input required type="date" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm font-bold" value={profileCA.date} onChange={e=>setProfileCA({...profileCA, date:e.target.value})} /></label>
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Amount (₱)<input required type="number" min="0.01" step="0.01" inputMode="decimal" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm font-black" placeholder="0.00" value={profileCA.amount} onChange={e=>setProfileCA({...profileCA, amount:e.target.value})} /></label>
-                                        </div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Note / Reason<input required type="text" maxLength="500" className="mt-1 w-full p-3 border rounded-xl bg-slate-50 text-sm" placeholder="Reason or repayment note" value={profileCA.reason} onChange={e=>setProfileCA({...profileCA, reason:e.target.value})} /></label>
-                                        <button type="submit" disabled={caBusy || !profileCA.amount || !profileCA.reason.trim()} className="w-full py-3 bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50">{caBusy ? 'Saving…' : profileCA.type === 'payment' ? 'Record Repayment' : 'Record Cash Advance'}</button>
-                                    </form>
-                                )}
                                 {visibleLedger.map(tx => (
                                     <div key={tx.id} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex items-center gap-4">
                                         <div className={`p-3 rounded-xl shrink-0 ${tx.amount < 0 || tx.isBonus ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><DollarSign className="w-5 h-5" /></div>
@@ -1431,7 +1457,7 @@
                 });
             };
 
-            const handleProfileIssueCA = async (emp, entry) => {
+            const handleProfileIssueCA = async (emp, entry, silent = false) => {
                 if (!isAdmin || !emp?.id || !entry) return false;
                 const amount = Number(entry.amount);
                 if (!Number.isFinite(amount) || amount <= 0) return false;
@@ -1439,7 +1465,7 @@
                 await runCAAction(async () => {
                     if (entry.type === 'advance') {
                         await createManualApprovedCA(emp.id, entry);
-                        alert('Cash advance recorded. The voucher is ready to print or save.');
+                        if (!silent) alert('Cash advance recorded. The voucher is ready to print or save.');
                     } else {
                         await window.fb.addDoc(getVaultCol('cash_advances'), {
                             empId: String(emp.id), amount: -Math.abs(amount),
