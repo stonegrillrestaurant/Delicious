@@ -97,6 +97,21 @@
             
             .print-hidden { display: none !important; }
             .payroll-print-container { padding: 0 !important; border: none !important; box-shadow: none !important; }
+            /* A4 Payroll All uses a full-width tabular print sheet, not the 58mm receipt rules. */
+            html:has(body.payroll-list-active), body.payroll-list-active, body.payroll-list-active #root { width: 100% !important; min-width: 0 !important; max-width: none !important; }
+            body.payroll-list-active #payroll-a4-compact { display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; max-width: none !important; padding: 0 !important; color: #000 !important; background: #fff !important; }
+            body.payroll-list-active #payroll-a4-compact table { width: 100%; border-collapse: collapse; table-layout: auto; font: 8pt Arial,sans-serif; }
+            body.payroll-list-active #payroll-a4-compact th, body.payroll-list-active #payroll-a4-compact td { border: 1px solid #555; padding: 5px 3px; vertical-align: middle; }
+            body.payroll-list-active #payroll-a4-compact thead { display: table-header-group; }
+            body.payroll-list-active #payroll-a4-compact tfoot { display: table-row-group; font-weight: bold; }
+            body.payroll-list-active #payroll-a4-compact th { font-weight: bold; text-align: center; white-space: nowrap; }
+            body.payroll-list-active #payroll-a4-compact td.money { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+            body.payroll-list-active #payroll-a4-compact td.number { text-align: center; }
+            body.payroll-list-active #payroll-a4-compact td.signature { min-width: 18mm; }
+            body.payroll-list-active #payroll-a4-compact tbody tr { height: 11mm; break-inside: avoid; }
+            body.payroll-list-active #payroll-a4-compact .payroll-sheet-head { text-align: center; margin-bottom: 5mm; }
+            body.payroll-list-active #payroll-a4-compact h2 { font: bold 15pt Arial,sans-serif; margin: 0 0 2mm; }
+
         }
         #pos-receipt-print, #payroll-list-thermal, #payroll-a4-compact, #payroll-ledger-thermal { display: none; }
         @media print {
@@ -1935,10 +1950,34 @@
                                             <button onClick={() => { document.body.classList.add('payroll-list-active'); window.print(); document.body.classList.remove('payroll-list-active'); }} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><Printer className="w-4 h-4"/> Print</button>
                                         </div>
                                         <div id="payroll-a4-compact">
-                                            <h2>STONE GRILL — PAYROLL {selectedMonth}</h2>
-                                            <table><thead><tr><th>Employee</th><th>Rate</th><th>Days</th><th>Cash Adv.</th><th>Net Pay</th><th>Signature</th></tr></thead>
-                                            <tbody>{payrollSummary.map(row=><tr key={row.id}><td>{row.name}</td><td>{formatMoney(row.periodDailyRate ?? row.dailyRate ?? row.rate)}</td><td>{row.days}</td><td>{formatMoney(row.monthlyCA)}</td><td><strong>{formatMoney(row.net)}</strong></td><td>____________</td></tr>)}</tbody>
-                                            <tfoot><tr><td colSpan="4"><strong>TOTAL NET</strong></td><td><strong>PHP {formatMoney(payrollSummary.reduce((n,x)=>n+x.net,0))}</strong></td><td></td></tr></tfoot></table>
+                                            <div className="payroll-sheet-head">
+                                                <h2>STONE GRILL RESTAURANT</h2>
+                                                <div>PAYROLL SUMMARY — {selectedMonth}</div>
+                                            </div>
+                                            <table>
+                                                <thead><tr><th>Name</th><th>Rate</th><th>Days</th><th>Gross</th><th>Bonus</th><th>SSS</th><th>Misc.</th><th>Cash Adv.</th><th>Net Pay</th><th>Signature</th></tr></thead>
+                                                <tbody>{payrollSummary.map(row=><tr key={row.id}>
+                                                    <td>{row.name}</td>
+                                                    <td className="money">{formatMoney(row.periodDailyRate ?? row.dailyRate ?? row.rate)}</td>
+                                                    <td className="number">{row.days}</td>
+                                                    <td className="money">{formatMoney(row.gross)}</td>
+                                                    <td className="money">{formatMoney(row.bonusAmount)}</td>
+                                                    <td className="money">{formatMoney(row.sssRate || 0)}</td>
+                                                    <td className="money">{formatMoney(row.miscRate || 0)}</td>
+                                                    <td className="money">{formatMoney(row.monthlyCA)}</td>
+                                                    <td className="money"><strong>{formatMoney(row.net)}</strong></td>
+                                                    <td className="signature"></td>
+                                                </tr>)}</tbody>
+                                                <tfoot><tr>
+                                                    <td>TOTAL</td><td></td><td className="number">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.days||0),0))}</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.gross||0),0))}</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.bonusAmount||0),0))}</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.sssRate||0),0))}</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.miscRate||0),0))}</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.monthlyCA||0),0))}</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.net||0),0))}</td><td></td>
+                                                </tr></tfoot>
+                                            </table>
                                         </div>
                                         <div id="payroll-list-thermal">
                                             <div className="thermal-title">STONE GRILL</div>
