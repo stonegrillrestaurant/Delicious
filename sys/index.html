@@ -2008,13 +2008,15 @@
                                                     @page { size: letter landscape; margin: 8mm; }
                                                     * { box-sizing: border-box; }
                                                     body { font: 9pt Arial, sans-serif; color: #111; margin: 0; background: white; }
+                                                    #print-sheet { position: relative; width: 263mm; height: 199mm; margin: 0; overflow: visible; }
+                                                    #payroll-a4-compact { position: absolute; top: 0; left: 0; width: 263mm; transform-origin: top left; }
                                                     .payroll-sheet-head { text-align: center; margin: 0 0 5mm; }
                                                     .payroll-sheet-head h2 { font: bold 15pt Arial, sans-serif; margin: 0 0 2mm; }
-                                                    table { width: 100%; border-collapse: collapse; table-layout: auto; font: 8pt Arial, sans-serif; }
-                                                    th, td { border: 1px solid #111; padding: 5px 3px; vertical-align: middle; }
+                                                    table { width: 100%; border-collapse: collapse; table-layout: auto; font: 7.5pt Arial, sans-serif; }
+                                                    th, td { border: 1px solid #111; padding: 3px 2px; vertical-align: middle; }
                                                     thead { display: table-header-group; }
                                                     tfoot { display: table-row-group; font-weight: bold; }
-                                                    tbody tr { height: 11mm; break-inside: avoid; }
+                                                    tbody tr { height: 7mm; break-inside: avoid; }
                                                     th { text-align: center; white-space: nowrap; }
                                                     td.money { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
                                                     td.number { text-align: center; }
@@ -2027,11 +2029,27 @@
                                                     .payroll-print-note { font: 7pt Arial, sans-serif; margin-top: 3mm; }
                                                     .print-toolbar { display: flex; gap: 10px; padding: 10px; margin-bottom: 12px; border-bottom: 1px solid #ddd; }
                                                     .print-toolbar button { padding: 10px 18px; font: bold 14px Arial; cursor: pointer; }
-                                                    @media print { .print-toolbar { display: none !important; } }
+                                                    @media print { .print-toolbar { display: none !important; } #print-sheet { break-inside: avoid; page-break-inside: avoid; } }
                                                 </style>`;
                                                 printWindow.document.open();
-                                                printWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Stone Grill Payroll Summary</title>' + printStyles + '</head><body><div class="print-toolbar"><button onclick="window.print()">Print Payroll List</button><button onclick="window.close()">Close</button></div>' + source.outerHTML + '</body></html>');
+                                                printWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Stone Grill Payroll Summary</title>' + printStyles + '</head><body><div class="print-toolbar"><button onclick="fitPayrollPage(); window.print()">Print Payroll List</button><button onclick="window.close()">Close</button></div>' + '<div id="print-sheet">' + source.outerHTML + '</div></body></html>');
                                                 printWindow.document.close();
+                                                // Scale both dimensions to the printable area, including long staff lists.
+                                                // Keep the printed page box fixed to one letter landscape sheet.
+                                                printWindow.fitPayrollPage = () => {
+                                                    const doc = printWindow.document;
+                                                    const sheet = doc.getElementById('print-sheet');
+                                                    const report = doc.getElementById('payroll-a4-compact');
+                                                    if (!sheet || !report) return;
+                                                    report.style.transform = 'none';
+                                                    const availableWidth = sheet.clientWidth - 2;
+                                                    const availableHeight = sheet.clientHeight - 2;
+                                                    const neededWidth = Math.max(report.scrollWidth, report.getBoundingClientRect().width);
+                                                    const neededHeight = Math.max(report.scrollHeight, report.getBoundingClientRect().height);
+                                                    const scale = Math.min(1, availableWidth / Math.max(1, neededWidth), availableHeight / Math.max(1, neededHeight));
+                                                    report.style.transform = 'scale(' + Math.max(0.05, scale * 0.995) + ')';
+                                                };
+                                                printWindow.fitPayrollPage();
                                                 printWindow.focus();
                                             }} className="bg-slate-900 text-white hover:bg-black px-6 py-3 rounded-xl text-xs font-black uppercase shadow-lg flex items-center gap-2"><Printer className="w-4 h-4"/> Print</button>
                                         </div>
