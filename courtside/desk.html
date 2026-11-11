@@ -448,8 +448,8 @@ function cancelBooking(sid){
  const ps=players.filter(p=>p.sid===sid);
  const paid=ps.filter(p=>p.paid&&Number(p.fee)>0);
  const amount=paid.reduce((n,p)=>n+(Number(p.fee)||0),0);
- const note=paid.length?"\\n\\n"+paid.length+" paid record(s), totaling "+money(amount)+", will remain in the ledger. Handle any refund separately.":"";
- if(!confirm("Cancel Court "+s.court+" booking and waive all uncollected payments?\\nThe booking stays in history. This cannot be undone from the desk."+note))return;
+ const note=paid.length?"\n\n"+paid.length+" paid record(s), totaling "+money(amount)+", will remain in the ledger. Handle any refund separately.":"";
+ if(!confirm("Cancel Court "+s.court+" booking and waive all uncollected payments?\nThe booking stays in history. This cannot be undone from the desk."+note))return;
  const n=Date.now();
  q({op:"upd",c:"sessions",id:sid,patch:{closed:true,cancelled:true,cancelledAt:n,cancelledBy:STAFF,closedAt:n}});
  ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{
@@ -463,7 +463,7 @@ function endSession(sid){
  const s=sessions.find(x=>x.id===sid),ps=sessPlayers(sid),un=ps.filter(p=>!p.paid).length,n=Date.now();
  if(!s||s.closed)return;
  if(n<s.start)return alert("Only an admin can cancel a booking. Use Cancel booking (Admin).");
- if(!confirm("End this session now and check everyone out?"+(un?"\\n\\n⚠️ "+un+" player(s) are unpaid. They stay in Players history so you can collect later.":"")))return;
+ if(!confirm("End this session now and check everyone out?"+(un?"\n\n⚠️ "+un+" player(s) are unpaid. They stay in Players history so you can collect later.":"")))return;
  q({op:"upd",c:"sessions",id:sid,patch:{closed:true,closedAt:n,until:openLive(s)?n:s.until}});
  ps.forEach(p=>q({op:"upd",c:"players",id:p.id,patch:{outAt:n,status:"done",log:[...(p.log||[]),{t:n,e:"Session ended"}]}}));
  closeModal();refresh()}
@@ -715,7 +715,7 @@ function checkinAll(sid){const n=Date.now(),l=players.filter(p=>p.sid===sid&&act
  refresh()}
 function dPlayers(){
  const l=players.filter(p=>inRange(p.inAt)).sort((a,b)=>b.inAt-a.inAt);
- return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?'<br><span class="note">Cancelled · No payment due</span>':p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
+ return rangeTabs()+`<div class="card"><div class="row"><b>Visit history (${l.length})</b><button class="btn s g" onclick="exportVisits()">Export CSV</button></div>${l.map(p=>`<div class="row" style="border-top:1px solid var(--bd);padding:8px 0"><div><b>${esc(p.name)}</b> <span class="pill p-${pst(p)}">${pst(p)}</span><div class="note">${new Date(p.inAt).toLocaleDateString()} ${tm(p.inAt)}${p.outAt?" – "+tm(p.outAt):""} · ${esc(p.service||"")}${p.court?" · Court "+p.court:""}${p.until?" · "+tm(p.startAt||p.inAt)+"–"+tm(p.until):""}${p.by?" · "+esc(p.by):""}</div></div><div style="text-align:right" class="${p.paid?"paid":"unpaid"}"><b>${money(p.fee||0)}</b>${p.cancelled?(p.paid?'<br><span class="note">Cancelled · Paid (review refund)</span>':'<br><span class="note">Cancelled · No payment due</span>'):p.paid?"":`<br><button class="btn s" style="margin-top:4px" onclick="collectModal('${p.id}')">Collect</button>`}</div></div>`).join("")||'<p class="note">No visits in this period.</p>'}</div>`}
 function dLgTop(){const l=txns.filter(t=>inRange(t.t)),inc=sum(l,"income"),ex=sum(l,"expense");
  return rangeTabs()+`<div class="grid"><div class="card stat"><b class="in">${money(inc)}</b><span>Income</span></div><div class="card stat"><b class="out">${money(ex)}</b><span>Expenses</span></div></div><div class="card stat"><b>${money(inc-ex)}</b><span>Net</span></div>`}
 function dLgList(){const l=txns.filter(t=>inRange(t.t)).sort((a,b)=>b.t-a.t);
