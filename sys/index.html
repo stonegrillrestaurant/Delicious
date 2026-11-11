@@ -110,6 +110,14 @@
             body.payroll-list-active #payroll-a4-compact td.signature { min-width: 18mm; }
             body.payroll-list-active #payroll-a4-compact tbody tr { height: 11mm; break-inside: avoid; }
             body.payroll-list-active #payroll-a4-compact .payroll-sheet-head { text-align: center; margin-bottom: 5mm; }
+            body.payroll-list-active #payroll-a4-compact .payroll-group-head th { background: #d99a9a !important; color: #111 !important; border-color: #111; text-align: center; font-weight: bold; font-size: 9pt; }
+            body.payroll-list-active #payroll-a4-compact thead tr:nth-child(2) th { background: #183b61 !important; color: #fff !important; border-color: #111; font-size: 8pt; }
+            body.payroll-list-active #payroll-a4-compact th, body.payroll-list-active #payroll-a4-compact td { border: 1px solid #111 !important; }
+            body.payroll-list-active #payroll-a4-compact td.employee { white-space: nowrap; }
+            body.payroll-list-active #payroll-a4-compact td.deduction-total { color: #c00 !important; font-weight: bold; }
+            body.payroll-list-active #payroll-a4-compact td.net-total { font-weight: bold; }
+            body.payroll-list-active #payroll-a4-compact .payroll-print-note { font: 7pt Arial,sans-serif; margin-top: 3mm; }
+
             body.payroll-list-active #payroll-a4-compact h2 { font: bold 15pt Arial,sans-serif; margin: 0 0 2mm; }
 
         }
@@ -1955,29 +1963,59 @@
                                                 <div>PAYROLL SUMMARY — {selectedMonth}</div>
                                             </div>
                                             <table>
-                                                <thead><tr><th>Name</th><th>Rate</th><th>Days</th><th>Gross</th><th>Bonus</th><th>SSS</th><th>Misc.</th><th>Cash Adv.</th><th>Net Pay</th><th>Signature</th></tr></thead>
-                                                <tbody>{payrollSummary.map(row=><tr key={row.id}>
-                                                    <td>{row.name}</td>
-                                                    <td className="money">{formatMoney(row.periodDailyRate ?? row.dailyRate ?? row.rate)}</td>
-                                                    <td className="number">{row.days}</td>
-                                                    <td className="money">{formatMoney(row.gross)}</td>
-                                                    <td className="money">{formatMoney(row.bonusAmount)}</td>
-                                                    <td className="money">{formatMoney(row.sssRate || 0)}</td>
-                                                    <td className="money">{formatMoney(row.miscRate || 0)}</td>
-                                                    <td className="money">{formatMoney(row.monthlyCA)}</td>
-                                                    <td className="money"><strong>{formatMoney(row.net)}</strong></td>
-                                                    <td className="signature"></td>
-                                                </tr>)}</tbody>
+                                                <thead>
+                                                    <tr className="payroll-group-head">
+                                                        <th colSpan="7"></th>
+                                                        <th colSpan="5">DEDUCTIONS</th>
+                                                        <th>NET</th>
+                                                        <th></th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>No.</th><th>Name of Employee</th><th>Days Worked</th><th>C.A.</th><th>Rate</th><th>Gross Total</th><th>Bonus</th>
+                                                        <th>SSS</th><th>Misc.</th><th>Other</th><th>Cash Adv.</th><th>Totals</th>
+                                                        <th>Amount Paid</th><th>Signature</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>{payrollSummary.map((row, index) => {
+                                                    const sss = Number(row.sssRate)||0;
+                                                    const misc = Number(row.miscRate)||0;
+                                                    const ca = Number(row.monthlyCA)||0;
+                                                    const gross = Number(row.gross)||0;
+                                                    const net = Number(row.net)||0;
+                                                    const other = Math.round((gross - net - ca - sss - misc)*100)/100;
+                                                    const deductions = Math.round((gross-net)*100)/100;
+                                                    return <tr key={row.id}>
+                                                        <td className="number">{index + 1}</td><td className="employee">{row.name}</td>
+                                                        <td className="number">{row.days}</td>
+                                                        <td className="money">{ca ? formatMoney(ca) : ''}</td>
+                                                        <td className="money">{formatMoney(row.periodDailyRate ?? row.dailyRate ?? row.rate)}</td>
+                                                        <td className="money"><strong>{formatMoney(gross)}</strong></td>
+                                                        <td className="money">{Number(row.bonusAmount) ? formatMoney(row.bonusAmount) : ''}</td>
+                                                        <td className="money">{sss ? formatMoney(sss) : ''}</td>
+                                                        <td className="money">{misc ? formatMoney(misc) : ''}</td>
+                                                        <td className="money">{other ? formatMoney(other) : ''}</td>
+                                                        <td className="money">{ca ? formatMoney(ca) : ''}</td>
+                                                        <td className="money deduction-total">{formatMoney(deductions)}</td>
+                                                        <td className="money net-total">{formatMoney(net)}</td>
+                                                        <td className="signature"></td>
+                                                    </tr>;
+                                                })}</tbody>
                                                 <tfoot><tr>
-                                                    <td>TOTAL</td><td></td><td className="number">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.days||0),0))}</td>
+                                                    <td colSpan="3">TOTAL</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.monthlyCA||0),0))}</td>
+                                                    <td></td>
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.gross||0),0))}</td>
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.bonusAmount||0),0))}</td>
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.sssRate||0),0))}</td>
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.miscRate||0),0))}</td>
+                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+(Number(x.gross||0)-Number(x.net||0)-Number(x.monthlyCA||0)-Number(x.sssRate||0)-Number(x.miscRate||0)),0))}</td>
                                                     <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.monthlyCA||0),0))}</td>
-                                                    <td className="money">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.net||0),0))}</td><td></td>
+                                                    <td className="money deduction-total">{formatMoney(payrollSummary.reduce((n,x)=>n+(Number(x.gross||0)-Number(x.net||0)),0))}</td>
+                                                    <td className="money net-total">{formatMoney(payrollSummary.reduce((n,x)=>n+Number(x.net||0),0))}</td>
+                                                    <td></td>
                                                 </tr></tfoot>
                                             </table>
+                                            <div className="payroll-print-note">Gross Total includes recorded bonuses. C.A. is also shown in the deductions group for reference and is deducted only once.</div>
                                         </div>
                                         <div id="payroll-list-thermal">
                                             <div className="thermal-title">STONE GRILL</div>
