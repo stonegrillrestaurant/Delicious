@@ -991,6 +991,9 @@ async function boot(){
  try{const c=JSON.parse(ls("cache")||"null");if(c){server=c;loaded=true}}catch(e){}
  try{outbox=JSON.parse(ls("outbox")||"[]")}catch(e){outbox=[]}
  rebuild();drawHead();status();
+ // On devices with unsynced local entries but no cached snapshot, pull() intentionally
+ // skips while the outbox is pending. Flush first so startup cannot deadlock.
+ if(!loaded&&outbox.length)await flush();
  if(!loaded)await pull();
  while(!loaded){overlay('<h2 style="margin:0 0 8px">Connecting…</h2><div class="note">Could not reach the server. Check the internet, then retry.</div><p><button class="btn" id="rt" style="width:100%">Retry</button></p>');
   await new Promise(r=>{$("#rt").onclick=r});await pull()}
