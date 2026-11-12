@@ -933,6 +933,11 @@
             const [interactivePayrolls, setInteractivePayrolls] = useState([]);
             
             const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+            const [attendanceDate, setAttendanceDate] = useState(() => {
+                const now = new Date();
+                return [now.getFullYear(), String(now.getMonth()+1).padStart(2,'0'), String(now.getDate()).padStart(2,'0')].join('-');
+            });
+            const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
             const [viewProfile, setViewProfile] = useState(null);
             const [showAddStaff, setShowAddStaff] = useState(false);
             const [isEditing, setIsEditing] = useState(false);
@@ -1094,6 +1099,30 @@
                     return { ...emp, days, gross, net, monthlyCA, caBalance: lifetimeCaBalance, bonusAmount, lifetimeDays, periodDailyRate };
                 });
             }, [employees, attendance, cashAdvances, interactivePayrolls, selectedMonth]);
+
+            // Daily roster is a read-only view of the existing attendance collection.
+            // One employee is counted once even when multiple logs exist for a date.
+            const dailyAttendanceRoster = useMemo(() => {
+                const records = new Map();
+                attendance.filter(a => cleanDate(a.date) === attendanceDate).forEach(a => {
+                    const key = normalizeId(a.empId);
+                    if (!key) return;
+                    const current = records.get(key);
+                    if (!current || (Number(a.dayEquivalent) || 0) > (Number(current.dayEquivalent) || 0)) records.set(key, a);
+                });
+                const roster = employees.filter(emp => !emp.hireDate || cleanDate(emp.hireDate) <= attendanceDate).map(emp => {
+                    const record = records.get(normalizeId(emp.id));
+                    const missingOut = record && (!record.lastOut || record.lastOut === '00:00');
+                    return { id: emp.id, name: emp.name, position: emp.position || '', record, status: !record ? 'No record' : missingOut ? 'Incomplete' : 'Present' };
+                });
+                records.forEach((record, key) => {
+                    if (!roster.some(emp => normalizeId(emp.id) === key)) {
+                        roster.push({ id: record.empId, name: record.empName || String(record.empId), position: '', record, status: !record.lastOut || record.lastOut === '00:00' ? 'Incomplete' : 'Present' });
+                    }
+                });
+                roster.sort((a,b) => a.name.localeCompare(b.name));
+                return roster;
+            }, [attendance, employees, attendanceDate]);
 
             const stats = useMemo(() => {
                 const today = new Date().toISOString().slice(0, 10);
@@ -1712,7 +1741,42 @@
                                 )}
 
                                 {isAdmin && activeTab === 'attendance' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full animate-slide-up">
+                                    <div className="space-y-6 animate-slide-up">
+                                        <div className="bg-white rounded-3xl border shadow-sm p-4 md:p-6">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                                                <div>
+                                                    <h3 className="text-lg font-black text-blue-900">Daily Attendance</h3>
+                                                    <p className="text-xs text-slate-500">Select a date to see who has attendance records. No record is not automatically an absence.</p>
+                                                </div>
+                                                <label className="text-xs font-bold text-slate-700 flex flex-col gap-1">Attendance date
+                                                    <input type="date" value={attendanceDate} onChange={e => setAttendanceDate(e.target.value)} className="border rounded-xl px-3 py-2 bg-slate-50 text-sm text-slate-900" />
+                                                </label>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                                                <div className="rounded-xl bg-emerald-50 p-3"><div className="text-xl font-black text-emerald-700">{dailyAttendanceRoster.filter(r => r.status === 'Present').length}</div><div className="text-[10px] font-bold text-emerald-700 uppercase">Present</div></div>
+                                                <div className="rounded-xl bg-amber-50 p-3"><div className="text-xl font-black text-amber-700">{dailyAttendanceRoster.filter(r => r.status === 'Incomplete').length}</div><div className="text-[10px] font-bold text-amber-700 uppercase">Incomplete</div></div>
+                                                <div className="rounded-xl bg-slate-100 p-3"><div className="text-xl font-black text-slate-600">{dailyAttendanceRoster.filter(r => r.status === 'No record').length}</div><div className="text-[10px] font-bold text-slate-600 uppercase">No record</div></div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                {['all','Present','Incomplete','No record'].map(status => <button key={status} type="button" onClick={() => setAttendanceStatusFilter(status)} className={`px-3 py-2 rounded-lg text-xs font-bold border ${attendanceStatusFilter === status ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-slate-600 border-slate-200'}`}>{status === 'all' ? 'All employees' : status}</button>)}
+                                            </div>
+                                            <div className="overflow-x-auto rounded-xl border">
+                                                <table className="w-full min-w-[510px] text-xs text-left">
+                                                    <thead className="bg-slate-50 text-slate-600 uppercase"><tr><th className="p-3">Employee</th><th className="p-3">Time in</th><th className="p-3">Time out</th><th className="p-3">Credited day</th><th className="p-3">Status</th></tr></thead>
+                                                    <tbody>{dailyAttendanceRoster.filter(r => attendanceStatusFilter === 'all' || r.status === attendanceStatusFilter).map(row => (
+                                                        <tr key={String(row.id)} className="border-t">
+                                                            <td className="p-3 font-bold text-slate-800">{row.name}<span className="block text-[10px] font-normal text-slate-400">{row.position}</span></td>
+                                                            <td className="p-3">{row.record?.firstIn || '—'}</td>
+                                                            <td className="p-3">{row.record?.lastOut && row.record.lastOut !== '00:00' ? row.record.lastOut : '—'}</td>
+                                                            <td className="p-3">{row.record ? `${Number(row.record.dayEquivalent) || 0}d` : '—'}</td>
+                                                            <td className="p-3 font-bold">{row.status}</td>
+                                                        </tr>
+                                                    ))}</tbody>
+                                                </table>
+                                                {!dailyAttendanceRoster.some(r => attendanceStatusFilter === 'all' || r.status === attendanceStatusFilter) && <p className="p-5 text-sm text-center text-slate-500">No matching employees for this date.</p>}
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full animate-slide-up">
                                         <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col">
                                             <h3 className="font-black text-blue-900 uppercase mb-2">Smart Import Logs</h3>
                                             <p className="text-[10px] text-slate-400 mb-6 font-bold uppercase leading-relaxed">Automatic Rule Applied:<br/>1 Punch = 0.5d | &lt;6 hrs = 0.5d | &gt;=6 hrs = 1.0d</p>
@@ -1731,6 +1795,7 @@
                                                 </table>
                                             </div>
                                         </div>
+                                    </div>
                                     </div>
                                 )}
 
