@@ -672,10 +672,7 @@ function quickOpenCourts(at=Date.now()){
 }
 function quickOpenTime(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
 function placeQuickOpen(){
- const card=$("#quick-open-card"),mobile=$("#quick-mobile"),desktop=$("#quick-desktop");
- if(!card||!mobile||!desktop)return;
- const target=window.matchMedia("(max-width:899px)").matches?mobile:desktop;
- if(card.parentNode!==target)target.appendChild(card);
+ // Unified form stays in the left column, also on mobile.
 }
 window.addEventListener("resize",placeQuickOpen);
 function quickOpenPost(){
@@ -711,7 +708,7 @@ function quickOpenSave(f){
  q({op:"add",c:"players",o:{id:uid(),name,phone:"",sid:s.id,court:s.court,mode:"open",role:"player",service:"Open play",hours:0,fee,paid,method:paid&&fee>0?method:"",status:"active",ci:true,startAt:s.start,until:s.until,inAt:arrival.getTime(),outAt:null,log}});
  if(paid&&fee>0)q({op:"add",c:"txns",o:{id:uid(),t:now,type:"income",cat:"Open play",amt:fee,method,note:name+refTxt+" · Court "+s.court+" · Desk entry"}});
  delete draft.opquick;
- f.reset();f.intime.value=quickOpenTime();f.dataset.autorate="1";quickOpenRate(true);
+ f.pname.value="";f.intime.value=quickOpenTime();f.paid.value="yes";f.method.value="Cash";f.ref.value="";f.dataset.autorate="1";quickOpenRate(true);
  const status=$("#opquickresult");if(status)status.textContent=name+" added to Court "+s.court+(paid?" · Paid "+money(fee):" · Unpaid "+money(fee));
  quickOpenPost();
 }
@@ -936,14 +933,7 @@ function exportVisits(){
  download("visits-"+day(Date.now())+".csv",["Entry Date,Entry Time,Check-out,Name,Phone,Service,Court,Mode,Reserved Date,Start,End,Fee,Paid,Payment mode,Staff",...l.map(p=>[day(p.inAt),tm(p.inAt),p.outAt?tm(p.outAt):"",p.name,p.phone,p.service,p.court||"",p.mode||"",p.startAt?day(p.startAt):(sessions.find(s=>s.id===p.sid)?.start?day(sessions.find(s=>s.id===p.sid).start):""),p.until?tm(p.startAt||p.inAt):"",p.until?tm(p.until):"",whole(+p.fee||0),p.paid?"Yes":"No",p.method,p.by].map(qq).join(","))].join("\n"))}
 
 // ================= views (shell is built once per tab; only #regions are redrawn)
-const formQS=`<div class="card"><b>Quick sale</b> <span class="note">(paddle rental, lesson, VIP room, shop, food)</span>
- <form data-d="qs" onsubmit="event.preventDefault();quickSale(this)">
- <label>Customer name (optional)</label><input name="cust" autocomplete="off">
- <label>Item</label><select name="service" onchange="calcQ(this.form)">${Object.keys(QUICK).map(s=>`<option>${s}</option>`).join("")}</select>
- <div class="grid"><div><label>Qty</label><input name="qty" type="number" min="1" value="1" oninput="calcQ(this.form)"></div><div><label>Amount (₱)</label><input name="fee" type="number" step="1" min="0" value="50"></div></div>
- <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
- <p><button class="btn" style="width:100%">Record sale</button></p></form></div>`;
-const formOpenQuick=`<div class="card" id="quick-open-card"><b>Quick Open Play entry</b><div class="note" id="opquickcourt">Finding available courts…</div>
+const formDeskEntry=`<div class="card" id="quick-open-card"><b>New entry</b><label>Entry type</label><select id="desk-entry-type" onchange="deskEntryType(this.value)"><option value="open">Open Play</option><option value="rent">Rent Court</option><option value="Paddle rental">Paddle Rental</option><option value="VIP room">VIP Room</option><option value="Lesson">Lesson</option><option value="Pro shop">Pro Shop</option><option value="Food & drinks">Food &amp; Drinks</option></select><div id="desk-open-fields"><div class="note" id="opquickcourt">Finding available courts…</div>
  <form id="opquick" data-d="opquick" onsubmit="event.preventDefault();quickOpenSave(this)">
  <label>Player name</label><input name="pname" autocomplete="off" placeholder="Player name" required>
  <div class="grid"><div><label>Time in</label><input name="intime" type="time" value="${quickOpenTime()}" oninput="quickOpenRate(true)" required></div>
@@ -952,16 +942,33 @@ const formOpenQuick=`<div class="card" id="quick-open-card"><b>Quick Open Play e
  <div class="grid"><div><label>Payment</label><select name="paid"><option value="yes">Paid now</option><option value="no">Unpaid</option></select></div>
  <div><label>Method</label><select name="method"><option>Cash</option><option>GCash</option></select></div></div>
  <label>GCash reference (if applicable)</label><input name="ref" autocomplete="off">
- <p><button class="btn" style="width:100%">Add player to Open Play</button></p></form>
- <div class="note" id="opquickresult"></div></div>`;
+ <p><button class="btn" style="width:100%">Add player to Open Play</button></p></form></div><div id="desk-rent-fields" style="display:none"><p class="note">Court rentals use the scheduling form to check availability and prevent double bookings.</p><button class="btn" onclick="setupModal({})">Choose court and time</button></div><div id="desk-sale-fields" style="display:none"><b id="desk-sale-title">Paddle rental</b><form data-d="qs" onsubmit="event.preventDefault();quickSale(this)">
+ <label>Customer name (optional)</label><input name="cust" autocomplete="off">
+ <input name="service" type="hidden" value="Paddle rental">
+ <div class="grid"><div><label>Qty</label><input name="qty" type="number" min="1" value="1" oninput="calcQ(this.form)"></div><div><label>Amount (₱)</label><input name="fee" type="number" step="1" min="0" value="50"></div></div>
+ <div class="grid"><div><label>Mode of payment</label><select name="method">${METHODS.map(m=>`<option>${m}</option>`).join("")}</select></div><div><label>GCash ref #</label><input name="ref" autocomplete="off"></div></div>
+ <p><button class="btn" style="width:100%">Record sale</button></p></form></div>
+ <div class="note" id="opquickresult"></div></div>
+
+function deskEntryType(type){
+ const isOpen=type==="open",isRent=type==="rent";
+ document.getElementById("desk-open-fields").style.display=isOpen?"":"none";
+ document.getElementById("desk-rent-fields").style.display=isRent?"":"none";
+ document.getElementById("desk-sale-fields").style.display=!isOpen&&!isRent?"":"none";
+ const player=document.querySelector("#opquick [name=pname]");
+ player.required=isOpen;
+ const time=document.querySelector("#opquick [name=intime]");time.required=isOpen;
+ const amount=document.querySelector("#opquick [name=amount]");amount.required=isOpen;
+ if(!isOpen&&!isRent){const f=document.querySelector("#desk-sale-fields form");f.service.value=type;document.getElementById("desk-sale-title").textContent=type;calcQ(f);}
+}
 const VIEWS={
- desk:{shell:()=>`<div class="dgrid"><div class="dl"><div id="alerts"></div><div id="stats"></div><div id="quick-mobile"></div><div id="unpaid"></div>
+ desk:{shell:()=>`<div class="dgrid"><div class="dl"><div id="alerts"></div><div id="stats"></div><div id="quick-mobile">${formDeskEntry}</div><div id="unpaid"></div>
   <div class="card"><b>Courts</b> <span class="note">tap a court to set it up or manage it</span><div id="courts" class="courts"></div>
   <div class="legend"><span><i style="background:var(--org)"></i>Rented</span><span><i style="background:var(--ac)"></i>Open play / Special event</span><span><i style="background:var(--red)"></i>Overtime</span></div></div>
   <div class="card"><div class="row"><b>Schedule</b><input type="date" id="sdate" value="${sdate}" style="width:auto" onchange="sdate=this.value||day(Date.now());refresh()"></div>
   <div class="scroll" id="sched" style="margin-top:6px"></div><div class="note">8:00 AM – 12:00 midnight · tap a free slot to reserve · tap a coloured slot to manage</div>
   <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setupModal({})">+ New court booking</button><button class="btn g" onclick="lateOpenModal()">+ Late Open Play Entry</button></div></div>
-  </div><div class="dr"><div id="quick-desktop">${formOpenQuick}</div>${formQS}
+  </div><div class="dr">
   <div class="card"><b>Active players</b> <span class="note">playing now, by court</span><div id="active"></div></div>
   <div class="card"><b>Reservations</b> <span class="note">waiting to arrive</span><div id="resv"></div></div></div></div>`,
   dyn:{alerts:dAlerts,stats:dStats,unpaid:dUnpaid,courts:dCourts,sched:dSched,active:dActive,resv:dResv},post:quickOpenPost},
