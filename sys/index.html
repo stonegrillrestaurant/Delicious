@@ -932,6 +932,7 @@
             const [holidayDate, setHolidayDate] = useState(() => new Date().toLocaleDateString('en-CA'));
             const [holidayName, setHolidayName] = useState('');
             const [holidayType, setHolidayType] = useState('regular');
+            const [holidayPercent, setHolidayPercent] = useState('200');
             const [holidayBusy, setHolidayBusy] = useState(false);
             const [cashAdvances, setCashAdvances] = useState([]);
             const [caRequests, setCaRequests] = useState([]); 
@@ -1076,13 +1077,13 @@
             }, [employees, attendance, holidayDate]);
 
             const saveHoliday = async () => {
-                if (!isAdmin || holidayBusy || !/^\d{4}-\d{2}-\d{2}$/.test(holidayDate) || !holidayName.trim()) {
-                    alert('Select a valid date and enter a holiday name.'); return;
+                if (!isAdmin || holidayBusy || !/^\d{4}-\d{2}-\d{2}$/.test(holidayDate) || !holidayName.trim() || holidayPercent.trim() === '' || !Number.isFinite(Number(holidayPercent)) || Number(holidayPercent) < 100 || Number(holidayPercent) > 500) {
+                    alert('Enter a valid holiday date, name, and total worked-day percentage from 100% to 500%.'); return;
                 }
                 setHolidayBusy(true);
                 try {
                     await window.fb.setDoc(getVaultDoc('holidays', holidayDate), {
-                        date: holidayDate, name: holidayName.trim(), type: holidayType,
+                        date: holidayDate, name: holidayName.trim(), type: holidayType, workedPercent: Number(holidayPercent),
                         updatedBy: user.uid, updatedAt: window.fb.serverTimestamp()
                     });
                     alert('Holiday saved.');
@@ -1142,7 +1143,9 @@
                     const holidayAmount = summarizeAttendanceDays(empAtt).reduce((sum, day) => {
                         const holiday = holidays.find(h => h.date === day.date);
                         if (!holiday || day.dayEquivalent <= 0) return sum;
-                        return sum + day.dayEquivalent * salaryRateForDate(emp, day.date) * (holiday.type === 'regular' ? 1 : 0.30);
+                        const totalPercent = Number.isFinite(Number(holiday.workedPercent)) && holiday.workedPercent != null ? Number(holiday.workedPercent) : (holiday.type === 'regular' ? 200 : 130);
+                        // The first 100% is already part of normal attendance pay.
+                        return sum + day.dayEquivalent * salaryRateForDate(emp, day.date) * Math.max(0, totalPercent - 100) / 100;
                     }, 0);
                     const gross = (savedPayroll?.data?.gross_pay != null ? Number(savedPayroll.data.gross_pay) : days * periodDailyRate + bonusAmount + oneTimeCredits) + holidayAmount;
                     const net = gross - monthlyCA - (parseFloat(emp.sssRate) || 0) - (parseFloat(emp.miscRate) || 0) - oneTimeDebits;
@@ -1678,20 +1681,21 @@
                                 {activeTab === 'holidays' && isAdmin && (
                                     <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-8 space-y-5 print-hidden">
                                         <h2 className="text-xl font-black text-blue-900">Holiday Management</h2>
-                                        <p className="text-sm text-slate-600">One holiday applies to the restaurant, but only employees with recorded attendance on the selected date receive the worked-holiday premium. Half days are prorated. Absent employees receive no worked-holiday premium.</p>
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                        <p className="text-sm text-slate-600">Enter the TOTAL worked-day pay percentage based on each employee's rate. The app adds only the premium above normal 100% pay. Only employees with attendance on the date receive the premium; half days are prorated.</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                                             <label className="text-sm font-bold">Date<input type="date" value={holidayDate} onChange={e => setHolidayDate(e.target.value)} className="block w-full p-3 mt-1 border rounded-xl" /></label>
                                             <label className="text-sm font-bold">Holiday name<input value={holidayName} onChange={e => setHolidayName(e.target.value)} placeholder="e.g. Christmas Day" className="block w-full p-3 mt-1 border rounded-xl" /></label>
-                                            <label className="text-sm font-bold">Holiday type<select value={holidayType} onChange={e => setHolidayType(e.target.value)} className="block w-full p-3 mt-1 border rounded-xl"><option value="regular">Regular (200% worked-day pay)</option><option value="special">Special non-working (130% worked-day pay)</option></select></label>
+                                            <label className="text-sm font-bold">Holiday type<select value={holidayType} onChange={e => { const type = e.target.value; setHolidayType(type); setHolidayPercent(type === 'regular' ? '200' : '130'); }} className="block w-full p-3 mt-1 border rounded-xl"><option value="regular">Regular holiday</option><option value="special">Special non-working day</option></select></label>
+                                            <label className="text-sm font-bold">Total worked pay %<input type="number" min="100" max="500" step="1" inputMode="decimal" value={holidayPercent} onChange={e => setHolidayPercent(e.target.value)} className="block w-full p-3 mt-1 border rounded-xl" /></label>
                                             <div className="flex items-end"><button disabled={holidayBusy} onClick={saveHoliday} className="w-full bg-blue-800 text-white p-3 rounded-xl font-bold disabled:opacity-50">{holidayBusy ? 'Saving...' : holidays.some(h => h.date === holidayDate) ? 'Update Holiday' : 'Add Holiday'}</button></div>
                                         </div>
                                         <div className="rounded-xl bg-slate-50 p-4">
                                             <h3 className="font-bold text-blue-900">Present on {holidayDate} ({holidayPresent.length})</h3>
-                                            <p className="text-xs text-slate-500 mb-2">Based on recorded attendance, with zero-day entries excluded.</p>
-                                            {holidayPresent.length ? <div className="flex flex-wrap gap-2">{holidayPresent.map(emp => <span key={emp.id} className="bg-white border rounded-lg px-3 py-2 text-sm">{emp.name} ({emp.worked === 1 ? 'Full day' : emp.worked + ' day'})</span>)}</div> : <p className="text-sm text-slate-500">No recorded attendance for this date.</p>}
+                                            <p className="text-xs text-slate-500 mb-2">Based on recorded attendance, with zero-day entries excluded. Preview uses the total {holidayPercent || '—'}% pay rate.</p>
+                                            {holidayPresent.length ? <div className="flex flex-wrap gap-2">{holidayPresent.map(emp => <span key={emp.id} className="bg-white border rounded-lg px-3 py-2 text-sm">{emp.name} ({emp.worked === 1 ? 'Full day' : emp.worked + ' day'}) — ₱{formatMoney(salaryRateForDate(emp, holidayDate) * emp.worked * Math.max(0, (Number(holidayPercent) || 100) - 100) / 100)} extra</span>)}</div> : <p className="text-sm text-slate-500">No recorded attendance for this date.</p>}
                                         </div>
                                         <h3 className="font-bold text-blue-900">Saved holidays</h3>
-                                        <div className="space-y-2">{holidays.slice().sort((a,b) => b.date.localeCompare(a.date)).map(h => <div key={h.id} className="border rounded-xl px-4 py-3 flex flex-wrap justify-between items-center gap-2"><div><strong>{h.date}</strong> — {h.name} <span className="text-xs text-slate-500">({h.type === 'regular' ? 'Regular' : 'Special non-working'})</span></div><div className="flex gap-2"><button className="px-3 py-1 border rounded-lg" onClick={() => { setHolidayDate(h.date); setHolidayName(h.name || ''); setHolidayType(h.type || 'regular'); }}>Edit</button><button className="px-3 py-1 border border-red-200 text-red-700 rounded-lg" onClick={() => removeHoliday(h.date)}>Remove</button></div></div>)}{holidays.length === 0 && <p className="text-sm text-slate-500">No holidays saved yet.</p>}</div>
+                                        <div className="space-y-2">{holidays.slice().sort((a,b) => b.date.localeCompare(a.date)).map(h => <div key={h.id} className="border rounded-xl px-4 py-3 flex flex-wrap justify-between items-center gap-2"><div><strong>{h.date}</strong> — {h.name} <span className="text-xs text-slate-500">({h.type === 'regular' ? 'Regular' : 'Special non-working'} · {h.workedPercent != null ? h.workedPercent : h.type === 'regular' ? 200 : 130}% total)</span></div><div className="flex gap-2"><button className="px-3 py-1 border rounded-lg" onClick={() => { setHolidayDate(h.date); setHolidayName(h.name || ''); setHolidayType(h.type || 'regular'); setHolidayPercent(String(h.workedPercent != null ? h.workedPercent : h.type === 'regular' ? 200 : 130)); }}>Edit</button><button className="px-3 py-1 border border-red-200 text-red-700 rounded-lg" onClick={() => removeHoliday(h.date)}>Remove</button></div></div>)}{holidays.length === 0 && <p className="text-sm text-slate-500">No holidays saved yet.</p>}</div>
                                     </div>
                                 )}
 
