@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pantry Stock</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1d1b;--mut:#6f6b63;--bd:#e4e0d6;--ac:#c2410c;--ok:#15803d;--lo:#b45309;--out:#b91c1c;--hd:#efebe1;--cl:40%;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151513;--card:#201f1c;--tx:#f1eee7;--mut:#a09b90;--bd:#35332e;--ac:#fb923c;--ok:#4ade80;--lo:#fbbf24;--out:#f87171;--hd:#2a2824;--cl:68%}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px 14px 90px}
+h1{font-size:21px;margin:2px 0}h2{font-size:14px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:12px}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
+label{font-size:12px;color:var(--mut);display:block;margin:10px 0 3px}
+button{border:0;border-radius:10px;padding:11px 14px;background:var(--ac);color:#fff;font-weight:700;cursor:pointer}
+button.g{background:transparent;color:var(--mut);border:1px solid var(--bd);font-weight:500;padding:7px 11px;font-size:13px}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--bd);display:flex;gap:10px;max-width:720px;margin:0 auto}
+.bar button{flex:1;font-size:17px;padding:14px}.in{background:var(--ok)}.outb{background:var(--out)}
+.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--mut);padding:6px;border-bottom:1px solid var(--bd);white-space:nowrap}
+td{padding:9px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}
+tr.ch td{background:var(--hd);font-size:14px;padding:9px 6px}
+td.n{font-weight:600;white-space:normal}.num{text-align:right}th.num{text-align:right}
+.b{font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;border:1px solid currentColor}
+.ok{color:var(--ok)}.lo{color:var(--lo)}.no{color:var(--out)}td.num b{font-size:18px}tr.ch td{border-top:2px solid var(--bd);font-size:15px}
+.log{font-size:13px;padding:6px 0;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;gap:8px}.log:last-child{border:0}
+.log small{color:var(--mut)}.plus{color:var(--ok);font-weight:700}.minus{color:var(--out);font-weight:700}
+.empty{color:var(--mut);text-align:center;padding:18px}
+dialog{border:1px solid var(--bd);border-radius:16px;background:var(--card);color:var(--tx);width:min(92vw,420px);padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.row{display:flex;gap:8px}.row>*{flex:1}.msg{font-size:13px;color:var(--mut);min-height:18px;margin-top:8px}
+.tg{display:flex;gap:6px;margin-bottom:4px}.tg button{flex:1;background:transparent;border:1px solid var(--bd);color:var(--mut)}
+.tg button.on.i{background:var(--ok);color:#fff;border-color:var(--ok)}.tg button.on.o{background:var(--out);color:#fff;border-color:var(--out)}
+.note{font-size:12px;color:var(--mut);margin-top:6px}.sz{font-size:12px;color:var(--mut);font-weight:400;margin-left:4px}td.cat{padding:10px 8px;border-top:2px solid var(--bd)}
+</style></head><body><main>
+<div class="hd"><div><h1>🥘 Pantry Stock</h1><div id="sync" style="font-size:12px;color:var(--mut)">Connecting…</div></div>
+<div style="display:flex;gap:6px"><button class="g" id="who">🔒 Lock</button><button class="g" id="stB" hidden>Staff</button><button class="g" id="newB">+ Menu</button></div></div>
+
+<div class="card"><h2>Inventory</h2><input id="q" placeholder="Search menu or category…" style="margin-bottom:8px">
+<div class="scroll"><table><tbody id="tb"></tbody></table></div>
+<div class="note">Menus in the same category share one stock.</div></div>
+<div id="logs"></div>
+</main>
+
+<div id="lk" style="position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:min(92vw,360px)"><h1>🔒 Pantry Stock</h1><div class="note" id="lkn">Loading…</div><select id="ls" style="margin-top:10px"></select><input id="ln" placeholder="Your name" style="margin-top:10px" hidden><input id="lp" type="password" placeholder="PIN / password" autocomplete="off" style="margin-top:10px"><div class="msg" id="lm"></div><button id="lg" style="width:100%;margin-top:8px">Unlock</button></div></div>
+<div class="bar"><button class="in" id="bIn">＋ Stock In</button><button class="outb" id="bOut">－ Stock Out</button></div>
+
+<dialog id="ds"><b>Staff</b><div id="sl" style="margin:8px 0"></div><label>Staff name</label><input id="sn"><label>PIN / password (4+ characters)</label><input id="sp" type="password" autocomplete="off"><div class="msg" id="sm">Using an existing name resets that person’s PIN.</div><div class="row" style="margin-top:10px"><button class="g" id="sx" style="padding:12px">Close</button><button id="sa">Add / reset PIN</button></div></dialog>
+<dialog id="dm"><div class="tg"><button class="i" id="mi">Stock In</button><button class="o" id="mo">Stock Out</button></div>
+<label id="il">Category</label><select id="it"></select>
+<label id="ql">Quantity</label><input id="qty" type="number" min="0" step="any" inputmode="decimal">
+<div class="msg" id="mm"></div>
+<div class="row" style="margin-top:10px"><button class="g" id="cx" style="padding:12px">Cancel</button><button id="go">Save</button></div></dialog>
+
+<dialog id="dn"><b id="dt">New menu</b>
+<label>Menu name</label><input id="n" placeholder="e.g. Lechon Kawali">
+<label>Category (shared stock)</label><input id="c" list="cl2" placeholder="e.g. Pork" autocomplete="off"><datalist id="cl2"></datalist>
+<label>Counted by</label><select id="t"><option value="w">Kilos</option><option value="p">Pieces</option></select>
+<label id="pl">Grams per order</label><input id="p" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 350">
+<div class="msg" id="pre"></div>
+<div class="row" style="margin-top:10px"><button class="g" id="cn" style="padding:12px">Cancel</button><button id="sv">Save menu</button></div></dialog>
+
+<script>
+/* ===== SETUP (optional) =====
+ Leave url/key empty = data saved on THIS device only (works instantly).
+ To share data between phones, create a free Supabase project, run this SQL, then paste the Project URL and anon key below:
+   create table records(coll text not null, id text not null, data jsonb not null default '{}', primary key(coll,id));
+   alter table records enable row level security;
+   create policy "open" on records for all using (true) with check (true);
+ Note: anyone who has your site URL + this key can read/write the data. PINs are a simple gate, not strong security. */
+const CFG={url:'',key:''};
+const DB=(()=>{const cache={},subs={};let ready=!CFG.url;
+ const H=CFG.key?{apikey:CFG.key,Authorization:'Bearer '+CFG.key,'Content-Type':'application/json'}:{};
+ const R=CFG.url.replace(/\/$/,'')+'/rest/v1/records';
+ const emit=c=>{if(!ready)return;(subs[c]||[]).forEach(f=>f({docs:Object.entries(cache[c]||{}).map(([id,d])=>({id,data:()=>d}))}))};
+ const saveLocal=()=>{try{localStorage.setItem('pantry-local',JSON.stringify(cache))}catch(e){}};
+ async function pull(){if(!CFG.url)return;try{const r=await fetch(R+'?select=coll,id,data',{headers:H});const rows=await r.json();if(!Array.isArray(rows))return;
+  const n={};rows.forEach(x=>{(n[x.coll]=n[x.coll]||{})[x.id]=x.data});
+  new Set([...Object.keys(n),...Object.keys(cache)]).forEach(c=>{cache[c]=n[c]||{}});ready=true;Object.keys(subs).forEach(emit)}catch(e){}}
+ if(!CFG.url){try{Object.assign(cache,JSON.parse(localStorage.getItem('pantry-local')||'{}'))}catch(e){}}else{pull();setInterval(pull,5000)}
+ async function put(c,id,d,merge){const nd=merge?{...(cache[c]||{})[id],...d}:d;(cache[c]=cache[c]||{})[id]=nd;emit(c);
+  if(!CFG.url){saveLocal();return}
+  const r=await fetch(R,{method:'POST',headers:{...H,Prefer:'resolution=merge-duplicates'},body:JSON.stringify({coll:c,id,data:nd})});if(!r.ok)throw new Error('Save failed ('+r.status+')')}
+ async function del(c,id){if(cache[c])delete cache[c][id];emit(c);if(!CFG.url){saveLocal();return}
+  const r=await fetch(R+'?coll=eq.'+c+'&id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:H});if(!r.ok)throw new Error('Delete failed ('+r.status+')')}
+ const coll=c=>({doc:id=>{id=id||crypto.randomUUID();return{set:d=>put(c,id,d,false),update:d=>put(c,id,d,true),delete:()=>del(c,id)}},onSnapshot:cb=>{(subs[c]=subs[c]||[]).push(cb);setTimeout(()=>emit(c),0);return()=>{}}});
+ return{collection:coll,doc:p=>{const[c,i]=p.split('/');return coll(c).doc(i)}}})();
+const claude={use:async n=>n==='db'?DB:{canEdit:()=>true}};
+const $=id=>document.getElementById(id);
+let items=[],logs=[],staff=[],db=null,mode='in',me=null,canAdmin=false,editId=null,idle=null,fails=0,until=0;
+const fmt=n=>Number.isInteger(n)?String(n):(Math.round(n*100)/100).toString();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pool=c=>logs.filter(l=>l.cat===c).reduce((a,l)=>a+l.delta,0);
+const ctype=c=>(items.find(i=>i.cat===c)||{}).type||'w';
+const sTxt=(t,s)=>t==='w'?(s>=1000?fmt(s/1000)+' kg':fmt(s)+' g'):fmt(s)+' pcs';
+const left=i=>Math.floor(Math.max(0,pool(i.cat))/i.portion+1e-9);
+const size=i=>i.type==='w'?fmt(i.portion)+' g':fmt(i.portion)+' pc';
+const HUES=[8,205,145,285,32,330,175,55,250,100];const hue=c=>{let h=0;for(const x of c.toLowerCase())h=(h*31+x.charCodeAt(0))%997;return HUES[h%HUES.length]};
+function norm(){const m={},k=c=>String(c||'').trim().toLowerCase();
+ items.forEach(i=>{if(!m[k(i.cat)])m[k(i.cat)]=String(i.cat).trim()});logs.forEach(l=>{if(!m[k(l.cat)])m[k(l.cat)]=String(l.cat||'').trim()});
+ items.forEach(i=>i.cat=m[k(i.cat)]);logs.forEach(l=>l.cat=m[k(l.cat)])}
+function render(){norm();
+ const q=$('q').value.toLowerCase();
+ const cats=[...new Set(items.map(i=>i.cat))].sort();
+ let h='';
+ cats.forEach(c=>{const ms=items.filter(i=>i.cat===c&&(i.name+c).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));if(!ms.length)return;
+  h+=`<tr class="ch"><td class="cat" colspan="3" style="background:hsl(${hue(c)} 60% 50% / .15);border-left:5px solid hsl(${hue(c)} 65% 50%)"><b style="color:hsl(${hue(c)} 70% var(--cl));font-size:16px">${esc(c)}</b> <span class="sz">·</span> <b>${sTxt(ctype(c),Math.max(0,pool(c)))}</b> <span class="sz">in stock</span></td></tr>`;
+  ms.forEach(i=>{const o=left(i),k=o===0?'no':o<=5?'lo':'ok';
+   h+=`<tr><td class="n">${esc(i.name)} <span class="sz">${size(i)}</span></td><td class="num ${o===0?'no':'ok'}"><b>${o}</b> <span class="sz">orders</span></td><td><button class="g" onclick="edit('${i.id}')">✎</button> <button class="g" onclick="del('${i.id}')">✕</button></td></tr>`})});
+ $('tb').innerHTML=h||'<tr><td colspan="3" class="empty">No menus yet. Tap “+ Menu”.</td></tr>';
+ const lc=[...new Set(items.map(i=>i.cat).concat(logs.map(l=>l.cat)))].sort();
+ $('cl2').innerHTML=[...new Set(['Pork','Beef','Chicken','Fish','Squid','Shrimp','Vegetables'].concat(lc))].sort().map(c=>`<option value="${esc(c)}">`).join('');
+ $('logs').innerHTML=lc.map(c=>{const L=logs.filter(l=>l.cat===c).sort((a,b)=>b.ts-a.ts).slice(0,10);
+  return `<div class="card"><h2 style="color:hsl(${hue(c)} 70% var(--cl))">${esc(c)} log</h2>${L.length?L.map(l=>`<div class="log"><div>${esc(l.name)} <span class="${l.delta>0?'plus':'minus'}">${l.delta>0?'＋':'－'}${esc(l.text)}</span><br><small>${esc(l.by||'—')}</small></div><small>${new Date(l.ts).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></div>`).join(''):'<div class="empty">No activity</div>'}</div>`}).join('');
+}
+function fill(){
+ if(mode==='in'){$('il').textContent='Category';const cs=[...new Set(items.map(i=>i.cat))].sort();$('it').innerHTML=cs.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+ else{$('il').textContent='Menu sold';$('it').innerHTML=items.slice().sort((a,b)=>a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name)).map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.cat)}) · ${size(i)}</option>`).join('')}}
+function openM(m){if(!items.length){alert('Add a menu first.');return}mode=m;setMode(m);$('qty').value='';$('dm').showModal()}
+function setMode(m){mode=m;$('mi').className='i'+(m==='in'?' on':'');$('mo').className='o'+(m==='out'?' on':'');fill();upd()}
+function upd(){const v=+$('qty').value;let t='';
+ if(mode==='in'){const c=$('it').value,ty=ctype(c);$('ql').textContent=ty==='w'?'Kilos received':'Pieces received';
+  if(v>0){const b=ty==='w'?v*1000:v;t='Adds: '+items.filter(i=>i.cat===c).map(i=>esc(i.name)+' +'+Math.floor(b/i.portion+1e-9)).join(', ')}}
+ else{const i=items.find(x=>x.id===$('it').value);$('ql').textContent='Orders sold';if(i&&v>0)t='Uses '+fmt(v*i.portion)+(i.type==='w'?' g':' pcs')+' from '+esc(i.cat)+' · stock now '+sTxt(i.type,pool(i.cat))}
+ $('mm').innerHTML=t}
+$('it').onchange=upd;$('qty').oninput=upd;$('mi').onclick=()=>setMode('in');$('mo').onclick=()=>setMode('out');
+$('bIn').onclick=()=>openM('in');$('bOut').onclick=()=>openM('out');$('cx').onclick=()=>$('dm').close();
+$('go').onclick=async()=>{const v=+$('qty').value;if(!(v>0)){$('mm').textContent='Enter a quantity.';return}
+ if(mode==='in'){const c=$('it').value,ty=ctype(c);
+  await write(()=>db.collection('logs').doc().set({itemId:'',name:'Stock in',cat:c,delta:ty==='w'?v*1000:v,text:fmt(v)+(ty==='w'?' kg':' pcs'),by:me?me.name:'',ts:Date.now()}))}
+ else{const i=items.find(x=>x.id===$('it').value);if(!i)return;const need=v*i.portion;
+  if(pool(i.cat)-need<-1e-9){$('mm').textContent='Not enough stock. Only '+left(i)+' orders left.';return}
+  await write(()=>db.collection('logs').doc().set({itemId:i.id,name:i.name,cat:i.cat,delta:-need,text:fmt(v)+' order(s) · '+fmt(need)+(i.type==='w'?' g':' pcs'),by:me?me.name:'',ts:Date.now()}))}
+ $('dm').close()};
+async function write(f){if(!me){lockUI();return}if(!db){alert('Shared storage is unavailable. Open this page signed in to claude.ai.');return}try{await f()}catch(e){alert('Could not save: '+(e&&e.message||'error'))}}
+function del(id){const i=items.find(x=>x.id===id);if(i&&confirm('Delete menu '+i.name+'? Category stock is kept.'))write(()=>db.doc('items/'+id).delete())}
+async function hash(salt,pin){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+':'+pin));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function touch(){clearTimeout(idle);if(me)idle=setTimeout(()=>{me=null;lockUI()},600000)}
+document.addEventListener('pointerdown',touch);
+function lockUI(){if(me&&!staff.find(s=>s.id===me.id))me=null;
+ $('lk').style.display=me?'none':'flex';
+ if(me){$('who').textContent='🔒 '+me.name;$('stB').hidden=!me.admin;return}
+ $('who').textContent='🔒 Lock';$('stB').hidden=true;const setup=!staff.length;
+ $('ls').hidden=setup;$('ln').hidden=!(setup&&canAdmin);$('lg').hidden=setup&&!canAdmin;$('lg').textContent=setup?'Create admin account':'Unlock';
+ $('lkn').textContent=setup?(canAdmin?'First time: enter your name and choose a PIN for the admin account.':'No staff set up yet. Ask the owner to open this page and create the first account.'):'Select your name and enter your PIN.';
+ const v=$('ls').value;$('ls').innerHTML=staff.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');if(v)$('ls').value=v}
+$('lg').onclick=async()=>{const pin=$('lp').value;if(Date.now()<until){$('lm').textContent='Too many tries. Wait a moment.';return}
+ if(pin.length<4){$('lm').textContent='PIN must be at least 4 characters.';return}
+ if(!staff.length){const name=$('ln').value.trim();if(!name||!db){$('lm').textContent='Enter a name.';return}const salt=crypto.randomUUID();
+  try{await db.collection('staff').doc().set({name,salt,hash:await hash(salt,pin),admin:true,ts:Date.now()});$('lp').value='';$('lm').textContent='Created. Select your name to unlock.'}catch(e){$('lm').textContent='Could not create: '+(e&&e.message||'error')}return}
+ const s=staff.find(x=>x.id===$('ls').value);if(!s)return;
+ if(await hash(s.salt,pin)===s.hash){me=s;fails=0;$('lp').value='';$('lm').textContent='';lockUI();touch()}else{if(++fails>=5){until=Date.now()+30000;fails=0}$('lm').textContent='Wrong PIN.'}};
+$('lp').onkeydown=e=>{if(e.key==='Enter')$('lg').click()};
+$('who').onclick=()=>{me=null;lockUI()};
+$('stB').onclick=()=>{renderStaff();$('ds').showModal()};$('sx').onclick=()=>$('ds').close();
+function renderStaff(){$('sl').innerHTML=staff.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="log"><div>${esc(s.name)}</div><button class="g" onclick="rmStaff('${s.id}')">Remove</button></div>`).join('')}
+function rmStaff(id){if(me&&id===me.id){alert('You can’t remove yourself.');return}if(confirm('Remove this staff member?'))write(()=>db.doc('staff/'+id).delete())}
+$('sa').onclick=async()=>{const name=$('sn').value.trim(),pin=$('sp').value;if(!name||pin.length<4){$('sm').textContent='Enter a name and a PIN of 4+ characters.';return}
+ const ex=staff.find(s=>s.name.toLowerCase()===name.toLowerCase()),salt=crypto.randomUUID(),h=await hash(salt,pin);
+ await write(()=>ex?db.doc('staff/'+ex.id).update({salt,hash:h}):db.collection('staff').doc().set({name,salt,hash:h,ts:Date.now()}));$('sn').value='';$('sp').value='';$('sm').textContent=ex?'PIN reset.':'Added.'};
+$('newB').onclick=()=>{editId=null;$('dt').textContent='New menu';$('n').value='';$('p').value='';pre();$('dn').showModal()};
+function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type;$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
+function pre(){const cv=$('c').value.trim().toLowerCase(),ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cv);
+ if(ex){$('t').value=ex.type;$('t').disabled=true}else $('t').disabled=false;
+ const t=$('t').value,p=+$('p').value;$('pl').textContent=t==='w'?'Grams per order':'Pieces per order';
+ $('pre').textContent=ex?'Shares the '+ex.cat+' stock ('+(t==='w'?'kilos':'pieces')+').':'';
+ if(p>0)$('pre').textContent+=(t==='w'?' 1 kilo makes '+fmt(Math.floor(1000/p*100)/100)+' orders.':' 10 pieces make '+fmt(Math.floor(10/p*100)/100)+' orders.')}
+$('t').onchange=pre;$('p').oninput=pre;$('c').oninput=pre;$('c').onchange=pre;
+$('sv').onclick=async()=>{const name=$('n').value.trim();let cat=$('c').value.trim();const p=+$('p').value;
+ if(!name||!cat||!(p>0)){$('pre').textContent='Enter a menu name, category and order size.';return}
+ const ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cat.toLowerCase());if(ex)cat=ex.cat;
+ const type=ex?ex.type:$('t').value,o=items.find(i=>i.id===editId);
+ if(o&&type!==o.type&&cat.toLowerCase()===o.cat.toLowerCase()&&logs.some(l=>l.cat===o.cat)){$('pre').textContent='Kilos/pieces can’t change while this category has stock history. Use a new category.';return}
+ await write(()=>editId?db.doc('items/'+editId).update({name,cat,type,portion:p}):db.collection('items').doc().set({name,cat,type,portion:p}));editId=null;$('n').value='';$('p').value='';pre();$('dn').close()};
+$('q').oninput=render;render();
+(async()=>{
+ const t=setTimeout(()=>{$('sync').textContent='Not connected — sign in to claude.ai to share data'},10000);
+ try{db=await claude.use('db')}catch(e){db=null}
+ try{const u=await claude.use('user');canAdmin=!!(u&&await u.canEdit())}catch(e){}
+ if(!db){clearTimeout(t);$('sync').textContent='Shared storage unavailable';return}
+ let got=0;const done=()=>{if(++got>=3){clearTimeout(t);$('sync').textContent=(CFG.url?'● Live · shared with everyone':'● This device only (see setup note)')}};
+ db.collection('items').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));render();done()},()=>{$('sync').textContent='Sync error'});
+ db.collection('logs').onSnapshot(s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));render();done()},()=>{$('sync').textContent='Sync error'});
+ db.collection('staff').onSnapshot(s=>{staff=s.docs.map(d=>({id:d.id,...d.data()}));lockUI();renderStaff();done()},()=>{$('sync').textContent='Sync error'});
+})();
+</script></body></html>
