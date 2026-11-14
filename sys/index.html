@@ -652,16 +652,21 @@
                         isBonus: Boolean(entry.isBonus)
                     })))
             ];
-            const ledgerMonthOptions = Array.from(new Set(receiptLedger.map(tx => /^\d{4}-\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated'))).sort();
+            const ledgerMonthOptions = Array.from(new Set(receiptLedger.map(tx => /^\d{4}-\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated'))).sort((a, b) => b.localeCompare(a));
             const visibleLedger = (ledgerMonth ? receiptLedger.filter(tx => ( /^\d{4}-\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated') === ledgerMonth) : receiptLedger)
-                .slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+                .slice().sort((a, b) => {
+                    const dateA = String(a.date || '');
+                    const dateB = String(b.date || '');
+                    const key = value => /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : (Number.isFinite(Date.parse(value)) ? new Date(value).toISOString().slice(0, 10) : '');
+                    return key(dateB).localeCompare(key(dateA)) || dateB.localeCompare(dateA);
+                });
             const receiptMonthMap = new Map();
             visibleLedger.forEach(tx => {
                 const monthKey = /^\d{4}-\d{2}/.test(String(tx.date || '')) ? String(tx.date).slice(0, 7) : 'undated';
                 if (!receiptMonthMap.has(monthKey)) receiptMonthMap.set(monthKey, []);
                 receiptMonthMap.get(monthKey).push(tx);
             });
-            const receiptMonths = Array.from(receiptMonthMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+            const receiptMonths = Array.from(receiptMonthMap.entries()).sort(([a], [b]) => b.localeCompare(a));
             const receiptTotals = visibleLedger.reduce((totals, tx) => {
                 const amount = Math.abs(Number(tx.amount) || 0);
                 if (Number(tx.amount) < 0 || tx.isBonus) totals.credits += amount;
