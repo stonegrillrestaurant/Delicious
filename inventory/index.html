@@ -2,22 +2,27 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pantry Stock</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#100f0e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))</script>
 <style>
-:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1d1b;--mut:#6f6b63;--bd:#e4e0d6;--ac:#c2410c;--ok:#15803d;--lo:#b45309;--out:#b91c1c;--hd:#efebe1;--cl:40%;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151513;--card:#201f1c;--tx:#f1eee7;--mut:#a09b90;--bd:#35332e;--ac:#fb923c;--ok:#4ade80;--lo:#fbbf24;--out:#f87171;--hd:#2a2824;--cl:68%}}
+:root{--bg:#100f0e;--card:#1b1917;--tx:#fff7ed;--mut:#b0a89e;--bd:#2f2a26;--ac:#f97316;--ok:#4ade80;--lo:#fbbf24;--out:#f87171;--hd:#262220;--cl:68%;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
 *{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{margin:0;background:radial-gradient(900px 380px at 50% -120px,rgba(249,115,22,.28),transparent 70%),var(--bg);background-attachment:fixed;color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 main{max-width:720px;margin:0 auto;padding:16px 14px 90px}
 h1{font-size:21px;margin:2px 0}h2{font-size:14px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:12px}
+.card{background:linear-gradient(90deg,#dc2626,#f97316,#fbbf24) top/100% 3px no-repeat,var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 12px 12px;margin-bottom:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}.brand img{height:56px;display:block}.sub{margin-top:2px;font-weight:800;font-style:italic;letter-spacing:.22em;font-size:12px;background:linear-gradient(90deg,#ef4444,#f97316,#fde047);-webkit-background-clip:text;background-clip:text;color:transparent}h2{font-style:italic}
 input,select,button{font:inherit;color:inherit}
 input,select{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
 label{font-size:12px;color:var(--mut);display:block;margin:10px 0 3px}
-button{border:0;border-radius:10px;padding:11px 14px;background:var(--ac);color:#fff;font-weight:700;cursor:pointer}
-button.g{background:transparent;color:var(--mut);border:1px solid var(--bd);font-weight:500;padding:7px 11px;font-size:13px}
+button{border:0;border-radius:10px;padding:11px 14px;background:linear-gradient(135deg,#dc2626,#f97316);color:#fff;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(249,115,22,.25)}
+button.g{box-shadow:none;background:transparent;color:var(--mut);border:1px solid var(--bd);font-weight:500;padding:7px 11px;font-size:13px}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--bd);display:flex;gap:10px;max-width:720px;margin:0 auto}
-.bar button{flex:1;font-size:17px;padding:14px}.in{background:var(--ok)}.outb{background:var(--out)}
+.bar button{flex:1;font-size:17px;padding:14px}.in{background:linear-gradient(135deg,#f97316,#fbbf24)!important;color:#1a0f08!important}.outb{background:linear-gradient(135deg,#7f1d1d,#dc2626)!important}
 .scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
 th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--mut);padding:6px;border-bottom:1px solid var(--bd);white-space:nowrap}
 td{padding:9px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}
@@ -31,11 +36,11 @@ td.n{font-weight:600;white-space:normal}.num{text-align:right}th.num{text-align:
 dialog{border:1px solid var(--bd);border-radius:16px;background:var(--card);color:var(--tx);width:min(92vw,420px);padding:16px}
 dialog::backdrop{background:rgba(0,0,0,.5)}
 .row{display:flex;gap:8px}.row>*{flex:1}.msg{font-size:13px;color:var(--mut);min-height:18px;margin-top:8px}
-.tg{display:flex;gap:6px;margin-bottom:4px}.tg button{flex:1;background:transparent;border:1px solid var(--bd);color:var(--mut)}
-.tg button.on.i{background:var(--ok);color:#fff;border-color:var(--ok)}.tg button.on.o{background:var(--out);color:#fff;border-color:var(--out)}
+.tg{display:flex;gap:6px;margin-bottom:4px}.tg button{flex:1;box-shadow:none;background:transparent;border:1px solid var(--bd);color:var(--mut)}
+.tg button.on.i{background:linear-gradient(135deg,#f97316,#fbbf24);color:#1a0f08;border-color:transparent}.tg button.on.o{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border-color:transparent}
 .note{font-size:12px;color:var(--mut);margin-top:6px}.sz{font-size:12px;color:var(--mut);font-weight:400;margin-left:4px}td.cat{padding:10px 8px;border-top:2px solid var(--bd)}
 </style></head><body><main>
-<div class="hd"><div><h1>🥘 Pantry Stock</h1><div id="sync" style="font-size:12px;color:var(--mut)">Connecting…</div></div>
+<div class="hd"><div><div class="brand"><img src="logo.png" alt="Stone Grill"><div class="sub">PANTRY STOCK</div></div><div id="sync" style="font-size:12px;color:var(--mut)">Connecting…</div></div>
 <div style="display:flex;gap:6px"><button class="g" id="who">🔒 Lock</button><button class="g" id="stB" hidden>Staff</button><button class="g" id="newB">+ Menu</button></div></div>
 
 <div class="card"><h2>Inventory</h2><input id="q" placeholder="Search menu or category…" style="margin-bottom:8px">
@@ -44,7 +49,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <div id="logs"></div>
 </main>
 
-<div id="lk" style="position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:min(92vw,360px)"><h1>🔒 Pantry Stock</h1><div class="note" id="lkn">Loading…</div><select id="ls" style="margin-top:10px"></select><input id="ln" placeholder="Your name" style="margin-top:10px" hidden><input id="lp" type="password" placeholder="PIN / password" autocomplete="off" style="margin-top:10px"><div class="msg" id="lm"></div><button id="lg" style="width:100%;margin-top:8px">Unlock</button></div></div>
+<div id="lk" style="position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:min(92vw,360px)"><div class="brand" style="text-align:center"><img src="logo.png" alt="Stone Grill" style="margin:0 auto 4px;height:80px"><div class="sub">PANTRY STOCK</div></div><div class="note" id="lkn">Loading…</div><select id="ls" style="margin-top:10px"></select><input id="ln" placeholder="Your name" style="margin-top:10px" hidden><input id="lp" type="password" placeholder="PIN / password" autocomplete="off" style="margin-top:10px"><div class="msg" id="lm"></div><button id="lg" style="width:100%;margin-top:8px">Unlock</button></div></div>
 <div class="bar"><button class="in" id="bIn">＋ Stock In</button><button class="outb" id="bOut">－ Stock Out</button></div>
 
 <dialog id="ds"><b>Staff</b><div id="sl" style="margin:8px 0"></div><label>Staff name</label><input id="sn"><label>PIN / password (4+ characters)</label><input id="sp" type="password" autocomplete="off"><div class="msg" id="sm">Using an existing name resets that person’s PIN.</div><div class="row" style="margin-top:10px"><button class="g" id="sx" style="padding:12px">Close</button><button id="sa">Add / reset PIN</button></div></dialog>
@@ -63,13 +68,8 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <div class="row" style="margin-top:10px"><button class="g" id="cn" style="padding:12px">Cancel</button><button id="sv">Save menu</button></div></dialog>
 
 <script>
-/* ===== SETUP (optional) =====
- Leave url/key empty = data saved on THIS device only (works instantly).
- To share data between phones, create a free Supabase project, run this SQL, then paste the Project URL and anon key below:
-   create table records(coll text not null, id text not null, data jsonb not null default '{}', primary key(coll,id));
-   alter table records enable row level security;
-   create policy "open" on records for all using (true) with check (true);
- Note: anyone who has your site URL + this key can read/write the data. PINs are a simple gate, not strong security. */
+/* Supabase connection (table: records). Leave url/key empty to store data on this device only.
+   Anyone with the site link + key can read/write; PINs are a simple gate, not strong security. */
 const CFG={url:'https://btnyktfthbarulnhetqy.supabase.co',key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0bnlrdGZ0aGJhcnVsbmhldHF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1NjcwOTEsImV4cCI6MjExMDE0MzA5MX0.1u2FuPEPy7wWILCeApwlWBBiV1zeh17hgO72gDfKiRI'};
 const DB=(()=>{const cache={},subs={};let ready=!CFG.url;
  const H=CFG.key?{apikey:CFG.key,Authorization:'Bearer '+CFG.key,'Content-Type':'application/json'}:{};
@@ -92,10 +92,11 @@ const $=id=>document.getElementById(id);
 let items=[],logs=[],staff=[],db=null,mode='in',me=null,canAdmin=false,editId=null,idle=null,fails=0,until=0;
 const fmt=n=>Number.isInteger(n)?String(n):(Math.round(n*100)/100).toString();
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const pool=c=>logs.filter(l=>l.cat===c).reduce((a,l)=>a+l.delta,0);
+const pool=(c,t)=>logs.filter(l=>l.cat===c&&(l.type||ctype(c))===t).reduce((a,l)=>a+l.delta,0);
+const types=c=>[...new Set(items.filter(i=>i.cat===c).map(i=>i.type))];
 const ctype=c=>(items.find(i=>i.cat===c)||{}).type||'w';
 const sTxt=(t,s)=>t==='w'?(s>=1000?fmt(s/1000)+' kg':fmt(s)+' g'):fmt(s)+' pcs';
-const left=i=>Math.floor(Math.max(0,pool(i.cat))/i.portion+1e-9);
+const left=i=>Math.floor(Math.max(0,pool(i.cat,i.type))/i.portion+1e-9);
 const size=i=>i.type==='w'?fmt(i.portion)+' g':fmt(i.portion)+' pc';
 const HUES=[8,205,145,285,32,330,175,55,250,100];const hue=c=>{let h=0;for(const x of c.toLowerCase())h=(h*31+x.charCodeAt(0))%997;return HUES[h%HUES.length]};
 function norm(){const m={},k=c=>String(c||'').trim().toLowerCase();
@@ -106,7 +107,7 @@ function render(){norm();
  const cats=[...new Set(items.map(i=>i.cat))].sort();
  let h='';
  cats.forEach(c=>{const ms=items.filter(i=>i.cat===c&&(i.name+c).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));if(!ms.length)return;
-  h+=`<tr class="ch"><td class="cat" colspan="3" style="background:hsl(${hue(c)} 60% 50% / .15);border-left:5px solid hsl(${hue(c)} 65% 50%)"><b style="color:hsl(${hue(c)} 70% var(--cl));font-size:16px">${esc(c)}</b> <span class="sz">·</span> <b>${sTxt(ctype(c),Math.max(0,pool(c)))}</b> <span class="sz">in stock</span></td></tr>`;
+  h+=`<tr class="ch"><td class="cat" colspan="3" style="background:hsl(${hue(c)} 60% 50% / .15);border-left:5px solid hsl(${hue(c)} 65% 50%)"><b style="color:hsl(${hue(c)} 70% var(--cl));font-size:16px">${esc(c)}</b> <span class="sz">·</span> <b>${types(c).map(t=>sTxt(t,Math.max(0,pool(c,t)))).join(' + ')}</b> <span class="sz">in stock</span></td></tr>`;
   ms.forEach(i=>{const o=left(i),k=o===0?'no':o<=5?'lo':'ok';
    h+=`<tr><td class="n">${esc(i.name)} <span class="sz">${size(i)}</span></td><td class="num ${o===0?'no':'ok'}"><b>${o}</b> <span class="sz">orders</span></td><td><button class="g" onclick="edit('${i.id}')">✎</button> <button class="g" onclick="del('${i.id}')">✕</button></td></tr>`})});
  $('tb').innerHTML=h||'<tr><td colspan="3" class="empty">No menus yet. Tap “+ Menu”.</td></tr>';
@@ -116,23 +117,23 @@ function render(){norm();
   return `<div class="card"><h2 style="color:hsl(${hue(c)} 70% var(--cl))">${esc(c)} log</h2>${L.length?L.map(l=>`<div class="log"><div>${esc(l.name)} <span class="${l.delta>0?'plus':'minus'}">${l.delta>0?'＋':'－'}${esc(l.text)}</span><br><small>${esc(l.by||'—')}</small></div><small>${new Date(l.ts).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></div>`).join(''):'<div class="empty">No activity</div>'}</div>`}).join('');
 }
 function fill(){
- if(mode==='in'){$('il').textContent='Category';const cs=[...new Set(items.map(i=>i.cat))].sort();$('it').innerHTML=cs.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+ if(mode==='in'){$('il').textContent='Category';const cs=[...new Set(items.map(i=>i.cat+'|'+i.type))].sort();$('it').innerHTML=cs.map(k=>{const c=k.slice(0,-2),t=k.slice(-1);return `<option value="${esc(k)}">${esc(c)} — ${t==='w'?'kilos':'pieces'}</option>`}).join('')}
  else{$('il').textContent='Menu sold';$('it').innerHTML=items.slice().sort((a,b)=>a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name)).map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.cat)}) · ${size(i)}</option>`).join('')}}
 function openM(m){if(!items.length){alert('Add a menu first.');return}mode=m;setMode(m);$('qty').value='';$('dm').showModal()}
 function setMode(m){mode=m;$('mi').className='i'+(m==='in'?' on':'');$('mo').className='o'+(m==='out'?' on':'');fill();upd()}
 function upd(){const v=+$('qty').value;let t='';
- if(mode==='in'){const c=$('it').value,ty=ctype(c);$('ql').textContent=ty==='w'?'Kilos received':'Pieces received';
-  if(v>0){const b=ty==='w'?v*1000:v;t='Adds: '+items.filter(i=>i.cat===c).map(i=>esc(i.name)+' +'+Math.floor(b/i.portion+1e-9)).join(', ')}}
- else{const i=items.find(x=>x.id===$('it').value);$('ql').textContent='Orders sold';if(i&&v>0)t='Uses '+fmt(v*i.portion)+(i.type==='w'?' g':' pcs')+' from '+esc(i.cat)+' · stock now '+sTxt(i.type,pool(i.cat))}
+ if(mode==='in'){const k=$('it').value,c=k.slice(0,-2),ty=k.slice(-1);$('ql').textContent=ty==='w'?'Kilos received':'Pieces received';
+  if(v>0){const b=ty==='w'?v*1000:v;t='Adds: '+items.filter(i=>i.cat===c&&i.type===ty).map(i=>esc(i.name)+' +'+Math.floor(b/i.portion+1e-9)).join(', ')}}
+ else{const i=items.find(x=>x.id===$('it').value);$('ql').textContent='Orders sold';if(i&&v>0)t='Uses '+fmt(v*i.portion)+(i.type==='w'?' g':' pcs')+' from '+esc(i.cat)+' · stock now '+sTxt(i.type,pool(i.cat,i.type))}
  $('mm').innerHTML=t}
 $('it').onchange=upd;$('qty').oninput=upd;$('mi').onclick=()=>setMode('in');$('mo').onclick=()=>setMode('out');
 $('bIn').onclick=()=>openM('in');$('bOut').onclick=()=>openM('out');$('cx').onclick=()=>$('dm').close();
 $('go').onclick=async()=>{const v=+$('qty').value;if(!(v>0)){$('mm').textContent='Enter a quantity.';return}
- if(mode==='in'){const c=$('it').value,ty=ctype(c);
-  await write(()=>db.collection('logs').doc().set({itemId:'',name:'Stock in',cat:c,delta:ty==='w'?v*1000:v,text:fmt(v)+(ty==='w'?' kg':' pcs'),by:me?me.name:'',ts:Date.now()}))}
+ if(mode==='in'){const k=$('it').value,c=k.slice(0,-2),ty=k.slice(-1);
+  await write(()=>db.collection('logs').doc().set({itemId:'',name:'Stock in',cat:c,type:ty,delta:ty==='w'?v*1000:v,text:fmt(v)+(ty==='w'?' kg':' pcs'),by:me?me.name:'',ts:Date.now()}))}
  else{const i=items.find(x=>x.id===$('it').value);if(!i)return;const need=v*i.portion;
-  if(pool(i.cat)-need<-1e-9){$('mm').textContent='Not enough stock. Only '+left(i)+' orders left.';return}
-  await write(()=>db.collection('logs').doc().set({itemId:i.id,name:i.name,cat:i.cat,delta:-need,text:fmt(v)+' order(s) · '+fmt(need)+(i.type==='w'?' g':' pcs'),by:me?me.name:'',ts:Date.now()}))}
+  if(pool(i.cat,i.type)-need<-1e-9){$('mm').textContent='Not enough stock. Only '+left(i)+' orders left.';return}
+  await write(()=>db.collection('logs').doc().set({itemId:i.id,name:i.name,cat:i.cat,type:i.type,delta:-need,text:fmt(v)+' order(s) · '+fmt(need)+(i.type==='w'?' g':' pcs'),by:me?me.name:'',ts:Date.now()}))}
  $('dm').close()};
 async function write(f){if(!me){lockUI();return}if(!db){alert('Shared storage is unavailable. Open this page signed in to claude.ai.');return}try{await f()}catch(e){alert('Could not save: '+(e&&e.message||'error'))}}
 function del(id){const i=items.find(x=>x.id===id);if(i&&confirm('Delete menu '+i.name+'? Category stock is kept.'))write(()=>db.doc('items/'+id).delete())}
@@ -163,16 +164,16 @@ $('sa').onclick=async()=>{const name=$('sn').value.trim(),pin=$('sp').value;if(!
 $('newB').onclick=()=>{editId=null;$('dt').textContent='New menu';$('n').value='';$('p').value='';pre();$('dn').showModal()};
 function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type;$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
 function pre(){const cv=$('c').value.trim().toLowerCase(),ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cv);
- if(ex){$('t').value=ex.type;$('t').disabled=true}else $('t').disabled=false;
+ $('t').disabled=false;
  const t=$('t').value,p=+$('p').value;$('pl').textContent=t==='w'?'Grams per order':'Pieces per order';
- $('pre').textContent=ex?'Shares the '+ex.cat+' stock ('+(t==='w'?'kilos':'pieces')+').':'';
+ $('pre').textContent=ex?'Joins the '+ex.cat+' category. Menus with the same unit share its stock.':'';
  if(p>0)$('pre').textContent+=(t==='w'?' 1 kilo makes '+fmt(Math.floor(1000/p*100)/100)+' orders.':' 10 pieces make '+fmt(Math.floor(10/p*100)/100)+' orders.')}
 $('t').onchange=pre;$('p').oninput=pre;$('c').oninput=pre;$('c').onchange=pre;
 $('sv').onclick=async()=>{const name=$('n').value.trim();let cat=$('c').value.trim();const p=+$('p').value;
  if(!name||!cat||!(p>0)){$('pre').textContent='Enter a menu name, category and order size.';return}
  const ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cat.toLowerCase());if(ex)cat=ex.cat;
- const type=ex?ex.type:$('t').value,o=items.find(i=>i.id===editId);
- if(o&&type!==o.type&&cat.toLowerCase()===o.cat.toLowerCase()&&logs.some(l=>l.cat===o.cat)){$('pre').textContent='Kilos/pieces can’t change while this category has stock history. Use a new category.';return}
+ const type=$('t').value,o=items.find(i=>i.id===editId);
+ if(o&&type!==o.type&&cat.toLowerCase()===o.cat.toLowerCase()&&logs.some(l=>l.cat===o.cat&&(l.type||ctype(o.cat))===o.type)){$('pre').textContent='Kilos/pieces can’t change while this category has stock history. Use a new category.';return}
  await write(()=>editId?db.doc('items/'+editId).update({name,cat,type,portion:p}):db.collection('items').doc().set({name,cat,type,portion:p}));editId=null;$('n').value='';$('p').value='';pre();$('dn').close()};
 $('q').oninput=render;render();
 (async()=>{
@@ -180,7 +181,7 @@ $('q').oninput=render;render();
  try{db=await claude.use('db')}catch(e){db=null}
  try{const u=await claude.use('user');canAdmin=!!(u&&await u.canEdit())}catch(e){}
  if(!db){clearTimeout(t);$('sync').textContent='Shared storage unavailable';return}
- let got=0;const done=()=>{if(++got>=3){clearTimeout(t);$('sync').textContent=(CFG.url?'● Live · shared with everyone':'● This device only (see setup note)')}};
+ let got=0;const done=()=>{if(++got>=3){clearTimeout(t);$('sync').textContent=(CFG.url?'● Live · shared with everyone':'● This device only')}};
  db.collection('items').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));render();done()},()=>{$('sync').textContent='Sync error'});
  db.collection('logs').onSnapshot(s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));render();done()},()=>{$('sync').textContent='Sync error'});
  db.collection('staff').onSnapshot(s=>{staff=s.docs.map(d=>({id:d.id,...d.data()}));lockUI();renderStaff();done()},()=>{$('sync').textContent='Sync error'});
