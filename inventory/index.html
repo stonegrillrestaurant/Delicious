@@ -119,8 +119,8 @@ function render(){norm();
 function fill(){
  if(mode==='in'){$('il').textContent='Category';const cs=[...new Set(items.map(i=>i.cat+'|'+i.type))].sort();$('it').innerHTML=cs.map(k=>{const c=k.slice(0,-2),t=k.slice(-1);return `<option value="${esc(k)}">${esc(c)} — ${t==='w'?'kilos':'pieces'}</option>`}).join('')}
  else{$('il').textContent='Menu sold';$('it').innerHTML=items.slice().sort((a,b)=>a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name)).map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.cat)}) · ${size(i)}</option>`).join('')}}
-function openM(m){if(!items.length){alert('Add a menu first.');return}mode=m;setMode(m);$('qty').value='';$('dm').showModal()}
-function setMode(m){mode=m;$('mi').className='i'+(m==='in'?' on':'');$('mo').className='o'+(m==='out'?' on':'');fill();upd()}
+function openM(m){if(m==='out'&&!canOut()){alert('Stock out is locked. Ask the admin.');return}if(!items.length){alert('Add a menu first.');return}mode=m;setMode(m);$('qty').value='';$('dm').showModal()}
+function setMode(m){if(m==='out'&&!canOut()){alert('Stock out is locked. Ask the admin.');return}mode=m;$('mi').className='i'+(m==='in'?' on':'');$('mo').className='o'+(m==='out'?' on':'');fill();upd()}
 function upd(){const v=+$('qty').value;let t='';
  if(mode==='in'){const k=$('it').value,c=k.slice(0,-2),ty=k.slice(-1);$('ql').textContent=ty==='w'?'Kilos received':'Pieces received';
   if(v>0){const b=ty==='w'?v*1000:v;t='Adds: '+items.filter(i=>i.cat===c&&i.type===ty).map(i=>esc(i.name)+' +'+Math.floor(b/i.portion+1e-9)).join(', ')}}
@@ -128,7 +128,7 @@ function upd(){const v=+$('qty').value;let t='';
  $('mm').innerHTML=t}
 $('it').onchange=upd;$('qty').oninput=upd;$('mi').onclick=()=>setMode('in');$('mo').onclick=()=>setMode('out');
 $('bIn').onclick=()=>openM('in');$('bOut').onclick=()=>openM('out');$('cx').onclick=()=>$('dm').close();
-$('go').onclick=async()=>{const v=+$('qty').value;if(!(v>0)){$('mm').textContent='Enter a quantity.';return}
+$('go').onclick=async()=>{const v=+$('qty').value;if(mode==='out'&&!canOut())return;if(!(v>0)){$('mm').textContent='Enter a quantity.';return}
  if(mode==='in'){const k=$('it').value,c=k.slice(0,-2),ty=k.slice(-1);
   await write(()=>db.collection('logs').doc().set({itemId:'',name:'Stock in',cat:c,type:ty,delta:ty==='w'?v*1000:v,text:fmt(v)+(ty==='w'?' kg':' pcs'),by:me?me.name:'',ts:Date.now()}))}
  else{const i=items.find(x=>x.id===$('it').value);if(!i)return;const need=v*i.portion;
@@ -137,12 +137,14 @@ $('go').onclick=async()=>{const v=+$('qty').value;if(!(v>0)){$('mm').textContent
  $('dm').close()};
 async function write(f){if(!me){lockUI();return}if(!db){alert('Shared storage is unavailable. Open this page signed in to claude.ai.');return}try{await f()}catch(e){alert('Could not save: '+(e&&e.message||'error'))}}
 function del(id){const i=items.find(x=>x.id===id);if(i&&confirm('Delete menu '+i.name+'? Category stock is kept.'))write(()=>db.doc('items/'+id).delete())}
+const canOut=()=>!!(me&&(me.admin||me.out));
+function setOut(){const b=$('bOut');b.disabled=!canOut();b.style.opacity=canOut()?1:.45;b.textContent=canOut()?'－ Stock Out':'🔒 Stock Out'}
 async function hash(salt,pin){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+':'+pin));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function touch(){clearTimeout(idle);if(me)idle=setTimeout(()=>{me=null;lockUI()},600000)}
 document.addEventListener('pointerdown',touch);
-function lockUI(){if(me&&!staff.find(s=>s.id===me.id))me=null;
+function lockUI(){if(me)me=staff.find(s=>s.id===me.id)||null;
  $('lk').style.display=me?'none':'flex';
- if(me){$('who').textContent='🔒 '+me.name;$('stB').hidden=!me.admin;return}
+ if(me){$('who').textContent='🔒 '+me.name;$('stB').hidden=!me.admin;setOut();return}
  $('who').textContent='🔒 Lock';$('stB').hidden=true;const setup=!staff.length;
  $('ls').hidden=setup;$('ln').hidden=!(setup&&canAdmin);$('lg').hidden=setup&&!canAdmin;$('lg').textContent=setup?'Create admin account':'Unlock';
  $('lkn').textContent=setup?(canAdmin?'First time: enter your name and choose a PIN for the admin account.':'No staff set up yet. Ask the owner to open this page and create the first account.'):'Select your name and enter your PIN.';
@@ -156,11 +158,12 @@ $('lg').onclick=async()=>{const pin=$('lp').value;if(Date.now()<until){$('lm').t
 $('lp').onkeydown=e=>{if(e.key==='Enter')$('lg').click()};
 $('who').onclick=()=>{me=null;lockUI()};
 $('stB').onclick=()=>{renderStaff();$('ds').showModal()};$('sx').onclick=()=>$('ds').close();
-function renderStaff(){$('sl').innerHTML=staff.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="log"><div>${esc(s.name)}</div><button class="g" onclick="rmStaff('${s.id}')">Remove</button></div>`).join('')}
+function renderStaff(){$('sl').innerHTML=staff.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="log"><div>${esc(s.name)}${s.admin?' <span class="sz">admin</span>':''}</div><div>${s.admin?'':`<button class="g" onclick="togOut('${s.id}')">Stock out: ${s.out?'ON':'OFF'}</button> `}<button class="g" onclick="rmStaff('${s.id}')">Remove</button></div></div>`).join('')}
+function togOut(id){const s=staff.find(x=>x.id===id);if(s)write(()=>db.doc('staff/'+id).update({out:!s.out}))}
 function rmStaff(id){if(me&&id===me.id){alert('You can’t remove yourself.');return}if(confirm('Remove this staff member?'))write(()=>db.doc('staff/'+id).delete())}
 $('sa').onclick=async()=>{const name=$('sn').value.trim(),pin=$('sp').value;if(!name||pin.length<4){$('sm').textContent='Enter a name and a PIN of 4+ characters.';return}
  const ex=staff.find(s=>s.name.toLowerCase()===name.toLowerCase()),salt=crypto.randomUUID(),h=await hash(salt,pin);
- await write(()=>ex?db.doc('staff/'+ex.id).update({salt,hash:h}):db.collection('staff').doc().set({name,salt,hash:h,ts:Date.now()}));$('sn').value='';$('sp').value='';$('sm').textContent=ex?'PIN reset.':'Added.'};
+ await write(()=>ex?db.doc('staff/'+ex.id).update({salt,hash:h}):db.collection('staff').doc().set({name,salt,hash:h,out:false,admin:false,ts:Date.now()}));$('sn').value='';$('sp').value='';$('sm').textContent=ex?'PIN reset.':'Added.'};
 $('newB').onclick=()=>{editId=null;$('dt').textContent='New menu';$('n').value='';$('p').value='';pre();$('dn').showModal()};
 function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type;$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
 function pre(){const cv=$('c').value.trim().toLowerCase(),ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cv);
