@@ -65,7 +65,8 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <label>Counted by</label><select id="t"><option value="w">Kilos</option><option value="p">Pieces</option></select>
 <label id="pl">Grams per order</label><input id="p" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 350">
 <div class="msg" id="pre"></div>
-<div class="row" style="margin-top:10px"><button class="g" id="cn" style="padding:12px">Cancel</button><button id="sv">Save menu</button></div></dialog>
+<div class="row" style="margin-top:10px"><button class="g" id="cn" style="padding:12px">Cancel</button><button id="sv">Save menu</button></div>
+<button class="g" id="dl" hidden style="width:100%;margin-top:16px;color:var(--out);border-color:var(--out)">🗑 Delete this menu</button></dialog>
 
 <script>
 /* Supabase connection (table: records). Leave url/key empty to store data on this device only.
@@ -109,7 +110,7 @@ function render(){norm();
  cats.forEach(c=>{const ms=items.filter(i=>i.cat===c&&(i.name+c).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));if(!ms.length)return;
   h+=`<tr class="ch"><td class="cat" colspan="3" style="background:hsl(${hue(c)} 60% 50% / .15);border-left:5px solid hsl(${hue(c)} 65% 50%)"><b style="color:hsl(${hue(c)} 70% var(--cl));font-size:16px">${esc(c)}</b> <span class="sz">·</span> <b>${types(c).map(t=>sTxt(t,Math.max(0,pool(c,t)))).join(' + ')}</b> <span class="sz">in stock</span></td></tr>`;
   ms.forEach(i=>{const o=left(i),k=o===0?'no':o<=5?'lo':'ok';
-   h+=`<tr><td class="n">${esc(i.name)} <span class="sz">${size(i)}</span></td><td class="num ${o===0?'no':'ok'}"><b>${o}</b> <span class="sz">orders</span></td><td><button class="g" onclick="edit('${i.id}')">✎</button> <button class="g" onclick="del('${i.id}')">✕</button></td></tr>`})});
+   h+=`<tr><td class="n">${esc(i.name)} <span class="sz">${size(i)}</span></td><td class="num ${o===0?'no':'ok'}"><b>${o}</b> <span class="sz">orders</span></td><td><button class="g" onclick="edit('${i.id}')">✎</button></td></tr>`})});
  $('tb').innerHTML=h||'<tr><td colspan="3" class="empty">No menus yet. Tap “+ Menu”.</td></tr>';
  const lc=[...new Set(items.map(i=>i.cat).concat(logs.map(l=>l.cat)))].sort();
  $('cl2').innerHTML=[...new Set(['Pork','Beef','Chicken','Fish','Squid','Shrimp','Vegetables'].concat(lc))].sort().map(c=>`<option value="${esc(c)}">`).join('');
@@ -136,6 +137,7 @@ $('go').onclick=async()=>{const v=+$('qty').value;if(mode==='out'&&!canOut())ret
   await write(()=>db.collection('logs').doc().set({itemId:i.id,name:i.name,cat:i.cat,type:i.type,delta:-need,text:fmt(v)+' order(s) · '+fmt(need)+(i.type==='w'?' g':' pcs'),by:me?me.name:'',ts:Date.now()}))}
  $('dm').close()};
 async function write(f){if(!me){lockUI();return}if(!db){alert('Shared storage is unavailable. Open this page signed in to claude.ai.');return}try{await f()}catch(e){alert('Could not save: '+(e&&e.message||'error'))}}
+$('dl').onclick=()=>{const i=items.find(x=>x.id===editId);if(i&&confirm('Delete menu '+i.name+'? The category stock is kept.')){write(()=>db.doc('items/'+i.id).delete());$('dn').close()}};
 function del(id){const i=items.find(x=>x.id===id);if(i&&confirm('Delete menu '+i.name+'? Category stock is kept.'))write(()=>db.doc('items/'+id).delete())}
 const canOut=()=>!!(me&&(me.admin||me.out));
 function setOut(){const b=$('bOut');b.disabled=!canOut();b.style.opacity=canOut()?1:.45;b.textContent=canOut()?'－ Stock Out':'🔒 Stock Out'}
@@ -164,8 +166,8 @@ function rmStaff(id){if(me&&id===me.id){alert('You can’t remove yourself.');re
 $('sa').onclick=async()=>{const name=$('sn').value.trim(),pin=$('sp').value;if(!name||pin.length<4){$('sm').textContent='Enter a name and a PIN of 4+ characters.';return}
  const ex=staff.find(s=>s.name.toLowerCase()===name.toLowerCase()),salt=crypto.randomUUID(),h=await hash(salt,pin);
  await write(()=>ex?db.doc('staff/'+ex.id).update({salt,hash:h}):db.collection('staff').doc().set({name,salt,hash:h,out:false,admin:false,ts:Date.now()}));$('sn').value='';$('sp').value='';$('sm').textContent=ex?'PIN reset.':'Added.'};
-$('newB').onclick=()=>{editId=null;$('dt').textContent='New menu';$('n').value='';$('p').value='';pre();$('dn').showModal()};
-function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type;$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
+$('newB').onclick=()=>{editId=null;$('dl').hidden=true;$('dt').textContent='New menu';$('n').value='';$('p').value='';pre();$('dn').showModal()};
+function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dl').hidden=false;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type;$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
 function pre(){const cv=$('c').value.trim().toLowerCase(),ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cv);
  $('t').disabled=false;
  const t=$('t').value,p=+$('p').value;$('pl').textContent=t==='w'?'Grams per order':'Pieces per order';
