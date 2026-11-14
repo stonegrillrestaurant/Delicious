@@ -92,6 +92,18 @@
         .c-card-left { display: flex; flex-direction: column; gap: 4px;}
         .c-card-right { text-align: right; background: #fff3e0; padding: 10px; border: 1px solid #f39c12; border-radius: 4px;}
 
+
+        /* Isolated printable snapshot: do not let live filter controls affect printing. */
+        #salesPrintSheet { display: none; }
+        @media print {
+            body.sales-printing > :not(#salesPrintSheet) { display: none !important; }
+            body.sales-printing #salesPrintSheet { display: block !important; width: 100% !important; }
+            body.sales-printing #salesPrintSheet table { min-width: 0 !important; width: 100% !important; }
+            body.sales-printing #salesPrintSheet th:last-child,
+            body.sales-printing #salesPrintSheet td:last-child { display: table-cell !important; }
+            body.sales-printing #salesPrintSheet .print-report-meta { margin: 0 0 3mm; font-size: 8pt; }
+        }
+
         /* Compact print-only transaction lists */
         .print-only { display: none; }
 
@@ -244,6 +256,7 @@
     </style>
 </head>
 <body>
+<div id="salesPrintSheet" aria-hidden="true"></div>
 
 <!-- LOGIN VIEW -->
 <div id="loginView" class="login-box">
@@ -269,7 +282,7 @@
     <div class="top-bar">
         <h2>Ledger Book: <span id="cashierNameDisplay"></span></h2>
         <div style="display:flex; gap: 10px;">
-            <button class="btn-action" style="background-color: var(--blue);" onclick="window.print()">
+            <button class="btn-action" style="background-color: var(--blue);" onclick="printSalesLedger()">
                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 4px;"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
                 Print
             </button>
@@ -351,7 +364,7 @@
         
         <button class="btn-action" onclick="document.getElementById('adminDateFilter').value=''; document.getElementById('adminMonthFilter').value=''; document.getElementById('adminDescFilter').value=''; renderAdminUI();">Clear Filters</button>
         
-        <button class="btn-action" style="background-color: var(--blue); margin-left: auto;" onclick="window.print()">
+        <button class="btn-action" style="background-color: var(--blue); margin-left: auto;" onclick="printSalesLedger()">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 4px;"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
             Print
         </button>
@@ -459,6 +472,43 @@
     function formatMoney(num) {
         return Number(num).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
+
+
+    // Snapshot the currently visible ledger so active search and date filters print reliably.
+    window.printSalesLedger = function() {
+        if (!currentUser) return;
+        const isAdmin = currentUser.email === ADMIN_EMAIL;
+        if (isAdmin) renderAdminUI();
+        const tableBody = document.getElementById(isAdmin ? 'adminTableBody' : 'cashierTableBody');
+        const originalTable = tableBody.closest('table');
+        const reportTable = originalTable.cloneNode(true);
+        // Action buttons have no place on the printed report.
+        reportTable.querySelectorAll('tr').forEach(row => {
+            if (row.cells.length > 1) row.deleteCell(-1);
+        });
+        const report = document.getElementById('salesPrintSheet');
+        report.replaceChildren();
+        const title = document.createElement('h1');
+        title.textContent = 'Stone Grill Finance';
+        const heading = document.createElement('h3');
+        heading.textContent = isAdmin
+            ? document.getElementById('printDateHeader').textContent
+            : 'Cashier Daily Ledger Report — ' + document.getElementById('cashierNameDisplay').textContent;
+        const meta = document.createElement('p');
+        meta.className = 'print-report-meta';
+        if (isAdmin) {
+            const query = document.getElementById('adminDescFilter').value.trim();
+            meta.textContent = query ? 'Description search: ' + query : 'All descriptions';
+        } else {
+            meta.textContent = 'All recorded transactions';
+        }
+        report.append(title, heading, meta, reportTable);
+        document.body.classList.add('sales-printing');
+        window.print();
+    };
+    window.addEventListener('afterprint', () => {
+        document.body.classList.remove('sales-printing');
+    });
 
     // --- AUTHENTICATION ---
     window.handleLogin = async () => {
