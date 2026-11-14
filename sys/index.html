@@ -519,7 +519,7 @@
             </div>;
         }
 
-        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDelete, isAdmin = false, onIssueCA, caBusy = false, onAddAdjustment }) {
+        function PayslipWidget({ emp, selectedMonth, monthOptions, setSelectedMonth, cashAdvances, interactivePayrolls, onClose, onEdit, onDeleteEmployee, onDeleteLedgerEntry, isAdmin = false, onIssueCA, caBusy = false, onAddAdjustment }) {
             const [activeTab, setActiveTab] = useState('payslip');
             const [ledgerPrintData, setLedgerPrintData] = useState(null);
             const [ledgerMonth, setLedgerMonth] = useState('');
@@ -639,12 +639,15 @@
             const receiptLedger = [
                 ...cashAdvances
                     .filter(ca => normalizeId(ca.empId) === normalizeId(emp.id))
-                    .map((ca, idx) => ({ id: ca.id || 'ca-' + idx, date: ca.date || '', type: Number(ca.amount) < 0 ? 'C.A. Repayment' : 'Cash Advance', amount: Number(ca.amount) || 0, note: ca.reason || '', isBonus: false })),
+                    .map(ca => ({ id: 'cash-' + ca.id, cashAdvanceId: ca.id, date: ca.date || '', type: Number(ca.amount) < 0 ? 'C.A. Repayment' : 'Cash Advance', amount: Number(ca.amount) || 0, note: ca.reason || '', isBonus: false })),
                 ...interactivePayrolls
                     .filter(p => normalizeId(p.empId) === normalizeId(emp.id))
                     .flatMap(p => (Array.isArray(p.data?.ledger) ? p.data.ledger : []).map((entry, idx) => ({
                         ...entry,
-                        id: entry.id || p.recordKey + '-ledger-' + idx,
+                        id: `adjustment-${p.id}-${idx}`,
+                        payrollId: p.id,
+                        ledgerIndex: idx,
+                        savedEntries: p.data.ledger,
                         date: entry.date || p.endDate || (p.month ? p.month + '-01' : ''),
                         type: entry.type || 'Ledger Entry',
                         amount: Number(entry.amount) || 0,
@@ -810,10 +813,10 @@
                                         {monthLedger.length>0 && <div className="space-y-1 text-xs">{monthLedger.map((x,i)=><div key={x.id||i} className="flex justify-between gap-2"><span>{x.type}: {x.note}</span><b>{Number(x.amount)>0?'+':'-'}₱{formatMoney(Math.abs(Number(x.amount)||0))}</b></div>)}</div>}
                                     </form>
                                 )}
-                                {(onEdit || onDelete) && (
+                                {(onEdit || onDeleteEmployee) && (
                                     <div className="flex gap-3 mt-4 print-hidden">
                                         {onEdit && <button onClick={() => onEdit(emp)} className="flex-1 py-3 bg-white border border-blue-200 text-blue-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-blue-50 transition-colors shadow-sm">Edit Profile</button>}
-                                        {onDelete && <button onClick={() => onDelete(emp.id, emp.name)} className="flex-1 py-3 bg-white border border-rose-200 text-rose-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-rose-50 transition-colors shadow-sm">Delete</button>}
+                                        {onDeleteEmployee && <button type="button" onClick={() => onDeleteEmployee(emp.id, emp.name)} className="flex-1 py-3 bg-white border border-rose-200 text-rose-600 rounded-xl font-bold text-xs tracking-wider uppercase hover:bg-rose-50 transition-colors shadow-sm">Delete Employee</button>}
                                     </div>
                                 )}
                             </div>
@@ -834,7 +837,7 @@
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className={`font-black tracking-wide text-sm ${tx.amount < 0 || tx.isBonus ? 'text-emerald-600' : 'text-red-500'}`}>{(tx.amount < 0 || tx.isBonus) ? '+' : '-'}₱{formatMoney(Math.abs(tx.amount))}</p>
-                                            {onDelete && <div className="mt-2"><button type="button" onClick={() => { if (!window.confirm('Delete this ledger entry?')) return; onDelete(tx); }} className="text-[10px] text-rose-500 hover:text-rose-700">Delete</button></div>}
+                                            {onDeleteLedgerEntry && <div className="mt-2"><button type="button" disabled={caBusy} onClick={() => onDeleteLedgerEntry(tx)} className="px-3 py-2 rounded-lg text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50">Delete</button></div>}
                                         </div>
                                     </div>
                                 ))}
@@ -1572,23 +1575,38 @@
                 await window.fb.deleteDoc(getVaultDoc('employees', normalizeId(id))); setViewProfile(null);
             };
 
-            const handleDeleteCA = async (caId) => {
-                if (!isAdmin || !window.confirm(`Delete and reverse this transaction?`)) return;
-                await window.fb.deleteDoc(getVaultDoc('cash_advances', caId));
-            };
-
             const handleDeleteLedgerEntry = async (tx) => {
-                if (!isAdmin || !tx) return;
-                try {
-                    if (tx.isBonus) {
-                        const key = String(tx.id || '').replace(/^bonus-/, ''); if (!key) return;
-                        if (!window.confirm('Delete this archived bonus?')) return;
-                        await window.fb.updateDoc(getVaultDoc('payroll_entries', key), { 'data.bonus': 0 }); alert('Bonus removed.');
-                    } else {
-                        if (!window.confirm('Delete this transaction?')) return;
-                        await window.fb.deleteDoc(getVaultDoc('cash_advances', tx.id)); alert('Transaction deleted.');
+                if (!isAdmin || caActionLock.current || !(tx?.cashAdvanceId || tx?.payrollId)) return;
+                if (!window.confirm(`Delete this ${tx.type} of ₱${formatMoney(tx.amount)} (${formatDisplayDate(tx.date) || 'undated'})?`)) return;
+                await runCAAction(() => window.fb.runTransaction(window.fb.db, async transaction => {
+                    if (tx.cashAdvanceId) {
+                        const cashRef = getVaultDoc('cash_advances', tx.cashAdvanceId);
+                        const cash = await transaction.get(cashRef);
+                        if (!cash.exists()) return;
+                        const { requestId, empId } = cash.data();
+                        if (requestId) {
+                            const requestRef = getVaultDoc('ca_requests', requestId);
+                            const request = (await transaction.get(requestRef)).data();
+                            if (request && normalizeId(request.empId) === normalizeId(empId)
+                                && (request.ledgerId || 'request_' + requestId) === tx.cashAdvanceId) {
+                                transaction.update(requestRef, { status: 'Voided', voidedAt: window.fb.serverTimestamp(), voidedByUid: user.uid });
+                            }
+                        }
+                        transaction.delete(cashRef);
+                        return;
                     }
-                } catch (err) { alert('Error deleting: ' + (err.message || err)); }
+
+                    const payrollRef = getVaultDoc('payroll_entries', tx.payrollId);
+                    const entries = (await transaction.get(payrollRef)).data()?.data?.ledger;
+                    const serialize = list => JSON.stringify(list, (_, value) => value && typeof value === 'object' && !Array.isArray(value)
+                        ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value);
+                    // The position distinguishes identical legacy entries. Recheck the saved list before deleting it.
+                    if (!Array.isArray(entries) || !entries[tx.ledgerIndex]
+                        || serialize(entries) !== serialize(tx.savedEntries)) {
+                        throw new Error('This ledger has changed. Review the current entries and select the duplicate again.');
+                    }
+                    transaction.update(payrollRef, { 'data.ledger': entries.filter((_, index) => index !== tx.ledgerIndex) });
+                }));
             };
 
             const handleExportBackup = () => {
@@ -1747,7 +1765,7 @@
 
                                             return (
                                                 <div className="animate-slide-up space-y-6 max-w-2xl mx-auto pb-10">
-                                                    <PayslipWidget emp={emp} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} attendance={attendance} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} onDelete={isAdmin ? handleDeleteLedgerEntry : undefined} />
+                                                    <PayslipWidget emp={emp} selectedMonth={selectedMonth} monthOptions={monthOptions} setSelectedMonth={setSelectedMonth} attendance={attendance} cashAdvances={cashAdvances} interactivePayrolls={interactivePayrolls} />
                                                     <div className="bg-white rounded-3xl border border-blue-50 shadow-xl overflow-hidden mt-6">
                                                         <div className="bg-emerald-700 text-white p-4 font-black uppercase tracking-widest text-sm flex items-center"><Banknote className="w-5 h-5 mr-2" /> Request Cash Advance</div>
                                                         <div className="p-6">
@@ -1770,6 +1788,7 @@
                                                                                     {req.status === 'Pending' && <span className="text-amber-500">PENDING</span>}
                                                                                     {req.status === 'Approved' && <span className="text-emerald-600">APPROVED</span>}
                                                                                     {req.status === 'Rejected' && <span className="text-rose-500">REJECTED</span>}
+                                                                                    {req.status === 'Voided' && <span className="text-rose-500">VOIDED</span>}
                                                                                     {req.status === 'Printed' && <span className="text-blue-600">LEGACY PRINTED — RECEIPT UNVERIFIED</span>}
                                                                                     {req.status === 'Disbursed' && <span className="text-blue-600">APPROVED AND RECORDED</span>}
                                                                                     {req.status === 'Received' && <span className="text-emerald-600">RECEIVED<br/><small>{timestampLabel(req.receivedAt)}</small></span>}
@@ -2129,7 +2148,7 @@
                                                                     <td className={`p-4 text-right font-black ${ca.amount < 0 ? 'text-emerald-600' : 'text-red-500'}`}>{ca.amount < 0 ? '+' : '-'}₱{formatMoney(Math.abs(ca.amount))}</td>
                                                                     <td className="p-4 text-center">
                                                                         {ca.amount > 0 && !ca.requestId && <button onClick={() => handlePrintReceipt({...ca, amount: Math.abs(ca.amount), status: 'Approved', approvedAt: ca.recordedAt, dateApproved: ca.date})} className="mr-2 border border-blue-600 text-blue-700 px-2 py-2 rounded-lg text-[9px] font-black uppercase"><Printer className="w-3 h-3 inline mr-1"/>Voucher</button>}
-                                                                        <button onClick={() => handleDeleteCA(ca.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><X className="w-3 h-3"/></button>
+                                                                        <button type="button" aria-label="Delete transaction" disabled={caBusy} onClick={() => handleDeleteLedgerEntry({ cashAdvanceId: ca.id, type: ca.amount < 0 ? 'C.A. Repayment' : 'Cash Advance', amount: ca.amount, date: ca.date })} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded disabled:opacity-50"><X className="w-3 h-3"/></button>
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -2386,7 +2405,8 @@
                                     interactivePayrolls={interactivePayrolls} 
                                     onClose={() => setViewProfile(null)} 
                                     onEdit={handleEditProfile} 
-                                    onDelete={handleDeleteEmployee} 
+                                    onDeleteEmployee={handleDeleteEmployee}
+                                    onDeleteLedgerEntry={handleDeleteLedgerEntry}
                                     isAdmin={isAdmin} 
                                     onIssueCA={handleProfileIssueCA}
                                     onAddAdjustment={handleAddAdjustment} 
