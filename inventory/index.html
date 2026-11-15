@@ -23,6 +23,10 @@ h1{font-size:21px;margin:2px 0}h2{font-size:14px;margin:0 0 8px;text-transform:u
 .tst{font-size:12px;font-weight:700;margin-bottom:6px}
 .tl{font-size:12px;color:var(--mut);line-height:1.5;margin-top:3px}.tl b{color:var(--tx);font-size:13px}.tl .inn,.tl .outn{font-size:11.5px;font-family:inherit}
 .chip{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;border:1px solid currentColor;margin-right:4px;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+button.chp{box-shadow:none;background:transparent;color:hsl(var(--h) 70% var(--cl));border:1.5px solid hsl(var(--h) 65% 50%);padding:8px 14px;font-weight:800}
+button.chp.on{background:hsl(var(--h) 65% 48%);color:#fff}
+.orow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)}.orow input{width:92px;text-align:center;font-size:20px;font-weight:700}
 .led{border:1px solid var(--bd)}.led th{background:var(--hd);color:var(--mut);padding:10px 8px;border-bottom:2px solid var(--bd);border-right:1px solid var(--bd);font-size:11px;letter-spacing:.06em}.led td{border-right:1px solid var(--bd);vertical-align:middle}.led tbody tr:nth-child(even){background:rgba(255,255,255,.035)}.inn,.outn{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:14px;white-space:nowrap}.led td.n{min-width:110px}.inn{color:var(--ok)}.outn{color:var(--out)}.led td:last-child,.led th:last-child{border-right:0}
 input,select,button{font:inherit;color:inherit}
 input,select{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
@@ -62,9 +66,9 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <div class="bar"><button class="in" id="bIn">＋ Stock In</button><button class="outb" id="bOut">－ Stock Out</button></div>
 
 <dialog id="ds"><b>Staff</b><div id="sl" style="margin:8px 0"></div><label>Staff name</label><input id="sn"><label>PIN / password (4+ characters)</label><input id="sp" type="password" autocomplete="off"><div class="msg" id="sm">Using an existing name resets that person’s PIN.</div><div class="row" style="margin-top:10px"><button class="g" id="sx" style="padding:12px">Close</button><button id="sa">Add / reset PIN</button></div></dialog>
-<dialog id="dm"><div class="tg"><button class="i" id="mi">Stock In</button><button class="o" id="mo">Stock Out</button></div>
-<label id="il">Category</label><select id="it"></select>
-<label id="ql">Quantity</label><input id="qty" type="number" min="0" step="any" inputmode="decimal">
+<dialog id="dm"><div id="mh" style="font-weight:800;font-size:19px"></div>
+<div id="chips" class="chips"></div>
+<div id="mb"></div>
 <label>Date (of the stock in / sales)</label><input id="dd" type="date">
 <div class="msg" id="mm"></div>
 <div class="row" style="margin-top:10px"><button class="g" id="cx" style="padding:12px">Cancel</button><button id="go">Save</button></div></dialog>
@@ -140,34 +144,38 @@ function render(){norm();
  $('cl2').innerHTML=[...new Set(['Pork','Beef','Chicken','Fish','Squid','Shrimp','Vegetables'].concat(lc))].sort().map(c=>`<option value="${esc(c)}">`).join('');
  const all=logs.filter(l=>!sel||l.cat===sel).sort((x,y)=>logDate(y).localeCompare(logDate(x))||y.ts-x.ts),L=all.slice(0,lim);$('more').hidden=all.length<=lim;
  $('lg2').innerHTML=L.length?`<table class="led"><thead><tr><th>Date / what</th><th class="num">In (+)</th><th class="num">Out (−)</th></tr></thead><tbody>${L.map(l=>{const H=hue(l.cat);
-  return `<tr><td class="n">${esc(l.name)}<div class="sz" style="margin:2px 0 0"><span class="chip" style="color:hsl(${H} 70% var(--cl))">${esc(l.cat)}</span><b>${fdate(logDate(l))}</b> · ${esc(l.by||'—')}</div></td><td class="num inn">${l.delta>0?esc(l.text):''}</td><td class="num outn">${l.delta<0?(t=>{const a=t.split(' · ');return esc(a[0])+(a[1]?'<div class="sz" style="margin:0;font-family:inherit;font-weight:400">'+esc(a[1])+'</div>':'')})(l.text):''}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">No activity yet</div>';
+  return `<tr><td class="n">${esc(l.name)}<div class="sz" style="margin:2px 0 0"><span class="chip" style="color:hsl(${H} 70% var(--cl))">${esc(l.cat)}</span><b>${fdate(logDate(l))}</b> · ${esc(l.by||'—')}</div></td><td class="num inn">${l.delta>0?(t=>{const a=t.split(' · ');return esc(a[0])+(a[1]?'<div class="sz" style="margin:0;font-family:inherit;font-weight:400">'+esc(a[1])+'</div>':'')})(l.text):''}</td><td class="num outn">${l.delta<0?(t=>{const a=t.split(' · ');return esc(a[0])+(a[1]?'<div class="sz" style="margin:0;font-family:inherit;font-weight:400">'+esc(a[1])+'</div>':'')})(l.text):''}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">No activity yet</div>';
 }
 $('tiles').onclick=e=>{const t=e.target.closest('.tile');if(t){sel=sel===t.dataset.c?'':t.dataset.c;render()}};
 $('more').onclick=()=>{lim+=20;render()};
 setInterval(render,60000);
-function fill(){
- if(mode==='in'){$('il').textContent='Category';const cs=[...new Set(items.map(i=>i.cat+'|'+i.type))].sort();$('it').innerHTML=cs.map(k=>{const c=k.slice(0,-2),t=k.slice(-1);return `<option value="${esc(k)}">${esc(c)} — ${t==='w'?'kilos':'pieces'}</option>`}).join('')}
- else{$('il').textContent='Menu sold';$('it').innerHTML=items.slice().sort((a,b)=>a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name)).map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.cat)}) · ${size(i)}</option>`).join('')}}
-function openM(m){if(m==='out'&&!canOut()){alert('Stock out is locked. Ask the admin.');return}if(!items.length){alert('Add a menu first.');return}mode=m;setMode(m);$('qty').value='';$('dd').value=today();$('dd').max=today();$('dm').showModal()}
-function setMode(m){if(m==='out'&&!canOut()){alert('Stock out is locked. Ask the admin.');return}mode=m;$('mi').className='i'+(m==='in'?' on':'');$('mo').className='o'+(m==='out'?' on':'');fill();upd()}
-function upd(){const v=+$('qty').value;let t='';
- if(mode==='in'){const k=$('it').value,c=k.slice(0,-2),ty=k.slice(-1);$('ql').textContent=ty==='w'?'Kilos received':'Pieces received';
-  if(v>0){const b=ty==='w'?v*1000:v;t='Adds: '+items.filter(i=>i.cat===c&&i.type===ty).map(i=>esc(i.name)+' +'+Math.floor(b/i.portion+1e-9)).join(', ')}}
- else{const i=items.find(x=>x.id===$('it').value);$('ql').textContent='Orders sold';if(i&&v>0)t='Uses '+fmt(v*i.portion)+(i.type==='w'?' g':' pcs')+' from '+esc(i.cat)+' · stock now '+sTxt(i.type,pool(i.cat,i.type))}
-
- const dv=$('dd').value||today(),k=$('it').value;let w='';
- if(mode==='in'){const c=k.slice(0,-2),ty=k.slice(-1),e=logs.filter(l=>l.cat===c&&l.delta>0&&(l.type||ctype(c))===ty&&logDate(l)===dv);if(e.length)w='Stock in already entered for '+fdate(dv)+': '+e.map(l=>l.text).join(' + ')}
- else{const i=items.find(x=>x.id===k);if(i){const e=logs.filter(l=>l.itemId===i.id&&l.delta<0&&logDate(l)===dv);if(e.length)w='Sales already entered for '+fdate(dv)+': '+e.reduce((a,l)=>a+(l.qty||parseFloat(l.text)||0),0)+' order(s) of '+i.name}}
+let dc='';
+function openM(m){if(m==='out'&&!canOut()){alert('Stock out is locked. Ask the admin.');return}if(!items.length){alert('Add a menu first.');return}
+ mode=m;const cs=[...new Set(items.map(i=>i.cat))];dc=cs.includes(sel)?sel:'';$('dd').value=today();$('dd').max=today();drawM();$('dm').showModal()}
+function drawM(){const cats=[...new Set(items.map(i=>i.cat))].sort();
+ $('mh').innerHTML=mode==='in'?'<span style="color:var(--ok)">＋ Stock In</span>':'<span style="color:var(--out)">－ Stock Out</span>';
+ $('chips').innerHTML=cats.map(c=>`<button class="chp${c===dc?' on':''}" data-c="${esc(c)}" style="--h:${hue(c)}">${esc(c)}</button>`).join('');
+ if(!dc){$('mb').innerHTML='<div class="msg">Tap a category above.</div>';$('mm').innerHTML='';return}
+ if(mode==='in')$('mb').innerHTML=types(dc).map(t=>`<label>${t==='w'?'Kilos received':'Pieces received'}</label><input class="qi" data-t="${t}" type="number" min="0" step="any" inputmode="decimal" placeholder="0" style="font-size:22px;font-weight:700">`).join('')+(types(dc).includes('p')?'<label>Kilos weighed (optional, for your records)</label><input id="kgw" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 12">':'');
+ else $('mb').innerHTML=items.filter(i=>i.cat===dc).sort((a,b)=>a.name.localeCompare(b.name)).map(i=>`<div class="orow"><div><b>${esc(i.name)}</b> <span class="sz">${size(i)}</span><div class="sz" style="margin:0">${left(i)} orders left</div></div><input class="qo" data-id="${i.id}" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>`).join('');
+ const f=$('mb').querySelector('input');if(f)setTimeout(()=>f.focus(),60);upd()}
+function upd(){if(!dc)return;const dv=$('dd').value||today();let t='',w='';
+ if(mode==='in'){const pc=+(($('mb').querySelector('.qi[data-t="p"]')||{}).value),kg=+(($('kgw')||{}).value);if(pc>0&&kg>0)t='Average '+fmt(Math.round(kg*1000/pc))+' g per piece';types(dc).forEach(ty=>{const e=logs.filter(l=>l.cat===dc&&l.delta>0&&(l.type||ctype(dc))===ty&&logDate(l)===dv);if(e.length)w+=(w?' · ':'')+e.map(l=>l.text).join(' + ')});if(w)w='Stock in already entered for '+fdate(dv)+': '+w}
+ else{const need={};$('mb').querySelectorAll('.qo').forEach(inp=>{const v=+inp.value,i=items.find(x=>x.id===inp.dataset.id);if(v>0&&i)need[i.type]=(need[i.type]||0)+v*i.portion});
+  t=Object.keys(need).map(ty=>'Uses '+sTxt(ty,need[ty])+' · stock after '+sTxt(ty,pool(dc,ty)-need[ty])).join('<br>');
+  const per={};logs.filter(l=>l.cat===dc&&l.delta<0&&logDate(l)===dv).forEach(l=>{per[l.name]=(per[l.name]||0)+(l.qty||parseFloat(l.text)||0)});
+  const k=Object.keys(per);if(k.length)w='Sales already entered for '+fdate(dv)+': '+k.map(n=>n+' '+per[n]).join(', ')}
  $('mm').innerHTML=t+(w?'<div class="no" style="margin-top:6px;font-weight:700">⚠ '+esc(w)+'</div>':'')}
-$('it').onchange=upd;$('dd').onchange=upd;$('qty').oninput=upd;$('mi').onclick=()=>setMode('in');$('mo').onclick=()=>setMode('out');
+$('chips').onclick=e=>{const b=e.target.closest('.chp');if(b){dc=b.dataset.c;drawM()}};
+$('mb').oninput=upd;$('dd').onchange=upd;
 $('bIn').onclick=()=>openM('in');$('bOut').onclick=()=>openM('out');$('cx').onclick=()=>$('dm').close();
-$('go').onclick=async()=>{const v=+$('qty').value;if(mode==='out'&&!canOut())return;if(!(v>0)){$('mm').textContent='Enter a quantity.';return}
- if(mode==='in'){const k=$('it').value,c=k.slice(0,-2),ty=k.slice(-1);
-  await write(()=>db.collection('logs').doc().set({itemId:'',name:'Stock in',cat:c,type:ty,delta:ty==='w'?v*1000:v,text:fmt(v)+(ty==='w'?' kg':' pcs'),by:me?me.name:'',ts:mkTs(),date:$('dd').value||today()}))}
- else{const i=items.find(x=>x.id===$('it').value);if(!i)return;const need=v*i.portion;
-  if(pool(i.cat,i.type)-need<-1e-9){$('mm').textContent='Not enough stock. Only '+left(i)+' orders left.';return}
-  await write(()=>db.collection('logs').doc().set({itemId:i.id,name:i.name,cat:i.cat,type:i.type,delta:-need,text:fmt(v)+' order(s) · '+fmt(need)+(i.type==='w'?' g':' pcs'),by:me?me.name:'',ts:mkTs(),date:$('dd').value||today(),qty:v}))}
- $('dm').close()};
+$('go').onclick=async()=>{if(!dc){$('mm').textContent='Tap a category first.';return}if(mode==='out'&&!canOut())return;
+ const ts=mkTs(),date=$('dd').value||today(),by=me?me.name:'',w=[];
+ if(mode==='in'){$('mb').querySelectorAll('.qi').forEach(inp=>{const v=+inp.value,t=inp.dataset.t,kg=t==='p'?+(($('kgw')||{}).value):0;if(v>0)w.push({itemId:'',name:'Stock in',cat:dc,type:t,delta:t==='w'?v*1000:v,text:fmt(v)+(t==='w'?' kg':' pcs')+(kg>0?' · '+fmt(kg)+' kg':''),by,ts,date})})}
+ else{const need={};$('mb').querySelectorAll('.qo').forEach(inp=>{const v=+inp.value,i=items.find(x=>x.id===inp.dataset.id);if(v>0&&i){const n=v*i.portion;need[i.type]=(need[i.type]||0)+n;w.push({itemId:i.id,name:i.name,cat:i.cat,type:i.type,delta:-n,qty:v,text:fmt(v)+' order(s) · '+fmt(n)+(i.type==='w'?' g':' pcs'),by,ts,date})}});
+  for(const t in need){if(pool(dc,t)-need[t]<-1e-9){$('mm').textContent='Not enough stock. Only '+sTxt(t,Math.max(0,pool(dc,t)))+' left.';return}}}
+ if(!w.length){$('mm').textContent='Enter a quantity.';return}
+ await write(async()=>{for(const l of w)await db.collection('logs').doc().set(l)});$('dm').close()};
 async function write(f){if(!me){lockUI();return}if(!db){alert('Shared storage is unavailable. Open this page signed in to claude.ai.');return}try{await f()}catch(e){alert('Could not save: '+(e&&e.message||'error'))}}
 $('dl').onclick=()=>{const i=items.find(x=>x.id===editId);if(i&&confirm('Delete menu '+i.name+'? The category stock is kept.')){write(()=>db.doc('items/'+i.id).delete());$('dn').close()}};
 function del(id){const i=items.find(x=>x.id===id);if(i&&confirm('Delete menu '+i.name+'? Category stock is kept.'))write(()=>db.doc('items/'+id).delete())}
