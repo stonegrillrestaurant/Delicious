@@ -15,7 +15,15 @@ body{margin:0;background:radial-gradient(900px 380px at 50% -120px,rgba(249,115,
 main{max-width:720px;margin:0 auto;padding:16px 14px 90px}
 h1{font-size:21px;margin:2px 0}h2{font-size:14px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
-.card{background:linear-gradient(90deg,#dc2626,#f97316,#fbbf24) top/100% 3px no-repeat,var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 12px 12px;margin-bottom:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}.brand img{height:56px;display:block}.sub{margin-top:2px;font-weight:800;font-style:italic;letter-spacing:.22em;font-size:12px;background:linear-gradient(90deg,#ef4444,#f97316,#fde047);-webkit-background-clip:text;background-clip:text;color:transparent}h2{font-style:italic}.led{border:1px solid var(--bd)}.led th{background:var(--hd);color:var(--mut);padding:10px 8px;border-bottom:2px solid var(--bd);border-right:1px solid var(--bd);font-size:11px;letter-spacing:.06em}.led td{border-right:1px solid var(--bd);vertical-align:middle}.led tbody tr:nth-child(even){background:rgba(255,255,255,.035)}.inn,.outn{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:14px;white-space:nowrap}.led td.n{min-width:110px}.inn{color:var(--ok)}.outn{color:var(--out)}.led td:last-child,.led th:last-child{border-right:0}
+.card{background:linear-gradient(90deg,#dc2626,#f97316,#fbbf24) top/100% 3px no-repeat,var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 12px 12px;margin-bottom:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}.brand img{height:56px;display:block}.sub{margin-top:2px;font-weight:800;font-style:italic;letter-spacing:.22em;font-size:12px;background:linear-gradient(90deg,#ef4444,#f97316,#fde047);-webkit-background-clip:text;background-clip:text;color:transparent}h2{font-style:italic}.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.tile{background:var(--card);border:1px solid var(--bd);border-left:5px solid hsl(var(--h) 65% 50%);border-radius:14px;padding:10px 11px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.tile.on{outline:2px solid hsl(var(--h) 70% 60%);background:hsl(var(--h) 35% 13%)}
+.tn{font-weight:800;font-size:15px;font-style:italic;text-transform:uppercase;letter-spacing:.04em}
+.ts{font-size:22px;font-weight:800;line-height:1.15;margin:4px 0}
+.tst{font-size:12px;font-weight:700;margin-bottom:6px}
+.tl{font-size:11.5px;color:var(--mut);line-height:1.35;margin-top:2px}.tl .inn,.tl .outn{font-size:11.5px;font-family:inherit}
+.chip{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;border:1px solid currentColor;margin-right:4px;white-space:nowrap}
+.led{border:1px solid var(--bd)}.led th{background:var(--hd);color:var(--mut);padding:10px 8px;border-bottom:2px solid var(--bd);border-right:1px solid var(--bd);font-size:11px;letter-spacing:.06em}.led td{border-right:1px solid var(--bd);vertical-align:middle}.led tbody tr:nth-child(even){background:rgba(255,255,255,.035)}.inn,.outn{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:14px;white-space:nowrap}.led td.n{min-width:110px}.inn{color:var(--ok)}.outn{color:var(--out)}.led td:last-child,.led th:last-child{border-right:0}
 input,select,button{font:inherit;color:inherit}
 input,select{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
 label{font-size:12px;color:var(--mut);display:block;margin:10px 0 3px}
@@ -43,10 +51,11 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <div class="hd"><div><div class="brand"><img src="logo.png" alt="Stone Grill"><div class="sub">PANTRY STOCK</div></div><div id="sync" style="font-size:12px;color:var(--mut)">Connecting…</div></div>
 <div style="display:flex;gap:6px"><button class="g" id="who">🔒 Lock</button><button class="g" id="stB" hidden>Staff</button><button class="g" id="newB">+ Menu</button></div></div>
 
-<div class="card"><h2>Inventory</h2><input id="q" placeholder="Search menu or category…" style="margin-bottom:8px">
+<div id="tiles" class="tiles"></div>
+<div class="card"><h2 id="mt">Menus</h2><input id="q" placeholder="Search menu or category…" style="margin-bottom:8px">
 <div class="scroll"><table><tbody id="tb"></tbody></table></div>
 <div class="note">Menus in the same category share one stock.</div></div>
-<div id="logs"></div>
+<div class="card"><h2 id="lt">Activity log</h2><div class="scroll" id="lg2"></div><button class="g" id="more" hidden style="width:100%;margin-top:10px">Show more</button></div>
 </main>
 
 <div id="lk" style="position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:min(92vw,360px)"><div class="brand" style="text-align:center"><img src="logo.png" alt="Stone Grill" style="margin:0 auto 4px;height:80px"><div class="sub">PANTRY STOCK</div></div><div class="note" id="lkn">Loading…</div><select id="ls" style="margin-top:10px"></select><input id="ln" placeholder="Your name" style="margin-top:10px" hidden><input id="lp" type="password" placeholder="PIN / password" autocomplete="off" style="margin-top:10px"><div class="msg" id="lm"></div><button id="lg" style="width:100%;margin-top:8px">Unlock</button></div></div>
@@ -103,20 +112,35 @@ const HUES=[8,205,145,285,32,330,175,55,250,100];const hue=c=>{let h=0;for(const
 function norm(){const m={},k=c=>String(c||'').trim().toLowerCase();
  items.forEach(i=>{if(!m[k(i.cat)])m[k(i.cat)]=String(i.cat).trim()});logs.forEach(l=>{if(!m[k(l.cat)])m[k(l.cat)]=String(l.cat||'').trim()});
  items.forEach(i=>i.cat=m[k(i.cat)]);logs.forEach(l=>l.cat=m[k(l.cat)])}
+let sel='',lim=20;
+const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);if(m<1)return'just now';if(m<60)return m+'m ago';const h=Math.round(m/60);if(h<24)return h+'h ago';return Math.round(h/24)+'d ago'};
+const fdt=ts=>new Date(ts).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 function render(){norm();
- const q=$('q').value.toLowerCase();
- const cats=[...new Set(items.map(i=>i.cat))].sort();
+ const q=$('q').value.toLowerCase(),cats=[...new Set(items.map(i=>i.cat))].sort();
+ if(sel&&!cats.includes(sel))sel='';
+ const last=(c,pos)=>logs.filter(l=>l.cat===c&&(pos?l.delta>0:l.delta<0)).sort((x,y)=>y.ts-x.ts)[0];
+ $('tiles').innerHTML=cats.map(c=>{const out=items.filter(i=>i.cat===c&&left(i)===0).length,li=last(c,1),lo=last(c,0),H=hue(c);
+  return `<div class="tile${sel===c?' on':''}" data-c="${esc(c)}" style="--h:${H}"><div class="tn" style="color:hsl(${H} 70% var(--cl))">${esc(c)}</div>
+  <div class="ts">${types(c).map(t=>sTxt(t,Math.max(0,pool(c,t)))).join(' + ')}</div>
+  <div class="tst ${out?'no':'ok'}">${out?'● '+out+' menu'+(out>1?'s':'')+' out':'● All menus available'}</div>
+  <div class="tl"><span class="inn">▲ IN</span> ${li?esc(li.text)+' · '+ago(li.ts):'—'}</div>
+  <div class="tl"><span class="outn">▼ OUT</span> ${lo?esc(lo.name)+' · '+ago(lo.ts):'—'}</div></div>`}).join('')||'<div class="empty" style="grid-column:1/3">No menus yet. Tap “+ Menu”.</div>';
+ $('mt').textContent=sel?'Menus · '+sel:'All menus';$('lt').textContent=sel?'Activity log · '+sel:'Activity log · all categories';
  let h='';
- cats.forEach(c=>{const ms=items.filter(i=>i.cat===c&&(i.name+c).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));if(!ms.length)return;
+ cats.filter(c=>!sel||c===sel).forEach(c=>{const ms=items.filter(i=>i.cat===c&&(i.name+c).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));if(!ms.length)return;
   h+=`<tr class="ch"><td class="cat" colspan="3" style="background:hsl(${hue(c)} 60% 50% / .15);border-left:5px solid hsl(${hue(c)} 65% 50%)"><b style="color:hsl(${hue(c)} 70% var(--cl));font-size:16px">${esc(c)}</b> <span class="sz">·</span> <b>${types(c).map(t=>sTxt(t,Math.max(0,pool(c,t)))).join(' + ')}</b> <span class="sz">in stock</span></td></tr>`;
-  ms.forEach(i=>{const o=left(i),k=o===0?'no':o<=5?'lo':'ok';
+  ms.forEach(i=>{const o=left(i);
    h+=`<tr><td class="n">${esc(i.name)} <span class="sz">${size(i)}</span></td><td class="num ${o===0?'no':'ok'}"><b>${o}</b> <span class="sz">orders</span></td><td><button class="g" onclick="edit('${i.id}')">✎</button></td></tr>`})});
- $('tb').innerHTML=h||'<tr><td colspan="3" class="empty">No menus yet. Tap “+ Menu”.</td></tr>';
+ $('tb').innerHTML=h||'<tr><td colspan="3" class="empty">No menus to show.</td></tr>';
  const lc=[...new Set(items.map(i=>i.cat).concat(logs.map(l=>l.cat)))].sort();
  $('cl2').innerHTML=[...new Set(['Pork','Beef','Chicken','Fish','Squid','Shrimp','Vegetables'].concat(lc))].sort().map(c=>`<option value="${esc(c)}">`).join('');
- $('logs').innerHTML=lc.map(c=>{const L=logs.filter(l=>l.cat===c).sort((a,b)=>b.ts-a.ts).slice(0,15);
-  return `<div class="card"><h2 style="color:hsl(${hue(c)} 70% var(--cl))">${esc(c)} ledger</h2>${L.length?`<div class="scroll"><table class="led"><thead><tr><th>Description</th><th class="num">Stock in (+)</th><th class="num">Stock out (−)</th></tr></thead><tbody>${L.map(l=>`<tr><td class="n">${esc(l.name)}<div class="sz" style="margin:0">${new Date(l.ts).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})} · ${esc(l.by||'—')}</div></td><td class="num inn">${l.delta>0?esc(l.text):''}</td><td class="num outn">${l.delta<0?(t=>{const a=t.split(' · ');return esc(a[0])+(a[1]?'<div class="sz" style="margin:0;font-family:inherit;font-weight:400">'+esc(a[1])+'</div>':'')})(l.text):''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No activity</div>'}</div>`}).join('');
+ const all=logs.filter(l=>!sel||l.cat===sel).sort((x,y)=>y.ts-x.ts),L=all.slice(0,lim);$('more').hidden=all.length<=lim;
+ $('lg2').innerHTML=L.length?`<table class="led"><thead><tr><th>When / what</th><th class="num">In (+)</th><th class="num">Out (−)</th></tr></thead><tbody>${L.map(l=>{const H=hue(l.cat);
+  return `<tr><td class="n">${esc(l.name)}<div class="sz" style="margin:2px 0 0"><span class="chip" style="color:hsl(${H} 70% var(--cl))">${esc(l.cat)}</span>${fdt(l.ts)} · <b>${ago(l.ts)}</b> · ${esc(l.by||'—')}</div></td><td class="num inn">${l.delta>0?esc(l.text):''}</td><td class="num outn">${l.delta<0?(t=>{const a=t.split(' · ');return esc(a[0])+(a[1]?'<div class="sz" style="margin:0;font-family:inherit;font-weight:400">'+esc(a[1])+'</div>':'')})(l.text):''}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">No activity yet</div>';
 }
+$('tiles').onclick=e=>{const t=e.target.closest('.tile');if(t){sel=sel===t.dataset.c?'':t.dataset.c;render()}};
+$('more').onclick=()=>{lim+=20;render()};
+setInterval(render,60000);
 function fill(){
  if(mode==='in'){$('il').textContent='Category';const cs=[...new Set(items.map(i=>i.cat+'|'+i.type))].sort();$('it').innerHTML=cs.map(k=>{const c=k.slice(0,-2),t=k.slice(-1);return `<option value="${esc(k)}">${esc(c)} — ${t==='w'?'kilos':'pieces'}</option>`}).join('')}
  else{$('il').textContent='Menu sold';$('it').innerHTML=items.slice().sort((a,b)=>a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name)).map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.cat)}) · ${size(i)}</option>`).join('')}}
