@@ -69,7 +69,8 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <dialog id="dm"><div id="mh" style="font-weight:800;font-size:19px"></div>
 <div id="chips" class="chips"></div>
 <div id="mb"></div>
-<label>Date (of the stock in / sales)</label><input id="dd" type="date">
+<div class="row"><div><label>Date</label><input id="dd" type="date"></div><div><label>Time</label><input id="dtm" type="time"></div></div>
+<div class="note" id="dnote"></div>
 <div class="msg" id="mm"></div>
 <div class="row" style="margin-top:10px"><button class="g" id="cx" style="padding:12px">Cancel</button><button id="go">Save</button></div></dialog>
 
@@ -121,7 +122,8 @@ let sel='',lim=20;
 const toDate=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const today=()=>toDate(Date.now()),logDate=l=>l.date||toDate(l.ts);
 const fdate=ds=>{if(!ds)return'—';if(ds===today())return'Today';const[y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})};
-const mkTs=()=>{const dv=$('dd').value||today(),n=new Date(),[y,m,d]=dv.split('-').map(Number);return new Date(y,m-1,d,n.getHours(),n.getMinutes(),n.getSeconds()).getTime()};
+const mkTs=()=>{if(!dtDirty)return Date.now();const dv=$('dd').value||today(),n=new Date(),[y,m,d]=dv.split('-').map(Number),[h,mi]=($('dtm').value||'').split(':').map(Number);return new Date(y,m-1,d,isNaN(h)?n.getHours():h,isNaN(mi)?n.getMinutes():mi,n.getSeconds()).getTime()};
+const tm=ts=>new Date(ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
 const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);if(m<1)return'just now';if(m<60)return m+'m ago';const h=Math.round(m/60);if(h<24)return h+'h ago';return Math.round(h/24)+'d ago'};
 const fdt=ts=>new Date(ts).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 function render(){norm();
@@ -131,8 +133,8 @@ function render(){norm();
  $('tiles').innerHTML=cats.map(c=>{const li=last(c,1),lo=last(c,0),H=hue(c),tot=types(c).reduce((a,t)=>a+Math.max(0,pool(c,t)),0);
   return `<div class="tile${sel===c?' on':''}" data-c="${esc(c)}" style="--h:${H}"><div class="tn" style="color:hsl(${H} 70% var(--cl))">${esc(c)}</div>
   <div class="ts ${tot<=0?'no':''}">${types(c).map(t=>sTxt(t,Math.max(0,pool(c,t)))).join(' + ')}</div>
-  <div class="tl"><span class="inn">▲ LAST IN</span> <b>${li?fdate(logDate(li)):'—'}</b></div>
-  <div class="tl"><span class="outn">▼ LAST OUT</span> <b>${lo?fdate(logDate(lo)):'—'}</b></div></div>`}).join('')||'<div class="empty" style="grid-column:1/3">No menus yet. Tap “+ Menu”.</div>';
+  <div class="tl"><span class="inn">▲ LAST IN</span> <b>${li?fdate(logDate(li)):'—'}</b>${li?' <span class="sz" style="margin:0">'+tm(li.ts)+'</span>':''}</div>
+  <div class="tl"><span class="outn">▼ LAST OUT</span> <b>${lo?fdate(logDate(lo)):'—'}</b>${lo?' <span class="sz" style="margin:0">'+tm(lo.ts)+'</span>':''}</div></div>`}).join('')||'<div class="empty" style="grid-column:1/3">No menus yet. Tap “+ Menu”.</div>';
  $('mt').textContent=sel?'Menus · '+sel:'All menus';$('lt').textContent=sel?'Activity log · '+sel:'Activity log · all categories';
  let h='';
  cats.filter(c=>!sel||c===sel).forEach(c=>{const ms=items.filter(i=>i.cat===c&&(i.name+c).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));if(!ms.length)return;
@@ -149,9 +151,10 @@ function render(){norm();
 $('tiles').onclick=e=>{const t=e.target.closest('.tile');if(t){sel=sel===t.dataset.c?'':t.dataset.c;render()}};
 $('more').onclick=()=>{lim+=20;render()};
 setInterval(render,60000);
-let dc='';
+let dc='',dtDirty=false;
+const setNote=()=>{$('dnote').textContent=dtDirty?'Late entry: using the date & time you set.':'Date & time are set automatically when you save. Tap to change for a late entry.'};
 function openM(m){if(m==='out'&&!canOut()){alert('Stock out is locked. Ask the admin.');return}if(!items.length){alert('Add a menu first.');return}
- mode=m;const cs=[...new Set(items.map(i=>i.cat))];dc=cs.includes(sel)?sel:'';$('dd').value=today();$('dd').max=today();drawM();$('dm').showModal()}
+ mode=m;const cs=[...new Set(items.map(i=>i.cat))];dc=cs.includes(sel)?sel:'';$('dd').value=today();$('dd').max=today();$('dtm').value=new Date().toTimeString().slice(0,5);dtDirty=false;setNote();drawM();$('dm').showModal()}
 function drawM(){const cats=[...new Set(items.map(i=>i.cat))].sort();
  $('mh').innerHTML=mode==='in'?'<span style="color:var(--ok)">＋ Stock In</span>':'<span style="color:var(--out)">－ Stock Out</span>';
  $('chips').innerHTML=cats.map(c=>`<button class="chp${c===dc?' on':''}" data-c="${esc(c)}" style="--h:${hue(c)}">${esc(c)}</button>`).join('');
@@ -167,10 +170,11 @@ function upd(){if(!dc)return;const dv=$('dd').value||today();let t='',w='';
   const k=Object.keys(per);if(k.length)w='Sales already entered for '+fdate(dv)+': '+k.map(n=>n+' '+per[n]).join(', ')}
  $('mm').innerHTML=t+(w?'<div class="no" style="margin-top:6px;font-weight:700">⚠ '+esc(w)+'</div>':'')}
 $('chips').onclick=e=>{const b=e.target.closest('.chp');if(b){dc=b.dataset.c;drawM()}};
-$('mb').oninput=upd;$('dd').onchange=upd;
+$('mb').oninput=upd;$('dd').onchange=upd;$('dd').oninput=()=>{dtDirty=true;setNote()};$('dtm').oninput=()=>{dtDirty=true;setNote()};
+setInterval(()=>{if($('dm').open&&!dtDirty){$('dd').value=today();$('dtm').value=new Date().toTimeString().slice(0,5);upd()}},20000);
 $('bIn').onclick=()=>openM('in');$('bOut').onclick=()=>openM('out');$('cx').onclick=()=>$('dm').close();
 $('go').onclick=async()=>{if(!dc){$('mm').textContent='Tap a category first.';return}if(mode==='out'&&!canOut())return;
- const ts=mkTs(),date=$('dd').value||today(),by=me?me.name:'',w=[];
+ const ts=mkTs(),date=toDate(ts),by=me?me.name:'',w=[];
  if(mode==='in'){$('mb').querySelectorAll('.qi').forEach(inp=>{const v=+inp.value,t=inp.dataset.t,kg=t==='p'?+(($('kgw')||{}).value):0;if(v>0)w.push({itemId:'',name:'Stock in',cat:dc,type:t,delta:t==='w'?v*1000:v,text:fmt(v)+(t==='w'?' kg':' pcs')+(kg>0?' · '+fmt(kg)+' kg':''),by,ts,date})})}
  else{const need={};$('mb').querySelectorAll('.qo').forEach(inp=>{const v=+inp.value,i=items.find(x=>x.id===inp.dataset.id);if(v>0&&i){const n=v*i.portion;need[i.type]=(need[i.type]||0)+n;w.push({itemId:i.id,name:i.name,cat:i.cat,type:i.type,delta:-n,qty:v,text:fmt(v)+' order(s) · '+fmt(n)+(i.type==='w'?' g':' pcs'),by,ts,date})}});
   for(const t in need){if(pool(dc,t)-need[t]<-1e-9){$('mm').textContent='Not enough stock. Only '+sTxt(t,Math.max(0,pool(dc,t)))+' left.';return}}}
