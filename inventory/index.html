@@ -77,8 +77,8 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <dialog id="dn"><b id="dt">New menu</b>
 <label>Menu name</label><input id="n" placeholder="e.g. Lechon Kawali">
 <label>Category (shared stock)</label><input id="c" list="cl2" placeholder="e.g. Pork" autocomplete="off"><datalist id="cl2"></datalist>
-<label>Counted by</label><select id="t"><option value="w">Kilos</option><option value="p">Pieces</option></select>
-<label id="pl">Grams per order</label><input id="p" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 350">
+<label id="pl">Order size (what one order uses)</label>
+<div class="row" style="gap:8px"><input id="p" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 200" style="flex:1.6"><select id="t" style="flex:1.2"><option value="g">Grams (g)</option><option value="kg">Kilos (kg)</option><option value="p">Pieces</option></select></div>
 <div class="msg" id="pre"></div>
 <div class="row" style="margin-top:10px"><button class="g" id="cn" style="padding:12px">Cancel</button><button id="sv">Save menu</button></div>
 <button class="g" id="dl" hidden style="width:100%;margin-top:16px;color:var(--out);border-color:var(--out)">🗑 Delete this menu</button></dialog>
@@ -210,20 +210,20 @@ function rmStaff(id){if(me&&id===me.id){alert('You can’t remove yourself.');re
 $('sa').onclick=async()=>{const name=$('sn').value.trim(),pin=$('sp').value;if(!name||pin.length<4){$('sm').textContent='Enter a name and a PIN of 4+ characters.';return}
  const ex=staff.find(s=>s.name.toLowerCase()===name.toLowerCase()),salt=crypto.randomUUID(),h=await hash(salt,pin);
  await write(()=>ex?db.doc('staff/'+ex.id).update({salt,hash:h}):db.collection('staff').doc().set({name,salt,hash:h,out:false,admin:false,ts:Date.now()}));$('sn').value='';$('sp').value='';$('sm').textContent=ex?'PIN reset.':'Added.'};
-$('newB').onclick=()=>{editId=null;$('dl').hidden=true;$('dt').textContent='New menu';$('n').value='';$('p').value='';pre();$('dn').showModal()};
-function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dl').hidden=false;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type;$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
+$('newB').onclick=()=>{editId=null;$('dl').hidden=true;$('dt').textContent='New menu';$('n').value='';$('p').value='';$('t').value='g';pre();$('dn').showModal()};
+function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dl').hidden=false;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type==='p'?'p':'g';$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
+const ut=()=>{const u=$('t').value;return{type:u==='p'?'p':'w',mult:u==='kg'?1000:1}};
 function pre(){const cv=$('c').value.trim().toLowerCase(),ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cv);
- $('t').disabled=false;
- const t=$('t').value,p=+$('p').value;$('pl').textContent=t==='w'?'Grams per order':'Pieces per order';
- $('pre').textContent=ex?'Joins the '+ex.cat+' category. Menus with the same unit share its stock.':'';
- if(p>0)$('pre').textContent+=(t==='w'?' 1 kilo makes '+fmt(Math.floor(1000/p*100)/100)+' orders.':' 10 pieces make '+fmt(Math.floor(10/p*100)/100)+' orders.')}
+ const u=ut(),p=+$('p').value*u.mult;
+ $('pre').textContent=ex?(ex.type===u.type?'Joins the '+ex.cat+' category and shares its stock.':'Note: '+ex.cat+' is counted in '+(ex.type==='w'?'kilos/grams':'pieces')+'. This menu gets its own separate stock.'):'';
+ if(p>0)$('pre').textContent+=(u.type==='w'?' 1 kilo (1,000 g) = '+fmt(Math.floor(1000/p*100)/100)+' orders of '+fmt(p)+' g.':' 10 pieces make '+fmt(Math.floor(10/p*100)/100)+' orders.')}
 $('t').onchange=pre;$('p').oninput=pre;$('c').oninput=pre;$('c').onchange=pre;
-$('sv').onclick=async()=>{const name=$('n').value.trim();let cat=$('c').value.trim();const p=+$('p').value;
+$('sv').onclick=async()=>{const name=$('n').value.trim();let cat=$('c').value.trim();const u=ut(),p=+$('p').value*u.mult;
  if(!name||!cat||!(p>0)){$('pre').textContent='Enter a menu name, category and order size.';return}
  const ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cat.toLowerCase());if(ex)cat=ex.cat;
- const type=$('t').value,o=items.find(i=>i.id===editId);
+ const type=u.type,o=items.find(i=>i.id===editId);
  if(o&&type!==o.type&&cat.toLowerCase()===o.cat.toLowerCase()&&logs.some(l=>l.cat===o.cat&&(l.type||ctype(o.cat))===o.type)){$('pre').textContent='Kilos/pieces can’t change while this category has stock history. Use a new category.';return}
- await write(()=>editId?db.doc('items/'+editId).update({name,cat,type,portion:p}):db.collection('items').doc().set({name,cat,type,portion:p}));editId=null;$('n').value='';$('p').value='';pre();$('dn').close()};
+ await write(()=>editId?db.doc('items/'+editId).update({name,cat,type,portion:p}):db.collection('items').doc().set({name,cat,type,portion:p}));editId=null;$('n').value='';$('p').value='';$('t').value='g';pre();$('dn').close()};
 $('q').oninput=render;render();
 (async()=>{
  const t=setTimeout(()=>{$('sync').textContent='Not connected — sign in to claude.ai to share data'},10000);
