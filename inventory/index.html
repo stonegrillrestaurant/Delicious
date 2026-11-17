@@ -4,84 +4,92 @@
 <title>Pantry Stock</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#100f0e">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))</script>
 <style>
-:root{--bg:#100f0e;--card:#1b1917;--tx:#fff7ed;--mut:#b0a89e;--bd:#2f2a26;--ac:#f97316;--ok:#fbbf24;--lo:#fbbf24;--out:#f87171;--hd:#262220;--cl:68%;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
-*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+:root{--bg:#100f0e;--card:#1b1917;--tx:#fff7ed;--mut:#b0a89e;--bd:#2f2a26;--ac:#f97316;--in:#fbbf24;--out:#f87171;--hd:#262220;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+*{box-sizing:border-box}
 body{margin:0;background:radial-gradient(900px 380px at 50% -120px,rgba(249,115,22,.28),transparent 70%),var(--bg);background-attachment:fixed;color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-main{max-width:720px;margin:0 auto;padding:16px 14px 90px}
-h1{font-size:21px;margin:2px 0}h2{font-size:14px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
-.hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
-.card{background:linear-gradient(#f97316,#f97316) top/100% 3px no-repeat,var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 12px 12px;margin-bottom:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}.brand img{height:56px;display:block}.sub{margin-top:2px;font-weight:800;font-style:italic;letter-spacing:.22em;font-size:12px;background:linear-gradient(90deg,#f97316,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent}h2{font-style:italic}.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.tile{background:var(--card);border:1px solid var(--bd);border-left:5px solid hsl(var(--h) 65% 50%);border-radius:14px;padding:10px 11px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.3)}
-.tile.on{outline:2px solid hsl(var(--h) 70% 60%);background:hsl(var(--h) 35% 13%)}
-.tn{font-weight:800;font-size:15px;font-style:italic;text-transform:uppercase;letter-spacing:.04em}
-.ts{font-size:22px;font-weight:800;line-height:1.15;margin:4px 0}
-.tst{font-size:12px;font-weight:700;margin-bottom:6px}
-.tl{font-size:12px;color:var(--mut);line-height:1.5;margin-top:3px}.tl b{color:var(--tx);font-size:13px}.tl .inn,.tl .outn{font-size:11.5px;font-family:inherit}
-.chip{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;border:1px solid currentColor;margin-right:4px;white-space:nowrap}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
-button.chp{box-shadow:none;background:transparent;color:hsl(var(--h) 70% var(--cl));border:1.5px solid hsl(var(--h) 65% 50%);padding:8px 14px;font-weight:800}
-button.chp.on{background:hsl(var(--h) 65% 48%);color:#fff}
-.orow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)}.orow input{width:92px;text-align:center;font-size:20px;font-weight:700}
-.led{border:1px solid var(--bd)}.led th{background:var(--hd);color:var(--mut);padding:10px 8px;border-bottom:2px solid var(--bd);border-right:1px solid var(--bd);font-size:11px;letter-spacing:.06em}.led td{border-right:1px solid var(--bd);vertical-align:middle}.led tbody tr:nth-child(even){background:rgba(255,255,255,.035)}.inn,.outn{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:14px;white-space:nowrap}.led td.n{min-width:110px}.inn{color:var(--ok)}.outn{color:var(--out)}.led td:last-child,.led th:last-child{border-right:0}
-input,select,button{font:inherit;color:inherit}
-input,select{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
+.top{position:sticky;top:0;z-index:20;background:rgba(16,15,14,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--bd);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.brand img{height:46px;display:block}.sb{font-weight:800;font-style:italic;letter-spacing:.22em;font-size:11px;background:linear-gradient(90deg,#f97316,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent}.sy{font-size:11px;color:var(--mut)}
+.tr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tabs{display:flex;gap:4px;background:var(--card);padding:4px;border-radius:12px;border:1px solid var(--bd)}
+.tab{box-shadow:none!important;background:transparent!important;color:var(--mut)!important;padding:8px 14px}.tab.on{background:var(--ac)!important;color:#1a0f08!important}
+main{max-width:820px;margin:0 auto;padding:14px 12px 40px}
+.card{background:linear-gradient(#f97316,#f97316) top/100% 3px no-repeat,var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px 14px 14px;margin-bottom:14px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+h2{margin:0;font-size:15px;font-style:italic;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+.hint{font-size:13px;color:var(--mut);margin:0 0 12px}
+input,select{font:inherit;color:inherit;width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:#1a0f08;font-weight:800;cursor:pointer}
+button.g{background:transparent;color:var(--mut);border:1px solid var(--bd);font-weight:500;padding:7px 11px;font-size:13px}
+button:disabled{opacity:.4;cursor:not-allowed}
 label{font-size:12px;color:var(--mut);display:block;margin:10px 0 3px}
-button{border:0;border-radius:10px;padding:11px 14px;background:#f97316;color:#1a0f08;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(249,115,22,.2)}
-button.g{box-shadow:none;background:transparent;color:var(--mut);border:1px solid var(--bd);font-weight:500;padding:7px 11px;font-size:13px}
-.bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--bd);display:flex;gap:10px;max-width:720px;margin:0 auto}
-.bar button{flex:1;font-size:17px;padding:14px}.in{background:#fbbf24!important;color:#1a0f08!important}.outb{background:#f87171!important;color:#1a0f08!important}
-.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--mut);padding:6px;border-bottom:1px solid var(--bd);white-space:nowrap}
-td{padding:9px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}
-tr.ch td{background:var(--hd);font-size:14px;padding:9px 6px}
-td.n{font-weight:600;white-space:normal}.num{text-align:right}th.num{text-align:right}
-.b{font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;border:1px solid currentColor}
-.ok{color:var(--ok)}.lo{color:var(--lo)}.no{color:var(--out)}td.num b{font-size:18px}tr.ch td{border-top:2px solid var(--bd);font-size:15px}
-.log{font-size:13px;padding:6px 0;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;gap:8px}.log:last-child{border:0}
-.log small{color:var(--mut)}.plus{color:var(--ok);font-weight:700}.minus{color:var(--out);font-weight:700}
-.empty{color:var(--mut);text-align:center;padding:18px}
-dialog{border:1px solid var(--bd);border-radius:16px;background:var(--card);color:var(--tx);width:min(92vw,420px);padding:16px}
-dialog::backdrop{background:rgba(0,0,0,.5)}
-.row{display:flex;gap:8px}.row>*{flex:1}.msg{font-size:13px;color:var(--mut);min-height:18px;margin-top:8px}
-.tg{display:flex;gap:6px;margin-bottom:4px}.tg button{flex:1;box-shadow:none;background:transparent;border:1px solid var(--bd);color:var(--mut)}
-.tg button.on.i{background:linear-gradient(135deg,#f97316,#fbbf24);color:#1a0f08;border-color:transparent}.tg button.on.o{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border-color:transparent}
-.note{font-size:12px;color:var(--mut);margin-top:6px}.sz{font-size:12px;color:var(--mut);font-weight:400;margin-left:4px}td.cat{padding:10px 8px;border-top:2px solid var(--bd)}
-</style></head><body><main>
-<div class="hd"><div><div class="brand"><img src="logo.png" alt="Stone Grill"><div class="sub">PANTRY STOCK</div></div><div id="sync" style="font-size:12px;color:var(--mut)">Connecting…</div></div>
-<div style="display:flex;gap:6px"><button class="g" id="who">🔒 Lock</button><button class="g" id="stB" hidden>Staff</button><button class="g" id="newB">+ Menu</button></div></div>
-
-<div id="tiles" class="tiles"></div>
-<div class="card"><h2 id="mt">Menus</h2><input id="q" placeholder="Search menu or category…" style="margin-bottom:8px">
-<div class="scroll"><table><tbody id="tb"></tbody></table></div>
-<div class="note">Menus in the same category share one stock.</div></div>
-<div class="card"><h2 id="lt">Activity log</h2><div class="scroll" id="lg2"></div><button class="g" id="more" hidden style="width:100%;margin-top:10px">Show more</button></div>
+.row{display:flex;gap:8px}.row>*{flex:1}.note{font-size:12px;color:var(--mut);margin-top:6px}.empty{text-align:center;color:var(--mut);padding:20px}
+.scroll{overflow-x:auto}.inn{color:var(--in)}.outn{color:var(--out)}.no{color:var(--out)}
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.chip{background:var(--bg);border:1px solid var(--bd);border-left:5px solid var(--ac);border-radius:12px;padding:10px 11px;cursor:pointer}
+.chip.on{outline:2px solid var(--ac);background:#2a1a10}
+.cn{font-weight:800;font-style:italic;text-transform:uppercase;color:#fdba74;font-size:15px}.cs{font-size:20px;font-weight:800;margin:3px 0}
+.co{font-size:14px;font-weight:800;color:var(--in)}.co.no{color:var(--out)}.co small{font-size:11px;color:var(--mut);font-weight:600;margin-left:3px}
+.cl{font-size:11.5px;color:var(--mut);margin-top:2px}.cl b{color:var(--tx)}
+.otitle{font-size:22px;font-weight:800;font-style:italic;text-transform:uppercase;color:#fdba74;display:flex;gap:8px;align-items:center}
+.avail{font-size:15px;font-weight:700;margin-top:2px}.meta{font-size:12px;color:var(--mut);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;border:1px solid currentColor}.pill.ok{color:var(--in)}.pill.low{color:var(--ac)}.pill.out{color:var(--out)}
+.box{border:1px solid var(--bd);border-radius:12px;padding:12px;margin-top:12px}
+.box.ib{border-left:4px solid var(--in);background:rgba(251,191,36,.06)}.box.ob{border-left:4px solid var(--out);background:rgba(248,113,113,.06)}
+.bh{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}.ib .bh{color:var(--in)}.ob .bh{color:var(--out)}
+.ir{display:flex;gap:8px}.ir select{width:120px;flex:none}.ir input{text-align:right;font-size:18px;font-weight:700}
+.up{width:100%;padding:14px;font-size:16px;margin-top:14px}
+.res{display:none;margin-top:12px;padding:11px 13px;border-radius:11px;font-size:13.5px;background:rgba(251,191,36,.1);border:1px solid var(--in);color:var(--in)}.res.show{display:block}.res.bad{background:rgba(248,113,113,.1);border-color:var(--out);color:var(--out)}
+.warn{margin-top:8px;font-size:13px;font-weight:700;color:var(--out)}
+.fl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.fl select{width:auto;min-width:130px}
+.irow{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:12px 4px;border-bottom:1px solid var(--bd);cursor:pointer}
+.irow:last-child{border:0}.iname{font-weight:800;font-style:italic;text-transform:uppercase;color:#fdba74;font-size:16px;display:flex;gap:6px;align-items:center}
+.isub{font-size:12px;color:var(--mut);margin-top:3px}.itot{text-align:right;font-size:13px;white-space:nowrap}.itot div{margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--mut);padding:8px 6px;background:var(--hd);border-bottom:2px solid var(--bd)}
+td{padding:8px 6px;border-bottom:1px solid var(--bd);vertical-align:middle}.num{text-align:right}th.num{text-align:right}
+.led{border:1px solid var(--bd)}.led td,.led th{border-right:1px solid var(--bd)}.led td:last-child,.led th:last-child{border-right:0}
+.led tbody tr:nth-child(even){background:rgba(255,255,255,.035)}.led tr[data-m]{cursor:pointer}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;white-space:nowrap}.sz{font-size:12px;color:var(--mut);font-weight:400}
+.hist{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px;margin:0 0 10px}
+dialog{border:1px solid var(--bd);border-radius:16px;background:var(--card);color:var(--tx);width:min(92vw,440px);padding:16px}dialog::backdrop{background:rgba(0,0,0,.6)}
+.prev{background:var(--bg);border:1px dashed var(--bd);border-radius:10px;padding:9px 11px;font-size:13px;margin:10px 0;color:var(--mut)}
+.rad{display:flex;gap:16px;margin:6px 0}.rad label{display:flex;gap:6px;align-items:center;margin:0;color:var(--tx);font-size:14px}.rad input{width:auto}
+#lk{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+</style></head><body>
+<header class="top">
+ <div class="brand"><img src="logo.png" alt="Stone Grill"><div class="sb">PANTRY STOCK</div><div class="sy" id="sync">Connecting…</div></div>
+ <div class="tr"><nav class="tabs"><button class="tab on" data-t="main">Operations</button><button class="tab" data-t="log">Activity</button></nav>
+ <button class="g" id="who">🔒 Lock</button><button class="g" id="stB" hidden>Staff</button></div>
+</header>
+<main>
+<section id="p-main">
+ <div class="card"><div class="ch"><h2>Stock operations</h2><button data-act="add">+ Add category</button></div>
+  <p class="hint">Tap a category below, enter stock in or sold orders, then tap Update.</p>
+  <div id="ops"></div><div class="res" id="res"></div></div>
+ <div class="card"><div class="ch"><h2>Stock by category</h2><span class="hint" style="margin:0">Tap a category to select</span></div><div class="strip" id="strip"></div></div>
+ <div class="card"><div class="ch"><h2>Inventory ledger</h2><div class="fl"><select id="flt"></select><button data-act="add">+ Add category</button></div></div><div id="inv"></div></div>
+</section>
+<section id="p-log" hidden><div class="card"><div class="ch"><h2>Activity log</h2></div><div class="scroll" id="act"></div><div class="note" id="anote"></div><button class="g" id="more" hidden style="width:100%;margin-top:10px">Show more</button></div></section>
 </main>
 
-<div id="lk" style="position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:min(92vw,360px)"><div class="brand" style="text-align:center"><img src="logo.png" alt="Stone Grill" style="margin:0 auto 4px;height:80px"><div class="sub">PANTRY STOCK</div></div><div class="note" id="lkn">Loading…</div><select id="ls" style="margin-top:10px"></select><input id="ln" placeholder="Your name" style="margin-top:10px" hidden><input id="lp" type="password" placeholder="PIN / password" autocomplete="off" style="margin-top:10px"><div class="msg" id="lm"></div><button id="lg" style="width:100%;margin-top:8px">Unlock</button></div></div>
-<div class="bar"><button class="in" id="bIn">＋ Stock In</button><button class="outb" id="bOut">－ Stock Out</button></div>
+<div id="lk"><div class="card" style="width:min(92vw,360px)"><div style="text-align:center"><img src="logo.png" alt="Stone Grill" style="height:80px"><div class="sb">PANTRY STOCK</div></div><div class="note" id="lkn">Loading…</div>
+ <select id="ls" style="margin-top:10px"></select><input id="ln" placeholder="Your name" style="margin-top:10px" hidden><input id="lp" type="password" placeholder="PIN / password" autocomplete="off" style="margin-top:10px">
+ <div class="note" id="lm"></div><button id="lg" style="width:100%;margin-top:8px">Unlock</button></div></div>
 
-<dialog id="ds"><b>Staff</b><div id="sl" style="margin:8px 0"></div><label>Staff name</label><input id="sn"><label>PIN / password (4+ characters)</label><input id="sp" type="password" autocomplete="off"><div class="msg" id="sm">Using an existing name resets that person’s PIN.</div><div class="row" style="margin-top:10px"><button class="g" id="sx" style="padding:12px">Close</button><button id="sa">Add / reset PIN</button></div></dialog>
-<dialog id="dm"><div id="mh" style="font-weight:800;font-size:19px"></div>
-<div id="chips" class="chips"></div>
-<div id="mb"></div>
-<div class="row"><div><label>Date</label><input id="dd" type="date"></div><div><label>Time</label><input id="dtm" type="time"></div></div>
-<div class="note" id="dnote"></div>
-<div class="msg" id="mm"></div>
-<div class="row" style="margin-top:10px"><button class="g" id="cx" style="padding:12px">Cancel</button><button id="go">Save</button></div></dialog>
+<dialog id="ds"><b>Staff</b><div id="sl" style="margin:8px 0"></div><label>Staff name</label><input id="sn"><label>PIN / password (4+ characters)</label><input id="sp" type="password" autocomplete="off">
+ <div class="note" id="sm">Using an existing name resets that person’s PIN.</div><div class="row" style="margin-top:10px"><button class="g" id="sx" style="padding:12px">Close</button><button id="sa">Add / reset PIN</button></div></dialog>
 
-<dialog id="dn"><b id="dt">New menu</b>
-<label>Menu name</label><input id="n" placeholder="e.g. Lechon Kawali">
-<label>Category (shared stock)</label><input id="c" list="cl2" placeholder="e.g. Pork" autocomplete="off"><datalist id="cl2"></datalist>
-<label id="pl">Order size (what one order uses)</label>
-<div class="row" style="gap:8px"><input id="p" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 200" style="flex:1.6"><select id="t" style="flex:1.2"><option value="g">Grams (g)</option><option value="kg">Kilos (kg)</option><option value="p">Pieces</option></select></div>
-<div class="msg" id="pre"></div>
-<div class="row" style="margin-top:10px"><button class="g" id="cn" style="padding:12px">Cancel</button><button id="sv">Save menu</button></div>
-<button class="g" id="dl" hidden style="width:100%;margin-top:16px;color:var(--out);border-color:var(--out)">🗑 Delete this menu</button></dialog>
+<dialog id="dc"><b id="ct">Add category</b>
+ <label>Category name</label><input id="cName" placeholder="e.g. PORK" autocomplete="off" style="text-transform:uppercase">
+ <label>Primary tracking unit</label><div class="rad"><label><input type="radio" name="ut" value="weight" checked> Weight (kg)</label><label><input type="radio" name="ut" value="piece"> Pieces</label></div>
+ <div class="row"><div><label>Grams per order</label><input id="cOrder" type="number" min="1" step="any" inputmode="decimal" placeholder="e.g. 200"></div><div><label>Grams per piece</label><input id="cPiece" type="number" min="1" step="any" inputmode="decimal" placeholder="e.g. 400"></div></div>
+ <div class="prev" id="cprev">Enter grams per order and/or per piece.</div>
+ <div class="row"><div><label>Low-stock alert (orders)</label><input id="cLow" type="number" min="0" value="5"></div><div id="ow"><label id="ol">Opening stock (kg)</label><input id="cOpen" type="number" min="0" step="any" value="0" inputmode="decimal"></div></div>
+ <div class="note" id="cm"></div>
+ <div class="row" style="margin-top:12px"><button class="g" id="cc" style="padding:12px">Cancel</button><button id="cs">Save category</button></div>
+ <button class="g" id="cdel" hidden style="width:100%;margin-top:14px;color:var(--out);border-color:var(--out)">🗑 Delete this category</button></dialog>
 
 <script>
 /* Supabase connection (table: records). Leave url/key empty to store data on this device only.
@@ -104,135 +112,147 @@ const DB=(()=>{const cache={},subs={};let ready=!CFG.url;
  const coll=c=>({doc:id=>{id=id||crypto.randomUUID();return{set:d=>put(c,id,d,false),update:d=>put(c,id,d,true),delete:()=>del(c,id)}},onSnapshot:cb=>{(subs[c]=subs[c]||[]).push(cb);setTimeout(()=>emit(c),0);return()=>{}}});
  return{collection:coll,doc:p=>{const[c,i]=p.split('/');return coll(c).doc(i)}}})();
 const claude={use:async n=>n==='db'?DB:{canEdit:()=>true}};
+</script>
+<script>
 const $=id=>document.getElementById(id);
-let items=[],logs=[],staff=[],db=null,mode='in',me=null,canAdmin=false,editId=null,idle=null,fails=0,until=0;
-const fmt=n=>Number.isInteger(n)?String(n):(Math.round(n*100)/100).toString();
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const pool=(c,t)=>logs.filter(l=>l.cat===c&&(l.type||ctype(c))===t).reduce((a,l)=>a+l.delta,0);
-const types=c=>[...new Set(items.filter(i=>i.cat===c).map(i=>i.type))];
-const ctype=c=>(items.find(i=>i.cat===c)||{}).type||'w';
-const sTxt=(t,s)=>t==='w'?(s>=1000?fmt(s/1000)+' kg':fmt(s)+' g'):fmt(s)+' pcs';
-const left=i=>Math.floor(Math.max(0,pool(i.cat,i.type))/i.portion+1e-9);
-const size=i=>i.type==='w'?fmt(i.portion)+' g':fmt(i.portion)+' pc';
-const HUES=[8,205,145,285,32,330,175,55,250,100];const hue=c=>28;
-function norm(){const m={},k=c=>String(c||'').trim().toLowerCase();
- items.forEach(i=>{if(!m[k(i.cat)])m[k(i.cat)]=String(i.cat).trim()});logs.forEach(l=>{if(!m[k(l.cat)])m[k(l.cat)]=String(l.cat||'').trim()});
- items.forEach(i=>i.cat=m[k(i.cat)]);logs.forEach(l=>l.cat=m[k(l.cat)])}
-let sel='',lim=20;
+let cats=[],moves=[],staff=[],db=null,me=null,sel='',editId=null,dirty=false,flt='',lim=30,idle=null,fails=0,until=0;const exp=new Set();
+const fmt=n=>String(Math.round(n*1000)/1000);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toDate=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-const today=()=>toDate(Date.now()),logDate=l=>l.date||toDate(l.ts);
+const today=()=>toDate(Date.now()),mDate=m=>m.date||toDate(m.ts);
 const fdate=ds=>{if(!ds)return'—';if(ds===today())return'Today';const[y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})};
-const mkTs=()=>{if(!dtDirty)return Date.now();const dv=$('dd').value||today(),n=new Date(),[y,m,d]=dv.split('-').map(Number),[h,mi]=($('dtm').value||'').split(':').map(Number);return new Date(y,m-1,d,isNaN(h)?n.getHours():h,isNaN(mi)?n.getMinutes():mi,n.getSeconds()).getTime()};
 const tm=ts=>new Date(ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
-const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);if(m<1)return'just now';if(m<60)return m+'m ago';const h=Math.round(m/60);if(h<24)return h+'h ago';return Math.round(h/24)+'d ago'};
-const fdt=ts=>new Date(ts).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-function render(){norm();
- const q=$('q').value.toLowerCase(),cats=[...new Set(items.map(i=>i.cat))].sort();
- if(sel&&!cats.includes(sel))sel='';
- const last=(c,pos)=>logs.filter(l=>l.cat===c&&(pos?l.delta>0:l.delta<0)).sort((x,y)=>logDate(y).localeCompare(logDate(x))||y.ts-x.ts)[0];
- $('tiles').innerHTML=cats.map(c=>{const li=last(c,1),lo=last(c,0),H=hue(c),tot=types(c).reduce((a,t)=>a+Math.max(0,pool(c,t)),0);
-  return `<div class="tile${sel===c?' on':''}" data-c="${esc(c)}" style="--h:${H}"><div class="tn" style="color:hsl(${H} 70% var(--cl))">${esc(c)}</div>
-  <div class="ts ${tot<=0?'no':''}">${types(c).map(t=>sTxt(t,Math.max(0,pool(c,t)))).join(' + ')}</div>
-  <div class="tl"><span class="inn">▲ LAST IN</span> <b>${li?fdate(logDate(li)):'—'}</b>${li?' <span class="sz" style="margin:0">'+tm(li.ts)+'</span>':''}</div>
-  <div class="tl"><span class="outn">▼ LAST OUT</span> <b>${lo?fdate(logDate(lo)):'—'}</b>${lo?' <span class="sz" style="margin:0">'+tm(lo.ts)+'</span>':''}</div></div>`}).join('')||'<div class="empty" style="grid-column:1/3">No menus yet. Tap “+ Menu”.</div>';
- $('mt').textContent=sel?'Menus · '+sel:'All menus';$('lt').textContent=sel?'Activity log · '+sel:'Activity log · all categories';
- let h='';
- cats.filter(c=>!sel||c===sel).forEach(c=>{const ms=items.filter(i=>i.cat===c&&(i.name+c).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));if(!ms.length)return;
-  h+=`<tr class="ch"><td class="cat" colspan="3" style="background:hsl(${hue(c)} 60% 50% / .15);border-left:5px solid hsl(${hue(c)} 65% 50%)"><b style="color:hsl(${hue(c)} 70% var(--cl));font-size:16px">${esc(c)}</b> <span class="sz">·</span> <b>${types(c).map(t=>sTxt(t,Math.max(0,pool(c,t)))).join(' + ')}</b> <span class="sz">in stock</span></td></tr>`;
-  ms.forEach(i=>{const o=left(i);
-   h+=`<tr><td class="n">${esc(i.name)} <span class="sz">${size(i)}</span></td><td class="num ${o===0?'no':'ok'}"><b>${o}</b> <span class="sz">orders</span></td><td><button class="g" onclick="edit('${i.id}')">✎</button></td></tr>`})});
- $('tb').innerHTML=h||'<tr><td colspan="3" class="empty">No menus to show.</td></tr>';
- const lc=[...new Set(items.map(i=>i.cat).concat(logs.map(l=>l.cat)))].sort();
- $('cl2').innerHTML=[...new Set(['Pork','Beef','Chicken','Fish','Squid','Shrimp','Vegetables'].concat(lc))].sort().map(c=>`<option value="${esc(c)}">`).join('');
- const all=logs.filter(l=>!sel||l.cat===sel).sort((x,y)=>logDate(y).localeCompare(logDate(x))||y.ts-x.ts),L=all.slice(0,lim);$('more').hidden=all.length<=lim;
- $('lg2').innerHTML=L.length?`<table class="led"><thead><tr><th>Date / what</th><th class="num">In (+)</th><th class="num">Out (−)</th></tr></thead><tbody>${L.map(l=>{const H=hue(l.cat);
-  return `<tr><td class="n">${esc(l.name)}<div class="sz" style="margin:2px 0 0"><span class="chip" style="color:hsl(${H} 70% var(--cl))">${esc(l.cat)}</span><b>${fdate(logDate(l))}</b> · ${new Date(l.ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})} · ${esc(l.by||'—')}</div></td><td class="num inn">${l.delta>0?(t=>{const a=t.split(' · ');return esc(a[0])+(a[1]?'<div class="sz" style="margin:0;font-family:inherit;font-weight:400">'+esc(a[1])+'</div>':'')})(l.text):''}</td><td class="num outn">${l.delta<0?(t=>{const a=t.split(' · ');return esc(a[0])+(a[1]?'<div class="sz" style="margin:0;font-family:inherit;font-weight:400">'+esc(a[1])+'</div>':'')})(l.text):''}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">No activity yet</div>';
-}
-$('tiles').onclick=e=>{const t=e.target.closest('.tile');if(t){sel=sel===t.dataset.c?'':t.dataset.c;render()}};
-$('more').onclick=()=>{lim+=20;render()};
-setInterval(render,60000);
-let dc='',dtDirty=false;
-const setNote=()=>{$('dnote').textContent=dtDirty?'Late entry: using the date & time you set.':'Date & time are set automatically when you save. Tap to change for a late entry.'};
-function openM(m){if(m==='out'&&!canOut()){alert('Stock out is locked. Ask the admin.');return}if(!items.length){alert('Add a menu first.');return}
- mode=m;const cs=[...new Set(items.map(i=>i.cat))];dc=cs.includes(sel)?sel:'';$('dd').value=today();$('dd').max=today();$('dtm').value=new Date().toTimeString().slice(0,5);dtDirty=false;setNote();drawM();$('dm').showModal()}
-function drawM(){const cats=[...new Set(items.map(i=>i.cat))].sort();
- $('mh').innerHTML=mode==='in'?'<span style="color:var(--ok)">＋ Stock In</span>':'<span style="color:var(--out)">－ Stock Out</span>';
- $('chips').innerHTML=cats.map(c=>`<button class="chp${c===dc?' on':''}" data-c="${esc(c)}" style="--h:${hue(c)}">${esc(c)}</button>`).join('');
- if(!dc){$('mb').innerHTML='<div class="msg">Tap a category above.</div>';$('mm').innerHTML='';return}
- if(mode==='in')$('mb').innerHTML=types(dc).map(t=>`<label>${t==='w'?'Kilos received':'Pieces received'}</label><input class="qi" data-t="${t}" type="number" min="0" step="any" inputmode="decimal" placeholder="0" style="font-size:22px;font-weight:700">`).join('')+(types(dc).includes('p')?'<label>Kilos weighed (optional, for your records)</label><input id="kgw" type="number" min="0" step="any" inputmode="decimal" placeholder="e.g. 12">':'');
- else $('mb').innerHTML=items.filter(i=>i.cat===dc).sort((a,b)=>a.name.localeCompare(b.name)).map(i=>`<div class="orow"><div><b>${esc(i.name)}</b> <span class="sz">${size(i)}</span><div class="sz" style="margin:0">${left(i)} orders left</div></div><input class="qo" data-id="${i.id}" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>`).join('');
- const f=$('mb').querySelector('input');if(f)setTimeout(()=>f.focus(),60);upd()}
-function upd(){if(!dc)return;const dv=$('dd').value||today();let t='',w='';
- if(mode==='in'){const pc=+(($('mb').querySelector('.qi[data-t="p"]')||{}).value),kg=+(($('kgw')||{}).value);if(pc>0&&kg>0)t='Average '+fmt(Math.round(kg*1000/pc))+' g per piece';types(dc).forEach(ty=>{const e=logs.filter(l=>l.cat===dc&&l.delta>0&&(l.type||ctype(dc))===ty&&logDate(l)===dv);if(e.length)w+=(w?' · ':'')+e.map(l=>l.text).join(' + ')});if(w)w='Stock in already entered for '+fdate(dv)+': '+w}
- else{const need={};$('mb').querySelectorAll('.qo').forEach(inp=>{const v=+inp.value,i=items.find(x=>x.id===inp.dataset.id);if(v>0&&i)need[i.type]=(need[i.type]||0)+v*i.portion});
-  t=Object.keys(need).map(ty=>'Uses '+sTxt(ty,need[ty])+' · stock after '+sTxt(ty,pool(dc,ty)-need[ty])).join('<br>');
-  const per={};logs.filter(l=>l.cat===dc&&l.delta<0&&logDate(l)===dv).forEach(l=>{per[l.name]=(per[l.name]||0)+(l.qty||parseFloat(l.text)||0)});
-  const k=Object.keys(per);if(k.length)w='Sales already entered for '+fdate(dv)+': '+k.map(n=>n+' '+per[n]).join(', ')}
- $('mm').innerHTML=t+(w?'<div class="no" style="margin-top:6px;font-weight:700">⚠ '+esc(w)+'</div>':'')}
-$('chips').onclick=e=>{const b=e.target.closest('.chp');if(b){dc=b.dataset.c;drawM()}};
-$('mb').oninput=upd;$('dd').onchange=upd;$('dd').oninput=()=>{dtDirty=true;setNote()};$('dtm').oninput=()=>{dtDirty=true;setNote()};
-setInterval(()=>{if($('dm').open&&!dtDirty){$('dd').value=today();$('dtm').value=new Date().toTimeString().slice(0,5);upd()}},20000);
-$('bIn').onclick=()=>openM('in');$('bOut').onclick=()=>openM('out');$('cx').onclick=()=>$('dm').close();
-$('go').onclick=async()=>{if(!dc){$('mm').textContent='Tap a category first.';return}if(mode==='out'&&!canOut())return;
- const ts=mkTs(),date=toDate(ts),by=me?me.name:'',w=[];
- if(mode==='in'){$('mb').querySelectorAll('.qi').forEach(inp=>{const v=+inp.value,t=inp.dataset.t,kg=t==='p'?+(($('kgw')||{}).value):0;if(v>0)w.push({itemId:'',name:'Stock in',cat:dc,type:t,delta:t==='w'?v*1000:v,text:fmt(v)+(t==='w'?' kg':' pcs')+(kg>0?' · '+fmt(kg)+' kg':''),by,ts,date})})}
- else{const need={};$('mb').querySelectorAll('.qo').forEach(inp=>{const v=+inp.value,i=items.find(x=>x.id===inp.dataset.id);if(v>0&&i){const n=v*i.portion;need[i.type]=(need[i.type]||0)+n;w.push({itemId:i.id,name:i.name,cat:i.cat,type:i.type,delta:-n,qty:v,text:fmt(v)+' order(s) · '+fmt(n)+(i.type==='w'?' g':' pcs'),by,ts,date})}});
-  for(const t in need){if(pool(dc,t)-need[t]<-1e-9){$('mm').textContent='Not enough stock. Only '+sTxt(t,Math.max(0,pool(dc,t)))+' left.';return}}}
- if(!w.length){$('mm').textContent='Enter a quantity.';return}
- await write(async()=>{for(const l of w)await db.collection('logs').doc().set(l)});$('dm').close()};
-async function write(f){if(!me){lockUI();return}if(!db){alert('Shared storage is unavailable. Open this page signed in to claude.ai.');return}try{await f()}catch(e){alert('Could not save: '+(e&&e.message||'error'))}}
-$('dl').onclick=()=>{const i=items.find(x=>x.id===editId);if(i&&confirm('Delete menu '+i.name+'? The category stock is kept.')){write(()=>db.doc('items/'+i.id).delete());$('dn').close()}};
-function del(id){const i=items.find(x=>x.id===id);if(i&&confirm('Delete menu '+i.name+'? Category stock is kept.'))write(()=>db.doc('items/'+id).delete())}
+const mkTs=()=>{if(!dirty||!$('dd'))return Date.now();const n=new Date(),[y,m,d]=($('dd').value||today()).split('-').map(Number),[h,mi]=($('dtm').value||'').split(':').map(Number);return new Date(y,m-1,d,isNaN(h)?n.getHours():h,isNaN(mi)?n.getMinutes():mi,n.getSeconds()).getTime()};
+const cat=id=>cats.find(c=>c.id===id),byName=(a,b)=>a.name.localeCompare(b.name);
+const stock=c=>moves.filter(m=>m.catId===c.id).reduce((a,m)=>a+m.g,0);
+const tin=c=>moves.filter(m=>m.catId===c.id&&m.g>0).reduce((a,m)=>a+m.g,0),tout=c=>-moves.filter(m=>m.catId===c.id&&m.g<0).reduce((a,m)=>a+m.g,0);
+const ordersOf=c=>{const s=Math.max(0,stock(c));return c.gpo>0?Math.floor(s/c.gpo+1e-9):(c.gpp>0?Math.floor(s/c.gpp+1e-9):0)};
+const sTxt=(c,g)=>c.unitType==='weight'?(g>=1000?fmt(g/1000)+' kg':fmt(g)+' g'):Math.floor(g/(c.gpp||1)+1e-9)+' pcs';
+const last=(c,pos)=>moves.filter(m=>m.catId===c.id&&(pos?m.g>0:m.g<0)).sort((a,b)=>mDate(b).localeCompare(mDate(a))||b.ts-a.ts)[0];
 const canOut=()=>!!(me&&(me.admin||me.out));
-function setOut(){const b=$('bOut');b.disabled=!canOut();b.style.opacity=canOut()?1:.45;b.textContent=canOut()?'－ Stock Out':'🔒 Stock Out'}
+const pcls=c=>{const n=ordersOf(c);return n<=0?'out':n<=(c.low??5)?'low':'ok'};
+const lastTxt=m=>m?'<b>'+fdate(mDate(m))+'</b> '+tm(m.ts):'—';
+function res(h,bad){const b=$('res');b.innerHTML=h;b.classList.toggle('bad',!!bad);b.classList.add('show');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('show'),6000)}
+async function write(f){if(!me){lockUI();return}if(!db){alert('Storage unavailable.');return}try{await f()}catch(e){alert('Could not save: '+(e&&e.message||'error'))}}
+
+function render(){renderStrip();renderOps();renderInv();renderAct();
+ const names=cats.slice().sort(byName);$('flt').innerHTML='<option value="">All categories</option>'+names.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');$('flt').value=cats.some(c=>c.id===flt)?flt:'';}
+function renderStrip(){$('strip').innerHTML=cats.slice().sort(byName).map(c=>{const n=ordersOf(c);
+ return `<div class="chip${c.id===sel?' on':''}" data-id="${c.id}"><div class="cn">${esc(c.name)}</div><div class="cs">${sTxt(c,Math.max(0,stock(c)))}</div><div class="co ${n<=0?'no':''}">${n}<small>${c.unitType==='weight'?'orders':'pcs'}</small></div><div class="cl"><span class="inn">▲ IN</span> ${lastTxt(last(c,1))}</div><div class="cl"><span class="outn">▼ OUT</span> ${lastTxt(last(c,0))}</div></div>`}).join('')||'<div class="empty" style="grid-column:1/-1">No categories yet.</div>'}
+
+function renderOps(){const box=$('ops');
+ if(!cats.length){box.innerHTML='<div class="empty">No categories yet. Tap “+ Add category”.</div>';return}
+ if(!cat(sel))sel=cats.slice().sort(byName)[0].id;
+ const c=cat(sel),n=ordersOf(c),keep=$('iq')&&box.dataset.c===c.id?{iq:$('iq').value,im:$('im').value,oq:$('oq').value,om:$('om').value,dd:$('dd').value,dtm:$('dtm').value}:null;
+ const lo=!canOut(),meta=[c.gpo>0?fmt(c.gpo)+' g/order':'',c.gpp>0?fmt(c.gpp)+' g/pc':''].filter(Boolean).join(' · ');
+ let io=(c.gpp>0?`<option value="piece">Pieces</option>`:'')+`<option value="kg">Kilos (kg)</option><option value="grams">Grams (g)</option>`;
+ let oo=(c.gpo>0?`<option value="order">Orders</option>`:'')+(c.gpp>0?`<option value="piece">Pieces</option>`:'')+`<option value="kg">Kilos (kg)</option><option value="grams">Grams (g)</option>`;
+ box.dataset.c=c.id;
+ box.innerHTML=`<div class="otitle">${esc(c.name)}<button class="g" data-act="edit" data-id="${c.id}">✎</button></div>
+ <div class="avail">${sTxt(c,Math.max(0,stock(c)))} available</div>
+ <div class="meta"><span class="pill ${pcls(c)}">${n} ${c.unitType==='weight'?'orders':'pcs'} available</span><span>${meta}</span></div>
+ <div class="cl" style="margin-top:6px"><span class="inn">▲ LAST IN</span> ${lastTxt(last(c,1))} &nbsp; <span class="outn">▼ LAST OUT</span> ${lastTxt(last(c,0))}</div>
+ <div class="box ib"><div class="bh">⬇ Stock in</div><div class="ir"><select id="im">${io}</select><input id="iq" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></div></div>
+ <div class="box ob"><div class="bh">⬆ Stock out ${lo?'🔒 (admin only)':''}</div><div class="ir"><select id="om" ${lo?'disabled':''}>${oo}</select><input id="oq" type="number" min="0" step="any" inputmode="decimal" placeholder="0" ${lo?'disabled':''}></div></div>
+ <div class="row"><div><label>Date</label><input id="dd" type="date"></div><div><label>Time</label><input id="dtm" type="time"></div></div>
+ <div class="note" id="dnote"></div><div class="warn" id="ow2"></div>
+ <button class="up" id="bu">Update ${esc(c.name)}</button>`;
+ $('im').value=keep?keep.im:(c.unitType==='piece'&&c.gpp>0?'piece':'kg');$('om').value=keep?keep.om:(c.gpo>0?'order':(c.gpp>0?'piece':'kg'));
+ if(keep){$('iq').value=keep.iq;$('oq').value=keep.oq}
+ $('dd').max=today();if(dirty&&keep){$('dd').value=keep.dd;$('dtm').value=keep.dtm}else{$('dd').value=today();$('dtm').value=new Date().toTimeString().slice(0,5)}
+ note();warn()}
+function note(){$('dnote').textContent=dirty?'Late entry: using the date & time you set.':'Date & time are set automatically when you save. Tap to change for a late entry.'}
+function warn(){const c=cat(sel);if(!c||!$('dd'))return;const dv=$('dd').value||today(),e=moves.filter(m=>m.catId===c.id&&mDate(m)===dv&&m.type!=='new');
+ $('ow2').textContent=e.length?'⚠ Already entered for '+fdate(dv)+': '+e.map(m=>(m.g>0?'IN ':'OUT ')+m.label).join(', '):''}
+
+async function apply(){const c=cat(sel);if(!c)return;if(!me){lockUI();return}
+ const iq=+$('iq').value||0,im=$('im').value,oq=+$('oq').value||0,om=$('om').value;
+ if(oq>0&&!canOut()){res('Stock out is locked. Ask the admin.',1);return}
+ let ig=0,il='',og=0,ol='';
+ if(iq>0){if(im==='kg'){ig=iq*1000;il=fmt(iq)+' kg'}else if(im==='grams'){ig=iq;il=fmt(iq)+' g'}else if(c.gpp>0){ig=iq*c.gpp;il=fmt(iq)+' pcs'}}
+ if(oq>0){if(om==='order'&&c.gpo>0){og=oq*c.gpo;ol=fmt(oq)+' orders'}else if(om==='kg'){og=oq*1000;ol=fmt(oq)+' kg'}else if(om==='grams'){og=oq;ol=fmt(oq)+' g'}else if(om==='piece'&&c.gpp>0){og=oq*c.gpp;ol=fmt(oq)+' pcs'}}
+ if(!ig&&!og){res('Enter a quantity to stock in or out.',1);return}
+ if(og>stock(c)+ig+1e-9){res('⚠ Not enough stock. Only '+sTxt(c,Math.max(0,stock(c)))+' available.',1);return}
+ const ts=mkTs(),date=toDate(ts),by=me.name,w=[];
+ if(ig)w.push({catId:c.id,catName:c.name,type:'in',g:ig,label:il,by,ts,date});if(og)w.push({catId:c.id,catName:c.name,type:'out',g:-og,label:ol,by,ts,date});
+ await write(async()=>{for(const m of w)await db.collection('moves').doc().set(m)});
+ dirty=false;$('iq').value='';$('oq').value='';
+ res('✔ <b>'+esc(c.name)+'</b> updated: '+[ig?'added '+il:'',og?'deducted '+ol:''].filter(Boolean).join(' & ')+'.')}
+
+function renderInv(){const list=cats.filter(c=>!flt||c.id===flt).sort(byName);
+ $('inv').innerHTML=list.map(c=>{const n=ordersOf(c),ex=exp.has(c.id),l=moves.filter(m=>m.catId===c.id).sort((a,b)=>mDate(a).localeCompare(mDate(b))||a.ts-b.ts);
+  let h='';if(ex){let bal=0;const rows=l.map(m=>{bal+=m.g;return{m,bal}}).reverse().slice(0,25);
+   h=`<div class="hist"><div class="scroll"><table class="led"><thead><tr><th>Date / time</th><th>Type</th><th class="num">In</th><th class="num">Out</th><th class="num">Balance</th></tr></thead><tbody>${rows.map(({m,bal})=>`<tr data-m="${m.id}"><td>${fdate(mDate(m))}<div class="sz">${tm(m.ts)}</div></td><td>${m.type==='new'?'Opening':m.type==='in'?'Stock in':'Sold'}</td><td class="num mono inn">${m.g>0?esc(m.label):''}</td><td class="num mono outn">${m.g<0?esc(m.label):''}</td><td class="num mono">${sTxt(c,Math.max(0,bal))}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No movements.</td></tr>'}</tbody></table></div>${me&&me.admin?'<div class="note">Admin: tap a row to correct or delete it.</div>':''}</div>`}
+  return `<div class="irow" data-id="${c.id}"><div><div class="iname">${ex?'▾':'▸'} ${esc(c.name)} <button class="g" data-act="edit" data-id="${c.id}">✎</button></div><div class="isub"><b style="color:var(--tx);font-size:15px">${sTxt(c,Math.max(0,stock(c)))}</b> total · <span class="pill ${pcls(c)}">${n} ${c.unitType==='weight'?'order':'pc'}${n===1?'':'s'}</span></div><div class="isub">${[c.gpo>0?fmt(c.gpo)+' g/order':'',c.gpp>0?fmt(c.gpp)+' g/pc':''].filter(Boolean).join(' · ')}</div></div>
+  <div class="itot"><div class="inn">In: ${sTxt(c,tin(c))}</div><div class="outn">Out: ${sTxt(c,tout(c))}</div></div></div>${h}`}).join('')||'<div class="empty">No categories yet.</div>'}
+
+function renderAct(){const all=moves.slice().sort((a,b)=>mDate(b).localeCompare(mDate(a))||b.ts-a.ts),L=all.slice(0,lim);$('more').hidden=all.length<=lim;$('anote').textContent=(me&&me.admin)?'Admin: tap an entry to correct or delete it.':'';
+ $('act').innerHTML=L.length?`<table class="led"><thead><tr><th>Date / what</th><th class="num">In (+)</th><th class="num">Out (−)</th></tr></thead><tbody>${L.map(m=>`<tr data-m="${m.id}"><td><b>${esc(m.catName)}</b> <span class="sz">${m.type==='new'?'opening':''}</span><div class="sz"><b style="color:var(--tx)">${fdate(mDate(m))}</b> · ${tm(m.ts)} · ${esc(m.by||'—')}</div></td><td class="num mono inn">${m.g>0?esc(m.label):''}</td><td class="num mono outn">${m.g<0?esc(m.label):''}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">No activity yet.</div>'}
+
+function fixMove(id){if(!(me&&me.admin))return;const m=moves.find(x=>x.id===id),c=m&&cat(m.catId);if(!m||!c)return;
+ const p=/^([\d.]+)\s*(\S+)/.exec(m.label||'');if(!p){alert('Cannot edit this entry.');return}
+ const u=p[2].toLowerCase(),f=u==='kg'?1000:u==='g'?1:u.startsWith('pc')?c.gpp:u.startsWith('order')?c.gpo:0;if(!(f>0)){alert('Cannot edit this entry.');return}
+ const v=prompt('Correct amount ('+p[2]+')\nEntry: '+m.catName+' · '+m.label+' · '+fdate(mDate(m))+'\n\nType 0 to DELETE this entry.',p[1]);if(v===null)return;const n=parseFloat(v);if(isNaN(n)||n<0)return;
+ if(n===0){if(confirm('Delete this entry? The stock will change back.'))write(()=>db.doc('moves/'+id).delete());return}
+ write(()=>db.doc('moves/'+id).update({g:(m.g<0?-1:1)*n*f,label:fmt(n)+' '+p[2]}))}
+
+/* ---- category modal ---- */
+function openCat(c){editId=c?c.id:null;$('ct').textContent=c?'Edit category':'Add category';$('cName').value=c?c.name:'';
+ document.querySelector(`input[name=ut][value=${c?c.unitType:'weight'}]`).checked=true;$('cOrder').value=c&&c.gpo?c.gpo:'';$('cPiece').value=c&&c.gpp?c.gpp:'';$('cLow').value=c?(c.low??5):5;$('cOpen').value=0;
+ $('ow').hidden=!!c;$('cdel').hidden=!(c&&me&&me.admin);$('cm').textContent='';cprev();$('dc').showModal()}
+const cu=()=>document.querySelector('input[name=ut]:checked').value;
+function cprev(){const o=+$('cOrder').value,p=+$('cPiece').value;let h='';if(o>0)h+='1 kg = '+Math.floor(1000/o)+' orders of '+fmt(o)+' g<br>';if(p>0)h+='1 kg = '+Math.floor(1000/p)+' pieces of '+fmt(p)+' g';$('cprev').innerHTML=h||'Enter grams per order and/or per piece.';$('ol').textContent=cu()==='weight'?'Opening stock (kg)':'Opening stock (pieces)'}
+$('cOrder').oninput=$('cPiece').oninput=cprev;document.querySelectorAll('input[name=ut]').forEach(r=>r.onchange=cprev);$('cc').onclick=()=>$('dc').close();
+$('cs').onclick=async()=>{const name=$('cName').value.trim().toUpperCase(),ut=cu(),o=+$('cOrder').value||0,p=+$('cPiece').value||0,low=Math.max(0,parseInt($('cLow').value)||0),op=+$('cOpen').value||0;
+ if(!name){$('cm').textContent='Enter a category name.';return}if(o<=0&&p<=0){$('cm').textContent='Enter grams per order or grams per piece.';return}if(ut==='piece'&&p<=0){$('cm').textContent='Pieces tracking needs grams per piece.';return}
+ if(cats.some(c=>c.id!==editId&&c.name.toUpperCase()===name)){$('cm').textContent='That category already exists.';return}
+ const d={name,unitType:ut,gpo:o,gpp:p,low};
+ if(editId){await write(()=>db.doc('cats/'+editId).update(d))}
+ else{const id=crypto.randomUUID();sel=id;await write(async()=>{await db.doc('cats/'+id).set({...d,ts:Date.now()});if(op>0){const g=ut==='weight'?op*1000:op*p;await db.collection('moves').doc().set({catId:id,catName:name,type:'new',g,label:fmt(op)+(ut==='weight'?' kg':' pcs'),by:me?me.name:'',ts:Date.now(),date:today()})}})}
+ $('dc').close()};
+$('cdel').onclick=()=>{const c=cat(editId);if(c&&confirm('Delete category '+c.name+' and all its history?')){const ms=moves.filter(m=>m.catId===c.id);write(async()=>{for(const m of ms)await db.doc('moves/'+m.id).delete();await db.doc('cats/'+c.id).delete()});$('dc').close()}};
+
+/* ---- events ---- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));$('p-main').hidden=t.dataset.t!=='main';$('p-log').hidden=t.dataset.t!=='log';scrollTo(0,0)});
+document.body.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;if(a.dataset.act==='add')openCat(null);else if(a.dataset.act==='edit'){e.stopPropagation();openCat(cat(a.dataset.id))}},true);
+$('strip').onclick=e=>{const c=e.target.closest('.chip');if(c){sel=c.dataset.id;dirty=false;flt='';renderStrip();renderOps();renderInv();$('ops').closest('.card').scrollIntoView({behavior:'smooth',block:'start'})}};
+$('ops').addEventListener('click',e=>{if(e.target.id==='bu')apply()});
+$('ops').addEventListener('input',e=>{if(e.target.id==='dd'||e.target.id==='dtm'){dirty=true;note();warn()}});
+$('flt').onchange=()=>{flt=$('flt').value;renderInv()};
+$('inv').onclick=e=>{if(e.target.closest('[data-act]'))return;const r=e.target.closest('tr[data-m]');if(r){fixMove(r.dataset.m);return}const ir=e.target.closest('.irow');if(ir){const id=ir.dataset.id;exp.has(id)?exp.delete(id):exp.add(id);renderInv()}};
+$('act').onclick=e=>{const r=e.target.closest('tr[data-m]');if(r)fixMove(r.dataset.m)};
+$('more').onclick=()=>{lim+=30;renderAct()};
+setInterval(()=>{if(!dirty&&$('dd')){$('dd').value=today();$('dtm').value=new Date().toTimeString().slice(0,5);warn()}render()},60000);
+
+/* ---- login / staff ---- */
 async function hash(salt,pin){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+':'+pin));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-function touch(){clearTimeout(idle);if(me)idle=setTimeout(()=>{me=null;lockUI()},600000)}
-document.addEventListener('pointerdown',touch);
-function lockUI(){if(me)me=staff.find(s=>s.id===me.id)||null;
- $('lk').style.display=me?'none':'flex';
- if(me){$('who').textContent='🔒 '+me.name;$('stB').hidden=!me.admin;setOut();return}
- $('who').textContent='🔒 Lock';$('stB').hidden=true;const setup=!staff.length;
- $('ls').hidden=setup;$('ln').hidden=!(setup&&canAdmin);$('lg').hidden=setup&&!canAdmin;$('lg').textContent=setup?'Create admin account':'Unlock';
- $('lkn').textContent=setup?(canAdmin?'First time: enter your name and choose a PIN for the admin account.':'No staff set up yet. Ask the owner to open this page and create the first account.'):'Select your name and enter your PIN.';
- const v=$('ls').value;$('ls').innerHTML=staff.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');if(v)$('ls').value=v}
-$('lg').onclick=async()=>{const pin=$('lp').value;if(Date.now()<until){$('lm').textContent='Too many tries. Wait a moment.';return}
- if(pin.length<4){$('lm').textContent='PIN must be at least 4 characters.';return}
+function touch(){clearTimeout(idle);if(me)idle=setTimeout(()=>{me=null;lockUI()},600000)}document.addEventListener('pointerdown',touch);
+function lockUI(){if(me)me=staff.find(s=>s.id===me.id)||null;$('lk').style.display=me?'none':'flex';
+ if(me){$('who').textContent='🔒 '+me.name;$('stB').hidden=!me.admin;render();return}
+ $('who').textContent='🔒 Lock';$('stB').hidden=true;const setup=!staff.length;$('ls').hidden=setup;$('ln').hidden=!setup;$('lg').textContent=setup?'Create admin account':'Unlock';
+ $('lkn').textContent=setup?'First time: enter your name and choose a PIN for the admin account.':'Select your name and enter your PIN.';
+ const v=$('ls').value;$('ls').innerHTML=staff.slice().sort(byName).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');if(v)$('ls').value=v}
+$('lg').onclick=async()=>{const pin=$('lp').value;if(Date.now()<until){$('lm').textContent='Too many tries. Wait a moment.';return}if(pin.length<4){$('lm').textContent='PIN must be at least 4 characters.';return}
  if(!staff.length){const name=$('ln').value.trim();if(!name||!db){$('lm').textContent='Enter a name.';return}const salt=crypto.randomUUID();
-  try{await db.collection('staff').doc().set({name,salt,hash:await hash(salt,pin),admin:true,ts:Date.now()});$('lp').value='';$('lm').textContent='Created. Select your name to unlock.'}catch(e){$('lm').textContent='Could not create: '+(e&&e.message||'error')}return}
+  try{await db.collection('staff').doc().set({name,salt,hash:await hash(salt,pin),admin:true,out:true,ts:Date.now()});$('lp').value='';$('lm').textContent='Created. Select your name to unlock.'}catch(e){$('lm').textContent='Could not create.'}return}
  const s=staff.find(x=>x.id===$('ls').value);if(!s)return;
  if(await hash(s.salt,pin)===s.hash){me=s;fails=0;$('lp').value='';$('lm').textContent='';lockUI();touch()}else{if(++fails>=5){until=Date.now()+30000;fails=0}$('lm').textContent='Wrong PIN.'}};
-$('lp').onkeydown=e=>{if(e.key==='Enter')$('lg').click()};
-$('who').onclick=()=>{me=null;lockUI()};
+$('lp').onkeydown=e=>{if(e.key==='Enter')$('lg').click()};$('who').onclick=()=>{me=null;lockUI()};
 $('stB').onclick=()=>{renderStaff();$('ds').showModal()};$('sx').onclick=()=>$('ds').close();
-function renderStaff(){$('sl').innerHTML=staff.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="log"><div>${esc(s.name)}${s.admin?' <span class="sz">admin</span>':''}</div><div>${s.admin?'':`<button class="g" onclick="togOut('${s.id}')">Stock out: ${s.out?'ON':'OFF'}</button> `}<button class="g" onclick="rmStaff('${s.id}')">Remove</button></div></div>`).join('')}
+function renderStaff(){$('sl').innerHTML=staff.slice().sort(byName).map(s=>`<div class="irow" style="cursor:default;align-items:center"><div>${esc(s.name)}${s.admin?' <span class="sz">admin</span>':''}</div><div>${s.admin?'':`<button class="g" onclick="togOut('${s.id}')">Stock out: ${s.out?'ON':'OFF'}</button> `}<button class="g" onclick="rmStaff('${s.id}')">Remove</button></div></div>`).join('')}
 function togOut(id){const s=staff.find(x=>x.id===id);if(s)write(()=>db.doc('staff/'+id).update({out:!s.out}))}
 function rmStaff(id){if(me&&id===me.id){alert('You can’t remove yourself.');return}if(confirm('Remove this staff member?'))write(()=>db.doc('staff/'+id).delete())}
 $('sa').onclick=async()=>{const name=$('sn').value.trim(),pin=$('sp').value;if(!name||pin.length<4){$('sm').textContent='Enter a name and a PIN of 4+ characters.';return}
  const ex=staff.find(s=>s.name.toLowerCase()===name.toLowerCase()),salt=crypto.randomUUID(),h=await hash(salt,pin);
  await write(()=>ex?db.doc('staff/'+ex.id).update({salt,hash:h}):db.collection('staff').doc().set({name,salt,hash:h,out:false,admin:false,ts:Date.now()}));$('sn').value='';$('sp').value='';$('sm').textContent=ex?'PIN reset.':'Added.'};
-$('newB').onclick=()=>{editId=null;$('dl').hidden=true;$('dt').textContent='New menu';$('n').value='';$('p').value='';$('t').value='g';pre();$('dn').showModal()};
-function edit(id){const i=items.find(x=>x.id===id);if(!i)return;editId=id;$('dl').hidden=false;$('dt').textContent='Edit menu';$('n').value=i.name;$('c').value=i.cat;$('t').value=i.type==='p'?'p':'g';$('p').value=i.portion;pre();$('dn').showModal()}$('cn').onclick=()=>$('dn').close();
-const ut=()=>{const u=$('t').value;return{type:u==='p'?'p':'w',mult:u==='kg'?1000:1}};
-function pre(){const cv=$('c').value.trim().toLowerCase(),ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cv);
- const u=ut(),p=+$('p').value*u.mult;
- $('pre').textContent=ex?(ex.type===u.type?'Joins the '+ex.cat+' category and shares its stock.':'Note: '+ex.cat+' is counted in '+(ex.type==='w'?'kilos/grams':'pieces')+'. This menu gets its own separate stock.'):'';
- if(p>0)$('pre').textContent+=(u.type==='w'?' 1 kilo (1,000 g) = '+fmt(Math.floor(1000/p*100)/100)+' orders of '+fmt(p)+' g.':' 10 pieces make '+fmt(Math.floor(10/p*100)/100)+' orders.')}
-$('t').onchange=pre;$('p').oninput=pre;$('c').oninput=pre;$('c').onchange=pre;
-$('sv').onclick=async()=>{const name=$('n').value.trim();let cat=$('c').value.trim();const u=ut(),p=+$('p').value*u.mult;
- if(!name||!cat||!(p>0)){$('pre').textContent='Enter a menu name, category and order size.';return}
- const ex=items.find(i=>i.id!==editId&&i.cat.toLowerCase()===cat.toLowerCase());if(ex)cat=ex.cat;
- const type=u.type,o=items.find(i=>i.id===editId);
- if(o&&type!==o.type&&cat.toLowerCase()===o.cat.toLowerCase()&&logs.some(l=>l.cat===o.cat&&(l.type||ctype(o.cat))===o.type)){$('pre').textContent='Kilos/pieces can’t change while this category has stock history. Use a new category.';return}
- await write(()=>editId?db.doc('items/'+editId).update({name,cat,type,portion:p}):db.collection('items').doc().set({name,cat,type,portion:p}));editId=null;$('n').value='';$('p').value='';$('t').value='g';pre();$('dn').close()};
-$('q').oninput=render;render();
-(async()=>{
- const t=setTimeout(()=>{$('sync').textContent='Not connected — sign in to claude.ai to share data'},10000);
+
+/* ---- start ---- */
+render();
+(async()=>{const t=setTimeout(()=>{$('sync').textContent='Not connected'},10000);
  try{db=await claude.use('db')}catch(e){db=null}
- try{const u=await claude.use('user');canAdmin=!!(u&&await u.canEdit())}catch(e){}
- if(!db){clearTimeout(t);$('sync').textContent='Shared storage unavailable';return}
- let got=0;const done=()=>{if(++got>=3){clearTimeout(t);$('sync').textContent=(CFG.url?'● Live · shared with everyone':'● This device only')}};
- db.collection('items').onSnapshot(s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));render();done()},()=>{$('sync').textContent='Sync error'});
- db.collection('logs').onSnapshot(s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));render();done()},()=>{$('sync').textContent='Sync error'});
- db.collection('staff').onSnapshot(s=>{staff=s.docs.map(d=>({id:d.id,...d.data()}));lockUI();renderStaff();done()},()=>{$('sync').textContent='Sync error'});
+ if(!db){clearTimeout(t);$('sync').textContent='Storage unavailable';return}
+ let got=0;const done=()=>{if(++got>=3){clearTimeout(t);$('sync').textContent=(CFG.url?'● Live · shared':'● This device only')+' · v10'}};
+ const sub=(n,f)=>db.collection(n).onSnapshot(s=>{f(s.docs.map(d=>({id:d.id,...d.data()})));done()},()=>{$('sync').textContent='Sync error'});
+ sub('cats',a=>{cats=a;render()});sub('moves',a=>{moves=a;render()});sub('staff',a=>{staff=a;lockUI();renderStaff()});
 })();
 </script></body></html>
