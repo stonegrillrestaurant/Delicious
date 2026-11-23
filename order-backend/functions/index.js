@@ -32,6 +32,7 @@ function endpoint(fn,max=7100000){return async(req,res)=>{
 async function throttle(ip,kind){const r=db.collection('sgOrderRateLimits').doc(hash(ip+':'+kind+':'+Math.floor(Date.now()/600000)));await db.runTransaction(async t=>{const s=await t.get(r),count=s.exists?s.data().count:0;if(count>=(kind==='order'?15:20))throw d.error(429,'Too many attempts. Contact Stone Grill or try later.');t.set(r,{count:count+1,expiresAt:Timestamp.fromMillis(Date.now()+86400000)});});}
 exports.orderApi=onRequest(options,endpoint(async(req,res)=>{
  const user=await signedUser(req),b=req.body;d.identity(b);
+ if(user.email_verified!==true)throw d.error(403,'Verify your email address before placing an order. Return to the ordering page after verifying.');
  const setup=await db.collection('sgSystem').doc('prepaid-v1').get();if(!setup.exists||setup.data().ready!==true)throw d.error(503,'Checkout update in progress. Please return shortly; do not send payment yet.');d.check(['quote','order','payment','receipt'].includes(b.action),'Invalid action');await throttle(req.ip||'unknown',b.action);
  if(b.action==='quote'){const order=d.order(b,await activeMenu());if(new Date(order.date+'T'+order.time+':00+08:00').getTime()<Date.now()-5*60000)throw d.error(400,'Choose a future date and time');return res.json({ok:true,order});}
  const ref=db.collection('sgOrders').doc(b.requestId),cap=db.collection('sgOrderCapabilities').doc(b.requestId),keyHash=hash(b.receiptKey);
