@@ -1,4 +1,4 @@
-import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile,isVerifiedCustomer,refreshVerification,sendVerificationEmail} from './customer-auth.js?v=accountchooser1';
+import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile,isVerifiedCustomer,refreshVerification,sendVerificationEmail} from './customer-auth.js?v=verified1';
 const box=document.getElementById('customerAccount');let stopProfile,stopPending,revision=0;
 function pendingBadge(count){const link=document.querySelector('.company-navigation a[href="account/"]');if(!link)return;let badge=link.querySelector('[data-pending-count]');if(!badge){badge=document.createElement('span');badge.dataset.pendingCount='';badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:5px;padding:0 5px;border-radius:99px;background:#b42318;color:#fff;font-size:11px;font-weight:800';link.appendChild(badge);}badge.hidden=count===0;badge.textContent=count>99?'99+':String(count);}
 
