@@ -1,4 +1,4 @@
-import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile} from './customer-auth.js?v=accountchooser1';
+import {auth,a,f,db,esc,wireLogin,loginMarkup,syncProfile,isVerifiedCustomer,refreshVerification,sendVerificationEmail} from './customer-auth.js?v=accountchooser1';
 const box=document.getElementById('customerAccount');let stopProfile,stopPending,revision=0;
 function pendingBadge(count){const link=document.querySelector('.company-navigation a[href="account/"]');if(!link)return;let badge=link.querySelector('[data-pending-count]');if(!badge){badge=document.createElement('span');badge.dataset.pendingCount='';badge.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:5px;padding:0 5px;border-radius:99px;background:#b42318;color:#fff;font-size:11px;font-weight:800';link.appendChild(badge);}badge.hidden=count===0;badge.textContent=count>99?'99+':String(count);}
 
@@ -29,6 +29,13 @@ a.onAuthStateChanged(auth,async user=>{
  box.innerHTML=user?`<div class="signed-account"><span class="account-avatar" aria-hidden="true">${esc((user.displayName||user.email||"S").slice(0,1).toUpperCase())}</span><a href="account/">${esc(user.displayName||user.email)}<small>My profile & orders →</small></a><button id="customerSignOut" class="account-signout" type="button">Sign out</button></div><p id="accountNotice" role="status" aria-live="polite"></p>`:`<div class="header-login"><span class="signin-hint">Sign in with Google to continue checkout.</span>${loginMarkup()}</div><p id="accountNotice" role="status" aria-live="polite"></p>`;
  if(!user){wireLogin(notice);return;}
  document.getElementById('customerSignOut').onclick=()=>a.signOut(auth);
+ if(!isVerifiedCustomer(user)){
+  const noticeBox=document.getElementById('accountNotice');
+  noticeBox.innerHTML='<strong>Email verification required.</strong> Confirm the email sent to your inbox before placing an order. <button type="button" id="customerResendVerification">Resend email</button> <button type="button" id="customerCheckVerification">I verified my email</button>';
+  document.getElementById('customerResendVerification').onclick=async()=>{try{await sendVerificationEmail();notice('Verification email sent. Check your inbox and spam folder.');}catch(e){notice(e.message);}};
+  document.getElementById('customerCheckVerification').onclick=async()=>{try{if(await refreshVerification()){location.reload();}else notice('Not verified yet. Open your email link, then try again.');}catch(e){notice(e.message);}};
+  return;
+ }
  stopPending=f.onSnapshot(f.query(f.collection(db,'sgOrders'),f.where('customerUid','==',user.uid)),snap=>{if(r!==revision)return;pendingBadge(snap.docs.filter(doc=>!['completed','cancelled'].includes(doc.data().status)).length);},()=>pendingBadge(0));
  try{await syncProfile();if(r!==revision)return;
   try{const saved=JSON.parse(sessionStorage.getItem('sgConfirmedOrder:'+user.uid)||'null');if(saved?.uid===user.uid)window.backendOrder=saved;}catch{}
