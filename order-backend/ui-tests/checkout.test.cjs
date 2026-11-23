@@ -10,35 +10,46 @@ function setup(){
  w.SG_AUTH={auth:{currentUser:{uid:'u'}},getToken:async()=> 'token'};w.APP={ORDER_API_URL:'https://example.invalid'};
  return {dom,w,d,event:{preventDefault(){},currentTarget:d.getElementById('orderForm')}};
 }
-test('review only requests a quote; QR/number choices display one method and bold total without upload',async()=>{
+test('checkout requests a quote and displays the current GCash payment popup',async()=>{
  const {dom,w,d,event}=setup(),calls=[];
- assert(d.getElementById('checkoutBtn').closest('.cart-totals'));assert.equal(d.getElementById('submissionSuccess'),null);
- assert.equal(d.querySelector('.order-steps'),null);assert.equal(d.querySelector('.ordering-welcome'),null);assert(d.querySelector('.menu-heading').textContent.includes('Choose your food'));assert.equal(d.querySelector('#payTitle').textContent,'Pay & submit');assert(!d.querySelector('.section-step'));assert(d.querySelector('#orderForm button[type=submit]').textContent.includes('Continue to payment'));
+ assert.equal(d.getElementById('submissionSuccess'),null);
+ assert.equal(d.querySelector('#payTitle').textContent,'Pay & submit');
+ assert(d.querySelector('#orderForm button[type=submit]').textContent.includes('Next'));
  w.fetch=async(_,r)=>{const b=JSON.parse(r.body);calls.push(b);return {ok:true,json:async()=>({ok:true,order:b})};};
  await w.handleSubmit(event);
  assert.deepEqual(calls.map(c=>c.action),['quote']);
  assert(d.getElementById('payTotal').textContent.includes('100'));
  assert.equal(d.getElementById('payTotal').tagName,'STRONG');
- assert.equal(d.getElementById('combinedCheckout').hidden,true);
- d.querySelector('[data-method=qr]').click();assert.equal(d.getElementById('qrPayment').hidden,false);assert.equal(d.getElementById('numberPayment').hidden,true);
- d.querySelector('[data-method=number]').click();assert.equal(d.getElementById('qrPayment').hidden,true);assert.equal(d.getElementById('numberPayment').hidden,false);
- assert.equal(d.querySelectorAll('input[type=file]').length,0);dom.window.close();
+ assert.equal(d.getElementById('paymentPopup').classList.contains('show'),true);
+ assert.equal(d.querySelectorAll('input[type=file]').length,0);
+ dom.window.close();
 });
-test('Continue resumes payment after sign-in or focuses the first missing required detail',()=>{const {dom,w,d}=setup();let opens=0,submits=0;const fake=d.createElement('button');fake.id='googleSignIn';fake.onclick=()=>opens++;d.body.append(fake);w.SG_AUTH.auth.currentUser=null;w.continueCheckout();assert.equal(opens,1);assert(w.sessionStorage.getItem('sgCheckoutIntent'));assert.equal(w.sessionStorage.getItem('sgContinueAfterLogin'),'1');const form=d.getElementById('orderForm');form.requestSubmit=()=>submits++;w.SG_AUTH.auth.currentUser={uid:'u'};w.resumeCheckoutAfterSignIn();assert.equal(submits,1);d.getElementById('fullName').value='';w.resumeCheckoutAfterSignIn();assert.equal(submits,1);assert.equal(d.activeElement.id,'fullName');assert.equal(w.lastToast,'Please complete the required details to continue to payment.');dom.window.close();});
-test('combined submit blocks double click and retries original reference after uncertain network failure',async()=>{
+test('customer checkout saves intent and resumes after successful sign-in',()=>{
+ const {dom,w,d}=setup();let opens=0,submits=0;
+ const fake=d.createElement('button');fake.id='googleSignIn';fake.onclick=()=>opens++;d.body.append(fake);
+ w.SG_AUTH.auth.currentUser=null;w.queueCheckoutAfterSignIn();assert.equal(opens,1);
+ assert(w.sessionStorage.getItem('sgCheckoutIntent'));
+ assert.equal(w.sessionStorage.getItem('sgContinueAfterLogin'),'1');
+ d.getElementById('orderForm').requestSubmit=()=>submits++;
+ w.SG_AUTH.auth.currentUser={uid:'u'};w.resumeCheckoutAfterSignIn();assert.equal(submits,1);
+ dom.window.close();
+});
+test('combined payment submission blocks double clicks and retries the original reference',async()=>{
  const {dom,w,d,event}=setup(),calls=[];let reject;
  w.fetch=async(_,r)=>{const b=JSON.parse(r.body);calls.push(b);if(b.action==='quote')return {ok:true,json:async()=>({ok:true,order:b})};return new Promise((_,no)=>reject=no);};
- await w.handleSubmit(event);d.querySelector('[data-method=qr]').click();d.getElementById('paymentReference').value='ABC123';
+ await w.handleSubmit(event);
+ d.getElementById('paymentReference').value='ABC123';
  const form=d.getElementById('combinedCheckout');
  form.dispatchEvent(new w.Event('submit',{cancelable:true}));form.dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();
- assert.equal(calls.filter(c=>c.action==='order').length,1);reject(Error('Network lost'));await tick();
- assert(d.getElementById('receiptStatus').textContent.includes('Do not send another payment'));
- assert.equal(d.getElementById('paymentReference').readOnly,true);
+ assert.equal(calls.filter(c=>c.action==='order').length,1);
+ reject(Error('Network lost'));await tick();
+ assert(d.getElementById('receiptStatus').textContent.includes('Check My Orders'));
  const original=calls.at(-1);let retried;
  w.fetch=async(_,r)=>{retried=JSON.parse(r.body);throw Error('Still offline');};
  d.getElementById('paymentReference').value='CHANGED';
  form.dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();
- assert.equal(retried.requestId,original.requestId);assert.equal(retried.submittedPaymentReference,'ABC123');
+ assert.equal(retried.requestId,original.requestId);
+ assert.equal(retried.submittedPaymentReference,'ABC123');
  dom.window.close();
 });
 test('auth account changes cannot submit another customer saved checkout',async()=>{
